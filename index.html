@@ -21,9 +21,30 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .note { font-size: 0.9em; color: #666; margin-top: 1em; }
+    .timebox {
+      position: fixed;
+      top: 1em;
+      right: 1em;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 0.6em 1em;
+      border-radius: 12px;
+      font-size: 0.9em;
+      color: #444;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: right;
+      line-height: 1.4em;
+      z-index: 999;
+    }
   </style>
 </head>
 <body>
+
+  <!-- 時間顯示區 -->
+  <div class="timebox">
+    <div id="utc-time">UTC：載入中...</div>
+    <div id="local-time">Local：載入中...</div>
+  </div>
+
   <h1>📦 簡報箱（Briefing Package）</h1>
 
   <div class="section">
@@ -61,5 +82,39 @@
     📎 工具來源：Weathernews、STARLUX ELB、Turbli<br>
     本頁面為簡報入口，點選可快速開啟即時圖表與輔助工具。
   </div>
+
+  <!-- JavaScript for Time -->
+  <script>
+    function pad(num) {
+      return String(num).padStart(2, '0');
+    }
+
+    function updateTimes() {
+      const now = new Date();
+
+      // UTC 時間
+      const yyyy = now.getUTCFullYear();
+      const mm = pad(now.getUTCMonth() + 1);
+      const dd = pad(now.getUTCDate());
+      const hh = pad(now.getUTCHours());
+      const min = pad(now.getUTCMinutes());
+      document.getElementById('utc-time').textContent =
+        `⏱ UTC：${yyyy}-${mm}-${dd} ${hh}:${min}Z`;
+
+      // Local 時間
+      const localY = now.getFullYear();
+      const localM = pad(now.getMonth() + 1);
+      const localD = pad(now.getDate());
+      const localH = pad(now.getHours());
+      const localMin = pad(now.getMinutes());
+      const offset = -now.getTimezoneOffset() / 60;
+      const offsetStr = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+      document.getElementById('local-time').textContent =
+        `🕓 Local：${localY}-${localM}-${localD} ${localH}:${localMin} (${offsetStr})`;
+    }
+
+    updateTimes();
+    setInterval(updateTimes, 60000);
+  </script>
 </body>
 </html>
