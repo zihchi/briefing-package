@@ -9,7 +9,17 @@
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
     .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
-    img { width: 100%; max-width: 800px; margin-top: 1em; border-radius: 8px; border: 1px solid #ccc; }
+    .btn {
+      display: inline-block;
+      margin-top: 1em;
+      padding: 0.6em 1.2em;
+      background-color: #3c79ff;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
     .note { font-size: 0.9em; color: #666; margin-top: 1em; }
   </style>
 </head>
@@ -18,22 +28,22 @@
 
   <div class="section">
     <h2>📌 國內悪天予想圖（FBJP）</h2>
-    <img src="https://www.data.jma.go.jp/airinfo/data/img/awfo_fbjp.png" alt="FBJP">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_fbjp.html" target="_blank">📥 開啟官方圖像頁</a>
   </div>
 
   <div class="section">
     <h2>📌 全國航空氣象解說報（國內空域）</h2>
-    <img src="https://www.data.jma.go.jp/airinfo/data/img/awfo_ajpn_cmnt_airspace.png" alt="AJPN AIRSPACE">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_airspace.html" target="_blank">📥 開啟官方圖像頁</a>
   </div>
 
   <div class="section">
     <h2>📌 全國航空氣象解說報（福岡FIR）</h2>
-    <img src="https://www.data.jma.go.jp/airinfo/data/img/awfo_ajpn_cmnt_fukuokafir.png" alt="FUKFIR">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_fukuokafir.html" target="_blank">📥 開啟官方圖像頁</a>
   </div>
 
   <div class="note">
     📎 圖片來源：<a href="https://www.data.jma.go.jp/airinfo/index.html" target="_blank">日本気象庁 航空情報</a>。<br>
-    每次開啟本頁即自動擷取最新圖像。
+    本頁面為簡報入口，點選可快速開啟官方即時圖表頁。
   </div>
 </body>
 </html>
