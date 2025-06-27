@@ -49,38 +49,41 @@
   <div class="section">
     <h2>🌀 日本重大天氣圖 (即時截圖)</h2>
     <ul>
-      <li>
-        <strong>雷達回波:</strong><br>
-        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_HMW_displayer.png" alt="雷達回波" width="600">
-      </li>
-      <li>
-        <strong>降雨即時圖:</strong><br>
-        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/rain/data/20250627170000_japan_rain_now.png" alt="降雨即時圖" width="600">
-      </li>
-      <li>
-        <strong>雲圖:</strong><br>
-        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_VIS_displayer.png" alt="雲圖" width="600">
-      </li>
+      <li><strong>雷達回波:</strong><br><img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_HMW_displayer.png" alt="雷達回波" width="600"></li>
+      <li><strong>降雨即時圖:</strong><br><img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/rain/data/20250627170000_japan_rain_now.png" alt="降雨即時圖" width="600"></li>
+      <li><strong>雲圖:</strong><br><img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_VIS_displayer.png" alt="雲圖" width="600"></li>
     </ul>
   </div>
 
   <div class="section">
     <h2>🛫 METAR / TAF 即時資訊</h2>
     <ul>
-      <li>
-        <strong>RCTP（桃園）：</strong><br>
+      <li><strong>RCTP（桃園）：</strong><br>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RCTP.TXT" width="600" height="80"></iframe>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RCTP.TXT" width="600" height="80"></iframe>
       </li>
-      <li>
-        <strong>ROAH（那霸）：</strong><br>
+      <li><strong>ROAH（那霸）：</strong><br>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/ROAH.TXT" width="600" height="80"></iframe>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/ROAH.TXT" width="600" height="80"></iframe>
       </li>
-      <li>
-        <strong>RJAA（成田）：</strong><br>
+      <li><strong>RJAA（成田）：</strong><br>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RJAA.TXT" width="600" height="80"></iframe>
         <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RJAA.TXT" width="600" height="80"></iframe>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🌏 日本航空天氣圖（JMA）</h2>
+    <ul>
+      <li><strong>FBJP 圖（日本惡天預報圖）:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.data.jma.go.jp/airinfo/data/awfo_fbjp.png" width="600">
+      </li>
+      <li><strong>福岡 FIR 航空評論圖:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_fukuokafir.png" width="600">
+      </li>
+      <li><strong>日本空域分析圖:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_airspace.png" width="600">
       </li>
     </ul>
   </div>
@@ -100,7 +103,7 @@
       const localY = now.getFullYear();
       const localM = pad(now.getMonth() + 1);
       const localD = pad(now.getDate());
-      const localH = pad(now.getHours());
+      const localH = now.getHours();
       const localMin = pad(now.getMinutes());
       const offset = -now.getTimezoneOffset() / 60;
       const offsetStr = `UTC${offset >= 0 ? '+' : ''}${offset}`;
