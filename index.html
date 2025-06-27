@@ -28,7 +28,7 @@
       background: rgba(255, 255, 255, 0.8);
       padding: 0.6em 1em;
       border-radius: 12px;
-      font-size: 1.2em;
+      font-size: 1.4em;
       font-weight: bold;
       color: #444;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -46,9 +46,43 @@
 
   <h1>📦 簡報箱（Briefing Package）</h1>
 
-  <div class="section" id="metar-section">
-    <h2>📡 RCTP METAR & TAF</h2>
-    <pre id="metar-taf" style="white-space: pre-wrap; font-family: monospace;"></pre>
+  <div class="section">
+    <h2>🌀 日本重大天氣圖 (即時截圖)</h2>
+    <ul>
+      <li>
+        <strong>雷達回波:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_HMW_displayer.png" alt="雷達回波" width="600">
+      </li>
+      <li>
+        <strong>降雨即時圖:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/rain/data/20250627170000_japan_rain_now.png" alt="降雨即時圖" width="600">
+      </li>
+      <li>
+        <strong>雲圖:</strong><br>
+        <img src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://www.jma.go.jp/bosai/himawari/data/satimg/20250627170000_JP_VIS_displayer.png" alt="雲圖" width="600">
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🛫 METAR / TAF 即時資訊</h2>
+    <ul>
+      <li>
+        <strong>RCTP（桃園）：</strong><br>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RCTP.TXT" width="600" height="80"></iframe>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RCTP.TXT" width="600" height="80"></iframe>
+      </li>
+      <li>
+        <strong>ROAH（那霸）：</strong><br>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/ROAH.TXT" width="600" height="80"></iframe>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/ROAH.TXT" width="600" height="80"></iframe>
+      </li>
+      <li>
+        <strong>RJAA（成田）：</strong><br>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RJAA.TXT" width="600" height="80"></iframe>
+        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RJAA.TXT" width="600" height="80"></iframe>
+      </li>
+    </ul>
   </div>
 
   <script>
@@ -74,44 +108,6 @@
     }
     updateTimes();
     setInterval(updateTimes, 60000);
-
-    async function fetchMetarTaf() {
-      try {
-        const resp = await fetch('https://aviationweather.gov/api/data/metar?ids=RCTP&taf=on&format=json');
-        const data = await resp.json();
-        const entry = data.features[0].properties;
-        let raw = entry.raw_text + '\n';
-
-        const vis = entry.visibility_mi * 1609.34;
-        const windDir = entry.wind_dir_degrees;
-        const windSpd = entry.wind_speed_kt;
-        const gust = entry.wind_gust_kt;
-
-        if (windSpd >= 15) raw += '<span style="color:red;">⚠️ Wind ' + windDir + windSpd + 'KT</span>\n';
-        if (gust && gust >= 20) raw += '<span style="color:orange;">⚠️ Gust ' + gust + 'KT</span>\n';
-        if (vis < 1000) raw += '<span style="color:red;">⚠️ Visibility ' + Math.round(vis) + 'm</span>\n';
-
-        if (entry.forecast) {
-          entry.forecast.forEach(f => {
-            raw += '\n' + f.raw_text + '\n';
-            if (/\d{4}V\d{4}KT/.test(f.raw_text)) {
-              raw += '<span style="color:purple;">ℹ️ Wind Shift Warning</span>\n';
-            }
-            const matchVis = f.raw_text.match(/(\d{1,2})SM/);
-            if (matchVis && +matchVis[1] * 1609.34 < 1000) {
-              raw += '<span style="color:red;">⚠️ TAF vis low</span>\n';
-            }
-          });
-        }
-
-        document.getElementById('metar-taf').innerHTML = raw;
-      } catch (err) {
-        document.getElementById('metar-taf').textContent = '❌ 無法載入 METAR/TAF 資料';
-      }
-    }
-    fetchMetarTaf();
-    setInterval(fetchMetarTaf, 600000);
   </script>
 </body>
 </html>
-
