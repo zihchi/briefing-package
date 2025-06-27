@@ -8,8 +8,18 @@
     body { background-color: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
     .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .section h2 { font-size: 1.3em; margin-top: 0; }
-    img { width: 100%; max-width: 800px; margin-top: 1em; border-radius: 8px; border: 1px solid #ccc; }
+    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
+    .btn {
+      display: inline-block;
+      margin-top: 1em;
+      padding: 0.6em 1.2em;
+      background-color: #3c79ff;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
     .note { font-size: 0.9em; color: #666; margin-top: 1em; }
   </style>
 </head>
@@ -18,27 +28,22 @@
 
   <div class="section">
     <h2>📌 國內悪天予想圖（FBJP）</h2>
-    <img id="fbjp" src="" alt="FBJP 圖片載入中...">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/img/fbjp.png" target="_blank">📥 開啟圖像</a>
   </div>
 
   <div class="section">
     <h2>📌 全國航空氣象解說報（國內空域）</h2>
-    <img id="ajpn" src="" alt="AJPN 圖片載入中...">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/img/ajpn_airspace_cmnt.png" target="_blank">📥 開啟圖像</a>
   </div>
 
   <div class="section">
     <h2>📌 全國航空氣象解說報（福岡FIR）</h2>
-    <img id="fukfir" src="" alt="FUKFIR 圖片載入中...">
+    <a class="btn" href="https://www.data.jma.go.jp/airinfo/data/img/ajpn_fukuokafir_cmnt.png" target="_blank">📥 開啟圖像</a>
   </div>
 
   <div class="note">
-    🔄 圖片來源：<a href="https://www.data.jma.go.jp/airinfo/index.html" target="_blank">日本気象庁 航空情報</a>。每次開啟本頁即自動載入最新圖像。
+    📎 圖片來源：<a href="https://www.data.jma.go.jp/airinfo/index.html" target="_blank">日本気象庁 航空情報</a>。<br>
+    本頁面為靜態簡報頁，每次重新開啟皆連結至最新圖片。
   </div>
-
-  <script>
-    document.getElementById("fbjp").src = "https://www.data.jma.go.jp/airinfo/data/img/fbjp.png";
-    document.getElementById("ajpn").src = "https://www.data.jma.go.jp/airinfo/data/img/ajpn_airspace_cmnt.png";
-    document.getElementById("fukfir").src = "https://www.data.jma.go.jp/airinfo/data/img/ajpn_fukuokafir_cmnt.png";
-  </script>
 </body>
 </html>
