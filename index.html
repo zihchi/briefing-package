@@ -20,7 +20,6 @@
       font-weight: bold;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .note { font-size: 0.9em; color: #666; margin-top: 1em; }
     .timebox {
       position: fixed;
       top: 1em;
@@ -36,12 +35,15 @@
       line-height: 1.6em;
       z-index: 999;
     }
+    .timebox span.highlight {
+      color: red;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="timebox">
     <div id="utc-time">UTC：載入中...</div>
-    <div id="local-time">Local：載入中...</div>
   </div>
 
   <h1>📦 簡報箱（Briefing Package）</h1>
@@ -92,20 +94,13 @@
       const yyyy = now.getUTCFullYear();
       const mm = pad(now.getUTCMonth() + 1);
       const dd = pad(now.getUTCDate());
-      const hh = pad(now.getUTCHours());
-      const min = pad(now.getUTCMinutes());
-      document.getElementById('utc-time').textContent = `⏱ UTC：${yyyy}-${mm}-${dd} ${hh}:${min}Z`;
-      const localY = now.getFullYear();
-      const localM = pad(now.getMonth() + 1);
-      const localD = pad(now.getDate());
-      const localH = now.getHours();
-      const localMin = pad(now.getMinutes());
-      const offset = -now.getTimezoneOffset() / 60;
-      const offsetStr = `UTC${offset >= 0 ? '+' : ''}${offset}`;
-      document.getElementById('local-time').textContent = `🕓 Local：${localY}-${localM}-${localD} ${localH}:${localMin} (${offsetStr})`;
+      const hh = `<span class='highlight'>${pad(now.getUTCHours())}</span>`;
+      const min = `<span class='highlight'>${pad(now.getUTCMinutes())}</span>`;
+      document.getElementById('utc-time').innerHTML = `⏱ UTC：${yyyy}-${mm}-${dd} ${hh}:${min}Z`;
     }
     updateTimes();
     setInterval(updateTimes, 60000);
   </script>
 </body>
 </html>
+
