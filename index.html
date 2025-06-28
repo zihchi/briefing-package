@@ -15,6 +15,7 @@
     .timebox span.highlight { color: red; font-weight: bold; }
     .img-column img { width: 140%; max-width: 840px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    pre { background: #fff; padding: 1em; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
   </style>
 </head>
 <body>
@@ -22,6 +23,7 @@
     <div id="utc-time">UTC：載入中...</div>
   </div>
   <h1>📦 簡報箱（Briefing Package）</h1>
+
   <div class="section">
     <h2>🗺️ 快速工具連結</h2>
     <div class="tool-grid">
@@ -34,17 +36,18 @@
       <a class="btn" href="https://turbli.com" target="_blank">Turbli 亂流預測</a>
     </div>
   </div>
+
   <div class="section windy-section">
     <h2>🌧️ Windy 即時雷達圖</h2>
-    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=radar&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C"></iframe>
+    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=radar"></iframe>
   </div>
   <div class="section windy-section">
     <h2>💨 Windy 地表風速圖</h2>
-    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C"></iframe>
+    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"></iframe>
   </div>
   <div class="section windy-section">
     <h2>✈️ Windy Clear Air Turbulence (FL390)</h2>
-    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=FL390&overlay=turbulence&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=kt&metricTemp=%C2%B0C"></iframe>
+    <iframe src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=FL390&overlay=turbulence"></iframe>
   </div>
   <div class="section">
     <h2>🌏 日本航空天氣圖（JMA）</h2>
@@ -54,6 +57,12 @@
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya83.png">
     </div>
   </div>
+
+  <div class="section">
+    <h2>📡 METAR / TAF</h2>
+    <pre id="metar-taf">載入中...</pre>
+  </div>
+
   <script>
     function pad(num){return String(num).padStart(2,'0');}
     function updateTimes(){
@@ -67,6 +76,28 @@
     }
     updateTimes();
     setInterval(updateTimes,60000);
+
+    async function fetchMetarTaf() {
+      try {
+        const stations = ["RCTP", "RCSS", "RCKH", "ROAH"];
+        let text = "";
+        for (let station of stations) {
+          const metarRes = await fetch(`https://aviationweather.gov/api/data/metar?ids=${station}&format=json`);
+          const tafRes = await fetch(`https://aviationweather.gov/api/data/taf?ids=${station}&format=json`);
+          const metar = await metarRes.json();
+          const taf = await tafRes.json();
+          text += `【${station}】\n`;
+          if (metar.features?.length) text += metar.features.map(f => f.properties.raw_text).join("\n") + "\n";
+          if (taf.features?.length) text += taf.features.map(f => f.properties.raw_text).join("\n") + "\n";
+          text += "\n";
+        }
+        document.getElementById("metar-taf").textContent = text.trim();
+      } catch {
+        document.getElementById("metar-taf").textContent = "❌ 無法載入 METAR/TAF";
+      }
+    }
+    fetchMetarTaf();
+    setInterval(fetchMetarTaf, 600000);
   </script>
 </body>
 </html>
