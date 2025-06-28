@@ -9,9 +9,14 @@
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
     .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(4, auto);
+      gap: 12px;
+    }
     .btn {
       display: inline-block;
-      margin-top: 1em;
       padding: 0.6em 1.2em;
       background-color: #3c79ff;
       color: white;
@@ -19,6 +24,7 @@
       text-decoration: none;
       font-weight: bold;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
     }
     .timebox {
       position: fixed;
@@ -39,13 +45,10 @@
       color: red;
       font-weight: bold;
     }
-    .img-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .img-row img {
-      width: 32%;
+    .img-column img {
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 10px;
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
@@ -60,17 +63,20 @@
 
   <div class="section">
     <h2>🗺️ 快速工具連結</h2>
-    <ul>
-      <li><a class="btn" href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank">Weathernews Flight Plan Editor</a></li>
-      <li><a class="btn" href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank">STARLUX ELB Fleet</a></li>
-      <li><a class="btn" href="https://sjx.lido.aero/lido/las/login.jsp?DESMON_RESULT_PAGE=https://sjx.lido.aero/briefing&DESMON_CODE=LAS_001&DESMON_LANG=null" target="_blank">LIDO Briefing</a></li>
-      <li><a class="btn" href="https://turbli.com" target="_blank">Turbli 亂流預測</a></li>
-    </ul>
+    <div class="tool-grid">
+      <a class="btn" href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank">Weathernews Flight Plan Editor</a>
+      <a class="btn" href="https://pilotstarspace.starlux-airlines.com/#/" target="_blank">SJX Pilot Space</a>
+      <a class="btn" href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank">STARLUX ELB Fleet</a>
+      <a class="btn" href="https://tono2.net" target="_blank">Tono2 航空氣象</a>
+      <a class="btn" href="https://sjx.lido.aero/lido/las/login.jsp?DESMON_RESULT_PAGE=https://sjx.lido.aero/briefing&DESMON_CODE=LAS_001&DESMON_LANG=null" target="_blank">LIDO Briefing</a>
+      <a class="btn" href="https://datis.rudicloud.com/" target="_blank">D-ATIS 查詢</a>
+      <a class="btn" href="https://turbli.com" target="_blank">Turbli 亂流預測</a>
+    </div>
   </div>
 
   <div class="section">
     <h2>🌏 日本航空天氣圖（JMA）</h2>
-    <div class="img-row">
+    <div class="img-column">
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png">
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya83.png">
@@ -113,4 +119,3 @@
   </script>
 </body>
 </html>
-
