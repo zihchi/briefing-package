@@ -39,6 +39,16 @@
       color: red;
       font-weight: bold;
     }
+    .img-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .img-row img {
+      width: 32%;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
@@ -60,11 +70,11 @@
 
   <div class="section">
     <h2>🌏 日本航空天氣圖（JMA）</h2>
-    <ul>
-      <li><a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_fbjp.html" target="_blank">FBJP 圖（日本惡天預報圖）</a></li>
-      <li><a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_fukuokafir.html" target="_blank">福岡 FIR 航空評論圖</a></li>
-      <li><a class="btn" href="https://www.data.jma.go.jp/airinfo/data/awfo_ajpn_cmnt_airspace.html" target="_blank">日本空域分析圖</a></li>
-    </ul>
+    <div class="img-row">
+      <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png">
+      <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
+      <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya83.png">
+    </div>
   </div>
 
   <div class="section">
