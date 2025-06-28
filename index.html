@@ -9,58 +9,18 @@
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
     .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
-    .tool-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      grid-template-rows: repeat(4, auto);
-      gap: 12px;
-    }
-    .btn {
-      display: inline-block;
-      padding: 0.6em 1.2em;
-      background-color: #3c79ff;
-      color: white;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .timebox {
-      position: fixed;
-      top: 1em;
-      right: 1em;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 0.6em 1em;
-      border-radius: 12px;
-      font-size: 1.4em;
-      font-weight: bold;
-      color: #444;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      text-align: right;
-      line-height: 1.6em;
-      z-index: 999;
-    }
-    .timebox span.highlight {
-      color: red;
-      font-weight: bold;
-    }
-    .img-column img {
-      width: 100%;
-      max-width: 600px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
+    .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .btn { display: inline-block; padding: 0.6em 1.2em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+    .timebox { position: fixed; top: 1em; right: 1em; background: rgba(255,255,255,0.8); padding: 0.6em 1em; border-radius: 12px; font-size: 1.4em; font-weight: bold; color: #444; box-shadow: 0 2px 6px rgba(0,0,0,0.1); z-index: 999; }
+    .timebox span.highlight { color: red; font-weight: bold; }
+    .img-column img { width: 120%; max-width: 720px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
   <div class="timebox">
     <div id="utc-time">UTC：載入中...</div>
   </div>
-
   <h1>📦 簡報箱（Briefing Package）</h1>
-
   <div class="section">
     <h2>🗺️ 快速工具連結</h2>
     <div class="tool-grid">
@@ -73,7 +33,6 @@
       <a class="btn" href="https://turbli.com" target="_blank">Turbli 亂流預測</a>
     </div>
   </div>
-
   <div class="section">
     <h2>🌏 日本航空天氣圖（JMA）</h2>
     <div class="img-column">
@@ -82,40 +41,20 @@
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya83.png">
     </div>
   </div>
-
-  <div class="section">
-    <h2>🛫 METAR / TAF 即時資訊</h2>
-    <ul>
-      <li><strong>RCTP（桃園）：</strong><br>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RCTP.TXT" width="600" height="80"></iframe>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RCTP.TXT" width="600" height="80"></iframe>
-      </li>
-      <li><strong>ROAH（那霸）：</strong><br>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/ROAH.TXT" width="600" height="80"></iframe>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/ROAH.TXT" width="600" height="80"></iframe>
-      </li>
-      <li><strong>RJAA（成田）：</strong><br>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/observations/metar/stations/RJAA.TXT" width="600" height="80"></iframe>
-        <iframe src="https://briefing-proxy.gfhf84k2mw.workers.dev/?url=https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/RJAA.TXT" width="600" height="80"></iframe>
-      </li>
-    </ul>
-  </div>
-
   <script>
-    function pad(num) {
-      return String(num).padStart(2, '0');
-    }
-    function updateTimes() {
-      const now = new Date();
-      const yyyy = now.getUTCFullYear();
-      const mm = pad(now.getUTCMonth() + 1);
-      const dd = pad(now.getUTCDate());
-      const hh = `<span class='highlight'>${pad(now.getUTCHours())}</span>`;
-      const min = `<span class='highlight'>${pad(now.getUTCMinutes())}</span>`;
-      document.getElementById('utc-time').innerHTML = `⏱ UTC：${yyyy}-${mm}-${dd} ${hh}:${min}Z`;
+    function pad(num){return String(num).padStart(2,'0');}
+    function updateTimes(){
+      const now=new Date();
+      const yyyy=now.getUTCFullYear();
+      const mm=pad(now.getUTCMonth()+1);
+      const dd=pad(now.getUTCDate());
+      const hh=`<span class='highlight'>${pad(now.getUTCHours())}</span>`;
+      const min=`<span class='highlight'>${pad(now.getUTCMinutes())}</span>`;
+      document.getElementById('utc-time').innerHTML=`⏱ UTC：${yyyy}-${mm}-${dd} ${hh}:${min}Z`;
     }
     updateTimes();
-    setInterval(updateTimes, 60000);
+    setInterval(updateTimes,60000);
   </script>
 </body>
 </html>
+
