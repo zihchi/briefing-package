@@ -78,10 +78,6 @@ let map = L.map('map').setView([23.5, 121], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let shapeLayers = [];
 
-map.on('click', function(e) {
-  alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
-});
-
 function normalizeDMS(coordStr) {
   let m = coordStr.match(/([NS])(\d{7,8})/i);
   if (m) return m[2] + m[1].toUpperCase();
@@ -94,24 +90,20 @@ function dmsToDecimal(dmsStr) {
   let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
   let m = dmsStr.match(regex);
   if (!m) return NaN;
-  let deg = parseInt(m[1]),
-      min = parseInt(m[2]),
-      sec = parseFloat(m[3]),
-      dir = m[4].toUpperCase();
-  let dec = deg + min / 60 + sec / 3600;
-  if (dir === 'S' || dir === 'W') dec *= -1;
+  let deg = parseInt(m[1]), min = parseInt(m[2]), sec = parseFloat(m[3]), dir = m[4];
+  let dec = deg + min/60 + sec/3600;
+  if (dir==='S'||dir==='W') dec*=-1;
   return dec;
 }
 
 function parseNotamBlock(block) {
-  console.log("原始輸入:", block);
   let altitude = "";
   let altMatch = block.match(/(SFC.*?FL\d+|\d+FT\s*AMSL|\d+M.*?MSL|\d+FT|\d+M)/i);
   if (altMatch) altitude = altMatch[1];
 
   let coords = [];
 
-  // FAN-SHAPED: 強化版可跨多行匹配
+  // FAN-SHAPED
   let fanMatch = block.match(/FAN-SHAPED AREA WI\s*(\d+)\s*KM RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG AND (\d+)DEG/i);
   if (fanMatch) {
     let radiusKm = parseInt(fanMatch[1]);
@@ -119,62 +111,54 @@ function parseNotamBlock(block) {
     let lon = dmsToDecimal(normalizeDMS(fanMatch[3]));
     let startAngle = parseInt(fanMatch[4]);
     let endAngle = parseInt(fanMatch[5]);
-    console.log("解析 FAN-SHAPED:", lat, lon, radiusKm, startAngle, endAngle);
-
-    let steps = 30;
-    let fanPoints = [[lat, lon]];
+    let steps = 30, fanPoints = [[lat, lon]];
     for (let i = 0; i <= steps; i++) {
-      let angle = (startAngle + (endAngle - startAngle) * (i / steps)) * Math.PI / 180;
-      let dLat = (radiusKm / 111.32) * Math.cos(angle);
-      let dLon = (radiusKm / (111.32 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+      let angle = (startAngle + (endAngle - startAngle) * (i / steps)) * Math.PI/180;
+      let dLat = (radiusKm/111.32) * Math.cos(angle);
+      let dLon = (radiusKm/(111.32*Math.cos(lat*Math.PI/180))) * Math.sin(angle);
       fanPoints.push([lat + dLat, lon + dLon]);
     }
     fanPoints.push([lat, lon]);
-    let p = L.polygon(fanPoints, {color: 'red', fillOpacity: 0.4})
-      .bindPopup(`扇形 ${radiusKm}KM<br>方位 ${startAngle}°-${endAngle}°<br>高度: ${altitude || "未知"}`)
+    let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
+      .bindPopup(`扇形 ${radiusKm}KM<br>方位 ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(p);
-    map.fitBounds(fanPoints, {padding: [50, 50], maxZoom: 14});
+    map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
     return;
   }
 
-  // RADIUS / CIRCLE
+  // CIRCLE / RADIUS
   let circleMatch = block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*KM/i);
   if (circleMatch) {
     let lat = dmsToDecimal(normalizeDMS(circleMatch[1]));
     let lon = dmsToDecimal(normalizeDMS(circleMatch[2]));
-    let radius = parseInt(circleMatch[3]) * 1000;
-    console.log("解析 CIRCLE:", lat, lon, radius);
-    let c = L.circle([lat, lon], {radius: radius, color: 'red', fillOpacity: 0.3})
-      .bindPopup(`圓形半徑: ${radius/1000} KM<br>高度: ${altitude || "未知"}`)
+    let radius = parseInt(circleMatch[3])*1000;
+    let c = L.circle([lat, lon], {radius: radius, color:'red', fillOpacity:0.3})
+      .bindPopup(`圓形半徑: ${radius/1000} KM<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(c);
     map.setView([lat, lon], 12);
     return;
   }
 
-  // 多邊形座標 (NE)
+  // 多邊形格式
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     let lat = dmsToDecimal(normalizeDMS(m[1]));
     let lon = dmsToDecimal(normalizeDMS(m[2]));
-    console.log("解析座標 (NE):", m[1], m[2], "->", lat, lon);
     if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
   }
-
-  // 多邊形座標 (.N/.E)
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
-    let lat = dmsToDecimal(m[1]);
-    let lon = dmsToDecimal(m[2]);
-    console.log("解析座標 (.N/.E):", m[1], m[2], "->", lat, lon);
-    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
+    let lat = dmsToDecimal(m[1]), lon = dmsToDecimal(m[2]);
+    if (!isNaN(lat)&&!isNaN(lon)) coords.push([lat, lon]);
   }
-
-  // 多邊形座標 (.N.E)
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g)) {
-    let lat = dmsToDecimal(m[1]);
-    let lon = dmsToDecimal(m[2]);
-    console.log("解析座標 (.N.E):", m[1], m[2], "->", lat, lon);
-    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
+    let lat = dmsToDecimal(m[1]), lon = dmsToDecimal(m[2]);
+    if (!isNaN(lat)&&!isNaN(lon)) coords.push([lat, lon]);
+  }
+  // GEO 格式
+  for (let m of block.matchAll(/(\d{6,8}[NS])\s+(\d{7,9}[EW])/g)) {
+    let lat = dmsToDecimal(m[1]), lon = dmsToDecimal(m[2]);
+    if (!isNaN(lat)&&!isNaN(lon)) coords.push([lat, lon]);
   }
 
   if (coords.length === 0) {
@@ -183,51 +167,44 @@ function parseNotamBlock(block) {
   }
 
   if (coords.length === 1) {
-    let c = L.circle(coords[0], {radius: 500, color: 'red'})
-      .bindPopup(`高度限制: ${altitude || "未知"}`).addTo(map).openPopup();
+    let c = L.circle(coords[0], {radius:500, color:'red'})
+      .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
     shapeLayers.push(c);
     map.setView(coords[0], 15);
   } else {
-    let p = L.polygon(coords, {color: 'red', fillOpacity: 0.5})
-      .bindPopup(`多邊形 高度: ${altitude || "未知"}`)
-      .addTo(map).openPopup();
+    let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
+      .bindPopup(`多邊形 高度: ${altitude||"未知"}`).addTo(map).openPopup();
     shapeLayers.push(p);
-
-    let latRange = Math.max(...coords.map(c => c[0])) - Math.min(...coords.map(c => c[0]));
-    let lonRange = Math.max(...coords.map(c => c[1])) - Math.min(...coords.map(c => c[1]));
-    if (latRange < 0.001 && lonRange < 0.001) {
-      map.setView(coords[0], 15);
-    } else {
-      map.fitBounds(coords, {padding: [50, 50], maxZoom: 15});
-    }
+    let latRange = Math.max(...coords.map(c=>c[0])) - Math.min(...coords.map(c=>c[0]));
+    let lonRange = Math.max(...coords.map(c=>c[1])) - Math.min(...coords.map(c=>c[1]));
+    if (latRange<0.001 && lonRange<0.001) map.setView(coords[0],15);
+    else map.fitBounds(coords, {padding:[50,50], maxZoom:15});
   }
 }
 
 function addNotam() {
   let block = document.getElementById('notamInput').value;
-  if (block.trim() === "") {
-    alert("請先輸入 NOTAM 內容");
-    return;
-  }
+  if (block.trim()==="") { alert("請先輸入 NOTAM 內容"); return; }
   parseNotamBlock(block);
-  document.getElementById('notamInput').value = "";
+  document.getElementById('notamInput').value="";
 }
 
 function clearMap() {
-  shapeLayers.forEach(layer => map.removeLayer(layer));
+  shapeLayers.forEach(layer=>map.removeLayer(layer));
   shapeLayers = [];
-  document.getElementById('notamInput').value = "";
+  document.getElementById('notamInput').value="";
 }
 
-function pad(num) { return String(num).padStart(2, '0'); }
+function pad(num){ return String(num).padStart(2,'0'); }
 function updateTimes(){
-  const now = new Date();
+  const now=new Date();
   document.getElementById('utc-time').innerHTML =
     `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
 }
 updateTimes();
-setInterval(updateTimes, 60000);
+setInterval(updateTimes,60000);
 </script>
+
 
 
 
