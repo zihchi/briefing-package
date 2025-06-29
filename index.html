@@ -119,6 +119,11 @@ function parseNotamBlock(block) {
   }
 
   let coords = [];
+  // NEW: 捕捉 ICAO 簡寫格式 NDDMMSS EDDDMMSS
+  for (let m of block.matchAll(/([NS]\d{6})\s*([EW]\d{7})/gi)) {
+    coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
+  }
+  // 備用舊格式
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
@@ -132,6 +137,7 @@ function parseNotamBlock(block) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
 
+  // CIRCLE
   let circleMatch = block.match(/DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WI AN AREA DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WITHIN (\d+)NM.*?(CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
@@ -157,6 +163,7 @@ function parseNotamBlock(block) {
     return;
   }
 
+  // FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*KM.*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radiusKM = parseInt(fanMatch[1]);
@@ -169,7 +176,7 @@ function parseNotamBlock(block) {
       let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
       let dLat = (radiusKM/111.32)*Math.cos(angle);
       let dLon = (radiusKM/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
-      fanPoints.push([lat+dLat, lon+ dLon]);
+      fanPoints.push([lat+dLat, lon+dLon]);
     }
     fanPoints.push([lat, lon]);
     let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
