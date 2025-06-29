@@ -97,7 +97,6 @@ function dmsToDecimal(dmsStr) {
 }
 
 function parseNotamBlock(block) {
-  // 🔍 全面高度解析
   let altitude = "";
   let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*(FL\d+)/i);
   if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
@@ -141,7 +140,7 @@ function parseNotamBlock(block) {
   let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?(?:CENTERED|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radius = parseInt(fanMatch[1]);
-    if (fanMatch[2]==="NM") radius = radius * 1.852;
+    if (fanMatch[2]==="NM") radius *= 1.852;
     let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
     let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
     let startAngle = parseInt(fanMatch[5]);
@@ -162,8 +161,9 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // ✅ CIRCLE
+  // ✅ CIRCLE 全面解析 KM / NM 任意順序
   let circleMatch = block.match(/(?:WITHIN|RADIUS).*?(\d+)\s*(KM|NM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/(\d+)\s*(KM|NM).*?RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
                   || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*(KM|NM)/i);
   if (circleMatch) {
     let radius, lat, lon, unit;
@@ -173,12 +173,12 @@ function parseNotamBlock(block) {
       lat = dmsToDecimal(normalizeDMS(circleMatch[3]));
       lon = dmsToDecimal(normalizeDMS(circleMatch[4]));
     } else {
-      lat = dmsToDecimal(normalizeDMS(circleMatch[1]));
-      lon = dmsToDecimal(normalizeDMS(circleMatch[2]));
-      radius = parseInt(circleMatch[3]);
-      unit = circleMatch[4];
+      lat = dmsToDecimal(normalizeDMS(circleMatch[3] || circleMatch[1]));
+      lon = dmsToDecimal(normalizeDMS(circleMatch[4] || circleMatch[2]));
+      radius = parseInt(circleMatch[1] || circleMatch[3]);
+      unit = circleMatch[2] || circleMatch[4];
     }
-    if (unit === "NM") radius = radius * 1.852;
+    if (unit.toUpperCase() === "NM") radius *= 1.852;
     let c = L.circle([lat, lon], {radius: radius*1000, color:'red', fillOpacity:0.3})
       .bindPopup(`圓形 ${radius.toFixed(2)}KM<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
     shapeLayers.push(c);
@@ -186,7 +186,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // ✅ 多邊形
+  // ✅ 多邊形 ICAO / GEO / JOINED
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
