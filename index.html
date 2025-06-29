@@ -94,48 +94,58 @@
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    let map = L.map('map').setView([23.5, 121], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+<script>
+  let map = L.map('map').setView([23.5, 121], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    map.on('click', function(e) {
-      alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
-    });
+  map.on('click', function(e) {
+    alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+  });
 
-    function dmsToDecimal(dmsStr) {
-      let regex = /(\\d{2,3})(\\d{2})(\\d{2}\\.\\d*)([NSEW])/;
-      let m = dmsStr.match(regex);
-      if (!m) return NaN;
-      let deg=parseInt(m[1]), min=parseInt(m[2]), sec=parseFloat(m[3]), dir=m[4];
-      let dec=deg+min/60+sec/3600;
-      if (dir=='S'||dir=='W') dec*=-1;
-      return dec;
+  function dmsToDecimal(dmsStr) {
+    let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
+    let m = dmsStr.match(regex);
+    if (!m) return NaN;
+    let deg=parseInt(m[1]), min=parseInt(m[2]), sec=parseFloat(m[3]), dir=m[4];
+    let dec=deg+min/60+sec/3600;
+    if (dir=='S'||dir=='W') dec*=-1;
+    return dec;
+  }
+
+  function drawMap() {
+    let text = document.getElementById('notamInput').value;
+    let altitude = "";
+    let altMatch = text.match(/(SFC.*?FL\d+|\d+FT\s*AMSL)/i);
+    if (altMatch) altitude = altMatch[1];
+    let regex = /(\d{6,7}(?:\.\d+)?[NS])\s*(\d{7,8}(?:\.\d+)?[EW])/g;
+    let matches = [...text.matchAll(regex)];
+    let coords = [];
+    for (let m of matches) {
+      let lat = dmsToDecimal(m[1]);
+      let lon = dmsToDecimal(m[2]);
+      if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
     }
-
-    function drawMap() {
-      let text = document.getElementById('notamInput').value;
-      let altitude = ""; let altMatch = text.match(/(SFC.*?FL\\d+|\\d+FT\\s*AMSL)/i);
-      if (altMatch) altitude = altMatch[1];
-      let regex=/((\\d{6,7}\\.\\d*)[NS])\\s*(\\d{7,8}\\.\\d*[EW])/g;
-      let fallback=/((\\d{6,7}[NS]))\\s*(\\d{7,8}[EW])/g;
-      let matches=[...text.matchAll(regex)]; if(matches.length==0) matches=[...text.matchAll(fallback)];
-      let coords=[];
-      for(let m of matches){
-        let lat=dmsToDecimal(m[1]); let lon=dmsToDecimal(m[3]);
-        if(!isNaN(lat)&&!isNaN(lon)) coords.push([lat,lon]);
-      }
-      map.eachLayer((layer)=>{if(layer instanceof L.Marker||layer instanceof L.Circle||layer instanceof L.Polygon) map.removeLayer(layer);});
-      if (coords.length == 1) { L.circle(coords[0], {radius:500, color:'red'}).bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup(); map.setView(coords[0],15); }
-      else if (coords.length > 1) { L.polygon(coords, {color:'red'}).bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup(); map.fitBounds(coords); }
-      else alert("未找到座標，請檢查格式");
+    map.eachLayer((layer)=>{if(layer instanceof L.Marker||layer instanceof L.Circle||layer instanceof L.Polygon) map.removeLayer(layer);});
+    if (coords.length == 1) {
+      L.circle(coords[0], {radius:500, color:'red'})
+        .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
+      map.setView(coords[0],15);
+    } else if (coords.length > 1) {
+      L.polygon(coords, {color:'red'})
+        .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
+      map.fitBounds(coords);
+    } else {
+      alert("未找到座標，請檢查格式");
     }
+  }
 
-    function pad(num){return String(num).padStart(2,'0');}
-    function updateTimes(){
-      const now=new Date();
-      document.getElementById('utc-time').innerHTML=`⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
-    }
-    updateTimes(); setInterval(updateTimes,60000);
-  </script>
+  function pad(num){return String(num).padStart(2,'0');}
+  function updateTimes(){
+    const now=new Date();
+    document.getElementById('utc-time').innerHTML=`⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
+  }
+  updateTimes(); setInterval(updateTimes,60000);
+</script>
+
 </body>
 </html>
