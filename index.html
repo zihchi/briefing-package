@@ -25,9 +25,7 @@
   </style>
 </head>
 <body>
-  <div class="timebox">
-    <div id="utc-time">UTC：載入中...</div>
-  </div>
+  <div class="timebox"><div id="utc-time">UTC：載入中...</div></div>
   <h1>📦 簡報箱（Briefing Package）</h1>
 
   <div class="section">
@@ -85,66 +83,87 @@
     </div>
   </div>
 
-  <!-- 新增 NOTAM 區塊 -->
   <div class="section">
     <h2>📝 NOTAM 座標快速地圖</h2>
     <textarea id="notamInput" placeholder="直接貼整段 NOTAM"></textarea><br>
-    <button onclick="drawMap()">產生地圖</button>
+    <button onclick="drawMap()">產生全部地圖</button>
+    <button onclick="addNotam()">新增 NOTAM</button>
+    <button onclick="clearMap()">清除地圖</button>
     <div id="map"></div>
   </div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-  let map = L.map('map').setView([23.5, 121], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+let map = L.map('map').setView([23.5, 121], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+let shapeLayers = [];
 
-  map.on('click', function(e) {
-    alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
-  });
+map.on('click', function(e) {
+  alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+});
 
-  function dmsToDecimal(dmsStr) {
-    let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
-    let m = dmsStr.match(regex);
-    if (!m) return NaN;
-    let deg=parseInt(m[1]), min=parseInt(m[2]), sec=parseFloat(m[3]), dir=m[4];
-    let dec=deg+min/60+sec/3600;
-    if (dir=='S'||dir=='W') dec*=-1;
-    return dec;
+function dmsToDecimal(dmsStr) {
+  let regex = /(\\d{2,3})(\\d{2})(\\d{2}(?:\\.\\d+)?)([NSEW])/;
+  let m = dmsStr.match(regex);
+  if (!m) return NaN;
+  let deg=parseInt(m[1]), min=parseInt(m[2]), sec=parseFloat(m[3]), dir=m[4];
+  let dec=deg+min/60+sec/3600;
+  if (dir=='S'||dir=='W') dec*=-1;
+  return dec;
+}
+
+function clearMap() {
+  shapeLayers.forEach(layer => map.removeLayer(layer));
+  shapeLayers = [];
+  document.getElementById('notamInput').value = "";
+}
+
+function parseNotamBlock(block) {
+  let altitude = "";
+  let altMatch = block.match(/(SFC.*?FL\\d+|\\d+FT\\s*AMSL)/i);
+  if (altMatch) altitude = altMatch[1];
+  let regex = /(\\d{6,7}(?:\\.\\d+)?[NS])\\s*(\\d{7,8}(?:\\.\\d+)?[EW])/g;
+  let matches = [...block.matchAll(regex)];
+  let coords = [];
+  for (let m of matches) {
+    let lat = dmsToDecimal(m[1]);
+    let lon = dmsToDecimal(m[2]);
+    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
   }
 
-  function drawMap() {
-    let text = document.getElementById('notamInput').value;
-    let altitude = "";
-    let altMatch = text.match(/(SFC.*?FL\d+|\d+FT\s*AMSL)/i);
-    if (altMatch) altitude = altMatch[1];
-    let regex = /(\d{6,7}(?:\.\d+)?[NS])\s*(\d{7,8}(?:\.\d+)?[EW])/g;
-    let matches = [...text.matchAll(regex)];
-    let coords = [];
-    for (let m of matches) {
-      let lat = dmsToDecimal(m[1]);
-      let lon = dmsToDecimal(m[2]);
-      if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
-    }
-    map.eachLayer((layer)=>{if(layer instanceof L.Marker||layer instanceof L.Circle||layer instanceof L.Polygon) map.removeLayer(layer);});
-    if (coords.length == 1) {
-      L.circle(coords[0], {radius:500, color:'red'})
-        .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
-      map.setView(coords[0],15);
-    } else if (coords.length > 1) {
-      L.polygon(coords, {color:'red'})
-        .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
-      map.fitBounds(coords);
-    } else {
-      alert("未找到座標，請檢查格式");
-    }
+  if (coords.length == 1) {
+    let c = L.circle(coords[0], {radius:500, color:'red'})
+      .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
+    shapeLayers.push(c);
+    map.setView(coords[0],15);
+  } else if (coords.length > 1) {
+    let p = L.polygon(coords, {color:'red'})
+      .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
+    shapeLayers.push(p);
+    map.fitBounds(coords);
   }
+}
 
-  function pad(num){return String(num).padStart(2,'0');}
-  function updateTimes(){
-    const now=new Date();
-    document.getElementById('utc-time').innerHTML=`⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
-  }
-  updateTimes(); setInterval(updateTimes,60000);
+function drawMap() {
+  clearMap();
+  let text = document.getElementById('notamInput').value;
+  let blocks = text.split(/-{2,}|\\n\\s*\\n/);
+  blocks.forEach(block => parseNotamBlock(block));
+}
+
+function addNotam() {
+  let block = document.getElementById('notamInput').value;
+  if(block.trim()==""){ alert("請先輸入 NOTAM 內容"); return; }
+  parseNotamBlock(block);
+  document.getElementById('notamInput').value = "";
+}
+
+function pad(num){return String(num).padStart(2,'0');}
+function updateTimes(){
+  const now=new Date();
+  document.getElementById('utc-time').innerHTML=`⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
+}
+updateTimes(); setInterval(updateTimes,60000);
 </script>
 
 </body>
