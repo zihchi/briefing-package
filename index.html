@@ -79,9 +79,9 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let shapeLayers = [];
 
 function normalizeDMS(coordStr) {
-  let m = coordStr.match(/([NS])([0-9]+)/i);
+  let m = coordStr.match(/([NS])(\d+)/i);
   if (m) return m[2] + m[1].toUpperCase();
-  m = coordStr.match(/([EW])([0-9]+)/i);
+  m = coordStr.match(/([EW])(\d+)/i);
   if (m) return m[2] + m[1].toUpperCase();
   return coordStr;
 }
@@ -99,8 +99,8 @@ function dmsToDecimal(dmsStr) {
 function parseNotamBlock(block) {
   block = block.replace(/\n/g, " ");
   let altitude = "";
-  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9 ]+)/i);
-  if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
+  let flRange = block.match(/F\)\s*(SFC|FL\d+).*?G\)\s*([A-Z0-9 \/]+)/i);
+  if (flRange) altitude = `${flRange[1]} - ${flRange[2].trim()}`;
   else {
     let fromSfcTo = block.match(/FROM SFC TO\s*([A-Z0-9 \/-]+)/i);
     if (fromSfcTo) altitude = `SFC - ${fromSfcTo[1].trim()}`;
@@ -108,8 +108,12 @@ function parseNotamBlock(block) {
       let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
       if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
       else {
-        let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-        if (height) altitude = `TOP: ${height[1]}`;
+        let baseTop = block.match(/BOTTOM\s*(FL\d+).*?TOP\s*(FL\d+)/i);
+        if (baseTop) altitude = `${baseTop[1]} - ${baseTop[2]}`;
+        else {
+          let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
+          if (height) altitude = `TOP: ${height[1]}`;
+        }
       }
     }
   }
@@ -129,7 +133,8 @@ function parseNotamBlock(block) {
   }
 
   let circleMatch = block.match(/DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
-                  || block.match(/WITHIN (\d+)NM.*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/WI AN AREA DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
+                  || block.match(/WITHIN (\d+)NM.*?(CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
                   || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)NM/i);
   if (circleMatch) {
     let radiusNM, lat, lon;
@@ -164,7 +169,7 @@ function parseNotamBlock(block) {
       let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
       let dLat = (radiusKM/111.32)*Math.cos(angle);
       let dLon = (radiusKM/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
-      fanPoints.push([lat+dLat, lon+dLon]);
+      fanPoints.push([lat+dLat, lon+ dLon]);
     }
     fanPoints.push([lat, lon]);
     let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
@@ -184,7 +189,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效座標、RADIUS 或 FAN 格式，請檢查 NOTAM");
+  alert("未找到有效 FAN / RADIUS / 座標格式，請檢查 NOTAM");
 }
 
 function addNotam() {
