@@ -136,7 +136,7 @@ function parseNotamBlock(block) {
 
   let coords = [];
 
-  // ✅ FAN-SHAPED
+  // ✅ FAN-SHAPED NM顯示
   let fanMatch = block.match(/FAN.*?(\d+)\s*(NM|KM).*?(?:CENTERED|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radiusNM = parseInt(fanMatch[1]);
@@ -161,10 +161,10 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // ✅ CIRCLE NM 主要顯示
-  let circleMatch = block.match(/(?:WITHIN|RADIUS).*?(\d+)\s*(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/(\d+)\s*(NM|KM).*?RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*(NM|KM)/i);
+  // ✅ NM 專用最強 CIRCLE
+  let circleMatch = block.match(/(?:DEFINED|WITHIN|RADIUS).*?(\d+)\s*(NM|KM).*?(?:RADIUS|CENTERED AT|OF)?\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/(\d+)\s*(NM|KM).*?RADIUS.*?(?:OF|CENTERED AT)?\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)\s*(NM|KM)/i);
   if (circleMatch) {
     let radiusNM, lat, lon, unit;
     if (circleMatch.length === 5) {
@@ -185,7 +185,7 @@ function parseNotamBlock(block) {
       .bindPopup(`圓形 ${radiusNM.toFixed(1)} NM (${radiusKM.toFixed(1)} KM)<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(c);
-    map.setView([lat, lon], 9);
+    map.setView([lat, lon], 8);
     return;
   }
 
@@ -251,6 +251,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes,60000);
 </script>
+
 
 
 
