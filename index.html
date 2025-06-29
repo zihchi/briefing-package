@@ -103,7 +103,7 @@ map.on('click', function(e) {
 });
 
 function dmsToDecimal(dmsStr) {
-  let regex = /(\\d{2,3})(\\d{2})(\\d{2}(?:\\.\\d+)?)([NSEW])/;
+  let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
   let m = dmsStr.match(regex);
   if (!m) return NaN;
   let deg=parseInt(m[1]), min=parseInt(m[2]), sec=parseFloat(m[3]), dir=m[4];
@@ -120,9 +120,9 @@ function clearMap() {
 
 function parseNotamBlock(block) {
   let altitude = "";
-  let altMatch = block.match(/(SFC.*?FL\\d+|\\d+FT\\s*AMSL)/i);
+  let altMatch = block.match(/(SFC.*?FL\d+|\d+FT\s*AMSL)/i);
   if (altMatch) altitude = altMatch[1];
-  let regex = /(\\d{6,7}(?:\\.\\d+)?[NS])\\s*(\\d{7,8}(?:\\.\\d+)?[EW])/g;
+  let regex = /(\d{6,7}(?:\.\d+)?[NS])\s*(\d{7,8}(?:\.\d+)?[EW])/g;
   let matches = [...block.matchAll(regex)];
   let coords = [];
   for (let m of matches) {
@@ -147,7 +147,7 @@ function parseNotamBlock(block) {
 function drawMap() {
   clearMap();
   let text = document.getElementById('notamInput').value;
-  let blocks = text.split(/-{2,}|\\n\\s*\\n/);
+  let blocks = text.split(/-{2,}|\n\s*\n/);
   blocks.forEach(block => parseNotamBlock(block));
 }
 
@@ -165,6 +165,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 </body>
 </html>
