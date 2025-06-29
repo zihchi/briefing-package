@@ -111,20 +111,21 @@ function parseNotamBlock(block) {
 
   let coords = [];
 
-  // FAN-SHAPED AREA WI 40KM RADIUS OF 421826N 1422633E BTN QTE 180DEG AND 270DEG
-  let fanMatch = block.match(/FAN-SHAPED AREA WI (\d+)\s*KM RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]).*?QTE (\d+)DEG AND (\d+)DEG/i);
+  // FAN-SHAPED: 強化版可跨多行匹配
+  let fanMatch = block.match(/FAN-SHAPED AREA WI\s*(\d+)\s*KM RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG AND (\d+)DEG/i);
   if (fanMatch) {
     let radiusKm = parseInt(fanMatch[1]);
     let lat = dmsToDecimal(normalizeDMS(fanMatch[2]));
     let lon = dmsToDecimal(normalizeDMS(fanMatch[3]));
     let startAngle = parseInt(fanMatch[4]);
     let endAngle = parseInt(fanMatch[5]);
+    console.log("解析 FAN-SHAPED:", lat, lon, radiusKm, startAngle, endAngle);
 
     let steps = 30;
     let fanPoints = [[lat, lon]];
     for (let i = 0; i <= steps; i++) {
       let angle = (startAngle + (endAngle - startAngle) * (i / steps)) * Math.PI / 180;
-      let dLat = (radiusKm / 111.32) * Math.cos(angle); // 1 deg lat ~ 111.32 km
+      let dLat = (radiusKm / 111.32) * Math.cos(angle);
       let dLon = (radiusKm / (111.32 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
       fanPoints.push([lat + dLat, lon + dLon]);
     }
@@ -137,12 +138,13 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // CIRCLE / RADIUS OF ... KM
-  let circleMatch = block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]).*?(\d+)\s*KM/i);
+  // RADIUS / CIRCLE
+  let circleMatch = block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*KM/i);
   if (circleMatch) {
     let lat = dmsToDecimal(normalizeDMS(circleMatch[1]));
     let lon = dmsToDecimal(normalizeDMS(circleMatch[2]));
     let radius = parseInt(circleMatch[3]) * 1000;
+    console.log("解析 CIRCLE:", lat, lon, radius);
     let c = L.circle([lat, lon], {radius: radius, color: 'red', fillOpacity: 0.3})
       .bindPopup(`圓形半徑: ${radius/1000} KM<br>高度: ${altitude || "未知"}`)
       .addTo(map).openPopup();
@@ -151,19 +153,23 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // 多邊形 (N3807185 E14054455) 等
+  // 多邊形座標 (NE)
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     let lat = dmsToDecimal(normalizeDMS(m[1]));
     let lon = dmsToDecimal(normalizeDMS(m[2]));
     console.log("解析座標 (NE):", m[1], m[2], "->", lat, lon);
     if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
   }
+
+  // 多邊形座標 (.N/.E)
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
     let lat = dmsToDecimal(m[1]);
     let lon = dmsToDecimal(m[2]);
     console.log("解析座標 (.N/.E):", m[1], m[2], "->", lat, lon);
     if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
   }
+
+  // 多邊形座標 (.N.E)
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g)) {
     let lat = dmsToDecimal(m[1]);
     let lon = dmsToDecimal(m[2]);
@@ -186,14 +192,13 @@ function parseNotamBlock(block) {
       .bindPopup(`多邊形 高度: ${altitude || "未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(p);
-    if (coords.length >= 2) {
-      let latRange = Math.max(...coords.map(c => c[0])) - Math.min(...coords.map(c => c[0]));
-      let lonRange = Math.max(...coords.map(c => c[1])) - Math.min(...coords.map(c => c[1]));
-      if (latRange < 0.001 && lonRange < 0.001) {
-        map.setView(coords[0], 15);
-      } else {
-        map.fitBounds(coords, {padding: [50, 50], maxZoom: 15});
-      }
+
+    let latRange = Math.max(...coords.map(c => c[0])) - Math.min(...coords.map(c => c[0]));
+    let lonRange = Math.max(...coords.map(c => c[1])) - Math.min(...coords.map(c => c[1]));
+    if (latRange < 0.001 && lonRange < 0.001) {
+      map.setView(coords[0], 15);
+    } else {
+      map.fitBounds(coords, {padding: [50, 50], maxZoom: 15});
     }
   }
 }
@@ -214,7 +219,6 @@ function clearMap() {
   document.getElementById('notamInput').value = "";
 }
 
-// UTC 顯示
 function pad(num) { return String(num).padStart(2, '0'); }
 function updateTimes(){
   const now = new Date();
@@ -224,6 +228,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes, 60000);
 </script>
+
 
 
 </body>
