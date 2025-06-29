@@ -79,6 +79,16 @@ map.on('click', function(e) {
   alert(`座標：${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
 });
 
+// ⭐ 新增：把 N3807185 轉成 N38 07 18.5 的格式
+function normalizeDMS(coordStr) {
+  let match = coordStr.match(/([NS])(\d{2})(\d{2})(\d{2,3})/i) ||
+              coordStr.match(/([EW])(\d{3})(\d{2})(\d{2,3})/i);
+  if (!match) return coordStr;
+  let [_, dir, deg, min, sec] = match;
+  return `${deg}${min}${sec}${dir.toUpperCase()}`;
+}
+
+// ⭐ 修正 DMS 解譯
 function dmsToDecimal(dmsStr) {
   let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
   let m = dmsStr.match(regex);
@@ -89,54 +99,67 @@ function dmsToDecimal(dmsStr) {
   return dec;
 }
 
+// ✅ 解析 NOTAM 區塊（含修正座標格式）
+function parseNotamBlock(block) {
+  let altitude = "";
+  let altMatch = block.match(/(SFC.*?FL\d+|\d+FT\s*AMSL|\d+M.*?MSL)/i);
+  if (altMatch) altitude = altMatch[1];
+
+  let rawMatches = [...block.matchAll(/(N\d{7,8})\s*(E\d{8})/gi)];
+  let coords = [];
+  for (let m of rawMatches) {
+    let latDMS = normalizeDMS(m[1]);
+    let lonDMS = normalizeDMS(m[2]);
+    let lat = dmsToDecimal(latDMS);
+    let lon = dmsToDecimal(lonDMS);
+    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
+  }
+
+  if (coords.length === 0) {
+    alert("未找到有效座標，請檢查格式");
+    return;
+  }
+
+  if (coords.length === 1) {
+    let c = L.circle(coords[0], {radius: 500, color: 'red'})
+      .bindPopup(`高度限制: ${altitude || "未知"}`).addTo(map).openPopup();
+    shapeLayers.push(c);
+    map.setView(coords[0], 15);
+  } else {
+    let p = L.polygon(coords, {color: 'red'})
+      .bindPopup(`高度限制: ${altitude || "未知"}`).addTo(map).openPopup();
+    shapeLayers.push(p);
+    map.fitBounds(coords);
+  }
+}
+
+// ✨ 產生與清除地圖
+function addNotam() {
+  let block = document.getElementById('notamInput').value;
+  if (block.trim() == "") {
+    alert("請先輸入 NOTAM 內容");
+    return;
+  }
+  parseNotamBlock(block);
+  document.getElementById('notamInput').value = "";
+}
+
 function clearMap() {
   shapeLayers.forEach(layer => map.removeLayer(layer));
   shapeLayers = [];
   document.getElementById('notamInput').value = "";
 }
 
-function parseNotamBlock(block) {
-  let altitude = "";
-  let altMatch = block.match(/(SFC.*?FL\d+|\d+FT\s*AMSL)/i);
-  if (altMatch) altitude = altMatch[1];
-  let regex = /(\d{6,7}(?:\.\d+)?[NS])\s*(\d{7,8}(?:\.\d+)?[EW])/g;
-  let matches = [...block.matchAll(regex)];
-  let coords = [];
-  for (let m of matches) {
-    let lat = dmsToDecimal(m[1]);
-    let lon = dmsToDecimal(m[2]);
-    if (!isNaN(lat) && !isNaN(lon)) coords.push([lat, lon]);
-  }
-
-  if (coords.length == 1) {
-    let c = L.circle(coords[0], {radius:500, color:'red'})
-      .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
-    shapeLayers.push(c);
-    map.setView(coords[0],15);
-  } else if (coords.length > 1) {
-    let p = L.polygon(coords, {color:'red'})
-      .bindPopup(`高度限制: ${altitude||"未知"}`).addTo(map).openPopup();
-    shapeLayers.push(p);
-    map.fitBounds(coords);
-  }
-}
-
-
-function addNotam() {
-  let block = document.getElementById('notamInput').value;
-  if(block.trim()==""){ alert("請先輸入 NOTAM 內容"); return; }
-  parseNotamBlock(block);
-  document.getElementById('notamInput').value = "";
-}
-
-function pad(num){return String(num).padStart(2,'0');}
+// 時間顯示
+function pad(num){ return String(num).padStart(2, '0'); }
 function updateTimes(){
-  const now=new Date();
-  document.getElementById('utc-time').innerHTML=`⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
+  const now = new Date();
+  document.getElementById('utc-time').innerHTML =
+    `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
 }
-updateTimes(); setInterval(updateTimes,60000);
+updateTimes();
+setInterval(updateTimes, 60000);
 </script>
-
 
 </body>
 </html>
