@@ -99,7 +99,7 @@ function dmsToDecimal(dmsStr) {
 function parseNotamBlock(block) {
   block = block.replace(/\n/g, " ");
   let altitude = "";
-  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*(FL\d+)/i);
+  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9 ]+)/i);
   if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
   else {
     let fromSfcTo = block.match(/FROM SFC TO\s*([A-Z0-9 \/-]+)/i);
@@ -152,6 +152,29 @@ function parseNotamBlock(block) {
     return;
   }
 
+  let fanMatch = block.match(/FAN.*?(\d+)\s*KM.*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+  if (fanMatch) {
+    let radiusKM = parseInt(fanMatch[1]);
+    let lat = dmsToDecimal(normalizeDMS(fanMatch[2]));
+    let lon = dmsToDecimal(normalizeDMS(fanMatch[3]));
+    let startAngle = parseInt(fanMatch[4]);
+    let endAngle = parseInt(fanMatch[5]);
+    let steps = 30, fanPoints = [[lat, lon]];
+    for (let i = 0; i <= steps; i++) {
+      let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
+      let dLat = (radiusKM/111.32)*Math.cos(angle);
+      let dLon = (radiusKM/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
+      fanPoints.push([lat+dLat, lon+dLon]);
+    }
+    fanPoints.push([lat, lon]);
+    let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
+      .bindPopup(`扇形 ${radiusKM}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
+      .addTo(map).openPopup();
+    shapeLayers.push(p);
+    map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
+    return;
+  }
+
   if (coords.length > 0) {
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
@@ -161,7 +184,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效座標或 RADIUS 格式，請檢查 NOTAM");
+  alert("未找到有效座標、RADIUS 或 FAN 格式，請檢查 NOTAM");
 }
 
 function addNotam() {
@@ -186,6 +209,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes,60000);
 </script>
+
 
 
 
