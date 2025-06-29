@@ -137,10 +137,10 @@ function parseNotamBlock(block) {
   let coords = [];
 
   // ✅ FAN-SHAPED
-  let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?(?:CENTERED|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+  let fanMatch = block.match(/FAN.*?(\d+)\s*(NM|KM).*?(?:CENTERED|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
-    let radius = parseInt(fanMatch[1]);
-    if (fanMatch[2]==="NM") radius *= 1.852;
+    let radiusNM = parseInt(fanMatch[1]);
+    if (fanMatch[2]==="KM") radiusNM /= 1.852;
     let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
     let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
     let startAngle = parseInt(fanMatch[5]);
@@ -148,45 +148,48 @@ function parseNotamBlock(block) {
     let steps = 30, fanPoints = [[lat, lon]];
     for (let i=0; i<=steps; i++) {
       let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
-      let dLat = (radius/111.32)*Math.cos(angle);
-      let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
+      let dLat = (radiusNM*1.852/111.32)*Math.cos(angle);
+      let dLon = (radiusNM*1.852/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
       fanPoints.push([lat+dLat, lon+dLon]);
     }
     fanPoints.push([lat, lon]);
     let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形 ${radius.toFixed(2)}KM<br>方位 ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
+      .bindPopup(`扇形 ${radiusNM.toFixed(1)} NM (${(radiusNM*1.852).toFixed(1)} KM)<br>方位 ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(p);
     map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
     return;
   }
 
-  // ✅ CIRCLE 全面解析 KM / NM 任意順序
-  let circleMatch = block.match(/(?:WITHIN|RADIUS).*?(\d+)\s*(KM|NM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/(\d+)\s*(KM|NM).*?RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*(KM|NM)/i);
+  // ✅ CIRCLE NM 主要顯示
+  let circleMatch = block.match(/(?:WITHIN|RADIUS).*?(\d+)\s*(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/(\d+)\s*(NM|KM).*?RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])[\s\S]*?(\d+)\s*(NM|KM)/i);
   if (circleMatch) {
-    let radius, lat, lon, unit;
+    let radiusNM, lat, lon, unit;
     if (circleMatch.length === 5) {
-      radius = parseInt(circleMatch[1]);
+      radiusNM = parseInt(circleMatch[1]);
       unit = circleMatch[2];
       lat = dmsToDecimal(normalizeDMS(circleMatch[3]));
       lon = dmsToDecimal(normalizeDMS(circleMatch[4]));
     } else {
       lat = dmsToDecimal(normalizeDMS(circleMatch[3] || circleMatch[1]));
       lon = dmsToDecimal(normalizeDMS(circleMatch[4] || circleMatch[2]));
-      radius = parseInt(circleMatch[1] || circleMatch[3]);
+      radiusNM = parseInt(circleMatch[1] || circleMatch[3]);
       unit = circleMatch[2] || circleMatch[4];
     }
-    if (unit.toUpperCase() === "NM") radius *= 1.852;
-    let c = L.circle([lat, lon], {radius: radius*1000, color:'red', fillOpacity:0.3})
-      .bindPopup(`圓形 ${radius.toFixed(2)}KM<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
+    if (unit.toUpperCase() === "KM") radiusNM /= 1.852;
+    let radiusMeters = radiusNM * 1852;
+    let radiusKM = radiusNM * 1.852;
+    let c = L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
+      .bindPopup(`圓形 ${radiusNM.toFixed(1)} NM (${radiusKM.toFixed(1)} KM)<br>高度: ${altitude||"未知"}`)
+      .addTo(map).openPopup();
     shapeLayers.push(c);
-    map.setView([lat, lon], 10);
+    map.setView([lat, lon], 9);
     return;
   }
 
-  // ✅ 多邊形 ICAO / GEO / JOINED
+  // ✅ 多邊形
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
@@ -248,6 +251,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes,60000);
 </script>
+
 
 
 
