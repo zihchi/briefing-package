@@ -97,27 +97,19 @@ function dmsToDecimal(dmsStr) {
 }
 
 function parseNotamBlock(block) {
-  let originalText = block;
-  block = block.replace(/[\n\r]+/g, " ").replace(/[,:;()\u3000]+/g, " ").replace(/\s+/g, " ").trim();
+  block = block.replace(/[\n\r]+/g, " ")
+               .replace(/[,:;()\u3000]+/g, " ")
+               .replace(/\s+/g, " ").trim();
   block = block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g, "$1 ");
   block = block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g, "$1 ");
   block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
   block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
+  // 改良高度解析，保持 F) G) 原字串
   let altitude = "";
-  let fgAlt = block.match(/F\)\s*([A-Z0-9\/ .-]+)[\s\S]*?G\)\s*([A-Z0-9\/ .-]+)/i);
-  if (fgAlt) {
-    altitude = `${fgAlt[1]} - ${fgAlt[2]}`;
-  } else {
-    let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
-    if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
-    else {
-      let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-      if (height) altitude = `TOP: ${height[1]}`;
-    }
-  }
-
-
+  let fgRaw = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
+  if (fgRaw) altitude = `F) ${fgRaw[1]} G) ${fgRaw[2]}`;
+  else altitude = "未知";
 
   let coords = [];
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
@@ -131,6 +123,7 @@ function parseNotamBlock(block) {
   }
   if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) coords.push(coords[0]);
 
+  // FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radius = parseInt(fanMatch[1]);
@@ -148,12 +141,12 @@ function parseNotamBlock(block) {
     }
     fanPoints.push([lat, lon]);
     L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形 ${radius.toFixed(2)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
-      .addTo(map).openPopup();
+      .bindPopup(`扇形<br>${altitude}`).addTo(map).openPopup();
     map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
     return;
   }
 
+  // ARC
   let arcMatch = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/i)
               || block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}[NS])\s*(\d{7,9}[EW])/i);
   if (arcMatch) {
@@ -163,10 +156,11 @@ function parseNotamBlock(block) {
     let lon = dmsToDecimal(normalizeDMS(arcMatch[4]));
     let radiusMeters = radius * (unit==="NM"?1852:1000);
     L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`ARC ${radius}${unit}<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
+      .bindPopup(`ARC ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
     return;
   }
 
+  // PSN ARC
   let geoArc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
   if (geoArc) {
     let lat = dmsToDecimal(normalizeDMS(geoArc[1]));
@@ -175,10 +169,11 @@ function parseNotamBlock(block) {
     let unit = geoArc[4];
     let radiusMeters = radius * (unit==="NM"?1852:1000);
     L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`PSN ARC ${radius}${unit}<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
+      .bindPopup(`PSN ARC ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
     return;
   }
 
+  // 圓形
   let circleMatch = block.match(/DEFINED AS (\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WITHIN (\d+)(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
                   || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i);
@@ -197,13 +192,14 @@ function parseNotamBlock(block) {
     }
     let radiusMeters = radius * (unit==="NM"?1852:1000);
     L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`圓形 ${radius}${unit}<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
+      .bindPopup(`圓形 ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
     return;
   }
 
+  // 多邊形
   if (coords.length > 0) {
     L.polygon(coords, {color:'red', fillOpacity:0.5})
-      .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`).addTo(map).openPopup();
+      .bindPopup(`多邊形<br>${altitude}`).addTo(map).openPopup();
     map.fitBounds(coords, {padding:[50,50], maxZoom:15});
     return;
   }
