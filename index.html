@@ -21,6 +21,17 @@
     .button-row { margin-bottom: 8px; }
     textarea { width: 800px; height: 100px; }
     button { margin-top: 5px; padding: 0.8em 1.6em;font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    /* === 新增：控制 popup 內容區塊，並顯示垂直捲動條 === */
+    .leaflet-popup-content pre {
+      white-space: pre-wrap;      /* 自動換行 */
+      word-break: break-all;      /* 長字串也可斷行 */
+      max-height: 180px;          /* 內容最大高度 */
+      overflow-y: auto;           /* 超出時顯示垂直捲動條 */
+      margin: 0;
+      padding: 0;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
@@ -63,144 +74,161 @@
   </div>
 
   <div class="section">
-  <h2>📝 NOTAM 座標快速地圖</h2>
-  <div class="button-row">
-    <button onclick="addNotam()">產出地圖</button>
-    <button onclick="clearMap()">清除全部</button>
+    <h2>📝 NOTAM 座標快速地圖</h2>
+    <div class="button-row">
+      <button onclick="addNotam()">產出地圖</button>
+      <button onclick="clearMap()">清除全部</button>
+    </div>
+    <textarea id="notamInput" placeholder="直接貼整段 NOTAM"></textarea>
+    <div id="map"></div>
   </div>
-  <textarea id="notamInput" placeholder="直接貼整段 NOTAM"></textarea>
-  <div id="map"></div>
-</div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-let map = L.map('map').setView([23.5, 121], 7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-let shapeLayers = [];
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    let map = L.map('map').setView([23.5, 121], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let shapeLayers = [];
 
-function normalizeDMS(c){
-  let m=c.match(/([NS])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
-  m=c.match(/([EW])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
-  return c;
-}
-function dmsToDecimal(d){
-  let m=d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
-  if(!m)return NaN;
-  let dec=+m[1]+(+m[2]/60)+(+m[3]/3600);
-  return (m[4]==='S'||m[4]==='W')?-dec:dec;
-}
-
-function parseNotamBlock(block){
-  block=block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
-  block=block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
-  block=block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
-  block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
-  block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
-
-  let coords=[];
-  for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
-    coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
-  for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
-    coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
-  for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
-    coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
-  if(/TO POINT OF ORIGIN/i.test(block)&&coords.length>0)coords.push(coords[0]);
-
-  let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
-  if(fan){
-    let r=+fan[1];if(fan[2]==="NM")r*=1.852;
-    let lat=dmsToDecimal(normalizeDMS(fan[3])), lon=dmsToDecimal(normalizeDMS(fan[4]));
-    let sa=+fan[5], ea=+fan[6], pts=[[lat,lon]], steps=30;
-    for(let i=0;i<=steps;i++){
-      let a=(sa+(ea-sa)*(i/steps))*Math.PI/180;
-      let dLat=(r/111.32)*Math.cos(a), dLon=(r/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(a);
-      pts.push([lat+dLat, lon+dLon]);
+    function normalizeDMS(c){
+      let m=c.match(/([NS])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
+      m=c.match(/([EW])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
+      return c;
     }
-    pts.push([lat,lon]);
-    let p=L.polygon(pts,{color:'red',fillOpacity:0.4})
-      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
-    shapeLayers.push(p); map.fitBounds(pts,{padding:[50,50],maxZoom:14}); return;
-  }
+    function dmsToDecimal(d){
+      let m=d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
+      if(!m)return NaN;
+      let dec=+m[1]+(+m[2]/60)+(+m[3]/3600);
+      return (m[4]==='S'||m[4]==='W')?-dec:dec;
+    }
 
-  let arc=block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
-  if(arc){
-    let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
-    let rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
-    shapeLayers.push(c); map.setView([lat,lon],8); return;
-  }
+    function parseNotamBlock(block){
+      // 每次都帶入統一的 popup 參數
+      const popupOptions = {
+        maxWidth: 350,
+        maxHeight: 200,
+        keepInView: true,
+        autoPan: true
+      };
 
-  let parc=block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
-  if(parc){
-    let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
-    let r=+parc[3], u=parc[4], rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
-    shapeLayers.push(c); map.setView([lat,lon],10); return;
-  }
+      block = block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
+      block = block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
+      block = block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
+      block = block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
+      block = block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
-  let circ=block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
-          ||block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
-  if(circ){
-    let r,u,lat,lon;
-    if(circ.length===5){r=+circ[1],u=circ[2],lat=dmsToDecimal(normalizeDMS(circ[3])),lon=dmsToDecimal(normalizeDMS(circ[4]));}
-    else{lat=dmsToDecimal(normalizeDMS(circ[1])),lon=dmsToDecimal(normalizeDMS(circ[2])),r=+circ[3],u=circ[4];}
-    let rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
-    shapeLayers.push(c); map.setView([lat,lon],8); return;
-  }
+      let coords = [];
+      for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
+        coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
+      for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
+        coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
+      for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
+        coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
+      if(/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0]);
 
-  if(coords.length>0){
-    let p=L.polygon(coords,{color:'red',fillOpacity:0.5})
-      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
-    shapeLayers.push(p); map.fitBounds(coords,{padding:[50,50],maxZoom:15}); return;
-  }
+      // FAN 型
+      let fan = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+      if(fan){
+        let r = +fan[1]; if(fan[2]==="NM") r*=1.852;
+        let lat = dmsToDecimal(normalizeDMS(fan[3])), lon = dmsToDecimal(normalizeDMS(fan[4]));
+        let sa = +fan[5], ea = +fan[6], pts = [[lat,lon]], steps = 30;
+        for(let i=0;i<=steps;i++){
+          let a=(sa+(ea-sa)*(i/steps))*Math.PI/180;
+          let dLat=(r/111.32)*Math.cos(a), dLon=(r/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(a);
+          pts.push([lat+dLat, lon+dLon]);
+        }
+        pts.push([lat,lon]);
+        L.polygon(pts, {color:'red',fillOpacity:0.4})
+          .bindPopup(`<pre>${block}</pre>`, popupOptions)
+          .addTo(map).openPopup();
+        shapeLayers.push(map);
+        map.fitBounds(pts,{padding:[50,50],maxZoom:14});
+        return;
+      }
 
-  alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
-}
+      // ARC 型
+      let arc = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
+      if(arc){
+        let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
+        let rm=r*(u==="NM"?1852:1000);
+        L.circle([lat,lon], {radius:rm,color:'red',fillOpacity:0.3})
+          .bindPopup(`<pre>${block}</pre>`, popupOptions)
+          .addTo(map).openPopup();
+        shapeLayers.push(map);
+        map.setView([lat,lon],8);
+        return;
+      }
 
-function addNotam(){
-  let b=document.getElementById('notamInput').value;
-  if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
-  parseNotamBlock(b); document.getElementById('notamInput').value="";
-}
+      // PSN ARC 型
+      let parc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
+      if(parc){
+        let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
+        let r=+parc[3], u=parc[4], rm=r*(u==="NM"?1852:1000);
+        L.circle([lat,lon], {radius:rm,color:'red',fillOpacity:0.3})
+          .bindPopup(`<pre>${block}</pre>`, popupOptions)
+          .addTo(map).openPopup();
+        shapeLayers.push(map);
+        map.setView([lat,lon],10);
+        return;
+      }
 
-function clearMap(){
-  shapeLayers.forEach(l=>map.removeLayer(l));
-  shapeLayers=[]; document.getElementById('notamInput').value="";
-}
+      // RADIUS 型
+      let circ = block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
+              || block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
+      if(circ){
+        let r,u,lat,lon;
+        if(circ.length===5){
+          r=+circ[1]; u=circ[2];
+          lat=dmsToDecimal(normalizeDMS(circ[3]));
+          lon=dmsToDecimal(normalizeDMS(circ[4]));
+        } else {
+          lat=dmsToDecimal(normalizeDMS(circ[1]));
+          lon=dmsToDecimal(normalizeDMS(circ[2]));
+          r=+circ[3]; u=circ[4];
+        }
+        let rm=r*(u==="NM"?1852:1000);
+        L.circle([lat,lon], {radius:rm,color:'red',fillOpacity:0.3})
+          .bindPopup(`<pre>${block}</pre>`, popupOptions)
+          .addTo(map).openPopup();
+        shapeLayers.push(map);
+        map.setView([lat,lon],8);
+        return;
+      }
 
-function pad(n){return String(n).padStart(2,'0');}
-function updateTimes(){
-  const now=new Date();
-  document.getElementById('utc-time').innerHTML=
-    `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
-}
-updateTimes(); setInterval(updateTimes,60000);
-</script>
+      // 多邊形坐標
+      if(coords.length>0){
+        L.polygon(coords, {color:'red',fillOpacity:0.5})
+          .bindPopup(`<pre>${block}</pre>`, popupOptions)
+          .addTo(map).openPopup();
+        shapeLayers.push(map);
+        map.fitBounds(coords,{padding:[50,50],maxZoom:15});
+        return;
+      }
 
+      alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
+    }
 
+    function addNotam(){
+      let b = document.getElementById('notamInput').value;
+      if(b.trim()===""){ alert("請先輸入 NOTAM 內容"); return; }
+      parseNotamBlock(b);
+      document.getElementById('notamInput').value = "";
+    }
 
+    function clearMap(){
+      shapeLayers.forEach(l => map.removeLayer(l));
+      shapeLayers = [];
+      document.getElementById('notamInput').value = "";
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function updateTimes(){
+      const now = new Date();
+      document.getElementById('utc-time').innerHTML =
+        `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} ` +
+        `<span class='highlight'>${pad(now.getUTCHours())}</span>:` +
+        `<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
+    }
+    updateTimes(); setInterval(updateTimes,60000);
+  </script>
 </body>
 </html>
