@@ -97,11 +97,17 @@ function parseNotamBlock(block){
   block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
   block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
-  // ✈️ 抓 F) G) 最穩
+  // 🛫 改良版抓 F) G)
   let fgFull = "未知";
-  let fMatch = block.match(/F\)\s*([^\s]+)/i);
-  let gMatch = block.match(/G\)\s*([^\s]+)/i);
-  if (fMatch && gMatch) fgFull = `F) ${fMatch[1]} G) ${gMatch[1]}`;
+  let fgCombo = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
+  if (fgCombo) fgFull = `F) ${fgCombo[1]} G) ${fgCombo[2]}`;
+  else {
+    let f = block.match(/F\)\s*([^\s]+)/i);
+    let g = block.match(/G\)\s*([^\s]+)/i);
+    if(f && g) fgFull = `F) ${f[1]} G) ${g[1]}`;
+    else if(f) fgFull = `F) ${f[1]}`;
+    else if(g) fgFull = `G) ${g[1]}`;
+  }
 
   let coords=[];
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
@@ -112,7 +118,6 @@ function parseNotamBlock(block){
     coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
   if(/TO POINT OF ORIGIN/i.test(block)&&coords.length>0)coords.push(coords[0]);
 
-  // FAN
   let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if(fan){
     let r=+fan[1];if(fan[2]==="NM")r*=1.852;
@@ -128,7 +133,6 @@ function parseNotamBlock(block){
     shapeLayers.push(p); map.fitBounds(pts,{padding:[50,50],maxZoom:14}); return;
   }
 
-  // ARC
   let arc=block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
   if(arc){
     let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
@@ -137,7 +141,6 @@ function parseNotamBlock(block){
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
-  // PSN ARC
   let parc=block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
   if(parc){
     let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
@@ -146,7 +149,6 @@ function parseNotamBlock(block){
     shapeLayers.push(c); map.setView([lat,lon],10); return;
   }
 
-  // 圓形
   let circ=block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
           ||block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
   if(circ){
@@ -158,7 +160,6 @@ function parseNotamBlock(block){
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
-  // 多邊形
   if(coords.length>0){
     let p=L.polygon(coords,{color:'red',fillOpacity:0.5}).bindPopup(`多邊形<br>${fgFull}`).addTo(map).openPopup();
     shapeLayers.push(p); map.fitBounds(coords,{padding:[50,50],maxZoom:15}); return;
@@ -172,12 +173,10 @@ function addNotam(){
   if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
   parseNotamBlock(b); document.getElementById('notamInput').value="";
 }
-
 function clearMap(){
   shapeLayers.forEach(l=>map.removeLayer(l));
   shapeLayers=[]; document.getElementById('notamInput').value="";
 }
-
 function pad(n){return String(n).padStart(2,'0');}
 function updateTimes(){
   const now=new Date();
@@ -186,6 +185,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 
