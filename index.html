@@ -97,9 +97,10 @@ function parseNotamBlock(block){
   block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
   block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
+  // ✅ 嚴謹 F) G) 抓法
   let fgFull="未知";
-  let fgMatch = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
-  if(fgMatch) fgFull = `F) ${fgMatch[1]} G) ${fgMatch[2]}`;
+  let fgMatch=block.match(/F\)\s*([^\s]+).*?G\)\s*([^\s]+)/i);
+  if(fgMatch) fgFull=`F) ${fgMatch[1]} G) ${fgMatch[2]}`;
 
   let coords=[];
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
@@ -179,6 +180,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 
