@@ -97,18 +97,6 @@ function parseNotamBlock(block){
   block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
   block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
-  // 🛫 改良版抓 F) G)
-  let fgFull = "未知";
-  let fgCombo = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
-  if (fgCombo) fgFull = `F) ${fgCombo[1]} G) ${fgCombo[2]}`;
-  else {
-    let f = block.match(/F\)\s*([^\s]+)/i);
-    let g = block.match(/G\)\s*([^\s]+)/i);
-    if(f && g) fgFull = `F) ${f[1]} G) ${g[1]}`;
-    else if(f) fgFull = `F) ${f[1]}`;
-    else if(g) fgFull = `G) ${g[1]}`;
-  }
-
   let coords=[];
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
     coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
@@ -129,7 +117,8 @@ function parseNotamBlock(block){
       pts.push([lat+dLat, lon+dLon]);
     }
     pts.push([lat,lon]);
-    let p=L.polygon(pts,{color:'red',fillOpacity:0.4}).bindPopup(`扇形<br>${fgFull}`).addTo(map).openPopup();
+    let p=L.polygon(pts,{color:'red',fillOpacity:0.4})
+      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
     shapeLayers.push(p); map.fitBounds(pts,{padding:[50,50],maxZoom:14}); return;
   }
 
@@ -137,7 +126,8 @@ function parseNotamBlock(block){
   if(arc){
     let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
     let rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`ARC ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
+      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
@@ -145,7 +135,8 @@ function parseNotamBlock(block){
   if(parc){
     let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
     let r=+parc[3], u=parc[4], rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`PSN ARC ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
+      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
     shapeLayers.push(c); map.setView([lat,lon],10); return;
   }
 
@@ -156,12 +147,14 @@ function parseNotamBlock(block){
     if(circ.length===5){r=+circ[1],u=circ[2],lat=dmsToDecimal(normalizeDMS(circ[3])),lon=dmsToDecimal(normalizeDMS(circ[4]));}
     else{lat=dmsToDecimal(normalizeDMS(circ[1])),lon=dmsToDecimal(normalizeDMS(circ[2])),r=+circ[3],u=circ[4];}
     let rm=r*(u==="NM"?1852:1000);
-    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`圓形 ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3})
+      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
   if(coords.length>0){
-    let p=L.polygon(coords,{color:'red',fillOpacity:0.5}).bindPopup(`多邊形<br>${fgFull}`).addTo(map).openPopup();
+    let p=L.polygon(coords,{color:'red',fillOpacity:0.5})
+      .bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
     shapeLayers.push(p); map.fitBounds(coords,{padding:[50,50],maxZoom:15}); return;
   }
 
@@ -173,10 +166,12 @@ function addNotam(){
   if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
   parseNotamBlock(b); document.getElementById('notamInput').value="";
 }
+
 function clearMap(){
   shapeLayers.forEach(l=>map.removeLayer(l));
   shapeLayers=[]; document.getElementById('notamInput').value="";
 }
+
 function pad(n){return String(n).padStart(2,'0');}
 function updateTimes(){
   const now=new Date();
@@ -185,6 +180,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 
