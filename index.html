@@ -97,13 +97,17 @@ function dmsToDecimal(dmsStr) {
 }
 
 function parseNotamBlock(block) {
+  // 🛠 修復不可見空格、NBSP、全形空格
   block = block.replace(/\n/g, " ");
-  block = block.replace(/[\u00A0\u3000]/g, ' '); // 全形空格、NBSP
-  block = block.replace(/\s+/g, ' ').trim();    // 多空白合一
+  block = block.replace(/[\u00A0\u3000]/g, ' '); // NBSP + 全形空格
+  block = block.replace(/\s+/g, ' ').trim();    // 多空白合併
+  block = block.replace(/([NS]\d{7,8})(?=\d{8,9}[EW])/g, '$1 '); // 強制插空格
+  block = block.replace(/([EW]\d{8,9})(?=\d{7,8}[NS])/g, '$1 ');
 
+  // ✈️ 高度解析
   let altitude = "";
-  let flRange = block.match(/F\)\s*(SFC|FL\d+).*?G\)\s*([A-Z0-9 \/]+)/i);
-  if (flRange) altitude = `${flRange[1]} - ${flRange[2].trim()}`;
+  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9 ]+)/i);
+  if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
   else {
     let fromSfcTo = block.match(/FROM SFC TO\s*([A-Z0-9 \/-]+)/i);
     if (fromSfcTo) altitude = `SFC - ${fromSfcTo[1].trim()}`;
@@ -111,13 +115,19 @@ function parseNotamBlock(block) {
       let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
       if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
       else {
-        let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-        if (height) altitude = `TOP: ${height[1]}`;
+        let topOnly = block.match(/TOP\s*([A-Z0-9\/ ]+)/i);
+        if (topOnly) altitude = `TOP: ${topOnly[1].trim()}`;
+        else {
+          let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
+          if (height) altitude = `TOP: ${height[1]}`;
+        }
       }
     }
   }
 
   let coords = [];
+
+  // 🟢 多邊形
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
@@ -131,9 +141,9 @@ function parseNotamBlock(block) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
 
+  // 🟠 RADIUS 圓形
   let circleMatch = block.match(/DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
-                  || block.match(/WI AN AREA DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
-                  || block.match(/WITHIN (\d+)NM.*?(CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/WITHIN (\d+)NM.*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
                   || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)NM/i);
   if (circleMatch) {
     let radiusNM, lat, lon;
@@ -147,42 +157,41 @@ function parseNotamBlock(block) {
       radiusNM = parseInt(circleMatch[3]);
     }
     let radiusMeters = radiusNM * 1852;
-    let radiusKM = radiusNM * 1.852;
     let c = L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`圓形 ${radiusNM.toFixed(1)} NM (${radiusKM.toFixed(1)} KM)<br>高度: ${altitude||"未知"}`)
+      .bindPopup(`圓形 ${radiusNM} NM<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(c);
     map.setView([lat, lon], 8);
     return;
   }
 
-  let fanMatch = block.match(/FAN.*?(\d+)\s*KM.*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+  // 🔵 FAN-SHAPED
+  let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
-    let radiusKM = parseInt(fanMatch[1]);
-    let lat = dmsToDecimal(normalizeDMS(fanMatch[2]));
-    let lon = dmsToDecimal(normalizeDMS(fanMatch[3]));
-    let startAngle = parseInt(fanMatch[4]);
-    let endAngle = parseInt(fanMatch[5]);
+    let radius = parseInt(fanMatch[1]);
+    if (fanMatch[2]==="NM") radius = radius * 1.852;
+    let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
+    let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
+    let startAngle = parseInt(fanMatch[5]);
+    let endAngle = parseInt(fanMatch[6]);
     let steps = 30, fanPoints = [[lat, lon]];
-    for (let i = 0; i <= steps; i++) {
+    for (let i=0; i<=steps; i++) {
       let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
-      let dLat = (radiusKM/111.32)*Math.cos(angle);
-      let dLon = (radiusKM/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
+      let dLat = (radius/111.32)*Math.cos(angle);
+      let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
       fanPoints.push([lat+dLat, lon+dLon]);
     }
     fanPoints.push([lat, lon]);
     let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形 ${radiusKM}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
+      .bindPopup(`扇形 ${radius.toFixed(1)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(p);
     map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
     return;
   }
 
+  // 🔺多邊形畫圖
   if (coords.length > 0) {
-    let first = coords[0];
-    let last = coords[coords.length - 1];
-    if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first); // 自動閉合
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
@@ -191,7 +200,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效 FAN / RADIUS / 座標格式，請檢查 NOTAM");
+  alert("未找到有效座標、RADIUS 或 FAN 格式，請檢查 NOTAM");
 }
 
 function addNotam() {
