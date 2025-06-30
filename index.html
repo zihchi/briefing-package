@@ -104,11 +104,11 @@ function parseNotamBlock(block) {
   block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
   block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
-  // 自適應抓取高度
   let altitude = "";
-  let fgAlt = block.match(/F\)\s*([A-Z0-9 \/.-]+)\s*G\)\s*([A-Z0-9 \/.-]+)/i);
-  if (fgAlt) altitude = `${fgAlt[1]} - ${fgAlt[2]}`;
-  else {
+  let fgAlt = block.match(/F\)\s*([A-Z0-9\/ .-]+)[\s\S]*?G\)\s*([A-Z0-9\/ .-]+)/i);
+  if (fgAlt) {
+    altitude = `${fgAlt[1]} - ${fgAlt[2]}`;
+  } else {
     let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
     if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
     else {
@@ -116,6 +116,8 @@ function parseNotamBlock(block) {
       if (height) altitude = `TOP: ${height[1]}`;
     }
   }
+
+
 
   let coords = [];
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
