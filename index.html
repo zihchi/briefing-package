@@ -97,7 +97,6 @@ function parseNotamBlock(block){
   block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
   block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
-  // 🔥最穩定抓法，抓 F) 一直到下一個 D) E) 或結尾
   let fgFull="未知";
   let fgMatch=block.match(/(F\)[\s\S]*?(?=\s[A-Z]\)|$))/i);
   if(fgMatch) fgFull=fgMatch[1].trim();
@@ -180,6 +179,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 
