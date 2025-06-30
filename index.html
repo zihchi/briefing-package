@@ -98,33 +98,23 @@ function dmsToDecimal(dmsStr) {
 
 function parseNotamBlock(block) {
   let originalText = block;
-  block = block.replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
-  block = block.replace(/[,:;()\u3000]+/g, " ");
-  block = block
-    .replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g, "$1 ")
-    .replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g, "$1 ")
-    .replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ")
-    .replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
+  block = block.replace(/[\n\r]+/g, " ").replace(/[,:;()\u3000]+/g, " ").replace(/\s+/g, " ").trim();
+  block = block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g, "$1 ");
+  block = block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g, "$1 ");
+  block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
+  block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
+  // 自適應抓取高度
   let altitude = "";
-  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9\/\- ]+)/i);
-  if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
+  let fgAlt = block.match(/F\)\s*([A-Z0-9 \/.-]+)\s*G\)\s*([A-Z0-9 \/.-]+)/i);
+  if (fgAlt) altitude = `${fgAlt[1]} - ${fgAlt[2]}`;
   else {
-    let fgAlt = block.match(/F\)\s*([A-Z0-9 \/.-]+)\s*G\)\s*([A-Z0-9 \/.-]+)/i);
-    if (fgAlt) altitude = `${fgAlt[1]} - ${fgAlt[2]}`;
+    let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
+    if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
     else {
-      let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
-      if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
-      else {
-        let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-        if (height) altitude = `TOP: ${height[1]}`;
-      }
+      let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
+      if (height) altitude = `TOP: ${height[1]}`;
     }
-  }
-  if (!altitude) {
-    let fOnly = block.match(/F\)\s*([A-Z0-9 \/-]+)/i);
-    let gOnly = block.match(/G\)\s*([A-Z0-9 \/-]+)/i);
-    if (fOnly && gOnly) altitude = `${fOnly[1]} - ${gOnly[1]}`;
   }
 
   let coords = [];
@@ -138,6 +128,29 @@ function parseNotamBlock(block) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
   if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) coords.push(coords[0]);
+
+  let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+  if (fanMatch) {
+    let radius = parseInt(fanMatch[1]);
+    if (fanMatch[2]==="NM") radius *= 1.852;
+    let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
+    let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
+    let startAngle = parseInt(fanMatch[5]);
+    let endAngle = parseInt(fanMatch[6]);
+    let steps = 30, fanPoints = [[lat, lon]];
+    for (let i=0; i<=steps; i++) {
+      let angle = (startAngle+(endAngle-startAngle)*(i/steps)) * Math.PI/180;
+      let dLat = (radius/111.32)*Math.cos(angle);
+      let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
+      fanPoints.push([lat+dLat, lon+dLon]);
+    }
+    fanPoints.push([lat, lon]);
+    L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
+      .bindPopup(`扇形 ${radius.toFixed(2)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
+      .addTo(map).openPopup();
+    map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
+    return;
+  }
 
   let arcMatch = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/i)
               || block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}[NS])\s*(\d{7,9}[EW])/i);
@@ -193,7 +206,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效座標、ARC、PSN ARC、RADIUS 格式，請檢查 NOTAM");
+  alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
 }
 
 function addNotam() {
@@ -218,6 +231,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes,60000);
 </script>
+
 
 
 
