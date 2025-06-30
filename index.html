@@ -97,12 +97,8 @@ function dmsToDecimal(dmsStr) {
 }
 
 function parseNotamBlock(block) {
-  block = block.replace(/\n+/g, " ")
-               .replace(/[:,;()]/g, " ")
-               .replace(/\s+/g, " ")
-               .trim();
-  block = block.replace(/([NS]\d{6,8})(?=[EW])/g, "$1 ");
-  block = block.replace(/([EW]\d{7,9})(?=[NS])/g, "$1 ");
+  block = block.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+  block = block.replace(/[:,;]+/g, ""); // 去掉多餘符號
   block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
   block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
@@ -144,6 +140,23 @@ function parseNotamBlock(block) {
     coords.push(coords[0]);
   }
 
+  // 新增 ARC 圓形偵測
+  let arcMatch = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/i);
+  if (arcMatch) {
+    let radius = parseInt(arcMatch[1]);
+    let unit = arcMatch[2];
+    let lat = dmsToDecimal(arcMatch[3]);
+    let lon = dmsToDecimal(arcMatch[4]);
+    let radiusMeters = radius * (unit==="NM"?1852:1000);
+    let c = L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
+      .bindPopup(`ARC RADIUS ${radius}${unit}<br>高度: ${altitude||"未知"}`)
+      .addTo(map).openPopup();
+    shapeLayers.push(c);
+    map.setView([lat, lon], 8);
+    return;
+  }
+
+  // PSN ARC
   let geoArc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),\s*RADIUS\s*(\d+)(NM|KM)/i);
   if (geoArc) {
     let lat = dmsToDecimal(normalizeDMS(geoArc[1]));
@@ -184,30 +197,6 @@ function parseNotamBlock(block) {
     return;
   }
 
-  let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
-  if (fanMatch) {
-    let radius = parseInt(fanMatch[1]);
-    if (fanMatch[2]==="NM") radius *= 1.852;
-    let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
-    let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
-    let startAngle = parseInt(fanMatch[5]);
-    let endAngle = parseInt(fanMatch[6]);
-    let steps = 30, fanPoints = [[lat, lon]];
-    for (let i=0; i<=steps; i++) {
-      let angle = (startAngle+(endAngle-startAngle)*(i/steps)) * Math.PI/180;
-      let dLat = (radius/111.32)*Math.cos(angle);
-      let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
-      fanPoints.push([lat+dLat, lon+dLon]);
-    }
-    fanPoints.push([lat, lon]);
-    let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形 ${radius.toFixed(2)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
-      .addTo(map).openPopup();
-    shapeLayers.push(p);
-    map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
-    return;
-  }
-
   if (coords.length > 0) {
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
@@ -217,8 +206,9 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效座標、RADIUS、FAN 格式，請檢查 NOTAM");
+  alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
 }
+
 
 
 function addNotam() {
