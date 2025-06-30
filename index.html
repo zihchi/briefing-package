@@ -24,18 +24,14 @@
 
     /* === 新增：控制 popup 內容區塊，並顯示垂直捲動條 === */
     .leaflet-popup-content pre {
-      width: 80% !important;
-      max-width: none !important;
-      white-space: pre-wrap;      /* 自動換行 */
-      word-break: break-all;      /* 長字串也可斷行 */
-      max-height: 180px;          /* 內容最大高度 */
-      overflow-y: auto;           /* 超出時顯示垂直捲動條 */
-      margin: 0;
-      padding: 0;
-      font-size: 0.9em;
-      /* 新增這兩行，啟用 iOS 慣性滑動並強制顯示可滑動 */
-      overflow-y: scroll;
-      -webkit-overflow-scrolling: touch;
+     white-space: pre-wrap;            /* 自動換行 */
+     word-break: break-all;            /* 長字串也可斷行 */
+     max-height: 60vh;                 /* 內容最大高度為視窗高度 60% */
+     overflow-y: scroll;               /* 強制顯示垂直捲軸，允許滑動 */
+     -webkit-overflow-scrolling: touch;/* iOS 慣性滑動 */
+     margin: 0;
+     padding: 0.2em;                   /* 微調內距以免貼邊 */
+     font-size: 0.9em;
       
     }
   </style>
