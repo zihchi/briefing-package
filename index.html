@@ -97,16 +97,11 @@ function dmsToDecimal(dmsStr) {
 }
 
 function parseNotamBlock(block) {
-  // 🛠 修復不可見空格、NBSP、全形空格
-  block = block.replace(/\n/g, " ");
-  block = block.replace(/[\u00A0\u3000]/g, ' '); // NBSP + 全形空格
-  block = block.replace(/\s+/g, ' ').trim();    // 多空白合併
-  block = block.replace(/([NS]\d{7,8})(?=\d{8,9}[EW])/g, '$1 '); // 強制插空格
-  block = block.replace(/([EW]\d{8,9})(?=\d{7,8}[NS])/g, '$1 ');
+  block = block.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
 
-  // ✈️ 高度解析
+  // ⛰️ 高度處理
   let altitude = "";
-  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9 ]+)/i);
+  let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9\/ ]+)/i);
   if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
   else {
     let fromSfcTo = block.match(/FROM SFC TO\s*([A-Z0-9 \/-]+)/i);
@@ -115,11 +110,12 @@ function parseNotamBlock(block) {
       let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
       if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
       else {
-        let topOnly = block.match(/TOP\s*([A-Z0-9\/ ]+)/i);
-        if (topOnly) altitude = `TOP: ${topOnly[1].trim()}`;
+        let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
+        if (height) altitude = `TOP: ${height[1]}`;
         else {
-          let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-          if (height) altitude = `TOP: ${height[1]}`;
+          let fOnly = block.match(/F\)\s*([A-Z0-9 \/-]+)/i);
+          let gOnly = block.match(/G\)\s*([A-Z0-9 \/-]+)/i);
+          if (fOnly && gOnly) altitude = `${fOnly[1]} - ${gOnly[1]}`;
         }
       }
     }
@@ -127,10 +123,21 @@ function parseNotamBlock(block) {
 
   let coords = [];
 
-  // 🟢 多邊形
-  for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
+  // 🔎 強化版座標擷取
+  // (1) NxxxxxxExxxxxxx 格式
+  for (let m of block.matchAll(/(N\d{6,8}E\d{7,9})/gi)) {
+    let s = m[1];
+    let ni = s.indexOf('N'), ei = s.indexOf('E');
+    let lat = s.slice(ni, ei), lon = s.slice(ei);
+    coords.push([dmsToDecimal(normalizeDMS(lat)), dmsToDecimal(normalizeDMS(lon))]);
+  }
+
+  // (2) Nxxxxxx Eyyyyyyy 格式
+  for (let m of block.matchAll(/(N\d{6,8})\s*(E\d{7,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
+
+  // (3) 小數 GEO 格式
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
@@ -141,56 +148,63 @@ function parseNotamBlock(block) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
 
-  // 🟠 RADIUS 圓形
-  let circleMatch = block.match(/DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
-                  || block.match(/WITHIN (\d+)NM.*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)NM/i);
+  // (4) 如果有 TO POINT OF ORIGIN, 自動回第一點
+  if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) {
+    coords.push(coords[0]);
+  }
+
+  // 🔵 RADIUS
+  let circleMatch = block.match(/DEFINED AS (\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
+                  || block.match(/WITHIN (\d+)(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
+                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i);
   if (circleMatch) {
-    let radiusNM, lat, lon;
-    if (circleMatch.length === 4) {
-      radiusNM = parseInt(circleMatch[1]);
-      lat = dmsToDecimal(normalizeDMS(circleMatch[2]));
-      lon = dmsToDecimal(normalizeDMS(circleMatch[3]));
+    let radius = parseInt(circleMatch[1]);
+    let unit = circleMatch[2];
+    let lat, lon;
+    if (circleMatch.length === 5) {
+      lat = dmsToDecimal(normalizeDMS(circleMatch[3]));
+      lon = dmsToDecimal(normalizeDMS(circleMatch[4]));
     } else {
       lat = dmsToDecimal(normalizeDMS(circleMatch[1]));
       lon = dmsToDecimal(normalizeDMS(circleMatch[2]));
-      radiusNM = parseInt(circleMatch[3]);
+      radius = parseInt(circleMatch[3]);
+      unit = circleMatch[4];
     }
-    let radiusMeters = radiusNM * 1852;
+    let radiusMeters = radius * (unit==="NM"?1852:1000);
     let c = L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`圓形 ${radiusNM} NM<br>高度: ${altitude||"未知"}`)
+      .bindPopup(`圓形 ${radius}${unit}<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(c);
     map.setView([lat, lon], 8);
     return;
   }
 
-  // 🔵 FAN-SHAPED
+  // 🔵 FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radius = parseInt(fanMatch[1]);
-    if (fanMatch[2]==="NM") radius = radius * 1.852;
+    if (fanMatch[2]==="NM") radius *= 1.852;
     let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
     let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
     let startAngle = parseInt(fanMatch[5]);
     let endAngle = parseInt(fanMatch[6]);
     let steps = 30, fanPoints = [[lat, lon]];
     for (let i=0; i<=steps; i++) {
-      let angle = (startAngle + (endAngle-startAngle)*(i/steps)) * Math.PI/180;
+      let angle = (startAngle+(endAngle-startAngle)*(i/steps)) * Math.PI/180;
       let dLat = (radius/111.32)*Math.cos(angle);
       let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
       fanPoints.push([lat+dLat, lon+dLon]);
     }
     fanPoints.push([lat, lon]);
     let p = L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形 ${radius.toFixed(1)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
+      .bindPopup(`扇形 ${radius.toFixed(2)}KM ${startAngle}°-${endAngle}°<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
     shapeLayers.push(p);
     map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
     return;
   }
 
-  // 🔺多邊形畫圖
+  // 🔵 多邊形
   if (coords.length > 0) {
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
@@ -202,6 +216,7 @@ function parseNotamBlock(block) {
 
   alert("未找到有效座標、RADIUS 或 FAN 格式，請檢查 NOTAM");
 }
+
 
 function addNotam() {
   let block = document.getElementById('notamInput').value;
