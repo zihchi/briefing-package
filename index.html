@@ -78,157 +78,107 @@ let map = L.map('map').setView([23.5, 121], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let shapeLayers = [];
 
-function normalizeDMS(coordStr) {
-  let m = coordStr.match(/([NS])(\d+)/i);
-  if (m) return m[2] + m[1].toUpperCase();
-  m = coordStr.match(/([EW])(\d+)/i);
-  if (m) return m[2] + m[1].toUpperCase();
-  return coordStr;
+function normalizeDMS(c){
+  let m=c.match(/([NS])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
+  m=c.match(/([EW])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
+  return c;
+}
+function dmsToDecimal(d){
+  let m=d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
+  if(!m)return NaN;
+  let dec=+m[1]+(+m[2]/60)+(+m[3]/3600);
+  return (m[4]==='S'||m[4]==='W')?-dec:dec;
 }
 
-function dmsToDecimal(dmsStr) {
-  let regex = /(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/;
-  let m = dmsStr.match(regex);
-  if (!m) return NaN;
-  let deg = parseInt(m[1]), min = parseInt(m[2]), sec = parseFloat(m[3]), dir = m[4];
-  let dec = deg + min/60 + sec/3600;
-  if (dir==='S'||dir==='W') dec*=-1;
-  return dec;
-}
+function parseNotamBlock(block){
+  block=block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
+  block=block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
+  block=block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
+  block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
+  block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
-function parseNotamBlock(block) {
-  block = block.replace(/[\n\r]+/g, " ")
-               .replace(/[,:;()\u3000]+/g, " ")
-               .replace(/\s+/g, " ").trim();
-  block = block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g, "$1 ");
-  block = block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g, "$1 ");
-  block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
-  block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
+  // 🔥最穩定抓法，抓 F) 一直到下一個 D) E) 或結尾
+  let fgFull="未知";
+  let fgMatch=block.match(/(F\)[\s\S]*?(?=\s[A-Z]\)|$))/i);
+  if(fgMatch) fgFull=fgMatch[1].trim();
 
-  let altitude = "";
-  let fgRaw = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
-  if (fgRaw) {
-    altitude = `F) ${fgRaw[1]} G) ${fgRaw[2]}`;
-  } else {
-    let fromSfcTo = block.match(/FROM SFC TO\s*([0-9]+)(FT|FL)/i);
-    if (fromSfcTo) altitude = `F) SFC G) ${fromSfcTo[1]}${fromSfcTo[2]}`;
-    else altitude = "未知";
-  }
+  let coords=[];
+  for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
+    coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
+  for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
+    coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
+  for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
+    coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
+  if(/TO POINT OF ORIGIN/i.test(block)&&coords.length>0)coords.push(coords[0]);
 
-  let coords = [];
-  for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
-    coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
-  }
-  for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g)) {
-    coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
-  }
-  for (let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g)) {
-    coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
-  }
-  if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) coords.push(coords[0]);
-
-  let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
-  if (fanMatch) {
-    let radius = parseInt(fanMatch[1]);
-    if (fanMatch[2]==="NM") radius *= 1.852;
-    let lat = dmsToDecimal(normalizeDMS(fanMatch[3]));
-    let lon = dmsToDecimal(normalizeDMS(fanMatch[4]));
-    let startAngle = parseInt(fanMatch[5]);
-    let endAngle = parseInt(fanMatch[6]);
-    let steps = 30, fanPoints = [[lat, lon]];
-    for (let i=0; i<=steps; i++) {
-      let angle = (startAngle+(endAngle-startAngle)*(i/steps)) * Math.PI/180;
-      let dLat = (radius/111.32)*Math.cos(angle);
-      let dLon = (radius/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(angle);
-      fanPoints.push([lat+dLat, lon+dLon]);
+  let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
+  if(fan){
+    let r=+fan[1];if(fan[2]==="NM")r*=1.852;
+    let lat=dmsToDecimal(normalizeDMS(fan[3])), lon=dmsToDecimal(normalizeDMS(fan[4]));
+    let sa=+fan[5], ea=+fan[6], pts=[[lat,lon]], steps=30;
+    for(let i=0;i<=steps;i++){
+      let a=(sa+(ea-sa)*(i/steps))*Math.PI/180;
+      let dLat=(r/111.32)*Math.cos(a), dLon=(r/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(a);
+      pts.push([lat+dLat, lon+dLon]);
     }
-    fanPoints.push([lat, lon]);
-    L.polygon(fanPoints, {color:'red', fillOpacity:0.4})
-      .bindPopup(`扇形<br>${altitude}`).addTo(map).openPopup();
-    map.fitBounds(fanPoints, {padding:[50,50], maxZoom:14});
-    return;
+    pts.push([lat,lon]);
+    let p=L.polygon(pts,{color:'red',fillOpacity:0.4}).bindPopup(`扇形<br>${fgFull}`).addTo(map).openPopup();
+    shapeLayers.push(p); map.fitBounds(pts,{padding:[50,50],maxZoom:14}); return;
   }
 
-  let arcMatch = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/i)
-              || block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}[NS])\s*(\d{7,9}[EW])/i);
-  if (arcMatch) {
-    let radius = parseInt(arcMatch[1]);
-    let unit = arcMatch[2];
-    let lat = dmsToDecimal(normalizeDMS(arcMatch[3]));
-    let lon = dmsToDecimal(normalizeDMS(arcMatch[4]));
-    let radiusMeters = radius * (unit==="NM"?1852:1000);
-    L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`ARC ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
-    return;
+  let arc=block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
+  if(arc){
+    let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
+    let rm=r*(u==="NM"?1852:1000);
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`ARC ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
-  let geoArc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
-  if (geoArc) {
-    let lat = dmsToDecimal(normalizeDMS(geoArc[1]));
-    let lon = dmsToDecimal(normalizeDMS(geoArc[2]));
-    let radius = parseInt(geoArc[3]);
-    let unit = geoArc[4];
-    let radiusMeters = radius * (unit==="NM"?1852:1000);
-    L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`PSN ARC ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
-    return;
+  let parc=block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
+  if(parc){
+    let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
+    let r=+parc[3], u=parc[4], rm=r*(u==="NM"?1852:1000);
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`PSN ARC ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    shapeLayers.push(c); map.setView([lat,lon],10); return;
   }
 
-  let circleMatch = block.match(/DEFINED AS (\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
-                  || block.match(/WITHIN (\d+)(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i)
-                  || block.match(/(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i);
-  if (circleMatch) {
-    let radius, unit, lat, lon;
-    if (circleMatch.length === 5) {
-      radius = parseInt(circleMatch[1]);
-      unit = circleMatch[2];
-      lat = dmsToDecimal(normalizeDMS(circleMatch[3]));
-      lon = dmsToDecimal(normalizeDMS(circleMatch[4]));
-    } else {
-      lat = dmsToDecimal(normalizeDMS(circleMatch[1]));
-      lon = dmsToDecimal(normalizeDMS(circleMatch[2]));
-      radius = parseInt(circleMatch[3]);
-      unit = circleMatch[4];
-    }
-    let radiusMeters = radius * (unit==="NM"?1852:1000);
-    L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
-      .bindPopup(`圓形 ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
-    map.setView([lat, lon], 8);
-    return;
+  let circ=block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
+          ||block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
+  if(circ){
+    let r,u,lat,lon;
+    if(circ.length===5){r=+circ[1],u=circ[2],lat=dmsToDecimal(normalizeDMS(circ[3])),lon=dmsToDecimal(normalizeDMS(circ[4]));}
+    else{lat=dmsToDecimal(normalizeDMS(circ[1])),lon=dmsToDecimal(normalizeDMS(circ[2])),r=+circ[3],u=circ[4];}
+    let rm=r*(u==="NM"?1852:1000);
+    let c=L.circle([lat,lon],{radius:rm,color:'red',fillOpacity:0.3}).bindPopup(`圓形 ${r}${u}<br>${fgFull}`).addTo(map).openPopup();
+    shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
-  if (coords.length > 0) {
-    L.polygon(coords, {color:'red', fillOpacity:0.5})
-      .bindPopup(`多邊形<br>${altitude}`).addTo(map).openPopup();
-    map.fitBounds(coords, {padding:[50,50], maxZoom:15});
-    return;
+  if(coords.length>0){
+    let p=L.polygon(coords,{color:'red',fillOpacity:0.5}).bindPopup(`多邊形<br>${fgFull}`).addTo(map).openPopup();
+    shapeLayers.push(p); map.fitBounds(coords,{padding:[50,50],maxZoom:15}); return;
   }
 
   alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
 }
 
-function addNotam() {
-  let block = document.getElementById('notamInput').value;
-  if (block.trim()==="") { alert("請先輸入 NOTAM 內容"); return; }
-  parseNotamBlock(block);
-  document.getElementById('notamInput').value="";
+function addNotam(){
+  let b=document.getElementById('notamInput').value;
+  if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
+  parseNotamBlock(b); document.getElementById('notamInput').value="";
 }
 
-function clearMap() {
-  shapeLayers.forEach(layer=>map.removeLayer(layer));
-  shapeLayers = [];
-  document.getElementById('notamInput').value="";
+function clearMap(){
+  shapeLayers.forEach(l=>map.removeLayer(l));
+  shapeLayers=[]; document.getElementById('notamInput').value="";
 }
 
-function pad(num){ return String(num).padStart(2,'0'); }
+function pad(n){return String(n).padStart(2,'0');}
 function updateTimes(){
   const now=new Date();
-  document.getElementById('utc-time').innerHTML =
+  document.getElementById('utc-time').innerHTML=
     `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
 }
-updateTimes();
-setInterval(updateTimes,60000);
+updateTimes(); setInterval(updateTimes,60000);
 </script>
 
 
