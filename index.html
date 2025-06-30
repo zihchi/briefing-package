@@ -12,8 +12,6 @@
     .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .btn { display: inline-block; padding: 0.6em 1.2em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-    .timebox { position: fixed; top: 1em; right: 1em; background: rgba(255,255,255,0.8); padding: 0.6em 1em; border-radius: 12px; font-size: 1.2em; font-weight: bold; color: #444; box-shadow: 0 2px 6px rgba(0,0,0,0.1); z-index: 999; }
-    .timebox span.highlight { color: red; font-weight: bold; }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; }
     .img-column { text-align: center; }
     .img-column img { width: 50%; height: auto; max-width: 540px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
@@ -204,13 +202,6 @@ function clearMap(){
   shapeLayers=[]; document.getElementById('notamInput').value="";
 }
 
-function pad(n){return String(n).padStart(2,'0');}
-function updateTimes(){
-  const now=new Date();
-  document.getElementById('utc-time').innerHTML=
-    `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
-}
-updateTimes(); setInterval(updateTimes,60000);
 </script>
 
 
