@@ -98,6 +98,8 @@ function dmsToDecimal(dmsStr) {
 
 function parseNotamBlock(block) {
   block = block.replace(/\n/g, " ");
+  block = block.replace(/TO POINT OF ORIGIN/ig, "");
+
   let altitude = "";
   let flRange = block.match(/F\)\s*(SFC|FL\d+).*?G\)\s*([A-Z0-9 \/]+)/i);
   if (flRange) altitude = `${flRange[1]} - ${flRange[2].trim()}`;
@@ -119,11 +121,9 @@ function parseNotamBlock(block) {
   }
 
   let coords = [];
-  // NEW: 捕捉 ICAO 簡寫格式 NDDMMSS EDDDMMSS
   for (let m of block.matchAll(/([NS]\d{6})\s*([EW]\d{7})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
-  // 備用舊格式
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
@@ -137,7 +137,6 @@ function parseNotamBlock(block) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
 
-  // CIRCLE
   let circleMatch = block.match(/DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WI AN AREA DEFINED AS (\d+)NM RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WITHIN (\d+)NM.*?(CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
@@ -163,7 +162,6 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*KM.*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radiusKM = parseInt(fanMatch[1]);
