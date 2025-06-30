@@ -20,25 +20,18 @@
     #map { height: 600px; width: 800px; margin-top: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     .button-row { margin-bottom: 8px; }
     textarea { width: 800px; height: 100px; }
-    button { margin-top: 5px; padding: 0.8em 1.6em;font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-    /* === 新增：控制 popup 內容區塊，並顯示垂直捲動條 === */
     .leaflet-popup-content pre {
-     white-space: pre-wrap;            /* 自動換行 */
-     word-break: break-all;            /* 長字串也可斷行 */
-     max-height: 60vh;                 /* 內容最大高度為視窗高度 60% */
-     overflow-y: scroll;               /* 強制顯示垂直捲軸，允許滑動 */
-     -webkit-overflow-scrolling: touch;/* iOS 慣性滑動 */
-     margin: 0;
-     padding: 0.2em;                   /* 微調內距以免貼邊 */
-     font-size: 0.9em;
-      
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 60vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0;
+      padding: 0.2em;
+      font-size: 0.9em;
     }
-    .leaflet-popup-content-wrapper,
-    .leaflet-popup-tip-container {
-    width: 50vw !important;
-    max-width: none !important;
-}
   </style>
 </head>
 <body>
@@ -109,10 +102,8 @@
   }
 
   function parseNotamBlock(block){
-    // 動態寬度：地圖寬度的 1/3
     const popupOptions = {
-      maxWidth: 40VW,
-      maxHeight: 200,
+      maxWidth: map.getSize().x * 0.5,
       keepInView: true,
       autoPan: true
     };
@@ -134,84 +125,7 @@
       coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
     if(/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0]);
 
-    // FAN 型
-    let fan = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
-    if(fan){
-      let r = +fan[1]; if(fan[2]==="NM") r*=1.852;
-      let lat = dmsToDecimal(normalizeDMS(fan[3])), lon = dmsToDecimal(normalizeDMS(fan[4]));
-      let sa = +fan[5], ea = +fan[6], pts = [[lat,lon]], steps = 30;
-      for(let i=0;i<=steps;i++){
-        let a=(sa+(ea-sa)*(i/steps))*Math.PI/180;
-        let dLat=(r/111.32)*Math.cos(a),
-            dLon=(r/(111.32*Math.cos(lat*Math.PI/180)))*Math.sin(a);
-        pts.push([lat+dLat, lon+dLon]);
-      }
-      pts.push([lat,lon]);
-      let layer = L.polygon(pts, {color:'red', fillOpacity:0.4})
-        .bindPopup(`<pre>${block}</pre>`, popupOptions)
-        .addTo(map)
-        .openPopup();
-      shapeLayers.push(layer);
-      map.fitBounds(pts, {padding:[50,50], maxZoom:14});
-      return;
-    }
-
-    // ARC 型
-    let arc = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
-    if(arc){
-      let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
-      let rm=r*(u==="NM"?1852:1000);
-      let layer = L.circle([lat,lon], {radius:rm, color:'red', fillOpacity:0.3})
-        .bindPopup(`<pre>${block}</pre>`, popupOptions)
-        .addTo(map)
-        .openPopup();
-      shapeLayers.push(layer);
-      map.setView([lat,lon], 8);
-      return;
-    }
-
-    // PSN ARC 型
-    let parc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
-    if(parc){
-      let lat=dmsToDecimal(normalizeDMS(parc[1])),
-          lon=dmsToDecimal(normalizeDMS(parc[2])),
-          r=+parc[3],
-          u=parc[4],
-          rm=r*(u==="NM"?1852:1000);
-      let layer = L.circle([lat,lon], {radius:rm, color:'red', fillOpacity:0.3})
-        .bindPopup(`<pre>${block}</pre>`, popupOptions)
-        .addTo(map)
-        .openPopup();
-      shapeLayers.push(layer);
-      map.setView([lat,lon], 10);
-      return;
-    }
-
-    // RADIUS 型
-    let circ = block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
-            || block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
-    if(circ){
-      let r,u,lat,lon;
-      if(circ.length===5){
-        r=+circ[1]; u=circ[2];
-        lat=dmsToDecimal(normalizeDMS(circ[3]));
-        lon=dmsToDecimal(normalizeDMS(circ[4]));
-      } else {
-        lat=dmsToDecimal(normalizeDMS(circ[1]));
-        lon=dmsToDecimal(normalizeDMS(circ[2]));
-        r=+circ[3]; u=circ[4];
-      }
-      let rm=r*(u==="NM"?1852:1000);
-      let layer = L.circle([lat,lon], {radius:rm, color:'red', fillOpacity:0.3})
-        .bindPopup(`<pre>${block}</pre>`, popupOptions)
-        .addTo(map)
-        .openPopup();
-      shapeLayers.push(layer);
-      map.setView([lat,lon], 8);
-      return;
-    }
-
-    // 多邊形坐標
+    // 多邊形
     if(coords.length>0){
       let layer = L.polygon(coords, {color:'red', fillOpacity:0.5})
         .bindPopup(`<pre>${block}</pre>`, popupOptions)
@@ -222,7 +136,7 @@
       return;
     }
 
-    alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
+    alert("未找到有效座標格式，請檢查 NOTAM");
   }
 
   function addNotam(){
@@ -251,3 +165,4 @@
 
 </body>
 </html>
+
