@@ -105,11 +105,15 @@ function parseNotamBlock(block) {
   block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
   block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
-  // 改良高度解析，保持 F) G) 原字串
   let altitude = "";
   let fgRaw = block.match(/F\)\s*([^\s]+)[\s\S]*?G\)\s*([^\s]+)/i);
-  if (fgRaw) altitude = `F) ${fgRaw[1]} G) ${fgRaw[2]}`;
-  else altitude = "未知";
+  if (fgRaw) {
+    altitude = `F) ${fgRaw[1]} G) ${fgRaw[2]}`;
+  } else {
+    let fromSfcTo = block.match(/FROM SFC TO\s*([0-9]+)(FT|FL)/i);
+    if (fromSfcTo) altitude = `F) SFC G) ${fromSfcTo[1]}${fromSfcTo[2]}`;
+    else altitude = "未知";
+  }
 
   let coords = [];
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
@@ -123,7 +127,6 @@ function parseNotamBlock(block) {
   }
   if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) coords.push(coords[0]);
 
-  // FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radius = parseInt(fanMatch[1]);
@@ -146,7 +149,6 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // ARC
   let arcMatch = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/i)
               || block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}[NS])\s*(\d{7,9}[EW])/i);
   if (arcMatch) {
@@ -160,7 +162,6 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // PSN ARC
   let geoArc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
   if (geoArc) {
     let lat = dmsToDecimal(normalizeDMS(geoArc[1]));
@@ -173,10 +174,10 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // 圓形
   let circleMatch = block.match(/DEFINED AS (\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WITHIN (\d+)(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
-                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i);
+                  || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i)
+                  || block.match(/(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i);
   if (circleMatch) {
     let radius, unit, lat, lon;
     if (circleMatch.length === 5) {
@@ -193,10 +194,10 @@ function parseNotamBlock(block) {
     let radiusMeters = radius * (unit==="NM"?1852:1000);
     L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
       .bindPopup(`圓形 ${radius}${unit}<br>${altitude}`).addTo(map).openPopup();
+    map.setView([lat, lon], 8);
     return;
   }
 
-  // 多邊形
   if (coords.length > 0) {
     L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>${altitude}`).addTo(map).openPopup();
@@ -229,6 +230,7 @@ function updateTimes(){
 updateTimes();
 setInterval(updateTimes,60000);
 </script>
+
 
 
 
