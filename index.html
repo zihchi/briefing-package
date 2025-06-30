@@ -181,7 +181,15 @@ function parseNotamBlock(block){
       .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
-
+  
+// 🗺️ 新增 PSN 單點標記
+  let psn=block.match(/PSN.*?(\d{6,8}(\.\d+)?[NS]).*?(\d{7,9}(\.\d+)?[EW])/i);
+  if(psn){
+    let lat=dmsToDecimal(normalizeDMS(psn[1])), lon=dmsToDecimal(normalizeDMS(psn[3]));
+    let m=L.marker([lat,lon]).bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
+    shapeLayers.push(m); map.setView([lat,lon],14); return;
+  }
+  
   if(coords.length>0){
     let p=L.polygon(coords,{color:'red',fillOpacity:0.5})
       .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
