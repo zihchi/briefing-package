@@ -98,7 +98,8 @@ function dmsToDecimal(dmsStr) {
 
 function parseNotamBlock(block) {
   block = block.replace(/\n/g, " ");
-  block = block.replace(/TO POINT OF ORIGIN/ig, "");
+  block = block.replace(/[\u00A0\u3000]/g, ' '); // 全形空格、NBSP
+  block = block.replace(/\s+/g, ' ').trim();    // 多空白合一
 
   let altitude = "";
   let flRange = block.match(/F\)\s*(SFC|FL\d+).*?G\)\s*([A-Z0-9 \/]+)/i);
@@ -110,20 +111,13 @@ function parseNotamBlock(block) {
       let sfcRange = block.match(/SFC\s*-\s*([A-Z0-9 \/-]+)/i);
       if (sfcRange) altitude = `SFC - ${sfcRange[1].trim()}`;
       else {
-        let baseTop = block.match(/BOTTOM\s*(FL\d+).*?TOP\s*(FL\d+)/i);
-        if (baseTop) altitude = `${baseTop[1]} - ${baseTop[2]}`;
-        else {
-          let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
-          if (height) altitude = `TOP: ${height[1]}`;
-        }
+        let height = block.match(/HEIGHT.*?(\d+(?:M|FT|FL))/i);
+        if (height) altitude = `TOP: ${height[1]}`;
       }
     }
   }
 
   let coords = [];
-  for (let m of block.matchAll(/([NS]\d{6})\s*([EW]\d{7})/gi)) {
-    coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
-  }
   for (let m of block.matchAll(/(N\d{7,8})\s*(E\d{8,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
@@ -186,6 +180,9 @@ function parseNotamBlock(block) {
   }
 
   if (coords.length > 0) {
+    let first = coords[0];
+    let last = coords[coords.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first); // 自動閉合
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
       .addTo(map).openPopup();
