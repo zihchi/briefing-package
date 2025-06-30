@@ -98,8 +98,10 @@ function dmsToDecimal(dmsStr) {
 
 function parseNotamBlock(block) {
   block = block.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+  // 強制在多組 NxxxxxxN 或 EyyyyyyE 中插入空白
+  block = block.replace(/([NS]\d{6,8})(?=[NS])/g, "$1 ");
+  block = block.replace(/([EW]\d{7,9})(?=[EW])/g, "$1 ");
 
-  // ⛰️ 高度處理
   let altitude = "";
   let flRange = block.match(/F\)\s*(FL\d+).*?G\)\s*([A-Z0-9\/ ]+)/i);
   if (flRange) altitude = `${flRange[1]} - ${flRange[2]}`;
@@ -123,21 +125,10 @@ function parseNotamBlock(block) {
 
   let coords = [];
 
-  // 🔎 強化版座標擷取
-  // (1) NxxxxxxExxxxxxx 格式
-  for (let m of block.matchAll(/(N\d{6,8}E\d{7,9})/gi)) {
-    let s = m[1];
-    let ni = s.indexOf('N'), ei = s.indexOf('E');
-    let lat = s.slice(ni, ei), lon = s.slice(ei);
-    coords.push([dmsToDecimal(normalizeDMS(lat)), dmsToDecimal(normalizeDMS(lon))]);
-  }
-
-  // (2) Nxxxxxx Eyyyyyyy 格式
+  // 多邊形
   for (let m of block.matchAll(/(N\d{6,8})\s*(E\d{7,9})/gi)) {
     coords.push([dmsToDecimal(normalizeDMS(m[1])), dmsToDecimal(normalizeDMS(m[2]))]);
   }
-
-  // (3) 小數 GEO 格式
   for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g)) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
@@ -147,21 +138,35 @@ function parseNotamBlock(block) {
   for (let m of block.matchAll(/(\d{6,8}[NS])\s+(\d{7,9}[EW])/g)) {
     coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
   }
-
-  // (4) 如果有 TO POINT OF ORIGIN, 自動回第一點
   if (/TO POINT OF ORIGIN/i.test(block) && coords.length > 0) {
     coords.push(coords[0]);
   }
 
-  // 🔵 RADIUS
+  // 新增對 GEO: PSN ARC ... RADIUS 的判讀
+  let geoArc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),\s*RADIUS\s*(\d+)(NM|KM)/i);
+  if (geoArc) {
+    let lat = dmsToDecimal(normalizeDMS(geoArc[1]));
+    let lon = dmsToDecimal(normalizeDMS(geoArc[2]));
+    let radius = parseInt(geoArc[3]);
+    let unit = geoArc[4];
+    let radiusMeters = radius * (unit==="NM"?1852:1000);
+    let c = L.circle([lat, lon], {radius: radiusMeters, color:'red', fillOpacity:0.3})
+      .bindPopup(`圓形 ${radius}${unit}<br>高度: ${altitude||"未知"}`)
+      .addTo(map).openPopup();
+    shapeLayers.push(c);
+    map.setView([lat, lon], 10);
+    return;
+  }
+
+  // 傳統 RADIUS
   let circleMatch = block.match(/DEFINED AS (\d+)(NM|KM) RADIUS OF (\d{6,8}[NS])(\d{7,9}[EW])/i)
                   || block.match(/WITHIN (\d+)(NM|KM).*?(?:CENTERED AT|OF)\s*(\d{6,8}[NS])\s*(\d{7,9}[EW])/i)
                   || block.match(/RADIUS OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?(\d+)(NM|KM)/i);
   if (circleMatch) {
-    let radius = parseInt(circleMatch[1]);
-    let unit = circleMatch[2];
-    let lat, lon;
+    let radius, unit, lat, lon;
     if (circleMatch.length === 5) {
+      radius = parseInt(circleMatch[1]);
+      unit = circleMatch[2];
       lat = dmsToDecimal(normalizeDMS(circleMatch[3]));
       lon = dmsToDecimal(normalizeDMS(circleMatch[4]));
     } else {
@@ -179,7 +184,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // 🔵 FAN
+  // FAN
   let fanMatch = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if (fanMatch) {
     let radius = parseInt(fanMatch[1]);
@@ -204,7 +209,7 @@ function parseNotamBlock(block) {
     return;
   }
 
-  // 🔵 多邊形
+  // 多邊形
   if (coords.length > 0) {
     let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
       .bindPopup(`多邊形<br>高度: ${altitude||"未知"}`)
@@ -214,8 +219,9 @@ function parseNotamBlock(block) {
     return;
   }
 
-  alert("未找到有效座標、RADIUS 或 FAN 格式，請檢查 NOTAM");
+  alert("未找到有效座標、RADIUS、FAN 格式，請檢查 NOTAM");
 }
+
 
 
 function addNotam() {
