@@ -145,6 +145,7 @@ for(let match of block.matchAll(/([NS])(\d{2})[°]?(\d{2})['’](\d{2})["”]?([
 if (/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0]);
 
   // ⬇️ 先整理文字格式
+  block = block.replace(/-/g, " "); // ⬅️ 新增這行處理 -
   block=block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
   block=block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
   block=block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
