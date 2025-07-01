@@ -34,7 +34,23 @@
     body { background: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
   .flight-box { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
   select { font-size: 1em; padding: 0.5em; margin-left: 0.5em;}
-    
+
+    .windy-section h2 button {
+  background: none;
+  border: 2px solid #3c79ff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-left: 12px;
+  font-size: 0.9em;
+  color: #3c79ff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.windy-section h2 button:hover {
+  background-color: rgba(60,121,255,0.1);
+  color: #2c5edc;
+}
 </style>
 </head>
 <body>
@@ -95,28 +111,32 @@
   <h2>🌧️ Windy 即時雷達圖 
     <button onclick="refreshIframe('windyRadar')">重新整理</button>
   </h2>
-  <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"></iframe>
+  <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
 <div class="section windy-section">
   <h2>💨 Windy 風速圖 (Surface) 
     <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
   </h2>
-  <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"></iframe>
+  <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
 <div class="section windy-section">
   <h2>🌬️ Windy 風速圖 (FL390) 
     <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
   </h2>
-  <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"></iframe>
+  <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
 <div class="section windy-section">
   <h2>✈️ Windy 晴空亂流圖 (FL390) 
     <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
   </h2>
-  <iframe id="windyTurbFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"></iframe>
+  <iframe id="windyTurbFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
   <div class="section">
