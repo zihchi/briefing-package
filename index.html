@@ -17,7 +17,7 @@
     .img-column img { width: 50%; height: auto; max-width: 540px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
     #map {height: 600px; width: 100%; max-width: 800px; margin-top: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);}
     .button-row { margin-bottom: 8px; }
-    textarea { width: width: 100%; max-width: 800px; height: 100px; }
+    textarea { width: width: 700px; height: 100px; }
     button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
 .section {
@@ -153,6 +153,22 @@ if (/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0])
   for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
     coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
 
+  // ⬇️ 新增專抓 - 串接的 DMS 多邊形
+for (let m of block.matchAll(/(\d{6,8}[NS])E(\d{7,9})/g)) {
+  let lat = dmsToDecimal(normalizeDMS(m[1]));
+  let lon = dmsToDecimal(`E${m[2]}`);
+  coords.push([lat, lon]);
+}
+if (coords.length > 0 && /;/.test(block)) {
+  coords.push(coords[0]);
+  let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
+    .bindPopup(`<pre>${block}</pre>`, popupOptions)
+    .addTo(map).openPopup();
+  shapeLayers.push(p);
+  map.fitBounds(coords, {padding:[50,50], maxZoom:15});
+  return;
+}
+  
   // ⬇️ FAN
   let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if(fan){
