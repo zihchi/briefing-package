@@ -97,7 +97,7 @@
   </div>
   <div style="width:75%; max-width:960px;">
     <iframe id="fr24"
-      src="https://www.flightradar24.com/24.97,121.21/9" 
+      src="https://www.flightradar24.com/24.97,121.21/9"
       width="100%" height="600" frameborder="0"
       style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
     </iframe>
@@ -303,8 +303,10 @@ function updateFlight() {
   var reg = document.getElementById("regSelect").value;
   var iframe = document.getElementById("fr24");
   if (reg === "") {
+    // 回到首頁地圖畫面 (台灣桃園放大 9 級)
     iframe.src = "https://www.flightradar24.com/24.97,121.21/9";
   } else {
+    // 顯示該機號
     iframe.src = "https://www.flightradar24.com/simple_index.php?reg=" + reg;
   }
 }
