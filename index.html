@@ -102,11 +102,14 @@ let map = L.map('map').setView([23.5, 121], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let shapeLayers = [];
 
+// ⬇️ 把 N320229E1240000 轉成 N320229 E1240000
 function normalizeDMS(c){
   let m=c.match(/([NS])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
   m=c.match(/([EW])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
   return c;
 }
+
+// ⬇️ 將 320229N 1240000E 轉十進位
 function dmsToDecimal(d){
   let m=d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
   if(!m)return NaN;
@@ -121,6 +124,19 @@ function parseNotamBlock(block){
     autoPan: true
   };
 
+  // ⬇️ 專門解析 DMS 格式 N32°02’29”E124°00’00”
+block = block.replace(/[’']/g,"'").replace(/[”"]/g,'"'); // 修正亂字元
+for(let match of block.matchAll(/([NS])(\d{2})[°]?(\d{2})['’](\d{2})["”]?([EW])(\d{3})[°]?(\d{2})['’](\d{2})["”]?/g)){
+  let lat = (+match[2]) + (+match[3])/60 + (+match[4])/3600;
+  if(match[1]==='S')lat=-lat;
+  let lon = (+match[6]) + (+match[7])/60 + (+match[8])/3600;
+  if(match[5]==='W')lon=-lon;
+  if(!coords)coords=[];
+  coords.push([lat, lon]);
+}
+if (/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0]);
+
+  // ⬇️ 先整理文字格式
   block=block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
   block=block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
   block=block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
@@ -128,14 +144,16 @@ function parseNotamBlock(block){
   block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
 
   let coords=[];
+
+  // ⬇️ 支援三種連續格式
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
     coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
     coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
   for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
     coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
-  if(/TO POINT OF ORIGIN/i.test(block)&&coords.length>0)coords.push(coords[0]);
 
+  // ⬇️ FAN
   let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if(fan){
     let r=+fan[1];if(fan[2]==="NM")r*=1.852;
@@ -152,6 +170,7 @@ function parseNotamBlock(block){
     shapeLayers.push(p); map.fitBounds(pts,{padding:[50,50],maxZoom:14}); return;
   }
 
+  // ⬇️ ARC
   let arc=block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
   if(arc){
     let r=+arc[1], u=arc[2], lat=dmsToDecimal(arc[3]), lon=dmsToDecimal(arc[5]);
@@ -161,6 +180,7 @@ function parseNotamBlock(block){
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
 
+  // ⬇️ PSN ARC
   let parc=block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
   if(parc){
     let lat=dmsToDecimal(normalizeDMS(parc[1])), lon=dmsToDecimal(normalizeDMS(parc[2]));
@@ -170,6 +190,7 @@ function parseNotamBlock(block){
     shapeLayers.push(c); map.setView([lat,lon],10); return;
   }
 
+  // ⬇️ CIRCLE
   let circ=block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
           ||block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
   if(circ){
@@ -181,15 +202,16 @@ function parseNotamBlock(block){
       .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
     shapeLayers.push(c); map.setView([lat,lon],8); return;
   }
-  
-// 🗺️ 新增 PSN 單點標記
+
+  // ⬇️ PSN 單點
   let psn=block.match(/PSN.*?(\d{6,8}(\.\d+)?[NS]).*?(\d{7,9}(\.\d+)?[EW])/i);
   if(psn){
     let lat=dmsToDecimal(normalizeDMS(psn[1])), lon=dmsToDecimal(normalizeDMS(psn[3]));
-    let m=L.marker([lat,lon]).bindPopup(`<pre>${block}</pre>`).addTo(map).openPopup();
+    let m=L.marker([lat,lon]).bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
     shapeLayers.push(m); map.setView([lat,lon],14); return;
   }
-  
+
+  // ⬇️ 多邊形
   if(coords.length>0){
     let p=L.polygon(coords,{color:'red',fillOpacity:0.5})
       .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
@@ -199,18 +221,25 @@ function parseNotamBlock(block){
   alert("未找到有效座標、ARC、PSN ARC、RADIUS、FAN 格式，請檢查 NOTAM");
 }
 
+// ⬇️ 其他功能
 function addNotam(){
   let b=document.getElementById('notamInput').value;
   if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
   parseNotamBlock(b); document.getElementById('notamInput').value="";
 }
-
 function clearMap(){
   shapeLayers.forEach(l=>map.removeLayer(l));
   shapeLayers=[]; document.getElementById('notamInput').value="";
 }
-
+function pad(n){return String(n).padStart(2,'0');}
+function updateTimes(){
+  const now=new Date();
+  document.getElementById('utc-time').innerHTML=
+    `⏱ UTC：${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1)}-${pad(now.getUTCDate())} <span class='highlight'>${pad(now.getUTCHours())}</span>:<span class='highlight'>${pad(now.getUTCMinutes())}</span>Z`;
+}
+updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 </body>
