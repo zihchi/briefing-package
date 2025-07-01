@@ -112,8 +112,9 @@ let shapeLayers = [];
 
 // ⬇️ 把 N320229E1240000 轉成 N320229 E1240000
 function normalizeDMS(c){
-  let m=c.match(/([NS])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
-  m=c.match(/([EW])(\d+)/i); if(m)return m[2]+m[1].toUpperCase();
+  c = c.toUpperCase();
+  let m=c.match(/([NS])(\d+)/); if(m)return m[2]+m[1];
+  m=c.match(/([EW])(\d+)/); if(m)return m[2]+m[1];
   return c;
 }
 
@@ -132,52 +133,42 @@ function parseNotamBlock(block){
     autoPan: true
   };
 
-  // ⬇️ 專門解析 DMS 格式 N32°02’29”E124°00’00”
-block = block.replace(/[’']/g,"'").replace(/[”"]/g,'"'); // 修正亂字元
-for(let match of block.matchAll(/([NS])(\d{2})[°]?(\d{2})['’](\d{2})["”]?([EW])(\d{3})[°]?(\d{2})['’](\d{2})["”]?/g)){
-  let lat = (+match[2]) + (+match[3])/60 + (+match[4])/3600;
-  if(match[1]==='S')lat=-lat;
-  let lon = (+match[6]) + (+match[7])/60 + (+match[8])/3600;
-  if(match[5]==='W')lon=-lon;
-  if(!coords)coords=[];
-  coords.push([lat, lon]);
-}
-if (/TO POINT OF ORIGIN/i.test(block) && coords.length>0) coords.push(coords[0]);
-
-  // ⬇️ 先整理文字格式
-  block = block.replace(/-/g, " "); // ⬅️ 新增這行處理 -
-  block=block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
-  block=block.replace(/(\d{6,8}\.\d+[NS])(?=\d{7,9}\.\d+[EW])/g,"$1 ");
-  block=block.replace(/(\d{6,8}[NS])(?=\d{7,9}[EW])/g,"$1 ");
-  block=block.replace(/([NS]\d{6,8})(?=[NS])/g,"$1 ");
-  block=block.replace(/([EW]\d{7,9})(?=[EW])/g,"$1 ");
+  // ⬇️ 先處理符號亂碼、換行、標點、以及用 - 作為分隔
+  block = block.replace(/[’']/g,"'").replace(/[”"]/g,'"'); 
+  block = block.replace(/-/g," ");
+  block = block.replace(/[\n\r]+/g," ").replace(/[,:;()\u3000]+/g," ").replace(/\s+/g," ").trim();
 
   let coords=[];
 
-  // ⬇️ 支援三種連續格式
+  // ⬇️ 專門解析 N32°02’29”E124°00’00” 這種格式
+  for(let match of block.matchAll(/([NS])(\d{2})[°]?(\d{2})['’](\d{2})["”]?([EW])(\d{3})[°]?(\d{2})['’](\d{2})["”]?/g)){
+    let lat = (+match[2]) + (+match[3])/60 + (+match[4])/3600;
+    if(match[1]==='S')lat=-lat;
+    let lon = (+match[6]) + (+match[7])/60 + (+match[8])/3600;
+    if(match[5]==='W')lon=-lon;
+    coords.push([lat, lon]);
+  }
+
+  // ⬇️ 處理正常的 DMS 格式（四種）
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
     coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
   for(let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
     coords.push([dmsToDecimal(m[1]),dmsToDecimal(m[2])]);
-  for(let m of block.matchAll(/(\d{6,8}[NS])\s*(\d{7,9}[EW])/g))
+  for(let m of block.matchAll(/(\d{6,8}[NS])\s+(\d{7,9}[EW])/g))
+    coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
+  for(let m of block.matchAll(/(\d{6,8}[NS])(\d{7,9}[EW])/g))
     coords.push([dmsToDecimal(normalizeDMS(m[1])),dmsToDecimal(normalizeDMS(m[2]))]);
 
-  // ⬇️ 新增專抓 - 串接的 DMS 多邊形
-for (let m of block.matchAll(/(\d{6,8}[NS])E(\d{7,9})/g)) {
-  let lat = dmsToDecimal(normalizeDMS(m[1]));
-  let lon = dmsToDecimal(`E${m[2]}`);
-  coords.push([lat, lon]);
-}
-if (coords.length > 0 && /;/.test(block)) {
-  coords.push(coords[0]);
-  let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
-    .bindPopup(`<pre>${block}</pre>`, popupOptions)
-    .addTo(map).openPopup();
-  shapeLayers.push(p);
-  map.fitBounds(coords, {padding:[50,50], maxZoom:15});
-  return;
-}
-  
+  // ⬇️ 多邊形加閉合（針對包含 ; 或 TO POINT OF ORIGIN）
+  if ((/;/.test(block) || /TO POINT OF ORIGIN/i.test(block)) && coords.length>0){
+    coords.push(coords[0]);
+    let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
+      .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
+    shapeLayers.push(p);
+    map.fitBounds(coords, {padding:[50,50], maxZoom:15});
+    return;
+  }
+
   // ⬇️ FAN
   let fan=block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
   if(fan){
@@ -236,7 +227,7 @@ if (coords.length > 0 && /;/.test(block)) {
     shapeLayers.push(m); map.setView([lat,lon],14); return;
   }
 
-  // ⬇️ 多邊形
+  // ⬇️ 最後多邊形 fallback
   if(coords.length>0){
     let p=L.polygon(coords,{color:'red',fillOpacity:0.5})
       .bindPopup(`<pre>${block}</pre>`, popupOptions).addTo(map).openPopup();
@@ -246,7 +237,7 @@ if (coords.length > 0 && /;/.test(block)) {
   alert("不是標準格式，請改用chatGPT");
 }
 
-// ⬇️ 其他功能
+// ⬇️ 其他基本操作
 function addNotam(){
   let b=document.getElementById('notamInput').value;
   if(b.trim()===""){alert("請先輸入 NOTAM 內容");return;}
@@ -264,6 +255,7 @@ function updateTimes(){
 }
 updateTimes(); setInterval(updateTimes,60000);
 </script>
+
 
 
 
