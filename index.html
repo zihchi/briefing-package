@@ -84,16 +84,22 @@
   <h2>✈️ Flightradar24 機號追蹤</h2>
   <div style="margin-bottom:1em;">
     <label for="regSelect" style="font-size:1.0em;">選擇機號：</label>
-    <select id="regSelect" onchange="updateFlight()" style="font-size:1.0em; padding:0.4em;">
-      <option value="B-58330">請選擇</option>
-      <option value="B-58301">B-58301</option>
-      <option value="B-58302">B-58302</option>
-      <option value="B-58303">B-58303</option>
-      <option value="B-58304">B-58304</option>
-      <option value="B-58305">B-58305</option>
-      <option value="B-58306">B-58306</option>
-      <option value="B-58307">B-58307</option>
-    </select>
+  <select id="regSelect" onchange="updateFlight()">
+    <option value="">請選擇</option>
+    <option value="B-58301">B-58301</option>
+    <option value="B-58302">B-58302</option>
+    <option value="B-58303">B-58303</option>
+    <option value="B-58304">B-58304</option>
+    <option value="B-58305">B-58305</option>
+    <option value="B-58306">B-58306</option>
+    <option value="B-58307">B-58307</option>
+  </select>
+
+<iframe id="fr24" 
+  src="https://www.flightradar24.com/RCTP" 
+  width="100%" height="600" frameborder="0"
+  style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+</iframe>
   </div>
   <div style="width:75%; max-width:960px;">
     <iframe id="fr24"
@@ -301,10 +307,14 @@ function updateTimes(){
 updateTimes(); setInterval(updateTimes,60000);
 
 function updateFlight() {
-  let reg = document.getElementById('regSelect').value;
-  document.getElementById('fr24').src = 
-    "https://www.flightradar24.com/simple_index.php?reg=" + reg;
-} 
+  var reg = document.getElementById("regSelect").value;
+  var iframe = document.getElementById("fr24");
+  if (reg === "") {
+    iframe.src = "https://www.flightradar24.com/RCTP"; // 預設顯示桃園機場
+  } else {
+    iframe.src = "https://www.flightradar24.com/simple_index.php?reg=" + reg;
+  }
+}
   function refreshIframe(id){
   const iframe = document.getElementById(id);
   if(iframe) iframe.src = iframe.src;
