@@ -51,6 +51,26 @@
   background-color: rgba(60,121,255,0.1);
   color: #2c5edc;
 }
+    .checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+}
+.checklist li {
+  padding: 0.5em 0;
+  border-bottom: 1px dashed #ccc;
+}
+.checklist label {
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.checklist input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3c79ff;
+}
 </style>
 </head>
 <body>
@@ -71,7 +91,42 @@
       
     </div>
   </div>
+<div class="section">
+  <h2>📋 簡報前檢查清單（PIR-EPS）</h2>
 
+  <div class="tool-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); margin-bottom:1em;">
+    <div class="btn" style="background:#3c79ff;">P</div>
+    <div class="btn" style="background:#3c79ff;">I</div>
+    <div class="btn" style="background:#3c79ff;">R</div>
+    <div class="btn" style="background:#3c79ff;">E</div>
+    <div class="btn" style="background:#3c79ff;">P</div>
+    <div class="btn" style="background:#3c79ff;">S</div>
+  </div>
+
+  <h3>🛠️ Briefing 文件項目</h3>
+  <ul class="checklist" id="briefingChecklist">
+    <li><label><input type="checkbox"> Special 特別事項</label></li>
+    <li><label><input type="checkbox"> NOTAM</label></li>
+    <li><label><input type="checkbox"> MEL / CDL Procedure</label></li>
+    <li><label><input type="checkbox"> Airport Briefing</label></li>
+    <li><label><input type="checkbox"> Special Procedure</label></li>
+  </ul>
+
+  <h3>🧳 個人準備檢查表</h3>
+  <ul class="checklist" id="personalChecklist">
+    <li><label><input type="checkbox"> Sign On</label></li>
+    <li><label><input type="checkbox"> 更新：Flysmart / Aviobook / FD PRO</label></li>
+    <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
+    <li><label><input type="checkbox"> OFP 已簽名</label></li>
+    <li><label><input type="checkbox"> Fleet Notice</label></li>
+  </ul>
+</div>
+
+  <div style="margin-top:1.2em; text-align:right;">
+  <button onclick="clearAllChecklist()">🧹 一鍵清除全部勾選</button>
+</div>
+
+  
   <div class="section">
     <h2>📝 NOTAM 座標地圖</h2>
     <div class="button-row">
@@ -307,6 +362,40 @@ function updateFlight() {
   function refreshIframe(id){
   const iframe = document.getElementById(id);
   if(iframe) iframe.src = iframe.src;
+}
+
+  function setupChecklist(listId) {
+  const list = document.getElementById(listId);
+  const storageKey = "checklist_" + listId;
+
+  // 讀取已儲存狀態
+  const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+  // 設定初始勾選狀態
+  list.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
+    cb.checked = saved[i] || false;
+    cb.addEventListener("change", () => {
+      saved[i] = cb.checked;
+      localStorage.setItem(storageKey, JSON.stringify(saved));
+    });
+  });
+}
+
+// 初始化兩組 checklist
+setupChecklist("briefingChecklist");
+setupChecklist("personalChecklist");
+  function clearAllChecklist() {
+  const checklistIds = ["briefingChecklist", "personalChecklist"];
+  checklistIds.forEach(id => {
+    const list = document.getElementById(id);
+    const checkboxes = list.querySelectorAll('input[type="checkbox"]');
+    const saved = {};
+    checkboxes.forEach((cb, i) => {
+      cb.checked = false;
+      saved[i] = false;
+    });
+    localStorage.setItem("checklist_" + id, JSON.stringify(saved));
+  });
 }
 </script>
 
