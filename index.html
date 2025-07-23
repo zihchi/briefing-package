@@ -120,10 +120,7 @@
     <li><label><input type="checkbox"> OFP Signed</label></li>
     <li><label><input type="checkbox"> Fleet Notice</label></li>
   </ul>
-</div>
-  <div style="margin-top:1.2em; text-align:right;">
-  <button onclick="clearAllChecklist()">🧹 一鍵清除全部勾選</button>
-</div>
+
 
     
   <div class="section windy-section">
@@ -385,24 +382,7 @@ function updateFlight() {
 // 初始化兩組 checklist
 setupChecklist("briefingChecklist");
 setupChecklist("personalChecklist");
-  function clearAllChecklist() {
-  const checklistIds = ["briefingChecklist", "personalChecklist"];
-  checklistIds.forEach(id => {
-    const list = document.getElementById(id);
-    const checkboxes = list.querySelectorAll('input[type="checkbox"]');
-    const saved = {};
-    checkboxes.forEach((cb, i) => {
-      cb.checked = false;
-      saved[i] = false;
-    });
-    localStorage.setItem("checklist_" + id, JSON.stringify(saved));
-  });
-}
 </script>
-
-
-
-
 </body>
 </html>
 
