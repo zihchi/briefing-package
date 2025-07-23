@@ -96,16 +96,16 @@
   <h3>📋 簡報前檢查清單（PIREPS）</h3>
   <ul class="checklist" id="briefingChecklist">
     <li><label><input type="checkbox"> Personal equipments</label></li>
-    <li><label><input type="checkbox"> flight Information</label></li>
+    <li><label><input type="checkbox"> Information</label></li>
     <li><label><input type="checkbox"> Registration</label></li>
     <li><label><input type="checkbox"> Enroute Wx</label></li>
+    <li><label><input type="checkbox"> Performance</label></li>
     <li><label><input type="checkbox"> Special Procedure</label></li>
   </ul>
 
 
-  <h3>🛠️ Briefing 文件項目</h3>
+  <h3>🛠️ Special 特別事項</h3>
   <ul class="checklist" id="briefingChecklist">
-    <li><label><input type="checkbox"> Special 特別事項</label></li>
     <li><label><input type="checkbox"> NOTAM</label></li>
     <li><label><input type="checkbox"> MEL / CDL Procedure</label></li>
     <li><label><input type="checkbox"> Airport Briefing</label></li>
@@ -117,11 +117,10 @@
     <li><label><input type="checkbox"> Sign On</label></li>
     <li><label><input type="checkbox"> 更新：Flysmart / Aviobook / FD PRO</label></li>
     <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
-    <li><label><input type="checkbox"> OFP 已簽名</label></li>
+    <li><label><input type="checkbox"> OFP Signed</label></li>
     <li><label><input type="checkbox"> Fleet Notice</label></li>
   </ul>
 </div>
-
   <div style="margin-top:1.2em; text-align:right;">
   <button onclick="clearAllChecklist()">🧹 一鍵清除全部勾選</button>
 </div>
@@ -171,12 +170,15 @@
 </div>
 
 <div class="section windy-section">
-  <h2>💨 Windy 風速圖 (Surface) 
-    <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
+  <h2>🌧️ Windy 雲圖 + 降雨回波（Radar & Satellite）
+    <button onclick="refreshIframe('windyRadarCloud')">重新整理</button>
   </h2>
-  <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  <iframe id="windyRadarCloud" 
+    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=radar&menu=&message=true&marker=&calendar=now"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+  </iframe>
 </div>
+
 
 <div class="section windy-section">
   <h2>🌬️ Windy 風速圖 (FL390) 
