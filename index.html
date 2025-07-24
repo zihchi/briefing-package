@@ -82,12 +82,13 @@
     <div class="tool-grid">
       <a class="btn" href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank">☁️Weathernews Flight Plan Editor</a>
       <a class="btn" href="https://pilotstarspace.starlux-airlines.com/#/" target="_blank">🌟SJX Pilot Space</a>
-      <a class="btn" href="https://turbli.com" target="_blank">🌀Turbli 亂流預測</a>
+      <a class="btn" href="https://turbli.com" target="_blank">💨Turbli 亂流預測</a>
       <a class="btn" href="https://tono2.net" target="_blank">🇯🇵Tono2 航空氣象</a>
       <a class="btn" href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank">🧰STARLUX ELB Fleet</a> 
       <a class="btn" href="https://www.skyinfo.jp" target="_blank">🇯🇵日本NOTAM地圖</a>
       <a class="btn" href="https://sjx.lido.aero/lido/las/login.jsp?DESMON_RESULT_PAGE=https://sjx.lido.aero/briefing&DESMON_CODE=LAS_001&DESMON_LANG=null" target="_blank">📋LIDO Briefing</a>
       <a class="btn" href="https://zihchi.github.io/flight-time/" target="_blank">💻飛時計算工具</a>
+      <a class="btn" href="https://app.cwa.gov.tw/web/obsmap/typhoon.html" target="_blank">🌀颱風路徑圖</a>
       
     </div>
   </div>
@@ -131,14 +132,14 @@
 </div>
 
 <div class="section windy-section">
-  <h2>☁️ Windy 雲圖（Clouds）
-    <button onclick="refreshIframe('windyClouds')">重新整理</button>
+  <h2>🌟 Windy 衛星紅外線圖（Infrared）
+    <button onclick="refreshIframe('windyInfraRed')">重新整理</button>
   </h2>
-  <iframe id="windyClouds"
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=clouds&menu=&message=true&marker=&calendar=now"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-  </iframe>
+  <iframe id="windyInfraRed"
+    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=true"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
+
 
 
 <div class="section windy-section">
