@@ -1,4 +1,4 @@
-const flights = [
+window.flights = [
   { flightNo: "205", route: "TPE/MFM" },
   { flightNo: "206", route: "MFM/TPE" },
   { flightNo: "846", route: "TPE/KMJ" },
