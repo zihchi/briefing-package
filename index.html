@@ -411,23 +411,30 @@ window.flights = [
   { flightNo: "805", route: "NRT/TPE" }
   ];  
 
-  function initFlightSelect() {
-    const selectEl = document.getElementById("flightSelect");
-    console.log("✅ initFlightSelect called, element:", selectEl);
+  console.log("🧪 window.flights:", window.flights);
 
-    if (!selectEl) return;
+function initFlightSelect() {
+  const selectEl = document.getElementById("flightSelect");
+  console.log("✅ initFlightSelect called, element:", selectEl);
 
-    const defaultOption = document.createElement("option");
-    defaultOption.value = "";
-    defaultOption.textContent = "-- 請選擇航班 --";
-    selectEl.appendChild(defaultOption);
+  if (!selectEl) {
+    console.warn("⛔ flightSelect element not found");
+    return;
+  }
 
-    window.flights.forEach(item => {
-      const opt = document.createElement("option");
-      opt.value = item.flightNo;
-      opt.textContent = item.flightNo;
-      selectEl.appendChild(opt);
-    });
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.textContent = "-- 請選擇航班 --";
+  selectEl.appendChild(defaultOption);
+
+  window.flights.forEach(item => {
+    console.log("🛬 Adding flight:", item.flightNo);  // ← 每筆都印出來
+    const opt = document.createElement("option");
+    opt.value = item.flightNo;
+    opt.textContent = item.flightNo;
+    selectEl.appendChild(opt);
+  });
+}
 
     selectEl.addEventListener("change", function () {
       const selected = this.value;
