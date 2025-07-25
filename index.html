@@ -127,8 +127,11 @@
   <h2>🛫 Turbli 航班亂流查詢</h2>
   <label for="flightSelect">請選擇航班：</label>
   <select id="flightSelect">
-    <option value="">-- 請選擇航班 --</option>
-  </select>
+  <option value="">-- 請選擇航班 --</option>
+</select>
+<br><br>
+<button id="turbliBtn" disabled onclick="openTurbli()">查詢</button>
+
 </div>
   
   <div class="section windy-section">
@@ -427,27 +430,41 @@ setupChecklist("personalChecklist");
     });
 
     selectEl.addEventListener("change", function () {
-      const selected = this.value;
-      if (!selected) return;
+  const selected = this.value;
+  const btn = document.getElementById("turbliBtn");
+  if (!selected) {
+    btn.disabled = true;
+    btn.dataset.url = "";
+    return;
+  }
 
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
 
-      const flight = flights.find(f => f.flightNo === selected);
-      if (!flight) return;
+  const flight = flights.find(f => f.flightNo === selected);
+  if (!flight) return;
 
-      const fullFlight = "JX-" + selected;
-      const url = `https://turbli.com/${flight.route}/${dateStr}/${fullFlight}/`;
-      window.open(url, "_blank");
-    });
+  const fullFlight = "JX-" + selected;
+  const url = `https://turbli.com/${flight.route}/${dateStr}/${fullFlight}/`;
+
+  btn.disabled = false;
+  btn.dataset.url = url;
+});
+
   } catch (e) {
     console.error("初始化航班選單失敗：", e);
   }
 }
 window.addEventListener("DOMContentLoaded", initFlightSelect);
+
+function openTurbli() {
+  const btn = document.getElementById("turbliBtn");
+  const url = btn.dataset.url;
+  if (url) window.open(url, "_blank");
+}
 </script>
 </body>
 </html>
