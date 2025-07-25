@@ -421,36 +421,38 @@ function initFlightSelect() {
   selectEl.appendChild(defaultOption);
 
   window.flights.forEach(item => {
-    console.log("🛬 Adding flight:", item.flightNo);  // ← 每筆都印出來
+    console.log("🛬 Adding flight:", item.flightNo);
     const opt = document.createElement("option");
     opt.value = item.flightNo;
     opt.textContent = item.flightNo;
     selectEl.appendChild(opt);
   });
+
+  // ✅ 正確掛上事件監聽器，更新按鈕連結
+  selectEl.addEventListener("change", function () {
+    const selected = this.value;
+    const btn = document.getElementById("turbliBtn");
+
+    if (!selected) {
+      btn.disabled = true;
+      btn.dataset.url = "";
+      return;
+    }
+
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const flight = window.flights.find(f => f.flightNo === selected);
+    if (!flight) return;
+
+    btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
+    btn.disabled = false;
+  });
 }
 
-    selectEl.addEventListener("change", function () {
-      const selected = this.value;
-      const btn = document.getElementById("turbliBtn");
-
-      if (!selected) {
-        btn.disabled = true;
-        btn.dataset.url = "";
-        return;
-      }
-
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-
-      const flight = window.flights.find(f => f.flightNo === selected);
-      if (!flight) return;
-
-      btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
-      btn.disabled = false;
-    });
   
 
   // ✅ 確保在 DOM 載入完才呼叫 initFlightSelect
