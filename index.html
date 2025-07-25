@@ -210,26 +210,6 @@
     <div id="map"></div>
   </div>
 
-<script>
-window.flights = [
-  { flightNo: "205", route: "TPE/MFM" },
-  { flightNo: "206", route: "MFM/TPE" },
-  { flightNo: "846", route: "TPE/KMJ" },
-  { flightNo: "847", route: "KMJ/TPE" },
-  { flightNo: "771", route: "TPE/SIN" },
-  { flightNo: "772", route: "SIN/TPE" },
-  { flightNo: "840", route: "TPE/FUK" },
-  { flightNo: "841", route: "FUK/TPE" },
-  { flightNo: "850", route: "TPE/CTS" },
-  { flightNo: "851", route: "CTS/TPE" },
-  { flightNo: "862", route: "TPE/SDJ" },
-  { flightNo: "863", route: "SDJ/TPE" },
-  { flightNo: "713", route: "TPE/SGN" },
-  { flightNo: "714", route: "SGN/TPE" },
-  { flightNo: "804", route: "TPE/NRT" },
-  { flightNo: "805", route: "NRT/TPE" }
-  ];  
-</script>
   
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -415,70 +395,69 @@ setupChecklist("briefingChecklist2");
 setupChecklist("personalChecklist");
 
 // 亂流的敘述檔案 //
-  function initFlightSelect() {
-      const selectEl = document.getElementById("flightSelect");
-      console.log("✅ Flight select loaded:", document.getElementById("flightSelect"));
-      if (!selectEl) return;
+window.flights = [
+  { flightNo: "205", route: "TPE/MFM" },
+  { flightNo: "206", route: "MFM/TPE" },
+  { flightNo: "846", route: "TPE/KMJ" },
+  { flightNo: "847", route: "KMJ/TPE" },
+  { flightNo: "771", route: "TPE/SIN" },
+  { flightNo: "772", route: "SIN/TPE" },
+  { flightNo: "840", route: "TPE/FUK" },
+  { flightNo: "841", route: "FUK/TPE" },
+  { flightNo: "850", route: "TPE/CTS" },
+  { flightNo: "851", route: "CTS/TPE" },
+  { flightNo: "862", route: "TPE/SDJ" },
+  { flightNo: "863", route: "SDJ/TPE" },
+  { flightNo: "713", route: "TPE/SGN" },
+  { flightNo: "714", route: "SGN/TPE" },
+  { flightNo: "804", route: "TPE/NRT" },
+  { flightNo: "805", route: "NRT/TPE" }
+  ];  
 
-      const flights = window.flights || [];
-      if (flights.length === 0) {
-        console.warn("⚠️ 航班清單為空");
+  function initFlightSelect() {
+    const selectEl = document.getElementById("flightSelect");
+    console.log("✅ initFlightSelect called, element:", selectEl);
+
+    if (!selectEl) return;
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "-- 請選擇航班 --";
+    selectEl.appendChild(defaultOption);
+
+    window.flights.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.flightNo;
+      opt.textContent = item.flightNo;
+      selectEl.appendChild(opt);
+    });
+
+    selectEl.addEventListener("change", function () {
+      const selected = this.value;
+      const btn = document.getElementById("turbliBtn");
+
+      if (!selected) {
+        btn.disabled = true;
+        btn.dataset.url = "";
         return;
       }
 
-      // ✅ 先加入預設選項
-      const defaultOption = document.createElement("option");
-      defaultOption.value = "";
-      defaultOption.textContent = "-- 請選擇航班 --";
-      selectEl.appendChild(defaultOption);
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
 
-      // ✅ 加入所有航班選項
-      flights.sort((a, b) => a.flightNo.localeCompare(b.flightNo));
-      flights.forEach(item => {
-        const opt = document.createElement("option");
-        opt.value = item.flightNo;
-        opt.textContent = item.flightNo;
-        selectEl.appendChild(opt);
-      });
+      const flight = window.flights.find(f => f.flightNo === selected);
+      if (!flight) return;
 
-      // ✅ 綁定事件
-      selectEl.addEventListener("change", function () {
-        const selected = this.value;
-        const btn = document.getElementById("turbliBtn");
-        if (!selected) {
-          btn.disabled = true;
-          btn.dataset.url = "";
-          return;
-        }
+      btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
+      btn.disabled = false;
+    });
+  }
 
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const dateStr = `${yyyy}-${mm}-${dd}`;
-
-        const flight = flights.find(f => f.flightNo === selected);
-        if (!flight) return;
-
-        const url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
-        btn.disabled = false;
-        btn.dataset.url = url;
-      });
-    }
-
-    function openTurbli() {
-      const btn = document.getElementById("turbliBtn");
-      const url = btn.dataset.url;
-      if (url) window.open(url, "_blank");
-    }
-
-    // ✅ 初始化
-  document.addEventListener("DOMContentLoaded", function() {
-  initFlightSelect();
-});
-
-
-
+  // ✅ 確保在 DOM 載入完才呼叫 initFlightSelect
+  document.addEventListener("DOMContentLoaded", initFlightSelect);
 </script>
 
 </body>
