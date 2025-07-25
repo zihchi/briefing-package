@@ -452,11 +452,15 @@ function initFlightSelect() {
     btn.disabled = false;
   });
 }
+document.addEventListener("DOMContentLoaded", function () {
+  initFlightSelect();
 
-  
+  document.getElementById("turbliBtn").addEventListener("click", function () {
+    const url = this.dataset.url;
+    if (url) window.open(url, "_blank");
+  });
+});
 
-  // ✅ 確保在 DOM 載入完才呼叫 initFlightSelect
-  document.addEventListener("DOMContentLoaded", initFlightSelect);
 </script>
 
 </body>
