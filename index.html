@@ -458,7 +458,7 @@ function initFlightSelect() {
       btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
       btn.disabled = false;
     });
-  }
+  
 
   // ✅ 確保在 DOM 載入完才呼叫 initFlightSelect
   document.addEventListener("DOMContentLoaded", initFlightSelect);
