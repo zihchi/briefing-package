@@ -209,8 +209,7 @@
     <textarea id="notamInput" placeholder="直接貼整段 NOTAM"></textarea>
     <div id="map"></div>
   </div>
-  
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
 window.flights = [
   { flightNo: "205", route: "TPE/MFM" },
@@ -229,8 +228,11 @@ window.flights = [
   { flightNo: "714", route: "SGN/TPE" },
   { flightNo: "804", route: "TPE/NRT" },
   { flightNo: "805", route: "NRT/TPE" }
-  ];
+  ];  
+<script>
   
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
 let map = L.map('map').setView([23.5, 121], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let shapeLayers = [];
