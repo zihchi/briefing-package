@@ -404,7 +404,6 @@ window.flights = [
   { flightNo: "805", route: "NRT/TPE" }
   ];  
 
-  console.log("🧪 window.flights:", window.flights);
 
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
@@ -420,13 +419,15 @@ function initFlightSelect() {
   defaultOption.textContent = "-- 請選擇航班 --";
   selectEl.appendChild(defaultOption);
 
-  window.flights.forEach(item => {
-    console.log("🛬 Adding flight:", item.flightNo);
-    const opt = document.createElement("option");
-    opt.value = item.flightNo;
-    opt.textContent = item.flightNo;
-    selectEl.appendChild(opt);
-  });
+  window.flights
+    .sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }))
+    .forEach(item => {
+      console.log("🛬 Adding flight:", item.flightNo);
+      const opt = document.createElement("option");
+      opt.value = item.flightNo;
+      opt.textContent = item.flightNo;
+      selectEl.appendChild(opt);
+    });
 
   // ✅ 正確掛上事件監聽器，更新按鈕連結
   selectEl.addEventListener("change", function () {
