@@ -458,14 +458,18 @@ setupChecklist("personalChecklist");
     console.error("初始化航班選單失敗：", e);
   }
 }
-window.addEventListener("DOMContentLoaded", initFlightSelect);
-
 function openTurbli() {
   const btn = document.getElementById("turbliBtn");
   const url = btn.dataset.url;
   if (url) window.open(url, "_blank");
 }
+
+window.onload = function () {
+  initFlightSelect();
+};
+
 </script>
+
 </body>
 </html>
 
