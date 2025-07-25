@@ -415,6 +415,7 @@ setupChecklist("personalChecklist");
 // 亂流的敘述檔案 //
   function initFlightSelect() {
       const selectEl = document.getElementById("flightSelect");
+      console.log("✅ Flight select loaded:", document.getElementById("flightSelect"));
       if (!selectEl) return;
 
       const flights = window.flights || [];
@@ -470,7 +471,11 @@ setupChecklist("personalChecklist");
     }
 
     // ✅ 初始化
-    window.onload = initFlightSelect;
+  document.addEventListener("DOMContentLoaded", function() {
+  initFlightSelect();
+});
+
+
 
 </script>
 
