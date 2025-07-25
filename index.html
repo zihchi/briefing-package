@@ -210,6 +210,7 @@
 
   
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="flights.js"></script>  
 <script>
 let map = L.map('map').setView([23.5, 121], 7);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -395,8 +396,7 @@ setupChecklist("personalChecklist");
 // 亂流的敘述檔案 //
   async function initFlightSelect() {
   try {
-    const response = await fetch("flights.json");
-    const flights = await response.json();
+    const flights = window.flights; // ← 這裡直接從全域變數取得
     const selectEl = document.getElementById("flightSelect");
 
     flights.forEach(item => {
@@ -424,10 +424,9 @@ setupChecklist("personalChecklist");
       window.open(url, "_blank");
     });
   } catch (e) {
-    console.error("讀取航班資料失敗：", e);
+    console.error("初始化航班選單失敗：", e);
   }
 }
-
 window.addEventListener("DOMContentLoaded", initFlightSelect);
 </script>
 </body>
