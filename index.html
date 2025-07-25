@@ -95,7 +95,7 @@
 <div class="section">
   
   <h3>📋 簡報前檢查清單（PIREPS）</h3>
-  <ul class="checklist" id="briefingChecklist">
+  <ul class="checklist" id="briefingChecklist1">
     <li><label><input type="checkbox"> Personal equipments</label></li>
     <li><label><input type="checkbox"> Information</label></li>
     <li><label><input type="checkbox"> Registration</label></li>
@@ -106,7 +106,7 @@
 
 
   <h3>🛠️ Special 特別事項</h3>
-  <ul class="checklist" id="briefingChecklist">
+  <ul class="checklist" id="briefingChecklist2">
     <li><label><input type="checkbox"> NOTAM</label></li>
     <li><label><input type="checkbox"> MEL / CDL Procedure</label></li>
     <li><label><input type="checkbox"> Airport Briefing</label></li>
@@ -123,6 +123,14 @@
   </ul>
 </div>
 
+<div class="section">
+  <h2>🛫 Turbli 航班亂流查詢</h2>
+  <label for="flightSelect">請選擇航班：</label>
+  <select id="flightSelect">
+    <option value="">-- 請選擇航班 --</option>
+  </select>
+</div>
+  
   <div class="section windy-section">
   <h2>🌧️ Windy 即時雷達圖 
     <button onclick="refreshIframe('windyRadar')">重新整理</button>
@@ -380,8 +388,47 @@ function updateFlight() {
 }
 
 // 初始化兩組 checklist
-setupChecklist("briefingChecklist");
+setupChecklist("briefingChecklist1");
+setupChecklist("briefingChecklist2");
 setupChecklist("personalChecklist");
+
+// 亂流的敘述檔案 //
+  async function initFlightSelect() {
+  try {
+    const response = await fetch("flights.json");
+    const flights = await response.json();
+    const selectEl = document.getElementById("flightSelect");
+
+    flights.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.flightNo;
+      opt.textContent = item.flightNo;
+      selectEl.appendChild(opt);
+    });
+
+    selectEl.addEventListener("change", function () {
+      const selected = this.value;
+      if (!selected) return;
+
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      const flight = flights.find(f => f.flightNo === selected);
+      if (!flight) return;
+
+      const fullFlight = "JX-" + selected;
+      const url = `https://turbli.com/${flight.route}/${dateStr}/${fullFlight}/`;
+      window.open(url, "_blank");
+    });
+  } catch (e) {
+    console.error("讀取航班資料失敗：", e);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", initFlightSelect);
 </script>
 </body>
 </html>
