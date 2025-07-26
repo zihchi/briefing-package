@@ -87,9 +87,12 @@
       <a class="btn" href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank">🧰STARLUX ELB Fleet</a> 
       <a class="btn" href="https://www.skyinfo.jp" target="_blank">🇯🇵日本NOTAM地圖</a>
       <a class="btn" href="https://sjx.lido.aero/lido/las/login.jsp?DESMON_RESULT_PAGE=https://sjx.lido.aero/briefing&DESMON_CODE=LAS_001&DESMON_LANG=null" target="_blank">📋LIDO Briefing</a>
-      <a class="btn" href="https://zihchi.github.io/flight-time/" target="_blank">💻飛時計算工具</a>
+      <a class="btn" href="https://datis.rudicloud.com/" target="_blank">💽D-ATIS</a>
       <a class="btn" href="https://app.cwa.gov.tw/web/obsmap/typhoon.html" target="_blank">🌀颱風路徑圖</a>
-      
+      <a class="btn" href="https://zihchi.github.io/flight-time/" target="_blank">💻飛時計算工具</a>
+
+
+    
     </div>
   </div>
 <div class="section">
@@ -139,11 +142,11 @@
 </div>
 
 <div class="section windy-section">
-  <h2>🌟 Windy 衛星紅外線圖（Infrared）
-    <button onclick="refreshIframe('windyInfraRed')">重新整理</button>
+  <h2>🌤️ Windy 衛星雲圖
+    <button onclick="refreshIframe('windySatellite')">重新整理</button>
   </h2>
-  <iframe id="windyInfraRed"
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&satelliteInfra=1&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
+  <iframe id="windySatellite"
+    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
     style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
@@ -156,6 +159,15 @@
     style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
 </div>
 
+<div class="section windy-section">
+  <h2>✈️ Windy 晴空亂流圖 (FL340) 
+    <button onclick="refreshIframe('windyTurbFL340')">重新整理</button>
+  </h2>
+  <iframe id="windyTurbFL340" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=250h&overlay=turbulence"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+</div>
+
+  
 <div class="section windy-section">
   <h2>✈️ Windy 晴空亂流圖 (FL390) 
     <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
@@ -174,29 +186,6 @@
     </div>
   </div>
 
-   <div class="section">
-  <h2>✈️ Flightradar24 機號追蹤</h2>
-  <div style="margin-bottom:1em;">
-    <label for="regSelect" style="font-size:1.0em;">選擇機號：</label>
-    <select id="regSelect" onchange="updateFlight()" style="font-size:1.0em; padding:0.4em;">
-      <option value="B-58301">B-58301</option>
-      <option value="B-58302">B-58302</option>
-      <option value="B-58303">B-58303</option>
-      <option value="B-58304">B-58304</option>
-      <option value="B-58305">B-58305</option>
-      <option value="B-58306">B-58306</option>
-      <option value="B-58307">B-58307</option>
-    </select>
-  </div>
-  <div style="width:75%; max-width:960px;">
-    <iframe id="fr24"
-      src="https://www.flightradar24.com/simple_index.php?reg=B-58301"
-      width="100%" height="600" frameborder="0"
-      style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-    </iframe>
-  </div>
-</div>
-  
   <div class="section">
     <h2>📝 NOTAM 座標地圖</h2>
     <div class="button-row">
@@ -352,32 +341,19 @@ function clearMap(){
   shapeLayers=[]; document.getElementById('notamInput').value="";
 }
 
-function updateFlight() {
-  var reg = document.getElementById("regSelect").value;
-  var iframe = document.getElementById("fr24");
-  iframe.src = "https://www.flightradar24.com/simple_index.php?reg=" + reg;
-}
+
   function refreshIframe(id){
   const iframe = document.getElementById(id);
   if(iframe) iframe.src = iframe.src;
 }
 
   function setupChecklist(listId) {
+  // 不做任何儲存，重新整理後將回到未勾選狀態
   const list = document.getElementById(listId);
-  const storageKey = "checklist_" + listId;
-
-  // 讀取已儲存狀態
-  const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-
-  // 設定初始勾選狀態
-  list.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
-    cb.checked = saved[i] || false;
-    cb.addEventListener("change", () => {
-      saved[i] = cb.checked;
-      localStorage.setItem(storageKey, JSON.stringify(saved));
-    });
-  });
+  if (!list) return;
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
 }
+
 
 // 初始化兩組 checklist
 setupChecklist("briefingChecklist1");
