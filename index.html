@@ -129,8 +129,14 @@
 <div class="section">
   <h2>🛫 Turbli 航班亂流查詢</h2>
   <label for="flightSelect">請選擇航班：</label>
-<select id="flightSelect"></select>
-<button id="turbliBtn" onclick="openTurbli()" disabled>查詢</button>
+  <select id="flightSelect" style="margin-right:1em;"></select>
+  <label for="dateSelect">請選擇日期：</label>
+  <select id="dateSelect" style="margin-right:1em;">
+    <option value="today">今天</option>
+    <option value="tomorrow">明天</option>
+  </select>
+
+  <button id="turbliBtn" onclick="openTurbli()" disabled>查詢</button>
 </div>
   
   <div class="section windy-section">
@@ -383,10 +389,13 @@ window.flights = [
 
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
+  const dateSelectEl = document.getElementById("dateSelect");
+  const btn = document.getElementById("turbliBtn");
+
   console.log("✅ initFlightSelect called, element:", selectEl);
 
-  if (!selectEl) {
-    console.warn("⛔ flightSelect element not found");
+  if (!selectEl || !dateSelectEl || !btn) {
+    console.warn("⛔ 找不到某些 DOM 元素");
     return;
   }
 
@@ -405,30 +414,42 @@ function initFlightSelect() {
       selectEl.appendChild(opt);
     });
 
-  // ✅ 正確掛上事件監聽器，更新按鈕連結
-  selectEl.addEventListener("change", function () {
-    const selected = this.value;
-    const btn = document.getElementById("turbliBtn");
+  function updateTurbliUrl() {
+    const selectedFlight = selectEl.value;
+    const selectedDate = dateSelectEl.value;
 
-    if (!selected) {
+    if (!selectedFlight) {
       btn.disabled = true;
       btn.dataset.url = "";
       return;
     }
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
+    const date = new Date();
+    if (selectedDate === "tomorrow") {
+      date.setDate(date.getDate() + 1);
+    }
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    const flight = window.flights.find(f => f.flightNo === selected);
-    if (!flight) return;
+    const flight = window.flights.find(f => f.flightNo === selectedFlight);
+    if (!flight) {
+      console.warn("⚠️ 找不到對應航班資料");
+      return;
+    }
 
-    btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selected}/`;
+    btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
     btn.disabled = false;
-  });
+  }
+
+  // 綁定兩個選單的 change 事件
+  selectEl.addEventListener("change", updateTurbliUrl);
+  dateSelectEl.addEventListener("change", updateTurbliUrl);
 }
+
+// 初始化與按鈕點擊事件
 document.addEventListener("DOMContentLoaded", function () {
   initFlightSelect();
 
