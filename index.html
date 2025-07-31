@@ -177,6 +177,47 @@
 
   <button id="turbliBtn" onclick="openTurbli()" disabled>查詢</button>
 </div>
+
+  <div class="section">
+  <h2>🌏 D-ATIS</h2>
+  <label for="AirportSelect">請選擇機場：</label>
+  <select id="AirportSelect" style="margin-right:1em;"></select>
+  <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
+    <option selected disabled>--請選擇機場--</option>
+    <optgroup label="台灣、香港">
+      <option value="https://datis.rudicloud.com/a/RCTP">RCTP 桃園</option>
+      <option value="https://datis.rudicloud.com/a/RCSS">RCSS 松山</option>
+      <option value="https://datis.rudicloud.com/a/RCKH">RCKH 高雄</option>
+      <option value="https://datis.rudicloud.com/a/VHHH">VHHH 香港</option>
+    </optgroup>
+    <optgroup label="越南">
+      <option value="https://datis.rudicloud.com/a/VVTS">VVTS 胡志明</option>
+      <option value="https://datis.rudicloud.com/a/VVNB">VVNB 河內</option>
+      <option value="https://datis.rudicloud.com/a/VVDN">VVDN 峴港</option>
+    </optgroup>
+    <optgroup label="東南亞">
+      <option value="https://datis.rudicloud.com/a/VTBS">VTBS 曼谷</option>
+      <option value="https://datis.rudicloud.com/a/WSSS">WSSS 新加坡</option>
+      <option value="https://datis.rudicloud.com/a/WMKK">WMKK 吉隆坡</option>
+      <option value="https://datis.rudicloud.com/a/WIII">WIII 雅加達</option>
+    </optgroup>
+    <optgroup label="日本">
+      <option value="https://datis.rudicloud.com/a/ROAH">ROAH 沖繩</option>
+      <option value="https://datis.rudicloud.com/a/RJFF">RJFF 福岡</option>
+      <option value="https://datis.rudicloud.com/a/RJFT">RJFT 熊本</option>
+      <option value="https://datis.rudicloud.com/a/RJBB">RJBB 關西</option>
+      <option value="https://datis.rudicloud.com/a/RJGG">RJGG 中部</option>
+      <option value="https://datis.rudicloud.com/a/RJTT">RJTT 羽田</option>
+      <option value="https://datis.rudicloud.com/a/RJAA">RJAA 成田</option>
+      <option value="https://datis.rudicloud.com/a/RJSS">RJSS 仙台</option>
+      <option value="https://datis.rudicloud.com/a/RJCH">RJCH 函館</option>
+      <option value="https://datis.rudicloud.com/a/RJCC">RJCC 新千歲</option>
+    </optgroup>
+  </select>
+</div>
+
+
+
   
   <div class="section windy-section">
   <h2>🌧️ Windy 即時雷達圖 
@@ -240,43 +281,6 @@
       <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
     </div>
   </div>
-
-  <div class="section">
-  <h2>🌏D-ATIS</h2>
-  <p style="font-size: medium;">選擇機場：</p>
-  <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
-    <option selected disabled>--選擇機場--：</option>
-    <optgroup label="台灣、香港">
-      <option value="https://datis.rudicloud.com/a/RCTP">RCTP 桃園</option>
-      <option value="https://datis.rudicloud.com/a/RCSS">RCSS 松山</option>
-      <option value="https://datis.rudicloud.com/a/RCKH">RCKH 高雄</option>
-      <option value="https://datis.rudicloud.com/a/VHHH">VHHH 香港</option>
-    </optgroup>
-    <optgroup label="越南">
-      <option value="https://datis.rudicloud.com/a/VVTS">VVTS 胡志明</option>
-      <option value="https://datis.rudicloud.com/a/VVNB">VVNB 河內</option>
-      <option value="https://datis.rudicloud.com/a/VVDN">VVDN 峴港</option>
-    </optgroup>
-    <optgroup label="東南亞">
-      <option value="https://datis.rudicloud.com/a/VTBS">VTBS 曼谷</option>
-      <option value="https://datis.rudicloud.com/a/WSSS">WSSS 新加坡</option>
-      <option value="https://datis.rudicloud.com/a/WMKK">WMKK 吉隆坡</option>
-      <option value="https://datis.rudicloud.com/a/WIII">WIII 雅加達</option>
-    </optgroup>
-    <optgroup label="日本">
-      <option value="https://datis.rudicloud.com/a/ROAH">ROAH 沖繩</option>
-      <option value="https://datis.rudicloud.com/a/RJFF">RJFF 福岡</option>
-      <option value="https://datis.rudicloud.com/a/RJFT">RJFT 熊本</option>
-      <option value="https://datis.rudicloud.com/a/RJBB">RJBB 關西</option>
-      <option value="https://datis.rudicloud.com/a/RJGG">RJGG 中部</option>
-      <option value="https://datis.rudicloud.com/a/RJTT">RJTT 羽田</option>
-      <option value="https://datis.rudicloud.com/a/RJAA">RJAA 成田</option>
-      <option value="https://datis.rudicloud.com/a/RJSS">RJSS 仙台</option>
-      <option value="https://datis.rudicloud.com/a/RJCH">RJCH 函館</option>
-      <option value="https://datis.rudicloud.com/a/RJCC">RJCC 新千歲</option>
-    </optgroup>
-  </select>
-</div>
   
   <div class="section">
     <h2>📝 NOTAM 座標地圖</h2>
