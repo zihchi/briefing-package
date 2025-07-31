@@ -121,17 +121,12 @@
     <div class="tool-grid">
       <a class="btn" href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank">☁️Weathernews Flight Plan Editor</a>
       <a class="btn" href="https://pilotstarspace.starlux-airlines.com/#/" target="_blank">🌟SJX Pilot Space</a>
-      <a class="btn" href="https://turbli.com" target="_blank">💨Turbli 亂流預測</a>
-      <a class="btn" href="https://tono2.net" target="_blank">🇯🇵Tono2 航空氣象</a>
       <a class="btn" href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank">🧰STARLUX ELB Fleet</a> 
-      <a class="btn" href="https://www.skyinfo.jp" target="_blank">🇯🇵日本NOTAM地圖</a>
+      <a class="btn" href="https://tono2.net" target="_blank">🇯🇵Tono2 航空氣象</a>
       <a class="btn" href="https://sjx.lido.aero/lido/las/login.jsp?DESMON_RESULT_PAGE=https://sjx.lido.aero/briefing&DESMON_CODE=LAS_001&DESMON_LANG=null" target="_blank">📋LIDO Briefing</a>
-      <a class="btn" href="https://datis.rudicloud.com/" target="_blank">💽D-ATIS</a>
+      <a class="btn" href="https://www.skyinfo.jp" target="_blank">🇯🇵日本NOTAM地圖</a>
       <a class="btn" href="https://app.cwa.gov.tw/web/obsmap/typhoon.html" target="_blank">🌀颱風路徑圖</a>
       <a class="btn" href="https://zihchi.github.io/flight-time/" target="_blank">💻飛時計算工具</a>
-
-
-    
     </div>
   </div>
 <div class="section">
@@ -174,8 +169,10 @@
     <option value="today">今天</option>
     <option value="tomorrow">明天</option>
   </select>
-
   <button id="turbliBtn" onclick="openTurbli()" disabled>查詢</button>
+  <a href="https://turbli.com/" target="_blank" style="margin-left: 1em;">
+    <button type="button">官網</button>
+  </a>
 </div>
 
   <div class="section">
@@ -184,6 +181,7 @@
   <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
     <option selected disabled>--請選擇機場--</option>
     <optgroup label="台灣、香港">
+      <option value="https://datis.rudicloud.com/">ATIS 官方網站</option>
       <option value="https://datis.rudicloud.com/a/RCTP">RCTP 桃園</option>
       <option value="https://datis.rudicloud.com/a/RCSS">RCSS 松山</option>
       <option value="https://datis.rudicloud.com/a/RCKH">RCKH 高雄</option>
