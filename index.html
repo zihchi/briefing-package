@@ -304,13 +304,31 @@ function normalizeDMS(c){
   return c;
 }
 
-// ⬇️ 將 320229N 1240000E 轉十進位
+// ⬇️ 將 DMS (含特殊三位秒數) 轉十進位
 function dmsToDecimal(d){
-  let m=d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
-  if(!m)return NaN;
-  let dec=+m[1]+(+m[2]/60)+(+m[3]/3600);
-  return (m[4]==='S'||m[4]==='W')?-dec:dec;
+  let m = d.match(/(\d{2,3})(\d{2})(\d{2,3})([NSEW])/);
+  if(!m) return NaN;
+
+  let deg = +m[1];
+  let min = +m[2];
+  let secRaw = m[3];
+
+  let sec;
+  if(secRaw.length === 2) {
+    // 標準格式 (18 → 18 秒)
+    sec = +secRaw;
+  } else if(secRaw.length === 3) {
+    // 三位數，代表小數秒 (185 → 18.5 秒)
+    sec = +secRaw / 10;
+  } else {
+    // 容錯：避免異常格式
+    sec = +secRaw;
+  }
+
+  let dec = deg + (min / 60) + (sec / 3600);
+  return (m[4] === 'S' || m[4] === 'W') ? -dec : dec;
 }
+
 
 function parseNotamBlock(block){
   const popupOptions = {
