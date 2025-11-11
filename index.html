@@ -213,8 +213,8 @@
 
  <div class="section">
   <h2>🌦️ 城市天氣</h2>
-  <label for="datisSelect">請選擇城市：</label>
-  <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
+  <label for="citywxSelect">請選擇城市：</label>
+  <select id="citywxSelect" onchange="openCitywx()" style="margin-right: 1em;">
     <option selected disabled>--請選擇城市--</option>
     <optgroup label="台灣、香港">
       <option value="https://www.bbc.com/weather/6696918">RCTP 桃園</option>
@@ -590,7 +590,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const url = sel.value;
     if (url) window.open(url, '_blank');
   }
-  
+
+ function openCitywx() {
+  const select = document.getElementById("citywxSelect");
+  const url = select.value;
+  if (url && url !== "--請選擇城市--") {
+    window.open(url, "_blank");
+  }
+} 
 </script>
 
 </body>
