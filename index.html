@@ -211,6 +211,41 @@
   </select>
 </div>
 
+ <div class="section">
+  <h2>🌦️ 城市天氣</h2>
+  <label for="datisSelect">請選擇城市：</label>
+  <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
+    <option selected disabled>--請選擇城市--</option>
+    <optgroup label="台灣、香港">
+      <option value="https://www.bbc.com/weather/6696918">RCTP 桃園</option>
+      <option value="https://www.bbc.com/weather/1673820">RCKH 高雄</option>
+      <option value="https://www.bbc.com/weather/1819729">VHHH 香港</option>
+    </optgroup>
+    <optgroup label="越南">
+      <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
+      <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
+      <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
+    </optgroup>
+    <optgroup label="東南亞">
+      <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
+      <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
+      <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
+    </optgroup>
+    <optgroup label="日本">
+      <option value="https://www.bbc.com/weather/1894616">ROAH 沖繩</option>
+      <option value="https://www.bbc.com/weather/1863967">RJFF 福岡</option>
+      <option value="https://www.bbc.com/weather/1858421">RJFT 熊本</option>
+      <option value="https://www.bbc.com/weather/1853909">RJBB 大阪</option>
+      <option value="https://www.bbc.com/weather/1856057">RJGG 名古屋</option>
+      <option value="https://www.bbc.com/weather/1850147">RJTT 東京</option>
+      <option value="https://www.bbc.com/weather/2111684">RJAA 成田</option>
+      <option value="https://www.bbc.com/weather/6300399">RJSS 仙台</option>
+      <option value="https://www.bbc.com/weather/2130188">RJCH 函館</option>
+      <option value="https://www.bbc.com/weather/2128295">RJCC 札幌</option>
+    </optgroup>
+  </select>
+</div>
+
   <div class="section windy-section">
   <h2>🌧️ Windy 即時雷達圖 
     <button onclick="refreshIframe('windyRadar')">重新整理</button>
