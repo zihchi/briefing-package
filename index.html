@@ -129,34 +129,26 @@
     </div>
   </div>
 <div class="section">
-  
-  <h3>📋 簡報檢查清單（PIREPS）</h3>
-  <ul class="checklist" id="briefingChecklist1">
-    <li><label><input type="checkbox"> Personal equipments</label></li>
-    <li><label><input type="checkbox"> Information</label></li>
-    <li><label><input type="checkbox"> Registration</label></li>
-    <li><label><input type="checkbox"> Enroute Wx</label></li>
-    <li><label><input type="checkbox"> Performance</label></li>
-    <li><label><input type="checkbox"> Special Procedure</label></li>
-  </ul>
-
-  <h3>🛠️ Special 特別事項</h3>
-  <ul class="checklist" id="briefingChecklist2">
-    <li><label><input type="checkbox"> NOTAM</label></li>
-    <li><label><input type="checkbox"> MEL / CDL Procedure</label></li>
-    <li><label><input type="checkbox"> Airport Briefing / Chart Prepare</label></li>
-    <li><label><input type="checkbox"> Newest Weather</label></li>
-    <li><label><input type="checkbox"> Special Procedure</label></li>
-  </ul>
 
   <h3>🧳 個人裝備檢查表</h3>
   <ul class="checklist" id="personalChecklist">
     <li><label><input type="checkbox"> Sign On</label></li>
     <li><label><input type="checkbox"> 更新：Flysmart / Aviobook / FD PRO</label></li>
     <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
-    <li><label><input type="checkbox"> OFP Signed</label></li>
+    <li><label><input type="checkbox"> 入境登記</label></li>
     <li><label><input type="checkbox"> Fleet Notice</label></li>
   </ul>
+
+  <h3>📋 簡報檢查清單（PIREPS）</h3>
+  <ul class="checklist" id="briefingChecklist1">
+    <li><label><input type="checkbox"> Personal equipments</label></li>
+    <li><label><input type="checkbox"> Information : 班號、時間、飛時、巡航高度</label></li>
+    <li><label><input type="checkbox"> Registration : 機號、旅客、油量、重量、水量、停機位</label></li>
+    <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
+    <li><label><input type="checkbox"> Performance : MEL</label></li>
+    <li><label><input type="checkbox"> Special Procedure : CAAWTF</label></li>
+  </ul>
+
 </div>
 
 <div class="section">
@@ -186,16 +178,6 @@
       <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
       <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
     </optgroup>
-    <optgroup label="越南">
-      <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
-      <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
-      <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
-    </optgroup>
-    <optgroup label="東南亞">
-      <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
-      <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
-      <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
-    </optgroup>
     <optgroup label="日本">
       <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
       <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
@@ -207,6 +189,16 @@
       <option value="https://atis.guru/atis/RJSS">RJSS 仙台</option>
       <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
       <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
+    </optgroup>
+    <optgroup label="東南亞">
+      <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
+      <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
+      <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
+    </optgroup>
+    <optgroup label="越南">
+      <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
+      <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
+      <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
     </optgroup>
   </select>
 </div>
@@ -221,17 +213,7 @@
       <option value="https://www.bbc.com/weather/1673820">RCKH 高雄</option>
       <option value="https://www.bbc.com/weather/1819729">VHHH 香港</option>
     </optgroup>
-    <optgroup label="越南">
-      <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
-      <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
-      <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
-    </optgroup>
-    <optgroup label="東南亞">
-      <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
-      <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
-      <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
-    </optgroup>
-    <optgroup label="日本">
+       <optgroup label="日本">
       <option value="https://www.bbc.com/weather/1894616">ROAH 沖繩</option>
       <option value="https://www.bbc.com/weather/1863967">RJFF 福岡</option>
       <option value="https://www.bbc.com/weather/1858421">RJFT 熊本</option>
@@ -242,6 +224,16 @@
       <option value="https://www.bbc.com/weather/6300399">RJSS 仙台</option>
       <option value="https://www.bbc.com/weather/2130188">RJCH 函館</option>
       <option value="https://www.bbc.com/weather/2128295">RJCC 札幌</option>
+    </optgroup>
+    <optgroup label="東南亞">
+      <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
+      <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
+      <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
+    </optgroup>
+    <optgroup label="越南">
+      <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
+      <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
+      <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
     </optgroup>
   </select>
 </div>
