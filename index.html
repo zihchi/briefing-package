@@ -339,12 +339,15 @@
 
 
 <div class="section windy-section">
-  <h2>🌬️ Windy 風速圖 (FL390) 
-    <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
+  <h2>🌬️ Windy 風速圖 (Surface Wind) 
+    <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
   </h2>
-  <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  <iframe id="windyWindSurface" 
+    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+  </iframe>
 </div>
+
 
 <div class="section windy-section">
   <h2>✈️ Windy 晴空亂流圖 (FL340) 
