@@ -109,6 +109,88 @@
   height: 18px;
   accent-color: #3c79ff;
 }
+
+/* ⛽ Fuel Calculator 區塊 */
+.fuel-box h2 {
+  font-size: 1.3rem;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.fuel-box h3 {
+  font-size: 1.1rem;
+  margin-top: 1.2rem;
+  margin-bottom: 0.3rem;
+}
+
+.fuel-box .hint {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 0.8rem;
+}
+
+.fuel-box .input-row {
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fuel-box .input-row label {
+  min-width: 8rem;
+}
+
+.fuel-box .input-row input[type="number"] {
+  width: 8rem;
+  padding: 0.3rem 0.4rem;
+}
+
+.fuel-box .input-row button {
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.fuel-box #message {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #b00;
+}
+
+.fuel-box .note {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.3rem;
+}
+
+/* 只在油量區塊內套用表格樣式，避免影響其他區塊 */
+.fuel-box table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.fuel-box th,
+.fuel-box td {
+  border: 1px solid #ccc;
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.fuel-box th:first-child,
+.fuel-box td:first-child {
+  text-align: left;
+}
+
+.fuel-box th {
+  background: #f5f5f5;
+}
+    
+    
 </style>
 </head>
 <body>
@@ -305,6 +387,88 @@
     </div>
   </div>
 
+  <div class="section fuel-box">
+    <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
+
+    <div class="hint">
+      單位：噸（t）。資料有效範圍：8.8 t ～ 100 t。<br>
+      目前假設：<br>
+      1）剩油分布為 Inner = 目前總油量，其餘油箱 = 0。<br>
+      2）加油時 Trim Tank 以固定 0.12 t/min 加油。<br>
+      3）Inner / Outer / Center 三個油箱共用 1.0 t/min，加油時均分流量：<br>
+         - 三個都在加油：各 1/3 t/min；<br>
+         - 若其中一個先滿，剩下兩個各 1/2 t/min；<br>
+         - 最後只剩一個時則為 1 t/min。
+    </div>
+
+    <div class="input-row">
+      <label for="currentFuel">目前剩油 (Total)：</label>
+      <input
+        type="number"
+        id="currentFuel"
+        step="0.1"
+        placeholder="例如：20.0"
+      />
+    </div>
+    <div class="input-row">
+      <label for="targetFuel">目標 Total Fuel：</label>
+      <input
+        type="number"
+        id="targetFuel"
+        step="0.1"
+        placeholder="例如：60.0"
+      />
+      <button type="button" onclick="onCalculate()">計算</button>
+    </div>
+
+    <div id="message"></div>
+
+    <h3>一、目標油量時的油量分布</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>項目</th>
+        <th>油量 (t)</th>
+      </tr>
+      </thead>
+      <tbody id="resultBody">
+      <tr><td>Inner Tank</td><td>-</td></tr>
+      <tr><td>Outer Tank</td><td>-</td></tr>
+      <tr><td>Trim Tank</td><td>-</td></tr>
+      <tr><td>Center Tank</td><td>-</td></tr>
+      <tr><th>Total (Inner+Outer+Trim+Center)</th><th>-</th></tr>
+      </tbody>
+    </table>
+
+    <h3>二、加油量與加油時間</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>油箱</th>
+          <th>加油量 Δ (t)</th>
+          <th>加油流量 (t/min)</th>
+          <th>所需時間 (min)</th>
+        </tr>
+      </thead>
+      <tbody id="timeBody">
+        <tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><td>Trim Tank</td><td>-</td><td>0.12</td><td>-</td></tr>
+        <tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr>
+        <tr><th>總加油時間</th><th colspan="3">-</th></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      Inner / Outer / Center 以「共享 1.0 t/min」方式加油，本表已考慮：油箱先滿者先停止，剩餘油箱自動分配較高流量。<br>
+      總加油時間為 IOC 三箱完成時間與 Trim Tank 完成時間兩者中的較大值（同時進行）。<br>
+      若某油箱目標油量低於起始油量，將不計入加油量（視為僅油箱內部再分配）。
+    </div>
+  </div>
+
+
+
+  
   <div class="section">
     <h2>📝 NOTAM 座標地圖</h2>
     <div class="button-row">
@@ -671,6 +835,272 @@ document.addEventListener("DOMContentLoaded", function () {
     window.open(url, "_blank");
   }
 } 
+
+
+  // ⛽ Fuel Distribution & Refuel Time Calculator ------------------------------
+
+// 依照提供的表格建立對照資料（單位：噸，為左右合計）
+const fuelTable = [
+  { total: 8.8,  inner: 9.0,  outer: 5.6, trim: 0.0, center: 0.0 },
+  { total: 14.6, inner: 9.0,  outer: 5.6, trim: 0.0, center: 0.0 },
+  { total: 24.0, inner: 18.4, outer: 5.6, trim: 0.0, center: 0.0 },
+  { total: 27.6, inner: 18.4, outer: 5.6, trim: 3.6, center: 0.0 },
+  { total: 30.0, inner: 20.8, outer: 5.6, trim: 3.6, center: 0.0 },
+  { total: 40.0, inner: 30.8, outer: 5.6, trim: 3.6, center: 0.0 },
+  { total: 60.0, inner: 50.8, outer: 5.6, trim: 3.6, center: 0.0 },
+  { total: 75.0, inner: 65.6, outer: 5.6, trim: 3.8, center: 0.0 },
+  { total: 100.0,inner: 68.2, outer: 5.6, trim: 3.8, center: 22.4 }
+];
+
+function interpolateFuel(total) {
+  const table = fuelTable;
+  const n = table.length;
+  if (n === 0) return null;
+  if (total < table[0].total || total > table[n - 1].total) {
+    return null;
+  }
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(total - table[i].total) < 1e-6) {
+      return {
+        total: total,
+        inner: table[i].inner,
+        outer: table[i].outer,
+        trim: table[i].trim,
+        center: table[i].center
+      };
+    }
+  }
+  for (let i = 1; i < n; i++) {
+    const prev = table[i - 1];
+    const curr = table[i];
+    if (total < curr.total + 1e-6) {
+      const ratio = (total - prev.total) / (curr.total - prev.total);
+      const lerp = (a, b) => a + (b - a) * ratio;
+      return {
+        total: total,
+        inner:  lerp(prev.inner,  curr.inner),
+        outer:  lerp(prev.outer,  curr.outer),
+        trim:   lerp(prev.trim,   curr.trim),
+        center: lerp(prev.center, curr.center)
+      };
+    }
+  }
+  const last = table[n - 1];
+  return {
+    total: total,
+    inner: last.inner,
+    outer: last.outer,
+    trim: last.trim,
+    center: last.center
+  };
+}
+
+function formatFuel(value) {
+  return value.toFixed(1);
+}
+
+function formatTimeMin(value) {
+  return value.toFixed(1);
+}
+
+function formatTimeHHMM(value) {
+  if (!isFinite(value) || value <= 0) return "0 分鐘";
+  const totalMin = Math.round(value);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return m + " 分鐘";
+  return h + " 小時 " + m + " 分";
+}
+
+// 計算 Inner/Outer/Center 共享 1 t/min 的加油時間（動態分配流量）
+function computeIOCRefuel(dInner, dOuter, dCenter) {
+  const remaining = {
+    inner: Math.max(dInner, 0),
+    outer: Math.max(dOuter, 0),
+    center: Math.max(dCenter, 0)
+  };
+  const original = { inner: remaining.inner, outer: remaining.outer, center: remaining.center };
+  const finishTime = { inner: 0, outer: 0, center: 0 };
+
+  let t = 0;
+  const eps = 1e-8;
+  const order = ["inner", "outer", "center"];
+
+  while (true) {
+    const active = order.filter(key => remaining[key] > eps);
+    if (active.length === 0) break;
+
+    const k = active.length; // 同時在加油的油箱數
+    let dt = Infinity;
+
+    // 對每一個 active tank，計算在目前分配下到達目標還需要多久
+    for (const key of active) {
+      const rem = remaining[key];
+      const timeToFinish = rem * k; // 因為各自流量 = 1/k t/min
+      if (timeToFinish < dt) dt = timeToFinish;
+    }
+
+    // 前進 dt 分鐘
+    t += dt;
+    for (const key of active) {
+      remaining[key] -= dt / active.length; // 每個油箱在 dt 內補進 dt/k 噸
+      if (remaining[key] < eps) {
+        remaining[key] = 0;
+        if (finishTime[key] === 0 && original[key] > 0) {
+          finishTime[key] = t; // 第一次達到目標的時間
+        }
+      }
+    }
+  }
+
+  return {
+    tInner: finishTime.inner,
+    tOuter: finishTime.outer,
+    tCenter: finishTime.center,
+    groupTime: t
+  };
+}
+
+function computeRefuel(currentTotal, targetTotal, finalDist) {
+  // 起始分布：Inner = currentTotal, 其他 = 0
+  const inner0  = currentTotal;
+  const outer0  = 0.0;
+  const trim0   = 0.0;
+  const center0 = 0.0;
+
+  let dInner  = finalDist.inner  - inner0;
+  let dOuter  = finalDist.outer  - outer0;
+  let dTrim   = finalDist.trim   - trim0;
+  let dCenter = finalDist.center - center0;
+
+  // 不考慮放油：若目標油量小於起始油量則視為 0（僅內部分配）
+  dInner  = Math.max(dInner,  0);
+  dOuter  = Math.max(dOuter,  0);
+  dTrim   = Math.max(dTrim,   0);
+  dCenter = Math.max(dCenter, 0);
+
+  // Inner/Outer/Center 共用 1 t/min，動態分配
+  const ioc = computeIOCRefuel(dInner, dOuter, dCenter);
+
+  // Trim Tank 獨立加油，固定 0.12 t/min
+  const rateTrim = 0.12;
+  const tTrim = dTrim > 0 ? dTrim / rateTrim : 0;
+
+  const totalDelta = dInner + dOuter + dTrim + dCenter;
+  const totalTime  = Math.max(ioc.groupTime, tTrim);
+  const effRate    = totalTime > 0 ? totalDelta / totalTime : 0; // t/min
+
+  return {
+    dInner, dOuter, dTrim, dCenter,
+    tInner: ioc.tInner,
+    tOuter: ioc.tOuter,
+    tCenter: ioc.tCenter,
+    tTrim,
+    totalDelta,
+    totalTime,
+    effRate
+  };
+}
+
+function onCalculate() {
+  const currentEl = document.getElementById("currentFuel");
+  const targetEl  = document.getElementById("targetFuel");
+  const messageEl = document.getElementById("message");
+
+  const currentTotal = parseFloat(currentEl.value);
+  const targetTotal  = parseFloat(targetEl.value);
+
+  if (Number.isNaN(currentTotal) || Number.isNaN(targetTotal)) {
+    messageEl.textContent = "請輸入有效的『目前剩油』與『目標 Total Fuel』（噸）。";
+    updateDistribution(null);
+    updateTimeTable(null);
+    return;
+  }
+
+  if (targetTotal <= currentTotal) {
+    messageEl.textContent = "目標 Total Fuel 必須大於目前剩油，暫不支援放油或僅油箱再分配情境。";
+    updateDistribution(null);
+    updateTimeTable(null);
+    return;
+  }
+
+  const finalDist = interpolateFuel(targetTotal);
+  if (!finalDist) {
+    const min = fuelTable[0].total;
+    const max = fuelTable[fuelTable.length - 1].total;
+    messageEl.textContent =
+      "超出資料範圍。請輸入介於 " + min + " t ～ " + max + " t 之間的數值。";
+    updateDistribution(null);
+    updateTimeTable(null);
+    return;
+  }
+
+  messageEl.textContent = "";
+  updateDistribution(finalDist);
+
+  const refuel = computeRefuel(currentTotal, targetTotal, finalDist);
+  updateTimeTable(refuel);
+}
+
+function updateDistribution(result) {
+  const tbody = document.getElementById("resultBody");
+  if (!result) {
+    tbody.innerHTML = `
+      <tr><td>Inner Tank</td><td>-</td></tr>
+      <tr><td>Outer Tank</td><td>-</td></tr>
+      <tr><td>Trim Tank</td><td>-</td></tr>
+      <tr><td>Center Tank</td><td>-</td></tr>
+      <tr><th>Total (Inner+Outer+Trim+Center)</th><th>-</th></tr>
+    `;
+    return;
+  }
+  const inner  = result.inner;
+  const outer  = result.outer;
+  const trim   = result.trim;
+  const center = result.center;
+  const sum    = inner + outer + trim + center;
+
+  tbody.innerHTML = `
+    <tr><td>Inner Tank</td><td>${formatFuel(inner)}</td></tr>
+    <tr><td>Outer Tank</td><td>${formatFuel(outer)}</td></tr>
+    <tr><td>Trim Tank</td><td>${formatFuel(trim)}</td></tr>
+    <tr><td>Center Tank</td><td>${formatFuel(center)}</td></tr>
+    <tr><th>Total (Inner+Outer+Trim+Center)</th><th>${formatFuel(sum)}</th></tr>
+  `;
+}
+
+function updateTimeTable(data) {
+  const tbody = document.getElementById("timeBody");
+  if (!data) {
+    tbody.innerHTML = `
+      <tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+      <tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+      <tr><td>Trim Tank</td><td>-</td><td>0.12</td><td>-</td></tr>
+      <tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+      <tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr>
+      <tr><th>總加油時間</th><th colspan="3">-</th></tr>
+    `;
+    return;
+  }
+
+  const {
+    dInner, dOuter, dTrim, dCenter,
+    tInner, tOuter, tTrim, tCenter,
+    totalDelta,
+    totalTime,
+    effRate
+  } = data;
+
+  tbody.innerHTML = `
+    <tr><td>Inner Tank</td><td>${formatFuel(dInner)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tInner)}</td></tr>
+    <tr><td>Outer Tank</td><td>${formatFuel(dOuter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tOuter)}</td></tr>
+    <tr><td>Trim Tank</td><td>${formatFuel(dTrim)}</td><td>0.12</td><td>${formatTimeMin(tTrim)}</td></tr>
+    <tr><td>Center Tank</td><td>${formatFuel(dCenter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tCenter)}</td></tr>
+    <tr><th>總加油量 (t)</th><th>${formatFuel(totalDelta)}</th><th>等效流量 (t/min)</th><th>${effRate.toFixed(2)}</th></tr>
+    <tr><th>總加油時間</th><th colspan="3">${formatTimeHHMM(totalTime)} （約 ${formatTimeMin(totalTime)} 分）</th></tr>
+  `;
+}
+
 </script>
 
 </body>
