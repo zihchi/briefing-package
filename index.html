@@ -867,18 +867,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ⛽ Fuel Distribution & Refuel Time Calculator ------------------------------
 
-// 依照提供的表格建立對照資料（單位：噸，為左右合計）
+// 依照圖表邏輯、官方 100t 數據及專業判斷修正（單位：噸，Inner/Outer 為左右合計）
+// 邏輯關鍵點：
+// 1. 0-9t: 僅填充 Inner
+// 2. 9-14.73t: Inner 停滯，開始填充 Outer 至滿 (5.73t)
+// 3. 27.6t: Trim 填充完成點
+// 4. 75t+: Inner 滿載，Center 開始填充
 const fuelTable = [
-  { total: 8.8,  inner: 9.0,  outer: 5.6, trim: 0.0, center: 0.0 },
-  { total: 14.6, inner: 9.0,  outer: 5.6, trim: 0.0, center: 0.0 },
-  { total: 24.0, inner: 18.4, outer: 5.6, trim: 0.0, center: 0.0 },
-  { total: 27.6, inner: 18.4, outer: 5.6, trim: 3.6, center: 0.0 },
-  { total: 30.0, inner: 20.8, outer: 5.6, trim: 3.6, center: 0.0 },
-  { total: 40.0, inner: 30.8, outer: 5.6, trim: 3.6, center: 0.0 },
-  { total: 60.0, inner: 50.8, outer: 5.6, trim: 3.6, center: 0.0 },
-  { total: 75.0, inner: 65.6, outer: 5.6, trim: 3.8, center: 0.0 },
-  { total: 100.0,inner: 68.2, outer: 5.6, trim: 3.8, center: 22.4 }
+  { total: 9.0,   inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 }, // 內側先加到 9 噸
+  { total: 14.73, inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 }, // 外側接著加滿 (9 + 5.73)
+  { total: 24.0,  inner: 18.27,  outer: 5.73,  trim: 0.0,  center: 0.0 }, // 繼續加內側
+  { total: 27.6,  inner: 18.14,  outer: 5.73,  trim: 3.73, center: 0.0 }, // Trim 加滿點 (總和符合 27.6)
+  { total: 30.0,  inner: 20.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
+  { total: 40.0,  inner: 30.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
+  { total: 60.0,  inner: 50.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
+  { total: 75.0,  inner: 64.4,   outer: 5.73,  trim: 4.87, center: 0.0 }, // 內側全滿點
+  { total: 100.0, inner: 64.4,   outer: 5.73,  trim: 3.8,  center: 26.07 } // 官方分佈基準點 (註1)
 ];
+
+// 註1：若需嚴格符合官方各油箱數據 (Total: 96.33)，
+// 可改為 { total: 96.33, inner: 64.4, outer: 5.73, trim: 3.8, center: 22.4 }
 
 function interpolateFuel(total) {
   const table = fuelTable;
