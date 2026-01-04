@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>簡報箱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body { background-color: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
@@ -51,28 +50,41 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
- // 顯著天氣結束
-    
-    .button-row { margin-bottom: 8px; }  
-     button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    #map, textarea {
-     width: 100%;
-     max-width: 800px;
-     margin-top: 10px;
-     border-radius: 8px;
-     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-     }
-     #map {height: 600px;}
-      textarea {height: 100px;}
- 
-    .section{ overflow-x: auto;}
-    .leaflet-popup-content {width: auto; min-width: 220px; max-width: 90%;}
-    .leaflet-popup-content pre { white-space: pre-wrap; word-break: break-word; width: 100%; max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin: 0; padding: 0.2em; font-size: 0.9em;}
+ /* 僅保留核心通用樣式，刪除所有地圖相關定義 */
+button { 
+  margin-top: 5px; 
+  padding: 0.8em 1.6em; 
+  font-size: 1.1em; 
+  background: #3c79ff; 
+  color: #fff; 
+  border: none; 
+  border-radius: 8px; 
+  font-weight: bold; 
+  cursor: pointer; 
+}
 
-    body { background: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
-  .flight-box { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
-  select { font-size: 1em; padding: 0.5em; margin-left: 0.5em;}
+.section { overflow-x: auto; }
 
+body { 
+  background: #f9f7f3; 
+  font-family: "Segoe UI", sans-serif; 
+  color: #333; 
+  padding: 2em; 
+}
+
+.flight-box { 
+  border-left: 6px solid #3c79ff; 
+  background: #fff; 
+  padding: 1em; 
+  border-radius: 12px; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+select { 
+  font-size: 1em; 
+  padding: 0.5em; 
+  margin-left: 0.5em;
+}
     .windy-section h2 button {
   background: none;
   border: 2px solid #3c79ff;
@@ -484,239 +496,8 @@
 
 
   
-  <div class="section">
-    <h2>📝 NOTAM 座標地圖</h2>
-    <div class="button-row">
-      <button onclick="addNotam()">產出地圖</button>
-      <button onclick="clearMap()">清除全部</button>
-    </div>
-    <textarea id="notamInput" placeholder="直接貼整段 NOTAM"></textarea>
-    <div id="map"></div>
-  </div>
-
-  
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-let map = L.map('map').setView([23.5, 121], 7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-let shapeLayers = [];
 
-// ⬇️ 把 N320229E1240000 轉成 N320229 E1240000
-function normalizeDMS(c){
-  c = c.toUpperCase();
-  let m = c.match(/([NS])(\d+)/);
-  if (m) return m[2] + m[1];
-  m = c.match(/([EW])(\d+)/);
-  if (m) return m[2] + m[1];
-  return c;
-}
-
-// ⬇️ 將 320229N 1240000E 轉十進位（ddmmss / dddmmss）
-function dmsToDecimal(d){ 
-  let m = d.match(/(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])/);
-  if (!m) return NaN;
-  let dec = +m[1] + (+m[2]/60) + (+m[3]/3600);
-  return (m[4] === 'S' || m[4] === 'W') ? -dec : dec;
-}
-
-function parseNotamBlock(block){
-  const popupOptions = {
-    maxWidth: map.getSize().x * 0.5,
-    keepInView: true,
-    autoPan: true
-  };
-
-  // ⬇️ 先處理符號亂碼、換行、標點、以及用 - 作為分隔
-  block = block.replace(/[’']/g,"'").replace(/[”"]/g,'"'); 
-  block = block.replace(/-/g," ");   // SIGMET / NOTAM 常見用 - 分隔點，統一轉空白
-  block = block
-    .replace(/[\n\r]+/g," ")
-    .replace(/[,:;()\u3000]+/g," ")
-    .replace(/\s+/g," ")
-    .trim();
-
-  let coords = [];
-
-  // ⬇️ 專門解析 N32°02’29”E124°00’00” 這種格式
-  for (let match of block.matchAll(/([NS])(\d{2})[°]?(\d{2})['’](\d{2})["”]?([EW])(\d{3})[°]?(\d{2})['’](\d{2})["”]?/g)){
-    let lat = (+match[2]) + (+match[3])/60 + (+match[4])/3600;
-    if (match[1] === 'S') lat = -lat;
-    let lon = (+match[6]) + (+match[7])/60 + (+match[8])/3600;
-    if (match[5] === 'W') lon = -lon;
-    coords.push([lat, lon]);
-  }
-
-  // ⬇️ SIGMET 常見格式：N1124 E11715 這種「ddmm / dddmm」無秒方式
-  // 例如：N1124 E11715 - N1013 E11651 - N0914 E11529 - ...
-  for (let m of block.matchAll(/([NS])(\d{2})(\d{2})\s*([EW])(\d{3})(\d{2})/g)){
-    let lat = (+m[2]) + (+m[3])/60;       // dd + mm/60
-    if (m[1] === 'S') lat = -lat;
-
-    let lon = (+m[5]) + (+m[6])/60;       // ddd + mm/60
-    if (m[4] === 'W') lon = -lon;
-
-    coords.push([lat, lon]);
-  }
-
-  // ⬇️ 處理正常的 DMS 格式（四種）
-  for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])\/(\d{7,9}\.\d+[EW])/g))
-    coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
-
-  for (let m of block.matchAll(/(\d{6,8}\.\d+[NS])(\d{7,9}\.\d+[EW])/g))
-    coords.push([dmsToDecimal(m[1]), dmsToDecimal(m[2])]);
-
-  for (let m of block.matchAll(/(\d{6,8}[NS])\s+(\d{7,9}[EW])/g))
-    coords.push([
-      dmsToDecimal(normalizeDMS(m[1])),
-      dmsToDecimal(normalizeDMS(m[2]))
-    ]);
-
-  for (let m of block.matchAll(/(\d{6,8}[NS])(\d{7,9}[EW])/g))
-    coords.push([
-      dmsToDecimal(normalizeDMS(m[1])),
-      dmsToDecimal(normalizeDMS(m[2]))
-    ]);
-
-  // ⬇️ 多邊形加閉合（針對包含 ; 或 TO POINT OF ORIGIN）
-  if ((/;/.test(block) || /TO POINT OF ORIGIN/i.test(block)) && coords.length > 0){
-    coords.push(coords[0]);
-    let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(p);
-    map.fitBounds(coords, {padding:[50,50], maxZoom:15});
-    return;
-  }
-
-  // ⬇️ FAN
-  let fan = block.match(/FAN.*?(\d+)\s*(KM|NM).*?OF\s*(\d{6,8}[NS])\s*(\d{7,9}[EW]).*?QTE\s*(\d+)DEG.*?(\d+)DEG/i);
-  if (fan){
-    let r = +fan[1];
-    if (fan[2] === "NM") r *= 1.852;
-    let lat = dmsToDecimal(normalizeDMS(fan[3]));
-    let lon = dmsToDecimal(normalizeDMS(fan[4]));
-    let sa = +fan[5], ea = +fan[6], pts = [[lat, lon]], steps = 30;
-
-    for (let i = 0; i <= steps; i++){
-      let a = (sa + (ea - sa) * (i/steps)) * Math.PI / 180;
-      let dLat = (r/111.32) * Math.cos(a);
-      let dLon = (r/(111.32 * Math.cos(lat * Math.PI / 180))) * Math.sin(a);
-      pts.push([lat + dLat, lon + dLon]);
-    }
-    pts.push([lat, lon]);
-
-    let p = L.polygon(pts, {color:'red', fillOpacity:0.4})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(p);
-    map.fitBounds(pts, {padding:[50,50], maxZoom:14});
-    return;
-  }
-
-  // ⬇️ ARC
-  let arc = block.match(/ARC OF A CIRCLE RADIUS (\d+)(NM|KM).*?CENTRED ON (\d{6,8}(\.\d+)?[NS])(\d{7,9}(\.\d+)?[EW])/i);
-  if (arc){
-    let r = +arc[1], u = arc[2];
-    let lat = dmsToDecimal(arc[3]);
-    let lon = dmsToDecimal(arc[5]);
-    let rm = r * (u === "NM" ? 1852 : 1000);
-    let c = L.circle([lat, lon], {radius:rm, color:'red', fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(c);
-    map.setView([lat, lon], 8);
-    return;
-  }
-
-  // ⬇️ PSN ARC
-  let parc = block.match(/PSN ARC (\d{6,8}[NS])\s*(\d{7,9}[EW]),?\s*RADIUS\s*(\d+)(NM|KM)/i);
-  if (parc){
-    let lat = dmsToDecimal(normalizeDMS(parc[1]));
-    let lon = dmsToDecimal(normalizeDMS(parc[2]));
-    let r = +parc[3], u = parc[4];
-    let rm = r * (u === "NM" ? 1852 : 1000);
-    let c = L.circle([lat, lon], {radius:rm, color:'red', fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(c);
-    map.setView([lat, lon], 10);
-    return;
-  }
-
-  // ⬇️ CIRCLE
-  let circ = block.match(/(?:DEFINED AS|WITHIN)? ?(\d+)(NM|KM) RADIUS OF (\d{6,8}[NS]) ?(\d{7,9}[EW])/i)
-           || block.match(/RADIUS OF (\d{6,8}[NS]) (\d{7,9}[EW]) ?(\d+)(NM|KM)/i);
-  if (circ){
-    let r, u, lat, lon;
-    if (circ.length === 5){
-      r = +circ[1];
-      u = circ[2];
-      lat = dmsToDecimal(normalizeDMS(circ[3]));
-      lon = dmsToDecimal(normalizeDMS(circ[4]));
-    } else {
-      lat = dmsToDecimal(normalizeDMS(circ[1]));
-      lon = dmsToDecimal(normalizeDMS(circ[2]));
-      r = +circ[3];
-      u = circ[4];
-    }
-    let rm = r * (u === "NM" ? 1852 : 1000);
-    let c = L.circle([lat, lon], {radius:rm, color:'red', fillOpacity:0.3})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(c);
-    map.setView([lat, lon], 8);
-    return;
-  }
-
-  // ⬇️ PSN 單點
-  let psn = block.match(/PSN.*?(\d{6,8}(\.\d+)?[NS]).*?(\d{7,9}(\.\d+)?[EW])/i);
-  if (psn){
-    let lat = dmsToDecimal(normalizeDMS(psn[1]));
-    let lon = dmsToDecimal(normalizeDMS(psn[3]));
-    let m = L.marker([lat, lon])
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(m);
-    map.setView([lat, lon], 14);
-    return;
-  }
-
-  // ⬇️ 最後多邊形 fallback（Leaflet polygon 會自動閉合）
-  if (coords.length > 0){
-    let p = L.polygon(coords, {color:'red', fillOpacity:0.5})
-      .bindPopup(`<pre>${block}</pre>`, popupOptions)
-      .addTo(map)
-      .openPopup();
-    shapeLayers.push(p);
-    map.fitBounds(coords, {padding:[50,50], maxZoom:15});
-    return;
-  }
-
-  alert("不是標準格式，請改用chatGPT");
-}
-
-// ⬇️ 其他基本操作
-function addNotam(){
-  let b = document.getElementById('notamInput').value;
-  if (b.trim() === ""){
-    alert("請先輸入 NOTAM 內容");
-    return;
-  }
-  parseNotamBlock(b);
-  document.getElementById('notamInput').value = "";
-}
-
-function clearMap(){
-  shapeLayers.forEach(l => map.removeLayer(l));
-  shapeLayers = [];
-  document.getElementById('notamInput').value = "";
-}
 
 function refreshIframe(id){
   const iframe = document.getElementById(id);
