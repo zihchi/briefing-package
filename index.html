@@ -418,17 +418,6 @@
   <div class="section fuel-box">
     <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
 
-    <div class="hint">
-      單位：噸（t）。資料有效範圍：8.8 t ～ 100 t。<br>
-      目前假設：<br>
-      1）剩油分布為 Inner = 目前總油量，其餘油箱 = 0。<br>
-      2）加油時 Trim Tank 以固定 0.1 t/min 加油。<br>
-      3）Inner / Outer / Center 三個油箱共用 1.0 t/min，加油時均分流量：<br>
-         - 三個都在加油：各 1/3 t/min；<br>
-         - 若其中一個先滿，剩下兩個各 1/2 t/min；<br>
-         - 最後只剩一個時則為 1 t/min。
-    </div>
-
     <div class="input-row">
       <label for="currentFuel">目前剩油 (Total)：</label>
       <input
@@ -487,10 +476,7 @@
         <tr><th>總加油時間</th><th colspan="3">-</th></tr>
       </tbody>
     </table>
-    <div class="note">
-      Inner / Outer / Center 以「共享 1.0 t/min」方式加油，本表已考慮：油箱先滿者先停止，剩餘油箱自動分配較高流量。<br>
-      總加油時間為 IOC 三箱完成時間與 Trim Tank 完成時間兩者中的較大值（同時進行）。<br>
-      若某油箱目標油量低於起始油量，將不計入加油量（視為僅油箱內部再分配）。
+  
     </div>
   </div>
 
