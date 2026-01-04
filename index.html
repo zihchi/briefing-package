@@ -43,11 +43,12 @@
 
 .img-column img {
   display: block;
-  max-width: 800px;
-  height: auto;
-  margin: 0 auto 10px auto;
+  width: 95%;          /* 優先佔用視窗寬度的 95% */
+  max-width: 1200px;   /* 將最大寬度從 800px 提升到 1200px */
+  height: auto;        /* 保持原始比例 */
+  margin: 0 auto 20px auto; /* 增加底部間距，讓多張圖之間更有空隙 */
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* 稍微加深陰影，讓圖表更立體 */
 }
 
  /* 僅保留核心通用樣式，刪除所有地圖相關定義 */
