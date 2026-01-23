@@ -644,7 +644,7 @@ document.addEventListener("DOMContentLoaded", function () {
 } 
 
 
-  // ⛽ Fuel Distribution & Refuel Time Calculator ------------------------------
+// ⛽ Fuel Distribution & Refuel Time Calculator ------------------------------
 
 // 依照圖表邏輯、官方 100t 數據及專業判斷修正（單位：噸，Inner/Outer 為左右合計）
 // 邏輯關鍵點：
@@ -653,15 +653,15 @@ document.addEventListener("DOMContentLoaded", function () {
 // 3. 27.6t: Trim 填充完成點
 // 4. 75t+: Inner 滿載，Center 開始填充
 const fuelTable = [
-  { total: 9.0,   inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 }, // 內側先加到 9 噸
-  { total: 14.73, inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 }, // 外側接著加滿 (9 + 5.73)
-  { total: 24.0,  inner: 18.27,  outer: 5.73,  trim: 0.0,  center: 0.0 }, // 繼續加內側
-  { total: 27.6,  inner: 18.14,  outer: 5.73,  trim: 3.73, center: 0.0 }, // Trim 加滿點 (總和符合 27.6)
-  { total: 30.0,  inner: 20.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
-  { total: 40.0,  inner: 30.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
-  { total: 60.0,  inner: 50.54,  outer: 5.73,  trim: 3.73, center: 0.0 }, 
-  { total: 75.0,  inner: 64.4,   outer: 5.73,  trim: 4.87, center: 0.0 }, // 內側全滿點
-  { total: 100.0, inner: 64.4,   outer: 5.73,  trim: 3.8,  center: 26.07 } // 官方分佈基準點 (註1)
+  { total: 9.0,   inner: 9.0,    outer: 0.0,    trim: 0.0,  center: 0.0 }, // 內側先加到 9 噸
+  { total: 14.73, inner: 9.0,    outer: 5.73,   trim: 0.0,  center: 0.0 }, // 外側接著加滿 (9 + 5.73)
+  { total: 24.0,  inner: 18.27,  outer: 5.73,   trim: 0.0,  center: 0.0 }, // 繼續加內側
+  { total: 27.6,  inner: 18.14,  outer: 5.73,   trim: 3.73, center: 0.0 }, // Trim 加滿點 (總和符合 27.6)
+  { total: 30.0,  inner: 20.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
+  { total: 40.0,  inner: 30.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
+  { total: 60.0,  inner: 50.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
+  { total: 75.0,  inner: 64.4,   outer: 5.73,   trim: 4.87, center: 0.0 }, // 內側全滿點
+  { total: 100.0, inner: 64.4,   outer: 5.73,   trim: 3.8,  center: 26.07 } // 官方分佈基準點 (註1)
 ];
 
 // 註1：若需嚴格符合官方各油箱數據 (Total: 96.33)，
@@ -671,6 +671,7 @@ function interpolateFuel(total) {
   const table = fuelTable;
   const n = table.length;
   if (n === 0) return null;
+  // 小於最小值或大於最大值時返回 null，交由外部處理 (或視為全在 Inner)
   if (total < table[0].total || total > table[n - 1].total) {
     return null;
   }
@@ -776,19 +777,36 @@ function computeIOCRefuel(dInner, dOuter, dCenter) {
   };
 }
 
+// 修正後的加油計算主邏輯
 function computeRefuel(currentTotal, targetTotal, finalDist) {
-  // 起始分布：Inner = currentTotal, 其他 = 0
-  const inner0  = currentTotal;
-  const outer0  = 0.0;
-  const trim0   = 0.0;
-  const center0 = 0.0;
+  // 1. 計算「目前剩油」的實際分佈狀態
+  //    先透過 interpolateFuel 取得當前總油量各油箱應有的油量
+  let currentDist = interpolateFuel(currentTotal);
+  
+  // 防呆：如果 currentTotal 小於表單最小範圍 (例如 < 9t)，
+  // 或是 interpolateFuel 返回 null，則假設全在 Inner (符合 0-9t 的邏輯)
+  if (!currentDist) {
+    currentDist = {
+      inner: currentTotal,
+      outer: 0.0,
+      trim: 0.0,
+      center: 0.0
+    };
+  }
 
+  // 設定正確的起始油量
+  const inner0  = currentDist.inner;
+  const outer0  = currentDist.outer;
+  const trim0   = currentDist.trim;
+  const center0 = currentDist.center;
+
+  // 計算各油箱需要補充的油量 (Delta)
   let dInner  = finalDist.inner  - inner0;
   let dOuter  = finalDist.outer  - outer0;
   let dTrim   = finalDist.trim   - trim0;
   let dCenter = finalDist.center - center0;
 
-  // 不考慮放油：若目標油量小於起始油量則視為 0（僅內部分配）
+  // 不考慮放油：若目標油量小於起始油量則視為 0（僅內部分配或不動作）
   dInner  = Math.max(dInner,  0);
   dOuter  = Math.max(dOuter,  0);
   dTrim   = Math.max(dTrim,   0);
