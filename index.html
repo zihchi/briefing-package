@@ -239,10 +239,10 @@ select {
   <ul class="checklist" id="briefingChecklist1">
     <li><label><input type="checkbox"> Personal equipments</label></li>
     <li><label><input type="checkbox"> Information : 班號、STD、飛時、巡航高度</label></li>
-    <li><label><input type="checkbox"> Registration : 機號、旅客、水量、停車位、油量、重量</label></li>
+    <li><label><input type="checkbox"> Registration : 機號、旅客、油量、水量、MEL、停機位</label></li>
     <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
-    <li><label><input type="checkbox"> Performance : MEL</label></li>
-    <li><label><input type="checkbox"> Special Procedure : CAAWTF</label></li>
+    <li><label><input type="checkbox"> Performance : 起飛重、落地重、MEL</label></li>
+    <li><label><input type="checkbox"> Special Procedure : Crew、Aircraft、Airport、Weather、NOTAM、Fuel</label></li>
     <li><label><input type="checkbox"> Fleet Notice</label></li>
   </ul>
 
@@ -375,7 +375,17 @@ select {
   </iframe>
 </div>
 
+<div class="section windy-section">
+  <h2>🌬️ Windy 風速圖 (FL390) 
+    <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
+  </h2>
+  <iframe id="windyWindFL390" 
+    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+  </iframe>
+</div>
 
+  
 <div class="section windy-section">
   <h2>✈️ Windy 晴空亂流圖 (FL340) 
     <button onclick="refreshIframe('windyTurbFL340')">重新整理</button>
