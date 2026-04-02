@@ -311,8 +311,6 @@
     <div class="img-grid-2col">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_1.jpg" alt="天気のツボ あさ">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_2.jpg" alt="天気のツボ よる">
-      <img id="unibrief-radar" alt="天氣雷達圖" style="width: 100%; max-width: 600px; grid-column: span 2;">
-      <img id="cwa-forecast" alt="中央氣象署預測圖" style="width: 100%; max-width: 600px;">
     </div>
   </div>
   <div class="section">
@@ -935,26 +933,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const url = this.dataset.url;
     if (url) window.open(url, "_blank");
   });
-});
-
-  document.addEventListener("DOMContentLoaded", function() {
-  
-  // 建立一個需要動態更新時間戳記的圖片清單 (去掉網址後方的數字)
-  const dynamicImages = [
-    { id: 'unibrief-radar', url: 'https://unibrief.herokuapp.com/chart/radar' },
-    { id: 'cwa-forecast', url: 'https://www.cwa.gov.tw/Data/fcst_img/FI04.png' }
-  ];
-
-  // 透過迴圈，自動為清單上的每一張圖片加上當下精確到毫秒的時間戳記
-  dynamicImages.forEach(function(imgData) {
-    const imgElement = document.getElementById(imgData.id);
-    
-    // 防呆機制：確認畫面上確實有這個圖片標籤才執行更新
-    if (imgElement) {
-      imgElement.src = imgData.url + '?' + Date.now();
-    }
-  });
-
 });
   
 </script>
