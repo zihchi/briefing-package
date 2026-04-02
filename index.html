@@ -325,17 +325,17 @@
   <div class="section fuel-box">
     <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
 
-  <div class="input-row">
+ <div class="input-row">
   <label for="currentFuel">剩油 Fuel Remaining：</label>
-  <input type="range" id="currentFuel" min="0" max="100" step="1" value="20" 
+  <input type="range" id="currentFuel" min="0" max="100" step="1" value="6" 
          oninput="document.getElementById('currentFuelVal').innerText = this.value + ' t'" />
-  <span id="currentFuelVal">20 t</span>
+  <span id="currentFuelVal">6 t</span>
 </div>
     <div class="input-row">
   <label for="targetFuel">目標油量 Target Fuel：</label>
-  <input type="range" id="targetFuel" min="0" max="150" step="0.1" value="60.0" 
+  <input type="range" id="targetFuel" min="0" max="150" step="0.1" value="25.0" 
          oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
-  <span id="targetFuelVal">60.0 t</span>
+  <span id="targetFuelVal">25.0 t</span>
   <button type="button" onclick="onCalculate()">計算</button>
 </div>
 
