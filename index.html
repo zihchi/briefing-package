@@ -240,8 +240,8 @@
   <div class="section">
     <div class="map-header">
         <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-            🌍 NOAA天氣
-            <button id="btn-refresh-map">🔄 重新整理</button>
+            🌍 NOAA AWC 天氣 (https://aviationweather.gov/data/metar/)
+            <button id="btn-refresh-map">重新整理</button>
         </h2>
         <div id="sync-status" style="background-color: #f39c12;">🔄 資料同步中...</div>
     </div>
@@ -301,16 +301,6 @@
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
   </div>
 
-  <div class="section windy-section">
-    <h2>🌡️ Windy 氣溫圖 (Temperature)
-      <button onclick="refreshIframe('windyTemp')">重新整理</button>
-    </h2>
-    <iframe id="windyTemp"
-      src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=temp"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-    </iframe>
-  </div>
-
   <div class="section windy-section"> 
     <h2>🌫️ WAQI 全台空氣品質地圖</h2> 
     <iframe width="100%" height="600" src="https://waqi.info/#/c/23.7/121.0/7z" frameborder="0" style="border:none;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1);"></iframe> 
@@ -319,10 +309,6 @@
   <div class="section">
     <h2>🌏 天氣圖概況圖</h2>
     <div class="img-grid-2col">
-      <img src="https://www.cwa.gov.tw/Data/radar/CV1_TW_1000_forPreview.png" alt="雷達圖">
-      <img src="https://www.cwa.gov.tw/Data/rainfall/QZJ_forPreview.jpg" alt="雨量">
-      <img src="https://www.cwa.gov.tw/Data/UVI/UVI_forPreview.png" alt="紫外線">
-      <img src="https://www.cwa.gov.tw/Data/temperature/temp_forPreview.jpg" alt="溫度">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_1.jpg" alt="天気のツボ あさ">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_2.jpg" alt="天気のツボ よる">
     </div>
