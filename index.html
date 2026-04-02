@@ -70,7 +70,7 @@
     
     .data-block { border-bottom: 2px dashed #bdc3c7; padding-bottom: 15px; margin-bottom: 15px; }
     .data-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
+    .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
     
     .raw-text { 
         font-family: 'Courier New', Courier, monospace; 
@@ -89,6 +89,10 @@
     .border-mvfr { border-left-color: #3498db !important; }
     .border-ifr { border-left-color: #e74c3c !important; }
     .border-lifr { border-left-color: #9b59b6 !important; }
+    
+    /* 儀表板重新整理按鈕專用 */
+    #btn-refresh-map { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
+    #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
   </style>
 </head>
 <body>
@@ -231,12 +235,15 @@
   </div>
 
   <!-- ========================================================= -->
-  <!-- 🛩️ 新增：東亞航空氣象戰術儀表板 (零延遲預載版) -->
+  <!-- 🛩️ 東亞航空氣象戰術儀表板 (搭載 Zulu Time 推算與手動重新整理) -->
   <!-- ========================================================= -->
   <div class="section">
     <div class="map-header">
-        <h2 style="margin: 0;">NOAA天氣</h2>
-        <div id="sync-status">🔄 資料同步中...</div>
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+            🌍 NOAA天氣
+            <button id="btn-refresh-map">🔄 重新整理</button>
+        </h2>
+        <div id="sync-status" style="background-color: #f39c12;">🔄 資料同步中...</div>
     </div>
     <div id="map"></div>
   </div>
@@ -257,7 +264,6 @@
       src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
   </div>
-
 
   <div class="section windy-section">
     <h2>🌬️ Windy 風速圖 (Surface Wind) 
@@ -304,7 +310,6 @@
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
     </iframe>
   </div>
-
 
   <div class="section windy-section"> 
     <h2>🌫️ WAQI 全台空氣品質地圖</h2> 
@@ -488,7 +493,7 @@ function openCitywx() {
 } 
 
 // ==========================================
-// 🌍 航空氣象儀表板核心邏輯 (完全獨立不衝突)
+// 🌍 航空氣象儀表板核心邏輯 (搭載時間推算與手動更新)
 // ==========================================
 function initAviationMap() {
     const mapContainer = document.getElementById('map');
@@ -504,10 +509,13 @@ function initAviationMap() {
     }).addTo(map);
 
     const airports = [
+        // 台灣
         { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
         { icao: 'RCSS', name: '臺北松山機場', lat: 25.0697, lng: 121.5525 },
         { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
         { icao: 'RCMQ', name: '臺中清泉崗機場', lat: 24.2646, lng: 120.6200 },
+        
+        // 日本
         { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
         { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
         { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
@@ -517,7 +525,21 @@ function initAviationMap() {
         { icao: 'RJGG', name: '中部國際機場', lat: 34.8583, lng: 136.8053 },
         { icao: 'RJSS', name: '仙台機場', lat: 38.1397, lng: 140.9169 },
         { icao: 'RJTT', name: '東京羽田國際機場', lat: 35.5523, lng: 139.7797 },
-        { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 }
+        { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 },
+
+        // 港澳及東南亞樞紐 (全新擴充)
+        { icao: 'VHHH', name: '香港國際機場', lat: 22.3089, lng: 113.9146 },
+        { icao: 'VMMC', name: '澳門國際機場', lat: 22.1496, lng: 113.5915 },
+        { icao: 'WMKK', name: '吉隆坡國際機場', lat: 2.7456, lng: 101.7099 },
+        { icao: 'RPLC', name: '克拉克國際機場', lat: 15.1858, lng: 120.5599 },
+        { icao: 'RPLL', name: '馬尼拉國際機場', lat: 14.5090, lng: 121.0194 },
+        { icao: 'WSSS', name: '新加坡樟宜機場', lat: 1.3592, lng: 103.9893 },
+        { icao: 'VTBD', name: '曼谷廊曼國際機場', lat: 13.9126, lng: 100.6068 },
+        { icao: 'VTBS', name: '曼谷蘇凡納布機場', lat: 13.6811, lng: 100.7473 },
+        { icao: 'VVDN', name: '峴港國際機場', lat: 16.0439, lng: 108.1994 },
+        { icao: 'VVNB', name: '河內內排國際機場', lat: 21.2212, lng: 105.8072 },
+        { icao: 'VVPQ', name: '富國國際機場', lat: 10.1656, lng: 103.9944 },
+        { icao: 'VVTS', name: '胡志明市新山一機場', lat: 10.8188, lng: 106.6520 }
     ];
 
     const weatherCache = {};
@@ -544,6 +566,44 @@ function initAviationMap() {
             } catch (e) {}
         }
         throw new Error(`無法取得 ${type} 資料`);
+    };
+
+    // 【新增功能】精準計算報文的發布時間，並與地球UTC時間比對
+    const calculateReportAge = (rawText) => {
+        if (!rawText) return "";
+        // 尋找報文中的時間戳記，例如 291330Z
+        const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
+        if (!match) return "";
+
+        const repDay = parseInt(match[1], 10);
+        const repHour = parseInt(match[2], 10);
+        const repMin = parseInt(match[3], 10);
+
+        const now = new Date();
+        const currDay = now.getUTCDate();
+        let targetMonth = now.getUTCMonth();
+        let targetYear = now.getUTCFullYear();
+
+        // 處理跨月的極端狀況 (例如報文寫 31 日，但今天剛好是 1 日)
+        if (repDay > currDay + 5) {
+            targetMonth -= 1;
+            if (targetMonth < 0) {
+                targetMonth = 11;
+                targetYear -= 1;
+            }
+        }
+
+        const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
+        const diffMs = now.getTime() - reportDate.getTime();
+        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+        if (diffMins < 60) {
+            return `(已發佈 ${diffMins} 分鐘)`;
+        } else {
+            const h = Math.floor(diffMins / 60);
+            const m = diffMins % 60;
+            return `(已發佈 ${h} 小時 ${m} 分鐘)`;
+        }
     };
 
     const parseWeatherElements = (text, prevVis, prevCeil) => {
@@ -639,26 +699,49 @@ function initAviationMap() {
 
             isDataReady = true;
             statusIndicator.innerText = "✅ 氣象同步完成";
+            statusIndicator.classList.remove('status-error');
             statusIndicator.classList.add('status-loaded');
+            statusIndicator.style.backgroundColor = ""; // Clear inline fallback
 
         } catch (error) {
             console.error(error);
             statusIndicator.innerText = "❌ 同步失敗";
+            statusIndicator.classList.remove('status-loaded');
             statusIndicator.classList.add('status-error');
+            statusIndicator.style.backgroundColor = "";
         }
     };
+
+    // 綁定手動重新整理按鈕
+    const refreshBtn = document.getElementById('btn-refresh-map');
+    if(refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            isDataReady = false;
+            const statusIndicator = document.getElementById('sync-status');
+            statusIndicator.classList.remove('status-loaded', 'status-error');
+            statusIndicator.style.backgroundColor = "#f39c12"; // 變回橘色
+            statusIndicator.innerText = "🔄 重新同步資料中...";
+            
+            // 清空快取後重抓
+            airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
+            bootSequence();
+        });
+    }
 
     airports.forEach(airport => {
         const marker = L.marker([airport.lat, airport.lng]).addTo(map);
 
         marker.on('click', function() {
             if (!isDataReady) {
-                marker.bindPopup(`
+                // 放棄 bindPopup，改用 L.popup() 獨立空投，避免 Leaflet 內建開關邏輯衝突
+                L.popup({ maxWidth: 450 })
+                    .setLatLng(marker.getLatLng())
+                    .setContent(`
                     <div class="weather-popup">
                         <div class="airport-title">${airport.name} (${airport.icao})</div>
                         <div style="color: #e67e22; font-weight: bold;">⚠️ 資料仍在背景下載中，請稍候。</div>
                     </div>
-                `, { maxWidth: 450 }).openPopup();
+                `).openOn(map);
                 return;
             }
 
@@ -669,28 +752,41 @@ function initAviationMap() {
             const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
             const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
 
+            // 取得時間計算結果
+            const metarAgeStr = calculateReportAge(rawMetarText);
+            const tafAgeStr = calculateReportAge(rawTafText);
+
             const coloredTafHtml = formatColorTAF(rawTafText);
 
-            marker.bindPopup(`
+            // 確保這段「發佈時間」不會干擾您複製貼上的格式，並徹底解決重複點擊顯示異常的 Bug
+            L.popup({ maxWidth: 500 })
+                .setLatLng(marker.getLatLng())
+                .setContent(`
                 <div class="weather-popup">
                     <div class="airport-title">${airport.name} (${airport.icao})</div>
                     
                     <!-- 結構化橫向區塊：METAR -->
                     <div class="data-block">
                         <div class="section-title">
-                            METAR (即時天氣)
-                            ${rawMetarText ? `<span class="badge bg-${metarCat}">${displayCat}</span>` : ''}
+                            <span style="display:inline-flex; align-items:center;">
+                                METAR (即時天氣)
+                                ${rawMetarText ? `<span class="badge bg-${metarCat}">${displayCat}</span>` : ''}
+                            </span>
+                            <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
                         </div>
                         <div class="raw-text border-${metarCat}">${rawMetarText || "目前無有效 METAR 報文"}</div>
                     </div>
                     
                     <!-- 結構化橫向區塊：TAF -->
                     <div class="data-block">
-                        <div class="section-title">TAF (機場預報)</div>
+                        <div class="section-title">
+                            <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
+                            <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${tafAgeStr}</span>
+                        </div>
                         ${coloredTafHtml}
                     </div>
                 </div>
-            `, { maxWidth: 500 }).openPopup();
+            `).openOn(map);
         });
     });
 
