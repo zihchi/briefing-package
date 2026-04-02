@@ -311,6 +311,7 @@
     <div class="img-grid-2col">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_1.jpg" alt="天気のツボ あさ">
       <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_2.jpg" alt="天気のツボ よる">
+      <img id="unibrief-radar" alt="天氣雷達圖" style="width: 100%; max-width: 600px; grid-column: span 2;">
     </div>
   </div>
   <div class="section">
@@ -934,6 +935,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (url) window.open(url, "_blank");
   });
 });
+
+// 等待 HTML 載入完成後，自動將雷達圖網址加上當下的時間戳記
+  document.addEventListener("DOMContentLoaded", function() {
+    const radarImg = document.getElementById('unibrief-radar');
+    const baseUrl = 'https://unibrief.herokuapp.com/chart/radar';
+    radarImg.src = baseUrl + '?' + Date.now();
+  });
+  
+  
 </script>
 
 </body>
