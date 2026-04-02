@@ -4,207 +4,92 @@
   <meta charset="UTF-8">
   <title>簡報箱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- 引入 Leaflet 的 CSS 樣式表以正確渲染地圖 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <style>
     body { background-color: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
-    .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
+    .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; margin-bottom: 15px; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .btn { display: inline-block; padding: 0.8em 1.6em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; }
 
-/* ⬇️ 天氣2格圖的排列開始 */
-.img-grid-2col {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1em;
-  justify-content: center;
-}
+    /* 天氣2格圖排列 */
+    .img-grid-2col { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
+    .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 100%; height: auto; }
+    @media (max-width: 768px) { .img-grid-2col img { width: 100%; } }
 
-.img-grid-2col img {
-  width: calc(100% / 2 - 1em);  /* 兩欄 */
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  max-width: 100%;
-  height: auto;
-}
+    /* 顯著天氣 */       
+    .img-column { text-align: center; }
+    .img-column img { display: block; width: 95%; max-width: 1200px; height: auto; margin: 0 auto 20px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
-@media (max-width: 768px) {
-  .img-grid-2col img {
-    width: 100%;  /* 手機版單欄 */
-  }
-}
-/* 天氣2格圖的結束 */
-
- // 顯著天氣開始       
-    .img-column {
-  text-align: center;
-}
-
-.img-column img {
-  display: block;
-  width: 95%;          /* 優先佔用視窗寬度的 95% */
-  max-width: 1200px;   /* 將最大寬度從 800px 提升到 1200px */
-  height: auto;        /* 保持原始比例 */
-  margin: 0 auto 20px auto; /* 增加底部間距，讓多張圖之間更有空隙 */
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* 稍微加深陰影，讓圖表更立體 */
-}
-
- /* 僅保留核心通用樣式，刪除所有地圖相關定義 */
-button { 
-  margin-top: 5px; 
-  padding: 0.8em 1.6em; 
-  font-size: 1.1em; 
-  background: #3c79ff; 
-  color: #fff; 
-  border: none; 
-  border-radius: 8px; 
-  font-weight: bold; 
-  cursor: pointer; 
-}
-
-.section { overflow-x: auto; }
-
-body { 
-  background: #f9f7f3; 
-  font-family: "Segoe UI", sans-serif; 
-  color: #333; 
-  padding: 2em; 
-}
-
-.flight-box { 
-  border-left: 6px solid #3c79ff; 
-  background: #fff; 
-  padding: 1em; 
-  border-radius: 12px; 
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-select { 
-  font-size: 1em; 
-  padding: 0.5em; 
-  margin-left: 0.5em;
-}
-    .windy-section h2 button {
-  background: none;
-  border: 2px solid #3c79ff;
-  border-radius: 6px;
-  padding: 4px 10px;
-  margin-left: 12px;
-  font-size: 0.9em;
-  color: #3c79ff;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-}
-.windy-section h2 button:hover {
-  background-color: rgba(60,121,255,0.1);
-  color: #2c5edc;
-}
-    .checklist {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1em 0;
-}
-.checklist li {
-  padding: 0.5em 0;
-  border-bottom: 1px dashed #ccc;
-}
-.checklist label {
-  font-size: 1em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.checklist input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: #3c79ff;
-}
-
-/* ⛽ Fuel Calculator 區塊 */
-.fuel-box h2 {
-  font-size: 1.3rem;
-  margin-top: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-}
-
-.fuel-box h3 {
-  font-size: 1.1rem;
-  margin-top: 1.2rem;
-  margin-bottom: 0.3rem;
-}
-
-.fuel-box .hint {
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 0.8rem;
-}
-
-.fuel-box .input-row {
-  margin: 0.5rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.fuel-box .input-row label {
-  min-width: 8rem;
-}
-
-.fuel-box .input-row input[type="number"] {
-  width: 8rem;
-  padding: 0.3rem 0.4rem;
-}
-
-.fuel-box .input-row button {
-  padding: 0.35rem 0.9rem;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.fuel-box #message {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #b00;
-}
-
-.fuel-box .note {
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 0.3rem;
-}
-
-/* 只在油量區塊內套用表格樣式，避免影響其他區塊 */
-.fuel-box table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.5rem;
-}
-
-.fuel-box th,
-.fuel-box td {
-  border: 1px solid #ccc;
-  padding: 0.4rem 0.5rem;
-  text-align: right;
-  font-size: 0.95rem;
-}
-
-.fuel-box th:first-child,
-.fuel-box td:first-child {
-  text-align: left;
-}
-
-.fuel-box th {
-  background: #f5f5f5;
-}
+    /* 通用按鈕 */
+    button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     
+    .flight-box { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    select { font-size: 1em; padding: 0.5em; margin-left: 0.5em; }
     
-</style>
+    .windy-section h2 button { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .windy-section h2 button:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
+    
+    .checklist { list-style: none; padding: 0; margin: 0 0 1em 0; }
+    .checklist li { padding: 0.5em 0; border-bottom: 1px dashed #ccc; }
+    .checklist label { font-size: 1em; display: flex; align-items: center; gap: 10px; }
+    .checklist input[type="checkbox"] { width: 18px; height: 18px; accent-color: #3c79ff; }
+
+    /* ⛽ Fuel Calculator 區塊 */
+    .fuel-box h2 { font-size: 1.3rem; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
+    .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; }
+    .fuel-box .hint { font-size: 0.9rem; color: #555; margin-bottom: 0.8rem; }
+    .fuel-box .input-row { margin: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .fuel-box .input-row label { min-width: 8rem; }
+    .fuel-box .input-row input[type="number"] { width: 8rem; padding: 0.3rem 0.4rem; }
+    .fuel-box .input-row button { padding: 0.35rem 0.9rem; cursor: pointer; font-size: 0.95rem; }
+    .fuel-box #message { margin-top: 0.5rem; font-size: 0.9rem; color: #b00; }
+    .fuel-box .note { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
+    .fuel-box table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    .fuel-box th, .fuel-box td { border: 1px solid #ccc; padding: 0.4rem 0.5rem; text-align: right; font-size: 0.95rem; }
+    .fuel-box th:first-child, .fuel-box td:first-child { text-align: left; }
+    .fuel-box th { background: #f5f5f5; }
+
+    /* =========================================
+       🌍 航空氣象儀表板專用樣式 (完美移植)
+       ========================================= */
+    #map { height: 650px; width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 1; }
+    
+    .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 20px; background-color: #f39c12; color: white; transition: background-color 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .status-loaded { background-color: #2ecc71 !important; }
+    .status-error { background-color: #e74c3c !important; }
+    
+    .weather-popup { min-width: 400px; text-align: left !important; }
+    .airport-title { font-size: 16px; font-weight: bold; color: #1a252f; margin-bottom: 15px; border-bottom: 2px solid #34495e; padding-bottom: 8px; }
+    
+    .data-block { border-bottom: 2px dashed #bdc3c7; padding-bottom: 15px; margin-bottom: 15px; }
+    .data-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
+    
+    .raw-text { 
+        font-family: 'Courier New', Courier, monospace; 
+        font-size: 13.5px; line-height: 1.6; background-color: #ebedef; padding: 12px; 
+        border-radius: 6px; white-space: pre-wrap; color: #2c3e50; word-wrap: break-word; border-left: 5px solid #95a5a6;
+    }
+    
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; vertical-align: middle; }
+    .bg-vfr { background-color: #2ecc71; } 
+    .bg-mvfr { background-color: #3498db; } 
+    .bg-ifr { background-color: #e74c3c; } 
+    .bg-lifr { background-color: #9b59b6; } 
+    .bg-unk { background-color: #95a5a6; } 
+    
+    .border-vfr { border-left-color: #2ecc71 !important; }
+    .border-mvfr { border-left-color: #3498db !important; }
+    .border-ifr { border-left-color: #e74c3c !important; }
+    .border-lifr { border-left-color: #9b59b6 !important; }
+  </style>
 </head>
 <body>
   
@@ -225,220 +110,225 @@ select {
       <a class="btn" href="https://zihchi.github.io/NOTAM/" target="_blank">📡NOTAM座標</a>
     </div>
   </div>
-<div class="section">
-
-  <h3>🧳 個人裝備檢查表</h3>
-  <ul class="checklist" id="personalChecklist">
-    <li><label><input type="checkbox"> Sign On</label></li>
-    <li><label><input type="checkbox"> 更新：Flysmart (確認版本) / FD PRO</label></li>
-    <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
-    <li><label><input type="checkbox"> 入境登記</label></li>
-  </ul>
-
-  <h3>📋 簡報檢查清單（PIREPS）</h3>
-  <ul class="checklist" id="briefingChecklist1">
-    <li><label><input type="checkbox"> Personal equipments</label></li>
-    <li><label><input type="checkbox"> Information : 班號、STD、飛時、巡航高度</label></li>
-    <li><label><input type="checkbox"> Registration : 機號、旅客、油量、水量、MEL、停機位</label></li>
-    <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
-    <li><label><input type="checkbox"> Performance : 起飛重、落地重、MEL</label></li>
-    <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
-    <li><label><input type="checkbox"> Fleet Notice Reviewed and Clicked</label></li>
-    <li><label><input type="checkbox"> OFP Signed</label></li>
-    
-  </ul>
-
-</div>
-
-<div class="section">
-  <h2>📢 公告欄 </h2>
-  <iframe
-    src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pubhtml?widget=true&headers=false"
-    style="width:100%; height:480px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
-  ></iframe>
-</div>
-
-  
-<div class="section">
-  <h2>🛫 Turbli 航班亂流查詢</h2>
-  <label for="flightSelect">請選擇航班：</label>
-  <select id="flightSelect" style="margin-right:1em;"></select>
-  <label for="dateSelect">請選擇日期：</label>
-  <select id="dateSelect" style="margin-right:1em;">
-    <option value="today">今天</option>
-    <option value="tomorrow">明天</option>
-  </select>
-  <button id="turbliBtn" onclick="openTurbli()" disabled>查詢</button>
-  <a href="https://turbli.com/" target="_blank" style="margin-left: 1em;">
-    <button type="button">官網</button>
-  </a>
-</div>
 
   <div class="section">
-  <h2>🌏 D-ATIS</h2>
-  <label for="datisSelect">請選擇機場：</label>
-  <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
-    <option selected disabled>--請選擇機場--</option>
-    <optgroup label="台灣、香港">
-      <option value="https://atis.guru/">ATIS 官方網站</option>
-      <option value="https://atis.guru/atis/RCTP">RCTP 桃園</option>
-      <option value="https://atis.guru/atis/RCSS">RCSS 松山</option>
-      <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
-      <option value="https://atis.guru/atis/VMMC">VMMC 澳門</option>
-      <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
-    </optgroup>
-    <optgroup label="日本">
-      <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
-      <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
-      <option value="https://atis.guru/atis/RJFT">RJFT 熊本</option>
-      <option value="https://atis.guru/atis/RJBB">RJBB 關西</option>
-      <option value="https://atis.guru/atis/RJGG">RJGG 中部</option>
-      <option value="https://atis.guru/atis/RJTT">RJTT 羽田</option>
-      <option value="https://atis.guru/atis/RJAA">RJAA 成田</option>
-      <option value="https://atis.guru/atis/RJSS">RJSS 仙台</option>
-      <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
-      <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
-    </optgroup>
-    <optgroup label="東南亞">
-      <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
-      <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
-      <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
-    </optgroup>
-    <optgroup label="越南">
-      <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
-      <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
-      <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
-    </optgroup>
-  </select>
-</div>
+    <h3>🧳 個人裝備檢查表</h3>
+    <ul class="checklist" id="personalChecklist">
+      <li><label><input type="checkbox"> Sign On</label></li>
+      <li><label><input type="checkbox"> 更新：Flysmart (確認版本) / FD PRO</label></li>
+      <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
+      <li><label><input type="checkbox"> 入境登記</label></li>
+    </ul>
 
- <div class="section">
-  <h2>🌦️ 城市天氣</h2>
-  <label for="citywxSelect">請選擇城市：</label>
-  <select id="citywxSelect" onchange="openCitywx()" style="margin-right: 1em;">
-    <option selected disabled>--請選擇城市--</option>
-    <optgroup label="台灣、香港">
-      <option value="https://www.bbc.com/weather/6696918">RCTP 桃園</option>
-      <option value="https://www.bbc.com/weather/1673820">RCKH 高雄</option>
-      <option value="https://www.bbc.com/weather/1821274">VMMC 澳門</option>
-      <option value="https://www.bbc.com/weather/1819729">VHHH 香港</option>
-      
-    </optgroup>
-       <optgroup label="日本">
-      <option value="https://www.bbc.com/weather/1894616">ROAH 沖繩</option>
-      <option value="https://www.bbc.com/weather/1863967">RJFF 福岡</option>
-      <option value="https://www.bbc.com/weather/1858421">RJFT 熊本</option>
-      <option value="https://www.bbc.com/weather/1853909">RJBB 大阪</option>
-      <option value="https://www.bbc.com/weather/1856057">RJGG 名古屋</option>
-      <option value="https://www.bbc.com/weather/1850147">RJTT 東京</option>
-      <option value="https://www.bbc.com/weather/2111684">RJAA 成田</option>
-      <option value="https://www.bbc.com/weather/6300399">RJSS 仙台</option>
-      <option value="https://www.bbc.com/weather/2130188">RJCH 函館</option>
-      <option value="https://www.bbc.com/weather/2128295">RJCC 札幌</option>
-    </optgroup>
-    <optgroup label="東南亞">
-      <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
-      <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
-      <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
-    </optgroup>
-    <optgroup label="越南">
-      <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
-      <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
-      <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
-    </optgroup>
-  </select>
-</div>
+    <h3>📋 簡報檢查清單（PIREPS）</h3>
+    <ul class="checklist" id="briefingChecklist1">
+      <li><label><input type="checkbox"> Personal equipments</label></li>
+      <li><label><input type="checkbox"> Information : 班號、STD、飛時、巡航高度</label></li>
+      <li><label><input type="checkbox"> Registration : 機號、旅客、油量、水量、MEL、停機位</label></li>
+      <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
+      <li><label><input type="checkbox"> Performance : 起飛重、落地重、MEL</label></li>
+      <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
+      <li><label><input type="checkbox"> Fleet Notice Reviewed and Clicked</label></li>
+      <li><label><input type="checkbox"> OFP Signed</label></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>📢 公告欄 </h2>
+    <iframe
+      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pubhtml?widget=true&headers=false"
+      style="width:100%; height:480px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
+    ></iframe>
+  </div>
+
+  <div class="section">
+    <h2>🛫 Turbli 航班亂流查詢</h2>
+    <label for="flightSelect">請選擇航班：</label>
+    <select id="flightSelect" style="margin-right:1em;"></select>
+    <label for="dateSelect">請選擇日期：</label>
+    <select id="dateSelect" style="margin-right:1em;">
+      <option value="today">今天</option>
+      <option value="tomorrow">明天</option>
+    </select>
+    <button id="turbliBtn" disabled>查詢</button>
+    <a href="https://turbli.com/" target="_blank" style="margin-left: 1em;">
+      <button type="button">官網</button>
+    </a>
+  </div>
+
+  <div class="section">
+    <h2>🌏 D-ATIS</h2>
+    <label for="datisSelect">請選擇機場：</label>
+    <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
+      <option selected disabled>--請選擇機場--</option>
+      <optgroup label="台灣、香港">
+        <option value="https://atis.guru/">ATIS 官方網站</option>
+        <option value="https://atis.guru/atis/RCTP">RCTP 桃園</option>
+        <option value="https://atis.guru/atis/RCSS">RCSS 松山</option>
+        <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
+        <option value="https://atis.guru/atis/VMMC">VMMC 澳門</option>
+        <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
+      </optgroup>
+      <optgroup label="日本">
+        <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
+        <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
+        <option value="https://atis.guru/atis/RJFT">RJFT 熊本</option>
+        <option value="https://atis.guru/atis/RJBB">RJBB 關西</option>
+        <option value="https://atis.guru/atis/RJGG">RJGG 中部</option>
+        <option value="https://atis.guru/atis/RJTT">RJTT 羽田</option>
+        <option value="https://atis.guru/atis/RJAA">RJAA 成田</option>
+        <option value="https://atis.guru/atis/RJSS">RJSS 仙台</option>
+        <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
+        <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
+      </optgroup>
+      <optgroup label="東南亞">
+        <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
+        <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
+        <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
+      </optgroup>
+      <optgroup label="越南">
+        <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
+        <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
+        <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="section">
+    <h2>🌦️ 城市天氣</h2>
+    <label for="citywxSelect">請選擇城市：</label>
+    <select id="citywxSelect" onchange="openCitywx()" style="margin-right: 1em;">
+      <option selected disabled>--請選擇城市--</option>
+      <optgroup label="台灣、香港">
+        <option value="https://www.bbc.com/weather/6696918">RCTP 桃園</option>
+        <option value="https://www.bbc.com/weather/1673820">RCKH 高雄</option>
+        <option value="https://www.bbc.com/weather/1821274">VMMC 澳門</option>
+        <option value="https://www.bbc.com/weather/1819729">VHHH 香港</option>
+      </optgroup>
+         <optgroup label="日本">
+        <option value="https://www.bbc.com/weather/1894616">ROAH 沖繩</option>
+        <option value="https://www.bbc.com/weather/1863967">RJFF 福岡</option>
+        <option value="https://www.bbc.com/weather/1858421">RJFT 熊本</option>
+        <option value="https://www.bbc.com/weather/1853909">RJBB 大阪</option>
+        <option value="https://www.bbc.com/weather/1856057">RJGG 名古屋</option>
+        <option value="https://www.bbc.com/weather/1850147">RJTT 東京</option>
+        <option value="https://www.bbc.com/weather/2111684">RJAA 成田</option>
+        <option value="https://www.bbc.com/weather/6300399">RJSS 仙台</option>
+        <option value="https://www.bbc.com/weather/2130188">RJCH 函館</option>
+        <option value="https://www.bbc.com/weather/2128295">RJCC 札幌</option>
+      </optgroup>
+      <optgroup label="東南亞">
+        <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
+        <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
+        <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
+      </optgroup>
+      <optgroup label="越南">
+        <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
+        <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
+        <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 🛩️ 新增：東亞航空氣象戰術儀表板 (零延遲預載版) -->
+  <!-- ========================================================= -->
+  <div class="section">
+    <div class="map-header">
+        <h2 style="margin: 0;">NOAA天氣</h2>
+        <div id="sync-status">🔄 資料同步中...</div>
+    </div>
+    <div id="map"></div>
+  </div>
 
   <div class="section windy-section">
-  <h2>🌧️ Windy 即時雷達圖 
-    <button onclick="refreshIframe('windyRadar')">重新整理</button>
-  </h2>
-  <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-</div>
+    <h2>🌧️ Windy 即時雷達圖 
+      <button onclick="refreshIframe('windyRadar')">重新整理</button>
+    </h2>
+    <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  </div>
 
-<div class="section windy-section">
-  <h2>🌤️ Windy 衛星雲圖
-    <button onclick="refreshIframe('windySatellite')">重新整理</button>
-  </h2>
-  <iframe id="windySatellite"
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-</div>
-
-
-<div class="section windy-section">
-  <h2>🌬️ Windy 風速圖 (Surface Wind) 
-    <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
-  </h2>
-  <iframe id="windyWindSurface" 
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-  </iframe>
-</div>
-
-<div class="section windy-section">
-  <h2>🌬️ Windy 風速圖 (FL390) 
-    <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
-  </h2>
-  <iframe id="windyWindFL390" 
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-  </iframe>
-</div>
-
-  
-<div class="section windy-section">
-  <h2>✈️ Windy 晴空亂流圖 (FL340) 
-    <button onclick="refreshIframe('windyTurbFL340')">重新整理</button>
-  </h2>
-  <iframe id="windyTurbFL340" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=250h&overlay=turbulence"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-</div>
-
-  
-<div class="section windy-section">
-  <h2>✈️ Windy 晴空亂流圖 (FL390) 
-    <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
-  </h2>
-  <iframe id="windyTurbFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-</div>
-
-<div class="section windy-section">
-  <h2>🌡️ Windy 氣溫圖 (Temperature)
-    <button onclick="refreshIframe('windyTemp')">重新整理</button>
-  </h2>
-  <iframe id="windyTemp"
-    src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=temp"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-  </iframe>
-</div>
+  <div class="section windy-section">
+    <h2>🌤️ Windy 衛星雲圖
+      <button onclick="refreshIframe('windySatellite')">重新整理</button>
+    </h2>
+    <iframe id="windySatellite"
+      src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  </div>
 
 
-  
-<div class="section windy-section"> <h2>🌫️ WAQI 全台空氣品質地圖</h2> 
-  <iframe width="100%" height="600" src="https://waqi.info/#/c/23.7/121.0/7z" frameborder="0" style="border:none;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1);"></iframe> 
-</div>
+  <div class="section windy-section">
+    <h2>🌬️ Windy 風速圖 (Surface Wind) 
+      <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
+    </h2>
+    <iframe id="windyWindSurface" 
+      src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+    </iframe>
+  </div>
+
+  <div class="section windy-section">
+    <h2>🌬️ Windy 風速圖 (FL390) 
+      <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
+    </h2>
+    <iframe id="windyWindFL390" 
+      src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+    </iframe>
+  </div>
+
+  <div class="section windy-section">
+    <h2>✈️ Windy 晴空亂流圖 (FL340) 
+      <button onclick="refreshIframe('windyTurbFL340')">重新整理</button>
+    </h2>
+    <iframe id="windyTurbFL340" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=250h&overlay=turbulence"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  </div>
+
+  <div class="section windy-section">
+    <h2>✈️ Windy 晴空亂流圖 (FL390) 
+      <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
+    </h2>
+    <iframe id="windyTurbFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+  </div>
+
+  <div class="section windy-section">
+    <h2>🌡️ Windy 氣溫圖 (Temperature)
+      <button onclick="refreshIframe('windyTemp')">重新整理</button>
+    </h2>
+    <iframe id="windyTemp"
+      src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=temp"
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+    </iframe>
+  </div>
+
+
+  <div class="section windy-section"> 
+    <h2>🌫️ WAQI 全台空氣品質地圖</h2> 
+    <iframe width="100%" height="600" src="https://waqi.info/#/c/23.7/121.0/7z" frameborder="0" style="border:none;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1);"></iframe> 
+  </div>
   
   <div class="section">
-  <h2>🌏 天氣圖概況圖</h2>
-  <div class="img-grid-2col">
-    <img src="https://www.cwa.gov.tw/Data/radar/CV1_TW_1000_forPreview.png" alt="雷達圖">
-    <img src="https://www.cwa.gov.tw/Data/rainfall/QZJ_forPreview.jpg" alt="雨量">
-    <img src="https://www.cwa.gov.tw/Data/UVI/UVI_forPreview.png" alt="紫外線">
-    <img src="https://www.cwa.gov.tw/Data/temperature/temp_forPreview.jpg" alt="溫度">
-     <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_1.jpg" alt="天気のツボ あさ">
-    <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_2.jpg" alt="天気のツボ よる">
-  </div>
-</div>
-<div class="section">
-    <h2>🌏顯著天氣圖</h2>
-    <div class="img-column">
-      <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya86-0.png">
-      <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png">
-      <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
+    <h2>🌏 天氣圖概況圖</h2>
+    <div class="img-grid-2col">
+      <img src="https://www.cwa.gov.tw/Data/radar/CV1_TW_1000_forPreview.png" alt="雷達圖">
+      <img src="https://www.cwa.gov.tw/Data/rainfall/QZJ_forPreview.jpg" alt="雨量">
+      <img src="https://www.cwa.gov.tw/Data/UVI/UVI_forPreview.png" alt="紫外線">
+      <img src="https://www.cwa.gov.tw/Data/temperature/temp_forPreview.jpg" alt="溫度">
+      <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_1.jpg" alt="天気のツボ あさ">
+      <img src="https://tenki.lbw.jp/imagedata/tubo/LBWwb_tubo_2.jpg" alt="天気のツボ よる">
     </div>
+  </div>
+  <div class="section">
+      <h2>🌏 顯著天氣圖</h2>
+      <div class="img-column">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya86-0.png">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
+      </div>
   </div>
 
   <div class="section fuel-box">
@@ -446,21 +336,11 @@ select {
 
     <div class="input-row">
       <label for="currentFuel">目前剩油 (Total)：</label>
-      <input
-        type="number"
-        id="currentFuel"
-        step="0.1"
-        placeholder="例如：20.0"
-      />
+      <input type="number" id="currentFuel" step="0.1" placeholder="例如：20.0" />
     </div>
     <div class="input-row">
       <label for="targetFuel">目標 Total Fuel：</label>
-      <input
-        type="number"
-        id="targetFuel"
-        step="0.1"
-        placeholder="例如：60.0"
-      />
+      <input type="number" id="targetFuel" step="0.1" placeholder="例如：60.0" />
       <button type="button" onclick="onCalculate()">計算</button>
     </div>
 
@@ -502,84 +382,55 @@ select {
         <tr><th>總加油時間</th><th colspan="3">-</th></tr>
       </tbody>
     </table>
-  
     </div>
   </div>
 
+<!-- 引入 Leaflet 的核心 JavaScript 函式庫 -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-
-  
 <script>
-
-
 function refreshIframe(id){
   const iframe = document.getElementById(id);
   if (iframe) iframe.src = iframe.src;
 }
 
 function setupChecklist(listId) {
-  // 不做任何儲存，重新整理後將回到未勾選狀態
   const list = document.getElementById(listId);
   if (!list) return;
   list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
 }
 
-
-// 初始化兩組 checklist
 setupChecklist("briefingChecklist1");
 setupChecklist("briefingChecklist2");
 setupChecklist("personalChecklist");
 
 // 亂流的敘述檔案 //
 window.flights = [
-  { flightNo: "820", route: "TPE/KIX" },
-  { flightNo: "821", route: "KIX/TPE" },
-  { flightNo: "822", route: "TPE/KIX" },
-  { flightNo: "823", route: "KIX/TPE" },
-  { flightNo: "233", route: "TPE/HKG" },
-  { flightNo: "234", route: "HKG/TPE" },
-  { flightNo: "235", route: "TPE/HKG" },
-  { flightNo: "236", route: "HKG/TPE" },
-  { flightNo: "201", route: "TPE/MFM" },
-  { flightNo: "202", route: "MFM/TPE" },
-  { flightNo: "205", route: "TPE/MFM" },
-  { flightNo: "206", route: "MFM/TPE" },
-  { flightNo: "846", route: "TPE/KMJ" },
-  { flightNo: "847", route: "KMJ/TPE" },
-  { flightNo: "771", route: "TPE/SIN" },
-  { flightNo: "772", route: "SIN/TPE" },
-  { flightNo: "838", route: "TPE/NGO" },
-  { flightNo: "839", route: "NGO/TPE" },
-  { flightNo: "840", route: "TPE/FUK" },
-  { flightNo: "841", route: "FUK/TPE" },
-  { flightNo: "850", route: "TPE/CTS" },
-  { flightNo: "851", route: "CTS/TPE" },
-  { flightNo: "862", route: "TPE/SDJ" },
-  { flightNo: "863", route: "SDJ/TPE" },
-  { flightNo: "711", route: "TPE/SGN" },
-  { flightNo: "712", route: "SGN/TPE" },
-  { flightNo: "713", route: "TPE/SGN" },
-  { flightNo: "714", route: "SGN/TPE" },
-  { flightNo: "789", route: "TPE/CRK" },
-  { flightNo: "790", route: "CRK/TPE" },
-  { flightNo: "802", route: "TPE/NRT" },
-  { flightNo: "803", route: "NRT/TPE" },
-  { flightNo: "804", route: "TPE/NRT" },
-  { flightNo: "805", route: "NRT/TPE" }
-  ];  
-
+  { flightNo: "820", route: "TPE/KIX" }, { flightNo: "821", route: "KIX/TPE" },
+  { flightNo: "822", route: "TPE/KIX" }, { flightNo: "823", route: "KIX/TPE" },
+  { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
+  { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" },
+  { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
+  { flightNo: "205", route: "TPE/MFM" }, { flightNo: "206", route: "MFM/TPE" },
+  { flightNo: "846", route: "TPE/KMJ" }, { flightNo: "847", route: "KMJ/TPE" },
+  { flightNo: "771", route: "TPE/SIN" }, { flightNo: "772", route: "SIN/TPE" },
+  { flightNo: "838", route: "TPE/NGO" }, { flightNo: "839", route: "NGO/TPE" },
+  { flightNo: "840", route: "TPE/FUK" }, { flightNo: "841", route: "FUK/TPE" },
+  { flightNo: "850", route: "TPE/CTS" }, { flightNo: "851", route: "CTS/TPE" },
+  { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
+  { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
+  { flightNo: "713", route: "TPE/SGN" }, { flightNo: "714", route: "SGN/TPE" },
+  { flightNo: "789", route: "TPE/CRK" }, { flightNo: "790", route: "CRK/TPE" },
+  { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
+  { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" }
+];  
 
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
   const dateSelectEl = document.getElementById("dateSelect");
   const btn = document.getElementById("turbliBtn");
 
-  console.log("✅ initFlightSelect called, element:", selectEl);
-
-  if (!selectEl || !dateSelectEl || !btn) {
-    console.warn("⛔ 找不到某些 DOM 元素");
-    return;
-  }
+  if (!selectEl || !dateSelectEl || !btn) return;
 
   const defaultOption = document.createElement("option");
   defaultOption.value = "";
@@ -589,7 +440,6 @@ function initFlightSelect() {
   window.flights
     .sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }))
     .forEach(item => {
-      console.log("🛬 Adding flight:", item.flightNo);
       const opt = document.createElement("option");
       opt.value = item.flightNo;
       opt.textContent = item.flightNo;
@@ -607,9 +457,7 @@ function initFlightSelect() {
     }
 
     const date = new Date();
-    if (selectedDate === "tomorrow") {
-      date.setDate(date.getDate() + 1);
-    }
+    if (selectedDate === "tomorrow") date.setDate(date.getDate() + 1);
 
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -617,272 +465,354 @@ function initFlightSelect() {
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
     const flight = window.flights.find(f => f.flightNo === selectedFlight);
-    if (!flight) {
-      console.warn("⚠️ 找不到對應航班資料");
-      return;
-    }
+    if (!flight) return;
 
     btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
     btn.disabled = false;
   }
 
-  // 綁定兩個選單的 change 事件
   selectEl.addEventListener("change", updateTurbliUrl);
   dateSelectEl.addEventListener("change", updateTurbliUrl);
 }
 
-// 初始化與按鈕點擊事件
-document.addEventListener("DOMContentLoaded", function () {
-  initFlightSelect();
+function openDatis() {
+  const sel = document.getElementById("datisSelect");
+  const url = sel.value;
+  if (url) window.open(url, '_blank');
+}
 
-  document.getElementById("turbliBtn").addEventListener("click", function () {
-    const url = this.dataset.url;
-    if (url) window.open(url, "_blank");
-  });
-});
-
- function openDatis() {
-    const sel = document.getElementById("datisSelect");
-    const url = sel.value;
-    if (url) window.open(url, '_blank');
-  }
-
- function openCitywx() {
+function openCitywx() {
   const select = document.getElementById("citywxSelect");
   const url = select.value;
-  if (url && url !== "--請選擇城市--") {
-    window.open(url, "_blank");
-  }
+  if (url && url !== "--請選擇城市--") window.open(url, "_blank");
 } 
 
+// ==========================================
+// 🌍 航空氣象儀表板核心邏輯 (完全獨立不衝突)
+// ==========================================
+function initAviationMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
 
-// ⛽ Fuel Distribution & Refuel Time Calculator ------------------------------
+    // 初始化地圖，設定在東亞中心
+    const map = L.map('map').setView([31.0, 130.0], 5);
 
-// 依照圖表邏輯、官方 100t 數據及專業判斷修正（單位：噸，Inner/Outer 為左右合計）
-// 邏輯關鍵點：
-// 1. 0-9t: 僅填充 Inner
-// 2. 9-14.73t: Inner 停滯，開始填充 Outer 至滿 (5.73t)
-// 3. 27.6t: Trim 填充完成點
-// 4. 75t+: Inner 滿載，Center 開始填充
+    // 使用穩定無擋的 CARTO 商業級免費圖層
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 20
+    }).addTo(map);
+
+    const airports = [
+        { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
+        { icao: 'RCSS', name: '臺北松山機場', lat: 25.0697, lng: 121.5525 },
+        { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
+        { icao: 'RCMQ', name: '臺中清泉崗機場', lat: 24.2646, lng: 120.6200 },
+        { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
+        { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
+        { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
+        { icao: 'RJCH', name: '函館機場', lat: 41.7700, lng: 140.8220 },
+        { icao: 'RJFF', name: '福岡機場', lat: 33.5859, lng: 130.4507 },
+        { icao: 'RJFK', name: '鹿兒島機場', lat: 31.8034, lng: 130.7194 },
+        { icao: 'RJGG', name: '中部國際機場', lat: 34.8583, lng: 136.8053 },
+        { icao: 'RJSS', name: '仙台機場', lat: 38.1397, lng: 140.9169 },
+        { icao: 'RJTT', name: '東京羽田國際機場', lat: 35.5523, lng: 139.7797 },
+        { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 }
+    ];
+
+    const weatherCache = {};
+    let isDataReady = false;
+
+    airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
+
+    const fetchBulkWeatherData = async (icaoList, type) => {
+        const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+        const fetchStrategies = [
+            (url) => url,
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+
+        for (let i = 0; i < fetchStrategies.length; i++) {
+            try {
+                const res = await fetch(fetchStrategies[i](targetUrl));
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) return data;
+                    if (data && data.contents) return JSON.parse(data.contents);
+                }
+            } catch (e) {}
+        }
+        throw new Error(`無法取得 ${type} 資料`);
+    };
+
+    const parseWeatherElements = (text, prevVis, prevCeil) => {
+        let vis = prevVis; let ceil = prevCeil;
+        if (/\b(CAVOK|SKC|CLR|NSC)\b/.test(text)) {
+            if (/\bCAVOK\b/.test(text)) vis = 10;
+            ceil = 99999;
+        }
+        const metricMatch = text.match(/(?:\s|^)([0-9]{4})(?:NDV)?(?:\s|$)/);
+        if (metricMatch) {
+            const meters = parseInt(metricMatch[1], 10);
+            vis = meters === 9999 ? 10 : meters / 1609.34;
+        }
+        const smMatch = text.match(/(?:\s|^)(P|M)?(\d+)?\s?(\d+\/\d+)?SM(?:\s|$)/);
+        if (smMatch) {
+            let val = 0;
+            if (smMatch[2]) val += parseInt(smMatch[2], 10);
+            if (smMatch[3]) {
+                const [num, den] = smMatch[3].split('/');
+                val += parseInt(num, 10) / parseInt(den, 10);
+            }
+            if (val === 0 && smMatch[1] === 'M') val = 0.25;
+            if (val === 0 && smMatch[1] === 'P') val = 6.0;
+            vis = val;
+        }
+        const cloudMatches = text.match(/(BKN|OVC|VV)(\d{3})/g);
+        if (cloudMatches) {
+            const bases = cloudMatches.map(c => parseInt(c.slice(3, 6), 10) * 100);
+            ceil = Math.min(...bases);
+        }
+        return { vis, ceil };
+    };
+
+    const getFlightCategory = (vis, ceil) => {
+        if (ceil < 500 || vis < 1) return "lifr";
+        if (ceil < 1000 || vis < 3) return "ifr";
+        if (ceil <= 3000 || vis <= 5) return "mvfr";
+        return "vfr";
+    };
+
+    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+
+    // TAF 狀態機引擎 (Word 防跑版 Inline CSS)
+    const formatColorTAF = (rawTaf) => {
+        if (!rawTaf) return "目前無有效 TAF 報文";
+        const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
+        const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
+        const lines = markedTaf.split('|||');
+
+        let prevailingVis = 999; let prevailingCeil = 99999;
+        let htmlOutput = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left;">`;
+
+        lines.forEach((line, index) => {
+            const cleanLine = line.trim();
+            if (!cleanLine) return;
+
+            let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
+            const cat = getFlightCategory(current.vis, current.ceil);
+            const color = catColors[cat];
+            const catLabel = cat.toUpperCase();
+
+            if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
+                prevailingVis = current.vis; prevailingCeil = current.ceil;
+            }
+
+            htmlOutput += `
+                <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
+                    <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px; vertical-align: middle;">${catLabel}</span>
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle;">${cleanLine}</span>
+                </div>
+            `;
+        });
+        htmlOutput += `</div>`;
+        return htmlOutput;
+    };
+
+    const bootSequence = async () => {
+        const statusIndicator = document.getElementById('sync-status');
+        const icaoString = airports.map(a => a.icao).join(',');
+
+        try {
+            const [allMetars, allTafs] = await Promise.all([
+                fetchBulkWeatherData(icaoString, 'metar'),
+                fetchBulkWeatherData(icaoString, 'taf')
+            ]);
+
+            if (Array.isArray(allMetars)) {
+                allMetars.forEach(m => { if(m.icaoId) weatherCache[m.icaoId].metar = m.rawOb; });
+            }
+            if (Array.isArray(allTafs)) {
+                allTafs.forEach(t => { if(t.icaoId) weatherCache[t.icaoId].taf = t.rawTAF; });
+            }
+
+            isDataReady = true;
+            statusIndicator.innerText = "✅ 氣象同步完成";
+            statusIndicator.classList.add('status-loaded');
+
+        } catch (error) {
+            console.error(error);
+            statusIndicator.innerText = "❌ 同步失敗";
+            statusIndicator.classList.add('status-error');
+        }
+    };
+
+    airports.forEach(airport => {
+        const marker = L.marker([airport.lat, airport.lng]).addTo(map);
+
+        marker.on('click', function() {
+            if (!isDataReady) {
+                marker.bindPopup(`
+                    <div class="weather-popup">
+                        <div class="airport-title">${airport.name} (${airport.icao})</div>
+                        <div style="color: #e67e22; font-weight: bold;">⚠️ 資料仍在背景下載中，請稍候。</div>
+                    </div>
+                `, { maxWidth: 450 }).openPopup();
+                return;
+            }
+
+            const rawMetarText = weatherCache[airport.icao].metar;
+            const rawTafText = weatherCache[airport.icao].taf;
+            
+            const metarState = parseWeatherElements(rawMetarText, 999, 99999);
+            const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
+            const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
+
+            const coloredTafHtml = formatColorTAF(rawTafText);
+
+            marker.bindPopup(`
+                <div class="weather-popup">
+                    <div class="airport-title">${airport.name} (${airport.icao})</div>
+                    
+                    <!-- 結構化橫向區塊：METAR -->
+                    <div class="data-block">
+                        <div class="section-title">
+                            METAR (即時天氣)
+                            ${rawMetarText ? `<span class="badge bg-${metarCat}">${displayCat}</span>` : ''}
+                        </div>
+                        <div class="raw-text border-${metarCat}">${rawMetarText || "目前無有效 METAR 報文"}</div>
+                    </div>
+                    
+                    <!-- 結構化橫向區塊：TAF -->
+                    <div class="data-block">
+                        <div class="section-title">TAF (機場預報)</div>
+                        ${coloredTafHtml}
+                    </div>
+                </div>
+            `, { maxWidth: 500 }).openPopup();
+        });
+    });
+
+    bootSequence();
+}
+
+// ==========================================
+// ⛽ 油量計算機邏輯 (保留您原有的完美設定)
+// ==========================================
 const fuelTable = [
-  { total: 9.0,   inner: 9.0,    outer: 0.0,    trim: 0.0,  center: 0.0 }, // 內側先加到 9 噸
-  { total: 14.73, inner: 9.0,    outer: 5.73,   trim: 0.0,  center: 0.0 }, // 外側接著加滿 (9 + 5.73)
-  { total: 24.0,  inner: 18.27,  outer: 5.73,   trim: 0.0,  center: 0.0 }, // 繼續加內側
-  { total: 27.6,  inner: 18.14,  outer: 5.73,   trim: 3.73, center: 0.0 }, // Trim 加滿點 (總和符合 27.6)
+  { total: 9.0,   inner: 9.0,    outer: 0.0,    trim: 0.0,  center: 0.0 },
+  { total: 14.73, inner: 9.0,    outer: 5.73,   trim: 0.0,  center: 0.0 },
+  { total: 24.0,  inner: 18.27,  outer: 5.73,   trim: 0.0,  center: 0.0 },
+  { total: 27.6,  inner: 18.14,  outer: 5.73,   trim: 3.73, center: 0.0 },
   { total: 30.0,  inner: 20.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
   { total: 40.0,  inner: 30.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
   { total: 60.0,  inner: 50.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
-  { total: 75.0,  inner: 64.4,   outer: 5.73,   trim: 4.87, center: 0.0 }, // 內側全滿點
-  { total: 100.0, inner: 64.4,   outer: 5.73,   trim: 3.8,  center: 26.07 } // 官方分佈基準點 (註1)
+  { total: 75.0,  inner: 64.4,   outer: 5.73,   trim: 4.87, center: 0.0 },
+  { total: 100.0, inner: 64.4,   outer: 5.73,   trim: 3.8,  center: 26.07 }
 ];
-
-// 註1：若需嚴格符合官方各油箱數據 (Total: 96.33)，
-// 可改為 { total: 96.33, inner: 64.4, outer: 5.73, trim: 3.8, center: 22.4 }
 
 function interpolateFuel(total) {
   const table = fuelTable;
   const n = table.length;
   if (n === 0) return null;
-  // 小於最小值或大於最大值時返回 null，交由外部處理 (或視為全在 Inner)
-  if (total < table[0].total || total > table[n - 1].total) {
-    return null;
-  }
+  if (total < table[0].total || total > table[n - 1].total) return null;
   for (let i = 0; i < n; i++) {
     if (Math.abs(total - table[i].total) < 1e-6) {
-      return {
-        total: total,
-        inner: table[i].inner,
-        outer: table[i].outer,
-        trim: table[i].trim,
-        center: table[i].center
-      };
+      return { total: total, inner: table[i].inner, outer: table[i].outer, trim: table[i].trim, center: table[i].center };
     }
   }
   for (let i = 1; i < n; i++) {
-    const prev = table[i - 1];
-    const curr = table[i];
+    const prev = table[i - 1], curr = table[i];
     if (total < curr.total + 1e-6) {
       const ratio = (total - prev.total) / (curr.total - prev.total);
       const lerp = (a, b) => a + (b - a) * ratio;
-      return {
-        total: total,
-        inner:  lerp(prev.inner,  curr.inner),
-        outer:  lerp(prev.outer,  curr.outer),
-        trim:   lerp(prev.trim,   curr.trim),
-        center: lerp(prev.center, curr.center)
-      };
+      return { total: total, inner: lerp(prev.inner, curr.inner), outer: lerp(prev.outer, curr.outer), trim: lerp(prev.trim, curr.trim), center: lerp(prev.center, curr.center) };
     }
   }
   const last = table[n - 1];
-  return {
-    total: total,
-    inner: last.inner,
-    outer: last.outer,
-    trim: last.trim,
-    center: last.center
-  };
+  return { total: total, inner: last.inner, outer: last.outer, trim: last.trim, center: last.center };
 }
 
-function formatFuel(value) {
-  return value.toFixed(1);
-}
-
-function formatTimeMin(value) {
-  return value.toFixed(1);
-}
-
+function formatFuel(value) { return value.toFixed(1); }
+function formatTimeMin(value) { return value.toFixed(1); }
 function formatTimeHHMM(value) {
   if (!isFinite(value) || value <= 0) return "0 分鐘";
   const totalMin = Math.round(value);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
   if (h === 0) return m + " 分鐘";
   return h + " 小時 " + m + " 分";
 }
 
-// 計算 Inner/Outer/Center 共享 1 t/min 的加油時間（動態分配流量）
 function computeIOCRefuel(dInner, dOuter, dCenter) {
-  const remaining = {
-    inner: Math.max(dInner, 0),
-    outer: Math.max(dOuter, 0),
-    center: Math.max(dCenter, 0)
-  };
+  const remaining = { inner: Math.max(dInner, 0), outer: Math.max(dOuter, 0), center: Math.max(dCenter, 0) };
   const original = { inner: remaining.inner, outer: remaining.outer, center: remaining.center };
   const finishTime = { inner: 0, outer: 0, center: 0 };
-
-  let t = 0;
-  const eps = 1e-8;
-  const order = ["inner", "outer", "center"];
+  let t = 0; const eps = 1e-8; const order = ["inner", "outer", "center"];
 
   while (true) {
     const active = order.filter(key => remaining[key] > eps);
     if (active.length === 0) break;
-
-    const k = active.length; // 同時在加油的油箱數
-    let dt = Infinity;
-
-    // 對每一個 active tank，計算在目前分配下到達目標還需要多久
+    const k = active.length; let dt = Infinity;
     for (const key of active) {
-      const rem = remaining[key];
-      const timeToFinish = rem * k; // 因為各自流量 = 1/k t/min
+      const timeToFinish = remaining[key] * k; 
       if (timeToFinish < dt) dt = timeToFinish;
     }
-
-    // 前進 dt 分鐘
     t += dt;
     for (const key of active) {
-      remaining[key] -= dt / active.length; // 每個油箱在 dt 內補進 dt/k 噸
+      remaining[key] -= dt / active.length; 
       if (remaining[key] < eps) {
         remaining[key] = 0;
-        if (finishTime[key] === 0 && original[key] > 0) {
-          finishTime[key] = t; // 第一次達到目標的時間
-        }
+        if (finishTime[key] === 0 && original[key] > 0) finishTime[key] = t; 
       }
     }
   }
-
-  return {
-    tInner: finishTime.inner,
-    tOuter: finishTime.outer,
-    tCenter: finishTime.center,
-    groupTime: t
-  };
+  return { tInner: finishTime.inner, tOuter: finishTime.outer, tCenter: finishTime.center, groupTime: t };
 }
 
-// 修正後的加油計算主邏輯
 function computeRefuel(currentTotal, targetTotal, finalDist) {
-  // 1. 計算「目前剩油」的實際分佈狀態
-  //    先透過 interpolateFuel 取得當前總油量各油箱應有的油量
   let currentDist = interpolateFuel(currentTotal);
-  
-  // 防呆：如果 currentTotal 小於表單最小範圍 (例如 < 9t)，
-  // 或是 interpolateFuel 返回 null，則假設全在 Inner (符合 0-9t 的邏輯)
-  if (!currentDist) {
-    currentDist = {
-      inner: currentTotal,
-      outer: 0.0,
-      trim: 0.0,
-      center: 0.0
-    };
-  }
+  if (!currentDist) currentDist = { inner: currentTotal, outer: 0.0, trim: 0.0, center: 0.0 };
 
-  // 設定正確的起始油量
-  const inner0  = currentDist.inner;
-  const outer0  = currentDist.outer;
-  const trim0   = currentDist.trim;
-  const center0 = currentDist.center;
+  const inner0 = currentDist.inner, outer0 = currentDist.outer, trim0 = currentDist.trim, center0 = currentDist.center;
+  let dInner = Math.max(finalDist.inner - inner0, 0);
+  let dOuter = Math.max(finalDist.outer - outer0, 0);
+  let dTrim = Math.max(finalDist.trim - trim0, 0);
+  let dCenter = Math.max(finalDist.center - center0, 0);
 
-  // 計算各油箱需要補充的油量 (Delta)
-  let dInner  = finalDist.inner  - inner0;
-  let dOuter  = finalDist.outer  - outer0;
-  let dTrim   = finalDist.trim   - trim0;
-  let dCenter = finalDist.center - center0;
-
-  // 不考慮放油：若目標油量小於起始油量則視為 0（僅內部分配或不動作）
-  dInner  = Math.max(dInner,  0);
-  dOuter  = Math.max(dOuter,  0);
-  dTrim   = Math.max(dTrim,   0);
-  dCenter = Math.max(dCenter, 0);
-
-  // Inner/Outer/Center 共用 1 t/min，動態分配
   const ioc = computeIOCRefuel(dInner, dOuter, dCenter);
-
-  // Trim Tank 獨立加油，固定 0.10 t/min
   const rateTrim = 0.10;
   const tTrim = dTrim > 0 ? dTrim / rateTrim : 0;
-
   const totalDelta = dInner + dOuter + dTrim + dCenter;
-  const totalTime  = Math.max(ioc.groupTime, tTrim);
-  const effRate    = totalTime > 0 ? totalDelta / totalTime : 0; // t/min
+  const totalTime = Math.max(ioc.groupTime, tTrim);
+  const effRate = totalTime > 0 ? totalDelta / totalTime : 0;
 
-  return {
-    dInner, dOuter, dTrim, dCenter,
-    tInner: ioc.tInner,
-    tOuter: ioc.tOuter,
-    tCenter: ioc.tCenter,
-    tTrim,
-    totalDelta,
-    totalTime,
-    effRate
-  };
+  return { dInner, dOuter, dTrim, dCenter, tInner: ioc.tInner, tOuter: ioc.tOuter, tCenter: ioc.tCenter, tTrim, totalDelta, totalTime, effRate };
 }
 
 function onCalculate() {
   const currentEl = document.getElementById("currentFuel");
   const targetEl  = document.getElementById("targetFuel");
   const messageEl = document.getElementById("message");
-
   const currentTotal = parseFloat(currentEl.value);
   const targetTotal  = parseFloat(targetEl.value);
 
   if (Number.isNaN(currentTotal) || Number.isNaN(targetTotal)) {
     messageEl.textContent = "請輸入有效的『目前剩油』與『目標 Total Fuel』（噸）。";
-    updateDistribution(null);
-    updateTimeTable(null);
-    return;
+    updateDistribution(null); updateTimeTable(null); return;
   }
-
   if (targetTotal <= currentTotal) {
-    messageEl.textContent = "目標 Total Fuel 必須大於目前剩油，暫不支援放油或僅油箱再分配情境。";
-    updateDistribution(null);
-    updateTimeTable(null);
-    return;
+    messageEl.textContent = "目標 Total Fuel 必須大於目前剩油。";
+    updateDistribution(null); updateTimeTable(null); return;
   }
 
   const finalDist = interpolateFuel(targetTotal);
   if (!finalDist) {
-    const min = fuelTable[0].total;
-    const max = fuelTable[fuelTable.length - 1].total;
-    messageEl.textContent =
-      "超出資料範圍。請輸入介於 " + min + " t ～ " + max + " t 之間的數值。";
-    updateDistribution(null);
-    updateTimeTable(null);
-    return;
+    messageEl.textContent = "超出資料範圍。";
+    updateDistribution(null); updateTimeTable(null); return;
   }
-
   messageEl.textContent = "";
   updateDistribution(finalDist);
-
   const refuel = computeRefuel(currentTotal, targetTotal, finalDist);
   updateTimeTable(refuel);
 }
@@ -890,64 +820,34 @@ function onCalculate() {
 function updateDistribution(result) {
   const tbody = document.getElementById("resultBody");
   if (!result) {
-    tbody.innerHTML = `
-      <tr><td>Inner Tank</td><td>-</td></tr>
-      <tr><td>Outer Tank</td><td>-</td></tr>
-      <tr><td>Trim Tank</td><td>-</td></tr>
-      <tr><td>Center Tank</td><td>-</td></tr>
-      <tr><th>Total (Inner+Outer+Trim+Center)</th><th>-</th></tr>
-    `;
+    tbody.innerHTML = `<tr><td>Inner Tank</td><td>-</td></tr><tr><td>Outer Tank</td><td>-</td></tr><tr><td>Trim Tank</td><td>-</td></tr><tr><td>Center Tank</td><td>-</td></tr><tr><th>Total</th><th>-</th></tr>`;
     return;
   }
-  const inner  = result.inner;
-  const outer  = result.outer;
-  const trim   = result.trim;
-  const center = result.center;
-  const sum    = inner + outer + trim + center;
-
-  tbody.innerHTML = `
-    <tr><td>Inner Tank</td><td>${formatFuel(inner)}</td></tr>
-    <tr><td>Outer Tank</td><td>${formatFuel(outer)}</td></tr>
-    <tr><td>Trim Tank</td><td>${formatFuel(trim)}</td></tr>
-    <tr><td>Center Tank</td><td>${formatFuel(center)}</td></tr>
-    <tr><th>Total (Inner+Outer+Trim+Center)</th><th>${formatFuel(sum)}</th></tr>
-  `;
+  const sum = result.inner + result.outer + result.trim + result.center;
+  tbody.innerHTML = `<tr><td>Inner Tank</td><td>${formatFuel(result.inner)}</td></tr><tr><td>Outer Tank</td><td>${formatFuel(result.outer)}</td></tr><tr><td>Trim Tank</td><td>${formatFuel(result.trim)}</td></tr><tr><td>Center Tank</td><td>${formatFuel(result.center)}</td></tr><tr><th>Total</th><th>${formatFuel(sum)}</th></tr>`;
 }
 
 function updateTimeTable(data) {
   const tbody = document.getElementById("timeBody");
   if (!data) {
-    tbody.innerHTML = `
-      <tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-      <tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-      <tr><td>Trim Tank</td><td>-</td><td>0.10</td><td>-</td></tr>
-      <tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-      <tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr>
-      <tr><th>總加油時間</th><th colspan="3">-</th></tr>
-    `;
+    tbody.innerHTML = `<tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr><tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr><tr><td>Trim Tank</td><td>-</td><td>0.10</td><td>-</td></tr><tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr><tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr><tr><th>總加油時間</th><th colspan="3">-</th></tr>`;
     return;
   }
-
-  const {
-    dInner, dOuter, dTrim, dCenter,
-    tInner, tOuter, tTrim, tCenter,
-    totalDelta,
-    totalTime,
-    effRate
-  } = data;
-
-  tbody.innerHTML = `
-    <tr><td>Inner Tank</td><td>${formatFuel(dInner)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tInner)}</td></tr>
-    <tr><td>Outer Tank</td><td>${formatFuel(dOuter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tOuter)}</td></tr>
-    <tr><td>Trim Tank</td><td>${formatFuel(dTrim)}</td><td>0.10</td><td>${formatTimeMin(tTrim)}</td></tr>
-    <tr><td>Center Tank</td><td>${formatFuel(dCenter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tCenter)}</td></tr>
-    <tr><th>總加油量 (t)</th><th>${formatFuel(totalDelta)}</th><th>等效流量 (t/min)</th><th>${effRate.toFixed(2)}</th></tr>
-    <tr><th>總加油時間</th><th colspan="3">${formatTimeHHMM(totalTime)} （約 ${formatTimeMin(totalTime)} 分）</th></tr>
-  `;
+  const { dInner, dOuter, dTrim, dCenter, tInner, tOuter, tTrim, tCenter, totalDelta, totalTime, effRate } = data;
+  tbody.innerHTML = `<tr><td>Inner Tank</td><td>${formatFuel(dInner)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tInner)}</td></tr><tr><td>Outer Tank</td><td>${formatFuel(dOuter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tOuter)}</td></tr><tr><td>Trim Tank</td><td>${formatFuel(dTrim)}</td><td>0.10</td><td>${formatTimeMin(tTrim)}</td></tr><tr><td>Center Tank</td><td>${formatFuel(dCenter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tCenter)}</td></tr><tr><th>總加油量 (t)</th><th>${formatFuel(totalDelta)}</th><th>等效流量 (t/min)</th><th>${effRate.toFixed(2)}</th></tr><tr><th>總加油時間</th><th colspan="3">${formatTimeHHMM(totalTime)} （約 ${formatTimeMin(totalTime)} 分）</th></tr>`;
 }
 
+// 統整啟動程序
+document.addEventListener("DOMContentLoaded", function () {
+  initFlightSelect();
+  initAviationMap(); // 啟動氣象地圖引擎
+
+  document.getElementById("turbliBtn").addEventListener("click", function () {
+    const url = this.dataset.url;
+    if (url) window.open(url, "_blank");
+  });
+});
 </script>
 
 </body>
 </html>
-
