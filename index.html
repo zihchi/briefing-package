@@ -237,18 +237,20 @@
   <!-- 🛩️ 東亞航空氣象戰術儀表板 (搭載表情符號解析與自動分類) -->
   <!-- ========================================================= -->
   <div class="section">
-    <div class="map-header">
-        <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-            🌍 NOAA AWC METAR/TAF 
-            <button id="btn-refresh-map">重新整理</button>
-        <div style="font-size: 0.85em; margin-top: 8px; font-weight: normal;">
-          🚨WS or TS、⚠️ Gust、(source: https://aviationweather.gov/data/metar/)
-        </div>
-        </h2>
-        <div id="sync-status" style="background-color: #f39c12;">🔄 資料同步中...</div>
-    </div>
-    <div id="map"></div>
+  <div class="map-header">
+    <h2 style="margin: 0;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        🌍 NOAA AWC METAR/TAF 
+        <button id="btn-refresh-map">重新整理</button>
+      </div>
+      <div style="font-size: 0.85em; margin-top: 8px; font-weight: normal;">
+        🚨WS or TS、⚠️ Gust、(source: https://aviationweather.gov/data/metar/)
+      </div>
+    </h2>
+    <div id="sync-status" style="background-color: #f39c12;">🔄 資料同步中...</div>
   </div>
+  <div id="map"></div>
+</div>
 
   <div class="section windy-section">
     <h2>🌧️ Windy 即時雷達圖 
