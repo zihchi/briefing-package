@@ -168,14 +168,18 @@
         <option value="https://atis.guru/">ATIS 官方網站</option>
         <option value="https://atis.guru/atis/RCTP">RCTP 桃園</option>
         <option value="https://atis.guru/atis/RCSS">RCSS 松山</option>
+        <option value="https://atis.guru/atis/RCMQ">RCMQ 台中</option>
         <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
         <option value="https://atis.guru/atis/VMMC">VMMC 澳門</option>
         <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
       </optgroup>
       <optgroup label="日本">
         <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
+        <option value="https://atis.guru/atis/RJFK">RJFK 鹿兒島</option>
         <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
         <option value="https://atis.guru/atis/RJFT">RJFT 熊本</option>
+        <option value="https://atis.guru/atis/RJBE">RJBE 神戶</option>
+        <option value="https://atis.guru/atis/RJOT">RJOT 高松</option>
         <option value="https://atis.guru/atis/RJBB">RJBB 關西</option>
         <option value="https://atis.guru/atis/RJGG">RJGG 中部</option>
         <option value="https://atis.guru/atis/RJTT">RJTT 羽田</option>
@@ -184,15 +188,30 @@
         <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
         <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
       </optgroup>
-      <optgroup label="東南亞">
+      <optgroup label="菲律賓">
+        <option value="https://atis.guru/atis/RPLL">RPLL 馬尼拉</option>
+        <option value="https://atis.guru/atis/RPLC">RPLC 克拉克</option>
+        <option value="https://atis.guru/atis/RPVM">RPVM 宿霧</option>
+      </optgroup>
+      <optgroup label="泰國">
         <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
-        <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
-        <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
+        <option value="https://atis.guru/atis/VTCC">VTCC 清邁</option>
+        <option value="https://atis.guru/atis/VTBU">VTBU 烏打拋</option>
       </optgroup>
       <optgroup label="越南">
         <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
         <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
         <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
+        <option value="https://atis.guru/atis/VVPQ">VVPQ 富國島</option>
+        <option value="https://atis.guru/atis/VVCR">VVCR 金蘭</option>
+      </optgroup>
+      <optgroup label="新馬印">
+        <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
+        <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
+        <option value="https://atis.guru/atis/WMKP">WMKP 檳城</option>
+        <option value="https://atis.guru/atis/WIII">WIII 雅加達</option>
+        <option value="https://atis.guru/atis/WADD">WADD 峇里島</option>        
+        </optgroup>
       </optgroup>
     </select>
   </div>
@@ -557,6 +576,8 @@ function initAviationMap() {
         { icao: 'RJGG', name: '中部國際機場', lat: 34.8583, lng: 136.8053 },
         { icao: 'RJSS', name: '仙台機場', lat: 38.1397, lng: 140.9169 },
         { icao: 'RJTT', name: '東京羽田國際機場', lat: 35.5523, lng: 139.7797 },
+        { icao: 'RJOT', name: '高松機場', lat: 34.2144, lng: 134.0156 }, 
+        { icao: 'RJBE', name: '神戶機場', lat: 34.6328, lng: 135.2239 }, 
         { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 },
 
         // 港澳及東南亞樞紐
@@ -575,6 +596,11 @@ function initAviationMap() {
         { icao: 'VVNB', name: '河內內排國際機場', lat: 21.2212, lng: 105.8072 },
         { icao: 'VVPQ', name: '富國國際機場', lat: 10.1656, lng: 103.9944 },
         { icao: 'VVTS', name: '胡志明市新山一機場', lat: 10.8188, lng: 106.6520 }
+        { icao: 'VTBU', name: '芭達雅-烏塔拋國際機場', lat: 12.6797, lng: 101.0051 }, 
+        { icao: 'RPVM', name: '麥克坦-宿霧國際機場', lat: 10.3075, lng: 123.9794 }, 
+        { icao: 'WIII', name: '雅加達-蘇加諾-哈達國際機場', lat: -6.1256, lng: 106.6558 }, 
+        { icao: 'WADD', name: '峇里島-伍拉·賴國際機場', lat: -8.7482, lng: 115.1675 }, 
+        { icao: 'WARR', name: '泗水-朱安達國際機場', lat: -7.3798, lng: 112.7836 }
     ];
 
     const weatherCache = {};
