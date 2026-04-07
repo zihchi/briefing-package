@@ -131,7 +131,7 @@
       <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
       <li><label><input type="checkbox"> Performance : 起飛重、落地重、MEL</label></li>
       <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
-      <li><label><input type="checkbox"> Fleet Notice Reviewed and Clicked</label></li>
+      <li><label><input type="checkbox"> Fleet Notice Reviewed and ✅ </label></li>
       <li><label><input type="checkbox"> OFP Signed</label></li>
     </ul>
   </div>
@@ -263,6 +263,14 @@
       src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
   </div>
+
+  <div class="section windy-section">
+  <h2>☁️ Windy 雲頂高度圖 
+    <button onclick="refreshIframe('windyCloudTop')">重新整理</button>
+  </h2>
+  <iframe id="windyCloudTop" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=cloudtop"
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+</div>
 
   <div class="section windy-section">
     <h2>🌬️ Windy 風速圖 (Surface Wind) 
