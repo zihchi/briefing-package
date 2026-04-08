@@ -61,7 +61,7 @@
     #map { height: 650px; width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 1; }
     
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-    #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 20px; background-color: #f39c12; color: white; transition: background-color 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 20px; background-color: #34495e; color: white; transition: background-color 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .status-loaded { background-color: #2ecc71 !important; }
     .status-error { background-color: #e74c3c !important; }
     
@@ -211,7 +211,6 @@
         <option value="https://atis.guru/atis/WMKP">WMKP 檳城</option>
         <option value="https://atis.guru/atis/WIII">WIII 雅加達</option>
         <option value="https://atis.guru/atis/WADD">WADD 峇里島</option>        
-        </optgroup>
       </optgroup>
     </select>
   </div>
@@ -260,13 +259,13 @@
     <h2 style="margin: 0;">
       <div style="display: flex; align-items: center; gap: 10px;">
         🌍 NOAA AWC METAR/TAF 
-        <button id="btn-refresh-map">重新整理</button>
+        <button id="btn-refresh-map">手動更新氣象</button>
       </div>
       <div style="font-size: 0.85em; margin-top: 8px; font-weight: normal;">
         🚨WS or TS、⚠️ Gust、(source: https://aviationweather.gov/data/metar/)
       </div>
     </h2>
-    <div id="sync-status" style="background-color: #f39c12;">🔄 資料同步中...</div>
+    <div id="sync-status" style="background-color: #34495e;">⏸️ 待命：請手動更新氣象</div>
   </div>
   <div id="map"></div>
 </div>
@@ -526,13 +525,9 @@ function getWeatherEmojis(text) {
   let hasGust = false;
 
   for (let token of tokens) {
-      // 偵測風切 (WS) 或雷暴 (TS)
       if (token === 'WS' || token.includes('TS')) hasTSWS = true;
-      // 偵測降雨 (RA)
       if (token.includes('RA')) hasRA = true;
-      // 偵測降雪 (SN)
       if (token.includes('SN')) hasSN = true;
-      // 偵測陣風 (G加上風速，例如 12015G25KT)
       if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
   }
 
@@ -559,13 +554,10 @@ function initAviationMap() {
     }).addTo(map);
 
     const airports = [
-        // 台灣
         { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
         { icao: 'RCSS', name: '臺北松山機場', lat: 25.0043, lng: 122.2451 },
         { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
         { icao: 'RCMQ', name: '臺中清泉崗機場', lat: 24.2646, lng: 120.6200 },
-        
-        // 日本
         { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
         { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
         { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
@@ -579,8 +571,6 @@ function initAviationMap() {
         { icao: 'RJOT', name: '高松機場', lat: 34.2144, lng: 134.0156 }, 
         { icao: 'RJBE', name: '神戶機場', lat: 34.6328, lng: 135.2239 }, 
         { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 },
-
-        // 港澳及東南亞樞紐
         { icao: 'VHHH', name: '香港國際機場', lat: 22.3089, lng: 113.9146 },
         { icao: 'VMMC', name: '澳門國際機場', lat: 22.1496, lng: 113.5915 },
         { icao: 'WMKK', name: '吉隆坡國際機場', lat: 2.7456, lng: 101.7099 },
@@ -608,25 +598,39 @@ function initAviationMap() {
 
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
+    // 🛡️ 重裝甲 API 連線模組：使用 try-catch 與多重代理備援
     const fetchBulkWeatherData = async (icaoList, type) => {
-        const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+        // 加入 _cb 參數避免 Safari 快取錯誤的跨域請求結果
+        const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${Date.now()}`;
+        
+        // 使用更穩定的跨域代理，加入 codetabs 作為第一線備援
         const fetchStrategies = [
-            (url) => url,
             (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
             (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
         ];
 
         for (let i = 0; i < fetchStrategies.length; i++) {
             try {
-                const res = await fetch(fetchStrategies[i](targetUrl));
+                // 加入逾時機制 (Timeout)，防止 Safari 卡死在等待回應
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); 
+                
+                const res = await fetch(fetchStrategies[i](targetUrl), { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data)) return data;
                     if (data && data.contents) return JSON.parse(data.contents);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn(`代理伺服器 ${i + 1} 連線失敗或逾時:`, e.message);
+            }
         }
-        throw new Error(`無法取得 ${type} 資料`);
+        // 如果全部失敗，回傳空陣列而非丟出導致當機的 Error
+        console.error(`無法取得 ${type} 資料，但已攔截錯誤以保護系統。`);
+        return [];
     };
 
     const calculateReportAge = (rawText) => {
@@ -705,7 +709,7 @@ function initAviationMap() {
     const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
 
     const formatColorTAF = (rawTaf) => {
-        if (!rawTaf) return "目前無有效 TAF 報文";
+        if (!rawTaf) return "目前無有效或無法載入 TAF 報文";
         const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
         const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
         const lines = markedTaf.split('|||');
@@ -722,7 +726,6 @@ function initAviationMap() {
             const color = catColors[cat];
             const catLabel = cat.toUpperCase();
             
-            // 加入表情符號解析邏輯
             const emojis = getWeatherEmojis(cleanLine);
             const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
 
@@ -742,6 +745,7 @@ function initAviationMap() {
         return htmlOutput;
     };
 
+    // 🚀 手動啟動程序：確保 Promise 與 Error 都被完美控制
     const bootSequence = async () => {
         const statusIndicator = document.getElementById('sync-status');
         const icaoString = airports.map(a => a.icao).join(',');
@@ -752,11 +756,20 @@ function initAviationMap() {
                 fetchBulkWeatherData(icaoString, 'taf')
             ]);
 
-            if (Array.isArray(allMetars)) {
+            if (allMetars.length > 0) {
                 allMetars.forEach(m => { if(m.icaoId) weatherCache[m.icaoId].metar = m.rawOb; });
             }
-            if (Array.isArray(allTafs)) {
+            if (allTafs.length > 0) {
                 allTafs.forEach(t => { if(t.icaoId) weatherCache[t.icaoId].taf = t.rawTAF; });
+            }
+
+            if (allMetars.length === 0 && allTafs.length === 0) {
+                // 優雅地處理空資料狀態，不再拋出導致 Console 紅字的 Error
+                statusIndicator.innerText = "❌ 氣象同步失敗 (代理伺服器遭阻擋)";
+                statusIndicator.classList.remove('status-loaded');
+                statusIndicator.classList.add('status-error');
+                statusIndicator.style.backgroundColor = ""; 
+                return;
             }
 
             isDataReady = true;
@@ -766,8 +779,8 @@ function initAviationMap() {
             statusIndicator.style.backgroundColor = ""; 
 
         } catch (error) {
-            console.error(error);
-            statusIndicator.innerText = "❌ 同步失敗";
+            console.error("同步程序中斷：", error);
+            statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
             statusIndicator.classList.remove('status-loaded');
             statusIndicator.classList.add('status-error');
             statusIndicator.style.backgroundColor = "";
@@ -798,7 +811,7 @@ function initAviationMap() {
                     .setContent(`
                     <div class="weather-popup">
                         <div class="airport-title">${airport.name} (${airport.icao})</div>
-                        <div style="color: #e67e22; font-weight: bold;">⚠️ 資料仍在背景下載中，請稍候。</div>
+                        <div style="color: #e67e22; font-weight: bold;">⚠️ 氣象資料尚未同步，請點擊上方「手動更新氣象」按鈕。</div>
                     </div>
                 `).openOn(map);
                 return;
@@ -816,7 +829,6 @@ function initAviationMap() {
 
             const coloredTafHtml = formatColorTAF(rawTafText);
 
-            // 解析 METAR 的表情符號
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
@@ -826,7 +838,6 @@ function initAviationMap() {
                 <div class="weather-popup">
                     <div class="airport-title">${airport.name} (${airport.icao})</div>
                     
-                    <!-- 結構化橫向區塊：METAR -->
                     <div class="data-block">
                         <div class="section-title">
                             <span style="display:inline-flex; align-items:center;">
@@ -838,7 +849,6 @@ function initAviationMap() {
                         <div class="raw-text border-${metarCat}">${rawMetarText || "目前無有效 METAR 報文"}</div>
                     </div>
                     
-                    <!-- 結構化橫向區塊：TAF -->
                     <div class="data-block">
                         <div class="section-title">
                             <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
@@ -851,7 +861,8 @@ function initAviationMap() {
         });
     });
 
-    bootSequence();
+    // ⚠️ 取消自動執行：將起飛決策權交還給機長
+    // bootSequence();
 }
 
 // ==========================================
