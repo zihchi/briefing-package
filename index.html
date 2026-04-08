@@ -95,48 +95,59 @@
     #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
 
     /* =========================================
-       ⏳ Curfew Calculator 專用樣式 (iOS 風格)
+       通用工具樣式 (iOS 風格 / 包含 Curfew & Time Calc)
        ========================================= */
-    .curfew-wrapper { max-width: 600px; margin: 0 auto; padding: 10px 0; }
-    .curfew-header-btn { background: none; border: 2px solid #e74c3c; color: #e74c3c; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 0; margin-top: 0; margin-left: auto;}
-    .curfew-header-btn:hover { background: rgba(231,76,60,0.1); transform: scale(1.05); }
+    .app-wrapper { max-width: 900px; margin: 0 auto; padding: 10px 0; }
+    .app-header-btn { background: none; border: 2px solid #e74c3c; color: #e74c3c; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 0; margin-top: 0; margin-left: auto;}
+    .app-header-btn:hover { background: rgba(231,76,60,0.1); transform: scale(1.05); }
     
-    .curfew-card { background: #fdfdfd; border-radius: 24px; padding: 1.5em; margin-bottom: 1.5em; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; }
-    .curfew-result-box { text-align: center; margin-bottom: 1.2em; border-bottom: 1px solid #f0f0f0; padding-bottom: 1.2em; }
-    .curfew-result-box:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
-    .curfew-label { font-size: 0.95em; font-weight: 600; color: #555; margin-bottom: 0.3em; }
-    .curfew-time-display { font-size: 2.2em; font-family: 'Courier New', Courier, monospace; letter-spacing: 4px; color: #222; font-weight: bold; }
+    .app-card { background: #fdfdfd; border-radius: 24px; padding: 1.5em; margin-bottom: 1.5em; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; }
+    .app-result-box { text-align: center; margin-bottom: 1.2em; border-bottom: 1px solid #f0f0f0; padding-bottom: 1.2em; }
+    .app-result-box:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+    .app-label { font-size: 0.95em; font-weight: 600; color: #555; margin-bottom: 0.3em; }
+    .app-time-display { font-size: 2.2em; font-family: 'Courier New', Courier, monospace; letter-spacing: 4px; color: #222; font-weight: bold; }
     
+    .app-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; margin-bottom: 8px; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px;}
+    
+    .app-toggle { background: #e9e9ea; padding: 4px; border-radius: 12px; display: flex; position: relative; margin-bottom: 15px; }
+    .app-toggle-btn { flex: 1; padding: 8px 0; text-align: center; font-size: 0.9em; font-weight: bold; color: #888; border: none; background: transparent; cursor: pointer; z-index: 2; transition: color 0.3s ease; margin-top: 0; }
+    .app-toggle-btn.active { color: #222; }
+    .app-toggle-pill { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1); z-index: 1; }
+    
+    .app-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px dashed #eee; }
+    .app-row:last-child { border-bottom: none; }
+    .app-row-label { font-size: 1.05em; color: #333; font-weight: 500; }
+    
+    .app-time-input { display: flex; align-items: center; gap: 4px; background: rgba(243,244,246,0.8); border-radius: 10px; padding: 4px 12px; }
+    .app-time-input select, .app-time-input input { 
+        border: none; background: transparent; font-size: 1.1em; font-family: 'Courier New', Courier, monospace; 
+        color: #3c79ff; font-weight: bold; outline: none; padding: 0; margin: 0; text-align: center; cursor: pointer;
+        -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    }
+    .app-time-input input { width: 40px; }
+    .app-time-input span { font-family: 'Courier New', Courier, monospace; color: #3c79ff; font-weight: bold; }
+
+    .app-date-input { background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #3c79ff; font-weight: bold; outline: none; width: 140px;}
+
     /* 雙欄排版設定 (iPad 橫向優化) */
-    .curfew-wrapper { max-width: 900px; margin: 0 auto; padding: 10px 0; }
-    .curfew-grid { display: flex; gap: 24px; align-items: stretch; }
-    .curfew-col-left { flex: 1; min-width: 250px; display: flex; flex-direction: column; }
-    .curfew-col-right { flex: 1.2; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
-    @media (max-width: 768px) { .curfew-grid { flex-direction: column; } }
+    .app-grid { display: flex; gap: 24px; align-items: stretch; }
+    .app-col-left { flex: 1; min-width: 250px; display: flex; flex-direction: column; }
+    .app-col-right { flex: 1.2; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
+    @media (max-width: 768px) { .app-grid { flex-direction: column; } }
 
     /* 醒目的航空級 UTC 數位時鐘 */
     .curfew-clock-container { background: #1e293b; border-radius: 16px; padding: 16px; margin-top: 20px; text-align: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4); border: 2px solid #334155; }
     .curfew-utc-label { font-size: 0.85em; color: #94a3b8; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
     .curfew-live-clock { font-family: 'Courier New', Courier, monospace; font-size: 1.8em; letter-spacing: 3px; color: #38bdf8; font-weight: bold; margin: 0; text-shadow: 0 0 10px rgba(56,189,248,0.4); }
 
-    .curfew-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; margin-bottom: 8px; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px;}
+    /* 時間計算器分頁樣式 */
+    .time-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 1.5em; gap: 10px;}
+    .time-tab-btn { flex: 1; padding: 12px 0; text-align: center; font-size: 1em; font-weight: bold; color: #888; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: 0.3s; margin-top:0; border-radius: 8px 8px 0 0;}
+    .time-tab-btn.active { color: #3c79ff; border-bottom-color: #3c79ff; background: rgba(60,121,255,0.05); }
+    .time-tab-content { display: none; }
+    .time-tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
     
-    .curfew-toggle { background: #e9e9ea; padding: 4px; border-radius: 12px; display: flex; position: relative; margin-bottom: 15px; }
-    .curfew-toggle-btn { flex: 1; padding: 8px 0; text-align: center; font-size: 0.9em; font-weight: bold; color: #888; border: none; background: transparent; cursor: pointer; z-index: 2; transition: color 0.3s ease; margin-top: 0; }
-    .curfew-toggle-btn.active { color: #222; }
-    .curfew-toggle-pill { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1); z-index: 1; }
-    
-    .curfew-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px dashed #eee; }
-    .curfew-row:last-child { border-bottom: none; }
-    .curfew-row-label { font-size: 1.05em; color: #333; font-weight: 500; }
-    
-    .curfew-time-input { display: flex; align-items: center; gap: 4px; background: rgba(243,244,246,0.8); border-radius: 10px; padding: 4px 12px; }
-    .curfew-time-input select { 
-        border: none; background: transparent; font-size: 1.1em; font-family: 'Courier New', Courier, monospace; 
-        color: #007aff; font-weight: bold; outline: none; padding: 0; margin: 0; text-align: center; cursor: pointer;
-        -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    }
-    .curfew-time-input span { font-family: 'Courier New', Courier, monospace; color: #007aff; font-weight: bold; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
   </style>
 </head>
@@ -257,42 +268,6 @@
         <option value="https://atis.guru/atis/WMKP">WMKP 檳城</option>
         <option value="https://atis.guru/atis/WIII">WIII 雅加達</option>
         <option value="https://atis.guru/atis/WADD">WADD 峇里島</option>        
-      </optgroup>
-    </select>
-  </div>
-
-  <div class="section">
-    <h2>🌦️ 城市天氣</h2>
-    <label for="citywxSelect">請選擇城市：</label>
-    <select id="citywxSelect" onchange="openCitywx()" style="margin-right: 1em;">
-      <option selected disabled>--請選擇城市--</option>
-      <optgroup label="台灣、香港">
-        <option value="https://www.bbc.com/weather/6696918">RCTP 桃園</option>
-        <option value="https://www.bbc.com/weather/1673820">RCKH 高雄</option>
-        <option value="https://www.bbc.com/weather/1821274">VMMC 澳門</option>
-        <option value="https://www.bbc.com/weather/1819729">VHHH 香港</option>
-      </optgroup>
-         <optgroup label="日本">
-        <option value="https://www.bbc.com/weather/1894616">ROAH 沖繩</option>
-        <option value="https://www.bbc.com/weather/1863967">RJFF 福岡</option>
-        <option value="https://www.bbc.com/weather/1858421">RJFT 熊本</option>
-        <option value="https://www.bbc.com/weather/1853909">RJBB 大阪</option>
-        <option value="https://www.bbc.com/weather/1856057">RJGG 名古屋</option>
-        <option value="https://www.bbc.com/weather/1850147">RJTT 東京</option>
-        <option value="https://www.bbc.com/weather/2111684">RJAA 成田</option>
-        <option value="https://www.bbc.com/weather/6300399">RJSS 仙台</option>
-        <option value="https://www.bbc.com/weather/2130188">RJCH 函館</option>
-        <option value="https://www.bbc.com/weather/2128295">RJCC 札幌</option>
-      </optgroup>
-      <optgroup label="東南亞">
-        <option value="https://www.bbc.com/weather/1609350">VTBS 曼谷</option>
-        <option value="https://www.bbc.com/weather/1880252">WSSS 新加坡</option>
-        <option value="https://www.bbc.com/weather/1735161">WMKK 吉隆坡</option>
-      </optgroup>
-      <optgroup label="越南">
-        <option value="https://www.bbc.com/weather/1566083">VVTS 胡志明</option>
-        <option value="https://www.bbc.com/weather/1581130">VVNB 河內</option>
-        <option value="https://www.bbc.com/weather/1583992">VVDN 峴港</option>
       </optgroup>
     </select>
   </div>
@@ -458,25 +433,25 @@
   <div class="section curfew-section" id="curfewBox">
     <h2>
       <div>⏳ Curfew Calculator</div>
-      <button id="resetCurfewBtn" class="curfew-header-btn" title="重設所有數值">
+      <button id="resetCurfewBtn" class="app-header-btn" title="重設所有數值">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
       </button>
     </h2>
 
-    <div class="curfew-wrapper">
-      <div class="curfew-grid">
+    <div class="app-wrapper">
+      <div class="app-grid">
         
         <!-- 左欄：計算結果與 UTC 時鐘 -->
-        <div class="curfew-col-left">
-          <div class="curfew-card" style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0;">
-            <div class="curfew-result-box">
-              <div id="offBlockLabel" class="curfew-label">Earliest Off Block Time</div>
-              <div id="resultEOBT" class="curfew-time-display">--:--</div>
+        <div class="app-col-left">
+          <div class="app-card" style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0;">
+            <div class="app-result-box">
+              <div id="offBlockLabel" class="app-label">Earliest Off Block Time</div>
+              <div id="resultEOBT" class="app-time-display">--:--</div>
             </div>
             
-            <div class="curfew-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
-              <div id="takeoffLabel" class="curfew-label">Earliest Takeoff Time</div>
-              <div id="resultETOT" class="curfew-time-display">--:--</div>
+            <div class="app-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
+              <div id="takeoffLabel" class="app-label">Earliest Takeoff Time</div>
+              <div id="resultETOT" class="app-time-display">--:--</div>
             </div>
 
             <!-- 醒目的 UTC 數位時鐘面板 -->
@@ -488,33 +463,33 @@
         </div>
 
         <!-- 右欄：設定選項與操作時間 -->
-        <div class="curfew-col-right">
+        <div class="app-col-right">
           
           <!-- Curfew 條件區塊 -->
           <div>
-            <div class="curfew-section-title">Curfew Settings</div>
-            <div class="curfew-card" style="margin-bottom: 0;">
+            <div class="app-section-title">Curfew Settings</div>
+            <div class="app-card" style="margin-bottom: 0;">
               
               <!-- Landing / Parking Toggle -->
-              <div class="curfew-toggle">
-                <button class="curfew-toggle-btn active curfew-type-btn" data-type="landing">Landing Curfew</button>
-                <button class="curfew-toggle-btn curfew-type-btn" data-type="parking">Parking Curfew</button>
-                <div id="typeBgPill" class="curfew-toggle-pill"></div>
+              <div class="app-toggle">
+                <button class="app-toggle-btn curfew-type-btn" data-type="landing">Landing Curfew</button>
+                <button class="app-toggle-btn active curfew-type-btn" data-type="parking">Parking Curfew</button>
+                <div id="typeBgPill" class="app-toggle-pill" style="transform: translateX(100%);"></div>
               </div>
 
               <!-- Before / After Toggle -->
-              <div class="curfew-toggle" style="margin-bottom: 20px;">
-                <button class="curfew-toggle-btn curfew-cond-btn" data-cond="before">Arrive Before</button>
-                <button class="curfew-toggle-btn active curfew-cond-btn" data-cond="after">Arrive After</button>
-                <div id="condBgPill" class="curfew-toggle-pill" style="transform: translateX(100%);"></div>
+              <div class="app-toggle" style="margin-bottom: 20px;">
+                <button class="app-toggle-btn active curfew-cond-btn" data-cond="before">Arrive Before</button>
+                <button class="app-toggle-btn curfew-cond-btn" data-cond="after">Arrive After</button>
+                <div id="condBgPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
               </div>
 
               <!-- Arrival Time Input -->
-              <div class="curfew-row" style="padding: 0; border: none;">
-                <span class="curfew-row-label">Arrival Curfew</span>
+              <div class="app-row" style="padding: 0; border: none;">
+                <span class="app-row-label">Arrival Curfew</span>
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
-                  <div class="curfew-time-input">
+                  <div class="app-time-input">
                     <select id="curfewHr"></select>
                     <span>:</span>
                     <select id="curfewMin"></select>
@@ -526,30 +501,30 @@
 
           <!-- 操作時間區塊 -->
           <div>
-            <div class="curfew-section-title">Operational Times</div>
-            <div class="curfew-card" style="margin-bottom: 0; padding: 0.5em 1.5em;">
+            <div class="app-section-title">Operational Times</div>
+            <div class="app-card" style="margin-bottom: 0; padding: 0.5em 1.5em;">
               
-              <div class="curfew-row">
-                <span class="curfew-row-label">Taxi Out Time</span>
-                <div class="curfew-time-input">
+              <div class="app-row">
+                <span class="app-row-label">Taxi Out Time</span>
+                <div class="app-time-input">
                   <select id="txoHr"></select>
                   <span>:</span>
                   <select id="txoMin"></select>
                 </div>
               </div>
               
-              <div class="curfew-row">
-                <span class="curfew-row-label">Flight Time</span>
-                <div class="curfew-time-input">
+              <div class="app-row">
+                <span class="app-row-label">Flight Time</span>
+                <div class="app-time-input">
                   <select id="ftHr"></select>
                   <span>:</span>
                   <select id="ftMin"></select>
                 </div>
               </div>
 
-              <div class="curfew-row">
-                <span class="curfew-row-label">Taxi In Time</span>
-                <div class="curfew-time-input">
+              <div class="app-row">
+                <span class="app-row-label">Taxi In Time</span>
+                <div class="app-time-input">
                   <select id="txiHr"></select>
                   <span>:</span>
                   <select id="txiMin"></select>
@@ -562,6 +537,149 @@
         </div> <!-- End Right Column -->
         
       </div> <!-- End Grid -->
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- ⏱️ 航空時間計算儀表板 (無縫融入版) -->
+  <!-- ========================================================= -->
+  <div class="section time-calc-section" id="timeCalcBox">
+    <h2>
+      <div>⏱️ 時間計算器</div>
+      <button id="resetTimeCalcBtn" class="app-header-btn" title="重設所有數值">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+    </h2>
+    
+    <div class="app-wrapper">
+      
+      <!-- 分頁按鈕 -->
+      <div class="time-tabs">
+        <button class="time-tab-btn active" data-tab="tab-simple" onclick="switchTimeTab('tab-simple')">純時間加減</button>
+        <button class="time-tab-btn" data-tab="tab-diff" onclick="switchTimeTab('tab-diff')">時間差計算</button>
+        <button class="time-tab-btn" data-tab="tab-addsub" onclick="switchTimeTab('tab-addsub')">時間推算</button>
+      </div>
+
+      <!-- 功能一：單純時間加減 -->
+      <div id="tab-simple" class="time-tab-content active">
+        <div class="app-card" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+          
+          <div style="flex: 1; text-align: center;">
+            <div class="app-label" style="margin-bottom: 8px;">TIME 1</div>
+            <div class="app-time-input" style="justify-content: center;">
+              <input type="number" id="simpleH1" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="simpleM1" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+          
+          <div style="flex: 0 0 140px;">
+            <div class="app-toggle" style="margin-bottom: 0;">
+              <button class="app-toggle-btn active" id="btnOpAdd" onclick="setSimpleOp('add')">➕ 加</button>
+              <button class="app-toggle-btn" id="btnOpSub" onclick="setSimpleOp('sub')">➖ 減</button>
+              <div id="simpleOpPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
+            </div>
+            <input type="hidden" id="simpleOp" value="add">
+          </div>
+
+          <div style="flex: 1; text-align: center;">
+            <div class="app-label" style="margin-bottom: 8px;">TIME 2</div>
+            <div class="app-time-input" style="justify-content: center;">
+              <input type="number" id="simpleH2" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="simpleM2" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="calculateSimple()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算總時長</button>
+        
+        <div id="simpleResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="simpleResultText" class="app-time-display"></div>
+          <div id="simpleResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
+      <!-- 功能二：計算時間差 -->
+      <div id="tab-diff" class="time-tab-content">
+        <div class="app-grid" style="margin-bottom: 1.5em;">
+          <div class="app-card" style="flex: 1; margin-bottom: 0;">
+            <div class="app-label" style="margin-bottom: 10px;">🛫 起始時間</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <input type="date" id="diffStartDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
+              <div class="app-time-input" style="justify-content: center;">
+                <select id="diffStartHour"></select>
+                <span>:</span>
+                <select id="diffStartMin"></select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="app-card" style="flex: 1; margin-bottom: 0;">
+            <div class="app-label" style="margin-bottom: 10px;">🛬 結束時間</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <input type="date" id="diffEndDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
+              <div class="app-time-input" style="justify-content: center;">
+                <select id="diffEndHour"></select>
+                <span>:</span>
+                <select id="diffEndMin"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="calculateTimeDiff()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算時間差</button>
+
+        <div id="diffResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="diffResultText" class="app-time-display"></div>
+          <div id="diffResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
+      <!-- 功能三：時間推算 -->
+      <div id="tab-addsub" class="time-tab-content">
+        <div class="app-card">
+          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px;">
+            <div class="app-label" style="min-width: 80px; margin: 0;">📍 基準</div>
+            <input type="date" id="baseDate" class="app-date-input">
+            <div class="app-time-input">
+              <select id="baseHour"></select>
+              <span>:</span>
+              <select id="baseMin"></select>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+            <div class="app-label" style="min-width: 80px; margin: 0;">⚙️ 推算</div>
+            
+            <div class="app-toggle" style="margin: 0; width: 140px;">
+              <button class="app-toggle-btn active" id="btnBaseAdd" onclick="setBaseOp('add')">往後推</button>
+              <button class="app-toggle-btn" id="btnBaseSub" onclick="setBaseOp('sub')">往前推</button>
+              <div id="baseOpPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
+            </div>
+            <input type="hidden" id="operationType" value="add">
+
+            <div class="app-time-input">
+              <input type="number" id="addDays" min="0" placeholder="0">
+              <span style="color:#555;">天</span>
+              <input type="number" id="addHours" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="addMins" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="calculateAddSub()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">開始推算</button>
+
+        <div id="addsubResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="addsubResultText" class="app-time-display" style="font-size: 1.8em;"></div>
+          <div id="addsubResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -659,12 +777,6 @@ function openDatis() {
   const url = sel.value;
   if (url) window.open(url, '_blank');
 }
-
-function openCitywx() {
-  const select = document.getElementById("citywxSelect");
-  const url = select.value;
-  if (url && url !== "--請選擇城市--") window.open(url, "_blank");
-} 
 
 // ==========================================
 // 🌤️ 惡劣天氣表情符號解析器
@@ -1158,8 +1270,8 @@ function updateTimeTable(data) {
 // ==========================================
 function initCurfewCalculator() {
     let state = {
-        curfewType: 'landing', // 'landing' or 'parking'
-        curfewCondition: 'after' // 'before' or 'after'
+        curfewType: 'parking', // 預設: parking
+        curfewCondition: 'before' // 預設: before
     };
 
     const els = {
@@ -1305,8 +1417,8 @@ function initCurfewCalculator() {
     });
 
     els.resetBtn.addEventListener('click', () => {
-        state.curfewType = 'landing';
-        state.curfewCondition = 'after';
+        state.curfewType = 'parking'; // Reset 時也回到新預設
+        state.curfewCondition = 'before';
         updateTypeToggleUI();
         updateCondToggleUI();
         populateDropdowns();
@@ -1319,17 +1431,204 @@ function initCurfewCalculator() {
 }
 
 // ==========================================
+// ⏱️ 時間計算器核心邏輯
+// ==========================================
+function switchTimeTab(tabId) {
+    document.querySelectorAll('.time-tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.time-tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.time-tab-btn[data-tab="${tabId}"]`).classList.add('active');
+}
+
+function setSimpleOp(op) {
+    document.getElementById('simpleOp').value = op;
+    const btnAdd = document.getElementById('btnOpAdd');
+    const btnSub = document.getElementById('btnOpSub');
+    const pill = document.getElementById('simpleOpPill');
+    
+    if (op === 'add') {
+        btnAdd.classList.add('active');
+        btnSub.classList.remove('active');
+        pill.style.transform = 'translateX(0)';
+    } else {
+        btnSub.classList.add('active');
+        btnAdd.classList.remove('active');
+        pill.style.transform = 'translateX(100%)';
+    }
+}
+
+function setBaseOp(op) {
+    document.getElementById('operationType').value = op;
+    const btnAdd = document.getElementById('btnBaseAdd');
+    const btnSub = document.getElementById('btnBaseSub');
+    const pill = document.getElementById('baseOpPill');
+    
+    if (op === 'add') {
+        btnAdd.classList.add('active');
+        btnSub.classList.remove('active');
+        pill.style.transform = 'translateX(0)';
+    } else {
+        btnSub.classList.add('active');
+        btnAdd.classList.remove('active');
+        pill.style.transform = 'translateX(100%)';
+    }
+}
+
+function calculateSimple() {
+    const h1 = parseInt(document.getElementById('simpleH1').value || 0);
+    const m1 = parseInt(document.getElementById('simpleM1').value || 0);
+    const op = document.getElementById('simpleOp').value;
+    const h2 = parseInt(document.getElementById('simpleH2').value || 0);
+    const m2 = parseInt(document.getElementById('simpleM2').value || 0);
+
+    let resultMins = (h1 * 60 + m1) + (op === 'add' ? (h2 * 60 + m2) : -(h2 * 60 + m2));
+    const isNegative = resultMins < 0;
+    resultMins = Math.abs(resultMins);
+
+    const finalH = Math.floor(resultMins / 60);
+    const finalM = resultMins % 60;
+    const formattedTime = `${finalH}:${String(finalM).padStart(2, '0')}`;
+
+    const box = document.getElementById('simpleResultBox');
+    const text = document.getElementById('simpleResultText');
+    const detail = document.getElementById('simpleResultDetail');
+    
+    box.style.display = 'block';
+    if (isNegative) {
+        text.innerHTML = `<span style="color:#e74c3c;">-${formattedTime}</span>`;
+        detail.textContent = `時數短缺 ${finalH} 小時 ${finalM} 分鐘`;
+    } else {
+        text.innerHTML = formattedTime;
+        detail.textContent = `總時長 ${finalH} 小時 ${finalM} 分鐘`;
+    }
+}
+
+function calculateTimeDiff() {
+    const start = new Date(`${document.getElementById('diffStartDate').value}T${document.getElementById('diffStartHour').value}:${document.getElementById('diffStartMin').value}:00`);
+    const end = new Date(`${document.getElementById('diffEndDate').value}T${document.getElementById('diffEndHour').value}:${document.getElementById('diffEndMin').value}:00`);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) { alert("請確保日期已填寫"); return; }
+
+    let diffMs = end.getTime() - start.getTime();
+    const isNegative = diffMs < 0;
+    diffMs = Math.abs(diffMs);
+
+    const hours = Math.floor(diffMs / 3600000);
+    const minutes = Math.floor((diffMs % 3600000) / 60000);
+    const displayResult = `${hours}:${String(minutes).padStart(2, '0')}`;
+
+    const box = document.getElementById('diffResultBox');
+    const text = document.getElementById('diffResultText');
+    const detail = document.getElementById('diffResultDetail');
+
+    box.style.display = 'block';
+    if (isNegative) {
+        text.innerHTML = `<span style="color:#e74c3c;">-${displayResult}</span>`;
+        detail.textContent = `⚠️ 結束時間早於起始時間`;
+    } else {
+        text.innerHTML = displayResult;
+        detail.textContent = `相差 ${hours} 小時 ${minutes} 分鐘`;
+    }
+}
+
+function calculateAddSub() {
+    const baseStr = `${document.getElementById('baseDate').value}T${document.getElementById('baseHour').value}:${document.getElementById('baseMin').value}:00`;
+    const baseDate = new Date(baseStr);
+    if(isNaN(baseDate.getTime())) { alert("請填寫基準日期"); return; }
+
+    const op = document.getElementById('operationType').value;
+    const d = parseInt(document.getElementById('addDays').value || 0);
+    const h = parseInt(document.getElementById('addHours').value || 0);
+    const m = parseInt(document.getElementById('addMins').value || 0);
+
+    const msToAdd = (d * 86400000) + (h * 3600000) + (m * 60000);
+    const targetDate = new Date(baseDate.getTime() + (op === 'add' ? msToAdd : -msToAdd));
+
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+    const hh = String(targetDate.getHours()).padStart(2, '0');
+    const min = String(targetDate.getMinutes()).padStart(2, '0');
+    const formatted = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+
+    document.getElementById('addsubResultBox').style.display = 'block';
+    document.getElementById('addsubResultText').textContent = formatted;
+    document.getElementById('addsubResultDetail').textContent = `推算目標為 ${['週日', '週一', '週二', '週三', '週四', '週五', '週六'][targetDate.getDay()]}`;
+}
+
+function initTimeCalculator() {
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentHour = String(now.getHours()).padStart(2, '0');
+    let nextHour = String(now.getHours() === 23 ? 23 : now.getHours() + 1).padStart(2, '0');
+
+    function populate(elementId, max) {
+        const select = document.getElementById(elementId);
+        if(!select) return;
+        select.innerHTML = '';
+        for (let i = 0; i <= max; i++) {
+            const val = String(i).padStart(2, '0');
+            select.options.add(new Option(val, val));
+        }
+    }
+
+    // Init Diff Tab
+    document.getElementById('diffStartDate').value = today; 
+    document.getElementById('diffEndDate').value = today;
+    populate('diffStartHour', 23); populate('diffEndHour', 23);
+    populate('diffStartMin', 59); populate('diffEndMin', 59);
+    document.getElementById('diffStartHour').value = currentHour; 
+    document.getElementById('diffEndHour').value = nextHour;
+
+    // Init AddSub Tab
+    document.getElementById('baseDate').value = today;
+    populate('baseHour', 23); populate('baseMin', 59);
+    document.getElementById('baseHour').value = currentHour;
+}
+
+function resetTimeCalculator() {
+    // 1. 切換回預設的第一個分頁
+    switchTimeTab('tab-simple');
+    
+    // 2. 清空純時間加減的輸入框與結果
+    document.getElementById('simpleH1').value = "";
+    document.getElementById('simpleM1').value = "";
+    document.getElementById('simpleH2').value = "";
+    document.getElementById('simpleM2').value = "";
+    setSimpleOp('add');
+    document.getElementById('simpleResultBox').style.display = 'none';
+
+    // 3. 隱藏時間差計算的結果
+    document.getElementById('diffResultBox').style.display = 'none';
+
+    // 4. 清空時間推算的輸入框與結果
+    document.getElementById('addDays').value = "";
+    document.getElementById('addHours').value = "";
+    document.getElementById('addMins').value = "";
+    setBaseOp('add');
+    document.getElementById('addsubResultBox').style.display = 'none';
+
+    // 5. 重新載入當前日期與時間
+    initTimeCalculator();
+}
+
+// ==========================================
 // 🚀 網頁載入啟動程序
 // ==========================================
 document.addEventListener("DOMContentLoaded", function () {
   initFlightSelect();
   initAviationMap(); 
   initCurfewCalculator(); // 啟動 Curfew 計算機
+  initTimeCalculator();   // 啟動 時間計算器
 
   document.getElementById("turbliBtn").addEventListener("click", function () {
     const url = this.dataset.url;
     if (url) window.open(url, "_blank");
   });
+
+  // 綁定時間計算器的重設按鈕
+  document.getElementById("resetTimeCalcBtn").addEventListener("click", resetTimeCalculator);
 });
   
 </script>
