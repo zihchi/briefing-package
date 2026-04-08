@@ -524,10 +524,19 @@ function getWeatherEmojis(text) {
   let hasSN = false;
   let hasGust = false;
 
+  // 使用嚴格的正規表達式，確保只匹配標準 METAR/TAF 氣象代碼，避免誤判 ICAO 代碼 (如 VVTS)
+  const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
+  const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
+  const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
+
   for (let token of tokens) {
-      if (token === 'WS' || token.includes('TS')) hasTSWS = true;
-      if (token.includes('RA')) hasRA = true;
-      if (token.includes('SN')) hasSN = true;
+      // 偵測風切 (WS) 或雷暴 (TS)
+      if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
+      // 偵測降雨 (RA)
+      if (raRegex.test(token)) hasRA = true;
+      // 偵測降雪 (SN)
+      if (snRegex.test(token)) hasSN = true;
+      // 偵測陣風 (G加上風速，例如 12015G25KT)
       if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
   }
 
