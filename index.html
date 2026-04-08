@@ -12,7 +12,8 @@
     body { background-color: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
     h1 { font-size: 1.8em; margin-bottom: 0.5em; }
     .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
-    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; margin-bottom: 15px; }
+    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; margin-bottom: 15px; justify-content: space-between;}
+    .section h2 div { display: flex; align-items: center; gap: 0.3em; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .btn { display: inline-block; padding: 0.8em 1.6em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; }
@@ -30,30 +31,30 @@
     button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     
     .flight-box { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    select { font-size: 1em; padding: 0.5em; margin-left: 0.5em; }
+    select { font-size: 1em; padding: 0.5em; margin-left: 0.5em; border: 1px solid #ccc; border-radius: 6px; }
     
     .windy-section h2 button { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
     .windy-section h2 button:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
     
     .checklist { list-style: none; padding: 0; margin: 0 0 1em 0; }
     .checklist li { padding: 0.5em 0; border-bottom: 1px dashed #ccc; }
-    .checklist label { font-size: 1em; display: flex; align-items: center; gap: 10px; }
+    .checklist label { font-size: 1em; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .checklist input[type="checkbox"] { width: 18px; height: 18px; accent-color: #3c79ff; }
 
     /* ⛽ Fuel Calculator 區塊 */
     .fuel-box h2 { font-size: 1.3rem; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
-    .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; }
+    .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; border-left: 4px solid #e67e22; padding-left: 8px;}
     .fuel-box .hint { font-size: 0.9rem; color: #555; margin-bottom: 0.8rem; }
     .fuel-box .input-row { margin: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-    .fuel-box .input-row label { min-width: 8rem; }
-    .fuel-box .input-row input[type="number"] { width: 8rem; padding: 0.3rem 0.4rem; }
+    .fuel-box .input-row label { min-width: 8rem; font-weight: bold;}
+    .fuel-box .input-row input[type="range"] { accent-color: #3c79ff; }
     .fuel-box .input-row button { padding: 0.35rem 0.9rem; cursor: pointer; font-size: 0.95rem; }
-    .fuel-box #message { margin-top: 0.5rem; font-size: 0.9rem; color: #b00; }
+    .fuel-box #message { margin-top: 0.5rem; font-size: 0.9rem; color: #b00; font-weight: bold;}
     .fuel-box .note { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
-    .fuel-box table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-    .fuel-box th, .fuel-box td { border: 1px solid #ccc; padding: 0.4rem 0.5rem; text-align: right; font-size: 0.95rem; }
+    .fuel-box table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .fuel-box th, .fuel-box td { border: 1px solid #e0e0e0; padding: 0.6rem 0.8rem; text-align: right; font-size: 0.95rem; }
     .fuel-box th:first-child, .fuel-box td:first-child { text-align: left; }
-    .fuel-box th { background: #f5f5f5; }
+    .fuel-box th { background: #f4f6f9; color: #333; }
 
     /* =========================================
        🌍 航空氣象儀表板專用樣式
@@ -92,6 +93,42 @@
     
     #btn-refresh-map { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
     #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
+
+    /* =========================================
+       ⏳ Curfew Calculator 專用樣式 (iOS 風格)
+       ========================================= */
+    .curfew-wrapper { max-width: 600px; margin: 0 auto; padding: 10px 0; }
+    .curfew-header-btn { background: none; border: 2px solid #e74c3c; color: #e74c3c; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 0; margin-top: 0; margin-left: auto;}
+    .curfew-header-btn:hover { background: rgba(231,76,60,0.1); transform: scale(1.05); }
+    
+    .curfew-card { background: #fdfdfd; border-radius: 24px; padding: 1.5em; margin-bottom: 1.5em; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; }
+    .curfew-result-box { text-align: center; margin-bottom: 1.2em; border-bottom: 1px solid #f0f0f0; padding-bottom: 1.2em; }
+    .curfew-result-box:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+    .curfew-label { font-size: 0.95em; font-weight: 600; color: #555; margin-bottom: 0.3em; }
+    .curfew-time-display { font-size: 2.2em; font-family: 'Courier New', Courier, monospace; letter-spacing: 4px; color: #222; font-weight: bold; }
+    
+    .curfew-utc-badge { width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px 0; text-align: center; font-size: 0.9em; font-weight: bold; color: #666; background: rgba(249,250,251,0.5); margin-top: 10px; }
+    .curfew-live-clock { text-align: center; margin-top: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; letter-spacing: 2px; color: #888; font-weight: bold; }
+
+    .curfew-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; margin-bottom: 8px; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px;}
+    
+    .curfew-toggle { background: #e9e9ea; padding: 4px; border-radius: 12px; display: flex; position: relative; margin-bottom: 15px; }
+    .curfew-toggle-btn { flex: 1; padding: 8px 0; text-align: center; font-size: 0.9em; font-weight: bold; color: #888; border: none; background: transparent; cursor: pointer; z-index: 2; transition: color 0.3s ease; margin-top: 0; }
+    .curfew-toggle-btn.active { color: #222; }
+    .curfew-toggle-pill { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1); z-index: 1; }
+    
+    .curfew-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px dashed #eee; }
+    .curfew-row:last-child { border-bottom: none; }
+    .curfew-row-label { font-size: 1.05em; color: #333; font-weight: 500; }
+    
+    .curfew-time-input { display: flex; align-items: center; gap: 4px; background: rgba(243,244,246,0.8); border-radius: 10px; padding: 4px 12px; }
+    .curfew-time-input select { 
+        border: none; background: transparent; font-size: 1.1em; font-family: 'Courier New', Courier, monospace; 
+        color: #007aff; font-weight: bold; outline: none; padding: 0; margin: 0; text-align: center; cursor: pointer;
+        -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    }
+    .curfew-time-input span { font-family: 'Courier New', Courier, monospace; color: #007aff; font-weight: bold; }
+
   </style>
 </head>
 <body>
@@ -352,19 +389,19 @@
   <div class="section fuel-box">
     <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
 
- <div class="input-row">
-  <label for="currentFuel">剩油 Fuel Remaining：</label>
-  <input type="range" id="currentFuel" min="0" max="100" step="0.1" value="6.0" style="width: 500px;"
-         oninput="document.getElementById('currentFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
-  <span id="currentFuelVal">6.0 t</span>
-</div>
+  <div class="input-row">
+    <label for="currentFuel">剩油 Fuel Remaining：</label>
+    <input type="range" id="currentFuel" min="0" max="100" step="0.1" value="6.0" style="width: 400px;"
+           oninput="document.getElementById('currentFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
+    <span id="currentFuelVal">6.0 t</span>
+  </div>
     <div class="input-row">
-  <label for="targetFuel">目標油量 Target Fuel：</label>
-  <input type="range" id="targetFuel" min="0" max="150" step="0.1" value="25.0" style="width: 500px;"
-         oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
-  <span id="targetFuelVal">25.0 t</span>
-  <button type="button" onclick="onCalculate()">計算</button>
-</div>
+    <label for="targetFuel">目標油量 Target Fuel：</label>
+    <input type="range" id="targetFuel" min="0" max="150" step="0.1" value="25.0" style="width: 400px;"
+           oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
+    <span id="targetFuelVal">25.0 t</span>
+    <button type="button" onclick="onCalculate()">計算</button>
+  </div>
 
     <div id="message"></div>
 
@@ -404,8 +441,105 @@
         <tr><th>總加油時間</th><th colspan="3">-</th></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- ⏳ Curfew Calculator (無縫融入版) -->
+  <!-- ========================================================= -->
+  <div class="section curfew-section" id="curfewBox">
+    <h2>
+      <div>⏳ Curfew Calculator</div>
+      <button id="resetCurfewBtn" class="curfew-header-btn" title="重設所有數值">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+    </h2>
+
+    <div class="curfew-wrapper">
+      
+      <!-- Result Card -->
+      <div class="curfew-card">
+        <div class="curfew-result-box">
+          <div id="offBlockLabel" class="curfew-label">Earliest Off Block Time</div>
+          <div id="resultEOBT" class="curfew-time-display">--:--</div>
+        </div>
+        
+        <div class="curfew-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
+          <div id="takeoffLabel" class="curfew-label">Earliest Takeoff Time</div>
+          <div id="resultETOT" class="curfew-time-display">--:--</div>
+        </div>
+
+        <div class="curfew-utc-badge">UTC</div>
+        <div class="curfew-live-clock" id="liveUTCClock">--:--:--</div>
+      </div>
+
+      <!-- Curfew Condition Section -->
+      <div class="curfew-section-title">Curfew Settings</div>
+      <div class="curfew-card">
+        
+        <!-- Landing / Parking Toggle -->
+        <div class="curfew-toggle">
+          <button class="curfew-toggle-btn active curfew-type-btn" data-type="landing">Landing Curfew</button>
+          <button class="curfew-toggle-btn curfew-type-btn" data-type="parking">Parking Curfew</button>
+          <div id="typeBgPill" class="curfew-toggle-pill"></div>
+        </div>
+
+        <!-- Before / After Toggle -->
+        <div class="curfew-toggle" style="margin-bottom: 20px;">
+          <button class="curfew-toggle-btn curfew-cond-btn" data-cond="before">Arrive Before</button>
+          <button class="curfew-toggle-btn active curfew-cond-btn" data-cond="after">Arrive After</button>
+          <div id="condBgPill" class="curfew-toggle-pill" style="transform: translateX(100%);"></div>
+        </div>
+
+        <!-- Arrival Time Input -->
+        <div class="curfew-row" style="padding: 0; border: none;">
+          <span class="curfew-row-label">Arrival Curfew</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
+            <div class="curfew-time-input">
+              <select id="curfewHr"></select>
+              <span>:</span>
+              <select id="curfewMin"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Times Section -->
+      <div class="curfew-section-title">Operational Times</div>
+      <div class="curfew-card" style="padding: 0.5em 1.5em;">
+        
+        <div class="curfew-row">
+          <span class="curfew-row-label">Taxi Out Time</span>
+          <div class="curfew-time-input">
+            <select id="txoHr"></select>
+            <span>:</span>
+            <select id="txoMin"></select>
+          </div>
+        </div>
+        
+        <div class="curfew-row">
+          <span class="curfew-row-label">Flight Time</span>
+          <div class="curfew-time-input">
+            <select id="ftHr"></select>
+            <span>:</span>
+            <select id="ftMin"></select>
+          </div>
+        </div>
+
+        <div class="curfew-row">
+          <span class="curfew-row-label">Taxi In Time</span>
+          <div class="curfew-time-input">
+            <select id="txiHr"></select>
+            <span>:</span>
+            <select id="txiMin"></select>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </div>
+
 
 <!-- 引入 Leaflet 的核心 JavaScript 函式庫 -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -423,7 +557,6 @@ function setupChecklist(listId) {
 }
 
 setupChecklist("briefingChecklist1");
-setupChecklist("briefingChecklist2");
 setupChecklist("personalChecklist");
 
 window.flights = [
@@ -509,7 +642,7 @@ function openCitywx() {
 } 
 
 // ==========================================
-// 🌤️ 惡劣天氣表情符號解析器 (Tactical Weather Parser)
+// 🌤️ 惡劣天氣表情符號解析器
 // ==========================================
 function getWeatherEmojis(text) {
   if (!text) return '';
@@ -521,19 +654,14 @@ function getWeatherEmojis(text) {
   let hasSN = false;
   let hasGust = false;
 
-  // 使用嚴格的正規表達式，確保只匹配標準 METAR/TAF 氣象代碼，避免誤判 ICAO 代碼 (如 VVTS)
   const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
   const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
   const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
 
   for (let token of tokens) {
-      // 偵測風切 (WS) 或雷暴 (TS)
       if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
-      // 偵測降雨 (RA)
       if (raRegex.test(token)) hasRA = true;
-      // 偵測降雪 (SN)
       if (snRegex.test(token)) hasSN = true;
-      // 偵測陣風 (G加上風速，例如 12015G25KT)
       if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
   }
 
@@ -604,12 +732,8 @@ function initAviationMap() {
 
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🛡️ 重裝甲 API 連線模組：使用 try-catch 與多重代理備援
     const fetchBulkWeatherData = async (icaoList, type) => {
-        // 加入 _cb 參數避免 Safari 快取錯誤的跨域請求結果
         const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${Date.now()}`;
-        
-        // 使用更穩定的跨域代理，加入 codetabs 作為第一線備援
         const fetchStrategies = [
             (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
             (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -618,7 +742,6 @@ function initAviationMap() {
 
         for (let i = 0; i < fetchStrategies.length; i++) {
             try {
-                // 加入逾時機制 (Timeout)，防止 Safari 卡死在等待回應
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000); 
                 
@@ -634,7 +757,6 @@ function initAviationMap() {
                 console.warn(`代理伺服器 ${i + 1} 連線失敗或逾時:`, e.message);
             }
         }
-        // 如果全部失敗，回傳空陣列而非丟出導致當機的 Error
         console.error(`無法取得 ${type} 資料，但已攔截錯誤以保護系統。`);
         return [];
     };
@@ -751,7 +873,6 @@ function initAviationMap() {
         return htmlOutput;
     };
 
-    // 🚀 手動啟動程序：確保 Promise 與 Error 都被完美控制
     const bootSequence = async () => {
         const statusIndicator = document.getElementById('sync-status');
         const icaoString = airports.map(a => a.icao).join(',');
@@ -770,7 +891,6 @@ function initAviationMap() {
             }
 
             if (allMetars.length === 0 && allTafs.length === 0) {
-                // 優雅地處理空資料狀態，不再拋出導致 Console 紅字的 Error
                 statusIndicator.innerText = "❌ 氣象同步失敗 (代理伺服器遭阻擋)";
                 statusIndicator.classList.remove('status-loaded');
                 statusIndicator.classList.add('status-error');
@@ -866,9 +986,6 @@ function initAviationMap() {
             `).openOn(map);
         });
     });
-
-    // ⚠️ 取消自動執行：將起飛決策權交還給機長
-    // bootSequence();
 }
 
 // ==========================================
@@ -1011,9 +1128,178 @@ function updateTimeTable(data) {
   tbody.innerHTML = `<tr><td>Inner Tank</td><td>${formatFuel(dInner)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tInner)}</td></tr><tr><td>Outer Tank</td><td>${formatFuel(dOuter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tOuter)}</td></tr><tr><td>Trim Tank</td><td>${formatFuel(dTrim)}</td><td>0.10</td><td>${formatTimeMin(tTrim)}</td></tr><tr><td>Center Tank</td><td>${formatFuel(dCenter)}</td><td>動態分配 (共 1.0)</td><td>${formatTimeMin(tCenter)}</td></tr><tr><th>總加油量 (t)</th><th>${formatFuel(totalDelta)}</th><th>等效流量 (t/min)</th><th>${effRate.toFixed(2)}</th></tr><tr><th>總加油時間</th><th colspan="3">${formatTimeHHMM(totalTime)} （約 ${formatTimeMin(totalTime)} 分）</th></tr>`;
 }
 
+// ==========================================
+// ⏳ Curfew Calculator 核心邏輯 (原生重構版)
+// ==========================================
+function initCurfewCalculator() {
+    let state = {
+        curfewType: 'landing', // 'landing' or 'parking'
+        curfewCondition: 'after' // 'before' or 'after'
+    };
+
+    const els = {
+        offBlockLabel: document.getElementById('offBlockLabel'),
+        takeoffLabel: document.getElementById('takeoffLabel'),
+        resultEOBT: document.getElementById('resultEOBT'),
+        resultETOT: document.getElementById('resultETOT'),
+        resetBtn: document.getElementById('resetCurfewBtn'),
+        typeBgPill: document.getElementById('typeBgPill'),
+        condBgPill: document.getElementById('condBgPill'),
+        typeBtns: document.querySelectorAll('.curfew-type-btn'),
+        condBtns: document.querySelectorAll('.curfew-cond-btn'),
+        liveClock: document.getElementById('liveUTCClock')
+    };
+
+    const dropdownIds = ['curfewHr', 'curfewMin', 'txoHr', 'txoMin', 'ftHr', 'ftMin', 'txiHr', 'txiMin'];
+
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getUTCHours()).padStart(2, '0');
+        const m = String(now.getUTCMinutes()).padStart(2, '0');
+        const s = String(now.getUTCSeconds()).padStart(2, '0');
+        els.liveClock.textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function populateDropdowns() {
+        const generateOptions = (max, defaultVal) => {
+            let html = '<option value="">--</option>';
+            for (let i = 0; i <= max; i++) {
+                const val = String(i).padStart(2, '0');
+                const selected = val === defaultVal ? 'selected' : '';
+                html += `<option value="${val}" ${selected}>${val}</option>`;
+            }
+            return html;
+        };
+
+        document.getElementById('curfewHr').innerHTML = generateOptions(23, '');
+        document.getElementById('curfewMin').innerHTML = generateOptions(59, '');
+        document.getElementById('txoHr').innerHTML = generateOptions(23, '00');
+        document.getElementById('txoMin').innerHTML = generateOptions(59, '15');
+        document.getElementById('ftHr').innerHTML = generateOptions(23, '');
+        document.getElementById('ftMin').innerHTML = generateOptions(59, '');
+        document.getElementById('txiHr').innerHTML = generateOptions(23, '00');
+        document.getElementById('txiMin').innerHTML = generateOptions(59, '15');
+    }
+
+    function getTimeStr(hrId, minId) {
+        const h = document.getElementById(hrId).value;
+        const m = document.getElementById(minId).value;
+        if (h === '' || m === '') return null;
+        return `${h}:${m}`;
+    }
+
+    function timeToMins(timeStr) {
+        if (!timeStr) return NaN;
+        const parts = timeStr.split(':');
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    }
+
+    function minsToTime(mins) {
+        mins = ((mins % 1440) + 1440) % 1440;
+        const h = String(Math.floor(mins / 60)).padStart(2, '0');
+        const m = String(mins % 60).padStart(2, '0');
+        return `${h}:${m}`;
+    }
+
+    function calculateTimes() {
+        const isBefore = state.curfewCondition === 'before';
+        els.offBlockLabel.textContent = isBefore ? 'Latest Off Block Time' : 'Earliest Off Block Time';
+        els.takeoffLabel.textContent = isBefore ? 'Latest Takeoff Time' : 'Earliest Takeoff Time';
+
+        const curfewTime = getTimeStr('curfewHr', 'curfewMin');
+        const ftTime = getTimeStr('ftHr', 'ftMin');
+        const txoTime = getTimeStr('txoHr', 'txoMin');
+        const txiTime = getTimeStr('txiHr', 'txiMin');
+
+        if (!curfewTime || !ftTime || !txoTime || !txiTime) {
+            els.resultEOBT.textContent = '--:--';
+            els.resultETOT.textContent = '--:--';
+            return;
+        }
+
+        const curfewMins = timeToMins(curfewTime);
+        const ftMins = timeToMins(ftTime);
+        const txoMins = timeToMins(txoTime);
+        const txiMins = timeToMins(txiTime);
+
+        let targetTouchdownMins = curfewMins;
+
+        if (state.curfewType === 'parking') {
+            targetTouchdownMins = curfewMins - txiMins;
+        }
+
+        const takeoffMins = targetTouchdownMins - ftMins;
+        const offBlockMins = takeoffMins - txoMins;
+
+        els.resultETOT.textContent = minsToTime(takeoffMins);
+        els.resultEOBT.textContent = minsToTime(offBlockMins);
+    }
+
+    function updateTypeToggleUI() {
+        els.typeBtns.forEach(btn => {
+            if (btn.dataset.type === state.curfewType) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        els.typeBgPill.style.transform = state.curfewType === 'landing' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
+    function updateCondToggleUI() {
+        els.condBtns.forEach(btn => {
+            if (btn.dataset.cond === state.curfewCondition) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        els.condBgPill.style.transform = state.curfewCondition === 'before' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
+    els.typeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            state.curfewType = e.target.dataset.type;
+            updateTypeToggleUI();
+            calculateTimes();
+        });
+    });
+
+    els.condBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            state.curfewCondition = e.target.dataset.cond;
+            updateCondToggleUI();
+            calculateTimes();
+        });
+    });
+
+    dropdownIds.forEach(id => {
+        document.getElementById(id).addEventListener('change', calculateTimes);
+    });
+
+    els.resetBtn.addEventListener('click', () => {
+        state.curfewType = 'landing';
+        state.curfewCondition = 'after';
+        updateTypeToggleUI();
+        updateCondToggleUI();
+        populateDropdowns();
+        calculateTimes();
+    });
+
+    populateDropdowns();
+    updateTypeToggleUI();
+    updateCondToggleUI();
+}
+
+// ==========================================
+// 🚀 網頁載入啟動程序
+// ==========================================
 document.addEventListener("DOMContentLoaded", function () {
   initFlightSelect();
   initAviationMap(); 
+  initCurfewCalculator(); // 啟動 Curfew 計算機
 
   document.getElementById("turbliBtn").addEventListener("click", function () {
     const url = this.dataset.url;
