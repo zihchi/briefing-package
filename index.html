@@ -107,8 +107,17 @@
     .curfew-label { font-size: 0.95em; font-weight: 600; color: #555; margin-bottom: 0.3em; }
     .curfew-time-display { font-size: 2.2em; font-family: 'Courier New', Courier, monospace; letter-spacing: 4px; color: #222; font-weight: bold; }
     
-    .curfew-utc-badge { width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px 0; text-align: center; font-size: 0.9em; font-weight: bold; color: #666; background: rgba(249,250,251,0.5); margin-top: 10px; }
-    .curfew-live-clock { text-align: center; margin-top: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; letter-spacing: 2px; color: #888; font-weight: bold; }
+    /* 雙欄排版設定 (iPad 橫向優化) */
+    .curfew-wrapper { max-width: 900px; margin: 0 auto; padding: 10px 0; }
+    .curfew-grid { display: flex; gap: 24px; align-items: stretch; }
+    .curfew-col-left { flex: 1; min-width: 250px; display: flex; flex-direction: column; }
+    .curfew-col-right { flex: 1.2; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
+    @media (max-width: 768px) { .curfew-grid { flex-direction: column; } }
+
+    /* 醒目的航空級 UTC 數位時鐘 */
+    .curfew-clock-container { background: #1e293b; border-radius: 16px; padding: 16px; margin-top: 20px; text-align: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4); border: 2px solid #334155; }
+    .curfew-utc-label { font-size: 0.85em; color: #94a3b8; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
+    .curfew-live-clock { font-family: 'Courier New', Courier, monospace; font-size: 1.8em; letter-spacing: 3px; color: #38bdf8; font-weight: bold; margin: 0; text-shadow: 0 0 10px rgba(56,189,248,0.4); }
 
     .curfew-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; margin-bottom: 8px; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px;}
     
@@ -296,10 +305,10 @@
     <h2 style="margin: 0;">
       <div style="display: flex; align-items: center; gap: 10px;">
         🌍 NOAA AWC METAR/TAF
-        <button id="btn-refresh-map">手動更新氣象</button>
+        <div id="sync-status" style="background-color: #34495e;">⏸️ 待命：請手動更新氣象</div>
       </div>
     </h2>
-    <div id="sync-status" style="background-color: #34495e;">⏸️ 待命：請手動更新氣象</div>
+    <button id="btn-refresh-map">手動更新氣象</button>
   </div>
   <div id="map"></div>
 </div>
@@ -455,88 +464,104 @@
     </h2>
 
     <div class="curfew-wrapper">
-      
-      <!-- Result Card -->
-      <div class="curfew-card">
-        <div class="curfew-result-box">
-          <div id="offBlockLabel" class="curfew-label">Earliest Off Block Time</div>
-          <div id="resultEOBT" class="curfew-time-display">--:--</div>
-        </div>
+      <div class="curfew-grid">
         
-        <div class="curfew-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
-          <div id="takeoffLabel" class="curfew-label">Earliest Takeoff Time</div>
-          <div id="resultETOT" class="curfew-time-display">--:--</div>
-        </div>
+        <!-- 左欄：計算結果與 UTC 時鐘 -->
+        <div class="curfew-col-left">
+          <div class="curfew-card" style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0;">
+            <div class="curfew-result-box">
+              <div id="offBlockLabel" class="curfew-label">Earliest Off Block Time</div>
+              <div id="resultEOBT" class="curfew-time-display">--:--</div>
+            </div>
+            
+            <div class="curfew-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
+              <div id="takeoffLabel" class="curfew-label">Earliest Takeoff Time</div>
+              <div id="resultETOT" class="curfew-time-display">--:--</div>
+            </div>
 
-        <div class="curfew-utc-badge">UTC</div>
-        <div class="curfew-live-clock" id="liveUTCClock">--:--:--</div>
-      </div>
-
-      <!-- Curfew Condition Section -->
-      <div class="curfew-section-title">Curfew Settings</div>
-      <div class="curfew-card">
-        
-        <!-- Landing / Parking Toggle -->
-        <div class="curfew-toggle">
-          <button class="curfew-toggle-btn active curfew-type-btn" data-type="landing">Landing Curfew</button>
-          <button class="curfew-toggle-btn curfew-type-btn" data-type="parking">Parking Curfew</button>
-          <div id="typeBgPill" class="curfew-toggle-pill"></div>
-        </div>
-
-        <!-- Before / After Toggle -->
-        <div class="curfew-toggle" style="margin-bottom: 20px;">
-          <button class="curfew-toggle-btn curfew-cond-btn" data-cond="before">Arrive Before</button>
-          <button class="curfew-toggle-btn active curfew-cond-btn" data-cond="after">Arrive After</button>
-          <div id="condBgPill" class="curfew-toggle-pill" style="transform: translateX(100%);"></div>
-        </div>
-
-        <!-- Arrival Time Input -->
-        <div class="curfew-row" style="padding: 0; border: none;">
-          <span class="curfew-row-label">Arrival Curfew</span>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
-            <div class="curfew-time-input">
-              <select id="curfewHr"></select>
-              <span>:</span>
-              <select id="curfewMin"></select>
+            <!-- 醒目的 UTC 數位時鐘面板 -->
+            <div class="curfew-clock-container">
+              <div class="curfew-utc-label">UTC TIME</div>
+              <div class="curfew-live-clock" id="liveUTCClock">--:--:--</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Times Section -->
-      <div class="curfew-section-title">Operational Times</div>
-      <div class="curfew-card" style="padding: 0.5em 1.5em;">
+        <!-- 右欄：設定選項與操作時間 -->
+        <div class="curfew-col-right">
+          
+          <!-- Curfew 條件區塊 -->
+          <div>
+            <div class="curfew-section-title">Curfew Settings</div>
+            <div class="curfew-card" style="margin-bottom: 0;">
+              
+              <!-- Landing / Parking Toggle -->
+              <div class="curfew-toggle">
+                <button class="curfew-toggle-btn active curfew-type-btn" data-type="landing">Landing Curfew</button>
+                <button class="curfew-toggle-btn curfew-type-btn" data-type="parking">Parking Curfew</button>
+                <div id="typeBgPill" class="curfew-toggle-pill"></div>
+              </div>
+
+              <!-- Before / After Toggle -->
+              <div class="curfew-toggle" style="margin-bottom: 20px;">
+                <button class="curfew-toggle-btn curfew-cond-btn" data-cond="before">Arrive Before</button>
+                <button class="curfew-toggle-btn active curfew-cond-btn" data-cond="after">Arrive After</button>
+                <div id="condBgPill" class="curfew-toggle-pill" style="transform: translateX(100%);"></div>
+              </div>
+
+              <!-- Arrival Time Input -->
+              <div class="curfew-row" style="padding: 0; border: none;">
+                <span class="curfew-row-label">Arrival Curfew</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
+                  <div class="curfew-time-input">
+                    <select id="curfewHr"></select>
+                    <span>:</span>
+                    <select id="curfewMin"></select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 操作時間區塊 -->
+          <div>
+            <div class="curfew-section-title">Operational Times</div>
+            <div class="curfew-card" style="margin-bottom: 0; padding: 0.5em 1.5em;">
+              
+              <div class="curfew-row">
+                <span class="curfew-row-label">Taxi Out Time</span>
+                <div class="curfew-time-input">
+                  <select id="txoHr"></select>
+                  <span>:</span>
+                  <select id="txoMin"></select>
+                </div>
+              </div>
+              
+              <div class="curfew-row">
+                <span class="curfew-row-label">Flight Time</span>
+                <div class="curfew-time-input">
+                  <select id="ftHr"></select>
+                  <span>:</span>
+                  <select id="ftMin"></select>
+                </div>
+              </div>
+
+              <div class="curfew-row">
+                <span class="curfew-row-label">Taxi In Time</span>
+                <div class="curfew-time-input">
+                  <select id="txiHr"></select>
+                  <span>:</span>
+                  <select id="txiMin"></select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div> <!-- End Right Column -->
         
-        <div class="curfew-row">
-          <span class="curfew-row-label">Taxi Out Time</span>
-          <div class="curfew-time-input">
-            <select id="txoHr"></select>
-            <span>:</span>
-            <select id="txoMin"></select>
-          </div>
-        </div>
-        
-        <div class="curfew-row">
-          <span class="curfew-row-label">Flight Time</span>
-          <div class="curfew-time-input">
-            <select id="ftHr"></select>
-            <span>:</span>
-            <select id="ftMin"></select>
-          </div>
-        </div>
-
-        <div class="curfew-row">
-          <span class="curfew-row-label">Taxi In Time</span>
-          <div class="curfew-time-input">
-            <select id="txiHr"></select>
-            <span>:</span>
-            <select id="txiMin"></select>
-          </div>
-        </div>
-
-      </div>
-
+      </div> <!-- End Grid -->
     </div>
   </div>
 
