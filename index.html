@@ -159,12 +159,12 @@
     .alt-header { display: grid; grid-template-columns: 2.5fr 2fr 2.5fr 2fr 2fr; gap: 10px; padding: 0 8px 8px 8px; border-bottom: 1px solid #eee; font-size: 0.9em; font-weight: bold; color: #888; text-transform: uppercase;}
     .alt-row { display: grid; grid-template-columns: 2.5fr 2fr 2.5fr 2fr 2fr; gap: 10px; align-items: center; padding: 8px; background: rgba(249,250,251,0.6); border-radius: 12px; transition: background 0.2s;}
     .alt-row:hover { background: rgba(243,244,246,0.9); }
-    .alt-rab-text { font-size: 0.85em; font-weight: 600; line-height: 1.3; white-space: pre-wrap; }
+    .alt-rab-text { font-size: 0.85em; font-weight: 600; line-height: 1.3; white-space: pre-wrap; transition: color 0.3s; }
     .alt-fix-col { text-align: right; font-weight: bold; color: #444; border-left: 2px solid #eee; padding-left: 10px;}
-    .alt-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; }
+    .alt-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; transition: all 0.3s; }
     .alt-badge.active { background: #e0f2fe; color: #0284c7; }
     .alt-badge.inactive { color: #ccc; }
-    .alt-readonly-input { background: #1e293b; color: #fff; font-weight: bold; border-radius: 8px; text-align: center; padding: 8px; width: 100%; border: none; outline: none; box-sizing: border-box;}
+    .alt-readonly-input { background: #1e293b; color: #fff; font-weight: bold; border-radius: 8px; text-align: center; padding: 8px; width: 100%; border: none; outline: none; box-sizing: border-box; transition: value 0.3s;}
     
     .btn-outline { background: #fff; border: 2px solid #e2e8f0; color: #64748b; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 10px auto; display: block;}
     .btn-outline:hover { border-color: #3c79ff; color: #3c79ff; background: rgba(60,121,255,0.05); }
@@ -721,12 +721,12 @@
       
       <!-- 頂部參數設定區塊 -->
       <div class="app-card" style="margin-bottom: 15px;">
-        <div class="app-grid" style="margin-bottom: 20px;">
-          <div class="app-col-left">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
+          <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column;">
             <div class="app-label">Aerodrome Elevation (ft)</div>
             <input type="number" id="altElev" class="app-text-input" placeholder="Enter Elevation" oninput="updateAltimetry()">
           </div>
-          <div class="app-col-right">
+          <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column;">
             <div class="app-label">Aerodrome Temp (°C)</div>
             <input type="number" id="altTemp" class="app-text-input" placeholder="e.g. -10" style="color: #3c79ff;" oninput="updateAltimetry()">
           </div>
@@ -1847,24 +1847,19 @@ function setAltApproach(type, index) {
     notesBox.classList.remove('active');
   }
 
-  renderAltimetryRows();
+  // 直接更新數值，不破壞DOM
+  recalculateAltimetryValues();
 }
 
 function updateAltimetry() {
-  const temp = document.getElementById('altTemp').value;
-  const elev = document.getElementById('altElev').value;
-  const fpa = document.getElementById('altFpa').value;
-
-  const fpaRes = calculateCorrectedFPA(temp, elev, fpa);
-  document.getElementById('altFpaResult').textContent = fpaRes ? `${fpaRes}°` : '--°';
-
-  renderAltimetryRows();
+  recalculateAltimetryValues();
 }
 
 function handleAltRowChange(id, value) {
   const row = altimetryRows.find(r => r.id === id);
   if(row) row.altitude = value;
-  updateAltimetry();
+  // 只做數值重新計算，不重新渲染DOM，解決打字卡住的問題
+  recalculateAltimetryValues();
 }
 
 function handleAltLabelChange(id, value) {
@@ -1875,21 +1870,23 @@ function handleAltLabelChange(id, value) {
 function addAltCustomRow() {
   const newId = `custom-${Date.now()}`;
   altimetryRows.push({ id: newId, label: 'Custom', altitude: '', isCustom: true });
-  renderAltimetryRows();
+  renderAltimetryRows(); // 新增時才重新渲染結構
 }
 
 function removeAltRow(id) {
   altimetryRows = altimetryRows.filter(r => r.id !== id);
-  renderAltimetryRows();
+  renderAltimetryRows(); // 刪除時才重新渲染結構
 }
 
-function renderAltimetryRows() {
-  const container = document.getElementById('altRowsContainer');
+// 這個函數只負責計算與更新數值，不再摧毀重建 HTML
+function recalculateAltimetryValues() {
   const temp = document.getElementById('altTemp').value;
   const elev = document.getElementById('altElev').value;
   const appType = document.getElementById('altAppType').value;
+  const fpa = document.getElementById('altFpa').value;
 
-  container.innerHTML = '';
+  const fpaRes = calculateCorrectedFPA(temp, elev, fpa);
+  document.getElementById('altFpaResult').textContent = fpaRes ? `${fpaRes}°` : '--°';
 
   altimetryRows.forEach(row => {
     const correction = calculateCorrection(temp, elev, row.altitude);
@@ -1901,6 +1898,32 @@ function renderAltimetryRows() {
     if (rabText.includes('Required') && !rabText.includes('Not Required')) rabColor = '#ef4444';
     if (rabText.includes('Not Recommended')) rabColor = '#f59e0b';
 
+    // 局部更新 DOM
+    const rabEl = document.getElementById(`alt-rab-${row.id}`);
+    if (rabEl) {
+      rabEl.textContent = rabText;
+      rabEl.style.color = rabColor;
+    }
+
+    const badgeEl = document.getElementById(`alt-badge-${row.id}`);
+    if (badgeEl) {
+      badgeEl.textContent = hasCorrection ? '+' + correction : '-';
+      badgeEl.className = `alt-badge ${hasCorrection ? 'active' : 'inactive'}`;
+    }
+
+    const correctedEl = document.getElementById(`alt-corrected-${row.id}`);
+    if (correctedEl) {
+      correctedEl.value = correctedAlt;
+    }
+  });
+}
+
+// 僅在初始化、新增或刪除行時才調用此函數，建立骨架
+function renderAltimetryRows() {
+  const container = document.getElementById('altRowsContainer');
+  container.innerHTML = '';
+
+  altimetryRows.forEach(row => {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'alt-row';
 
@@ -1914,20 +1937,23 @@ function renderAltimetryRows() {
     const removeBtnHtml = row.isCustom ? `<span style="position:absolute; right:-25px; color:#ccc; cursor:pointer; font-size:1.2em; top:5px;" onclick="removeAltRow('${row.id}')">×</span>` : '';
 
     rowDiv.innerHTML = `
-      <div class="alt-rab-text" style="color: ${rabColor}; padding-left:10px;">${rabText}</div>
+      <div id="alt-rab-${row.id}" class="alt-rab-text" style="padding-left:10px;"></div>
       <div class="alt-fix-col">${labelHtml}</div>
       <div><input type="number" class="app-text-input" style="text-align:center; padding:6px; background:#fff; border:1px solid #e2e8f0;" value="${row.altitude}" oninput="handleAltRowChange('${row.id}', this.value)" placeholder="Value"></div>
       <div style="text-align:center;">
-        <div class="alt-badge ${hasCorrection ? 'active' : 'inactive'}">${hasCorrection ? '+' + correction : '-'}</div>
+        <div id="alt-badge-${row.id}" class="alt-badge inactive">-</div>
       </div>
       <div style="position:relative;">
-        <input type="text" class="alt-readonly-input" readonly value="${correctedAlt}">
+        <input id="alt-corrected-${row.id}" type="text" class="alt-readonly-input" readonly value="">
         ${removeBtnHtml}
       </div>
     `;
 
     container.appendChild(rowDiv);
   });
+
+  // 骨架建立後，計算填入一次數值
+  recalculateAltimetryValues();
 }
 
 function resetAltimetryCalculator() {
@@ -1946,7 +1972,7 @@ function resetAltimetryCalculator() {
   ];
 
   setAltApproach('NPA(2D)', 0);
-  updateAltimetry();
+  renderAltimetryRows(); // 重置時才強制重新渲染一次骨架
 }
 
 // ==========================================
