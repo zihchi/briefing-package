@@ -131,7 +131,9 @@
     .app-time-input span { font-family: 'Courier New', Courier, monospace; color: #3c79ff; font-weight: bold; }
 
     .app-date-input { background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #3c79ff; font-weight: bold; outline: none; width: 140px;}
-    .app-text-input { background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #333; font-weight: bold; outline: none; width: 100%; box-sizing: border-box;}
+    
+    /* 確保所有文字輸入框沒有外距干擾排版 */
+    .app-text-input { margin: 0; background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #333; font-weight: bold; outline: none; width: 100%; box-sizing: border-box; }
 
     /* 雙欄排版設定 (iPad 橫向優化) */
     .app-grid { display: flex; gap: 24px; align-items: stretch; }
@@ -153,7 +155,7 @@
     
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ❄️ Altimetry 專屬表格樣式 */
+    /* ❄️ Altimetry 專屬表格與 Grid 佈局 */
     .alt-table-wrapper { overflow-x: auto; padding-bottom: 10px; }
     .alt-table { min-width: 650px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
     .alt-header { display: grid; grid-template-columns: 2.5fr 2fr 2.5fr 2fr 2fr; gap: 10px; padding: 0 8px 8px 8px; border-bottom: 1px solid #eee; font-size: 0.9em; font-weight: bold; color: #888; text-transform: uppercase;}
@@ -398,13 +400,13 @@
 
   <div class="input-row">
     <label for="currentFuel">剩油 Fuel Remaining：</label>
-    <input type="range" id="currentFuel" min="0" max="100" step="0.1" value="6.0" style="width: 400px;"
+    <input type="range" id="currentFuel" min="0" max="109.1" step="0.1" value="6.0" style="width: 400px;"
            oninput="document.getElementById('currentFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
     <span id="currentFuelVal">6.0 t</span>
   </div>
     <div class="input-row">
     <label for="targetFuel">目標油量 Target Fuel：</label>
-    <input type="range" id="targetFuel" min="0" max="150" step="0.1" value="25.0" style="width: 400px;"
+    <input type="range" id="targetFuel" min="0" max="109.1" step="0.1" value="25.0" style="width: 400px;"
            oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
     <span id="targetFuelVal">25.0 t</span>
     <button type="button" onclick="onCalculate()">計算</button>
@@ -412,20 +414,22 @@
 
     <div id="message"></div>
 
-    <h3>一、目標油量時的油量分布</h3>
+    <h3>一、油量分布比較 (目前剩油 vs 目標油量)</h3>
     <table>
       <thead>
       <tr>
-        <th>項目</th>
-        <th>油量 (t)</th>
+        <th>項目 (Tank)</th>
+        <th>目前剩油 (t)</th>
+        <th>目標油量 (t)</th>
+        <th>需加油量 Δ (t)</th>
       </tr>
       </thead>
       <tbody id="resultBody">
-      <tr><td>Inner Tank</td><td>-</td></tr>
-      <tr><td>Outer Tank</td><td>-</td></tr>
-      <tr><td>Trim Tank</td><td>-</td></tr>
-      <tr><td>Center Tank</td><td>-</td></tr>
-      <tr><th>Total (Inner+Outer+Trim+Center)</th><th>-</th></tr>
+      <tr><td>Inner Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Outer Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Trim Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Center Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><th>Total (I+O+T+C)</th><th>-</th><th>-</th><th>-</th></tr>
       </tbody>
     </table>
 
@@ -721,13 +725,13 @@
       
       <!-- 頂部參數設定區塊 -->
       <div class="app-card" style="margin-bottom: 15px;">
-        <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-          <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column;">
-            <div class="app-label">Aerodrome Elevation (ft)</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; align-items: start;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="app-label" style="margin: 0;">Aerodrome Elevation (ft)</div>
             <input type="number" id="altElev" class="app-text-input" placeholder="Enter Elevation" oninput="updateAltimetry()">
           </div>
-          <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column;">
-            <div class="app-label">Aerodrome Temp (°C)</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="app-label" style="margin: 0;">Aerodrome Temp (°C)</div>
             <input type="number" id="altTemp" class="app-text-input" placeholder="e.g. -10" style="color: #3c79ff;" oninput="updateAltimetry()">
           </div>
         </div>
@@ -1230,15 +1234,16 @@ function initAviationMap() {
 // ⛽ 油量計算機邏輯 
 // ==========================================
 const fuelTable = [
-  { total: 9.0,   inner: 9.0,    outer: 0.0,    trim: 0.0,  center: 0.0 },
-  { total: 14.73, inner: 9.0,    outer: 5.73,   trim: 0.0,  center: 0.0 },
-  { total: 24.0,  inner: 18.27,  outer: 5.73,   trim: 0.0,  center: 0.0 },
-  { total: 27.6,  inner: 18.14,  outer: 5.73,   trim: 3.73, center: 0.0 },
-  { total: 30.0,  inner: 20.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
-  { total: 40.0,  inner: 30.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
-  { total: 60.0,  inner: 50.54,  outer: 5.73,   trim: 3.73, center: 0.0 }, 
-  { total: 75.0,  inner: 64.4,   outer: 5.73,   trim: 4.87, center: 0.0 },
-  { total: 100.0, inner: 64.4,   outer: 5.73,   trim: 3.8,  center: 26.07 }
+  { total: 9.0,     inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 },
+  { total: 14.73,   inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 },
+  { total: 23.9,    inner: 18.17,  outer: 5.73,  trim: 0.0,  center: 0.0 }, // 修改點：Inner 停止於 18.17，Trim 開始進油
+  { total: 27.5,    inner: 18.17,  outer: 5.73,  trim: 3.60, center: 0.0 }, // 新增點：Trim 滿載於 3.60
+  { total: 30.0,    inner: 20.67,  outer: 5.73,  trim: 3.60, center: 0.0 },
+  { total: 40.0,    inner: 30.39,  outer: 5.73,  trim: 3.88, center: 0.0 },
+  { total: 60.0,    inner: 49.83,  outer: 5.73,  trim: 4.44, center: 0.0 },
+  { total: 75.0,    inner: 64.40,  outer: 5.73,  trim: 4.87, center: 0.0 },
+  { total: 100.0,   inner: 65.50,  outer: 5.73,  trim: 4.88, center: 23.89 },
+  { total: 109.18,  inner: 65.94,  outer: 5.73,  trim: 4.89, center: 32.62 }
 ];
 
 function interpolateFuel(total) {
@@ -1328,32 +1333,68 @@ function onCalculate() {
 
   if (Number.isNaN(currentTotal) || Number.isNaN(targetTotal)) {
     messageEl.textContent = "請輸入有效的『目前剩油』與『目標 Total Fuel』（噸）。";
-    updateDistribution(null); updateTimeTable(null); return;
+    updateDistribution(null, null); updateTimeTable(null); return;
   }
   if (targetTotal <= currentTotal) {
     messageEl.textContent = "目標 Total Fuel 必須大於目前剩油。";
-    updateDistribution(null); updateTimeTable(null); return;
+    updateDistribution(null, null); updateTimeTable(null); return;
   }
+
+  let currentDist = interpolateFuel(currentTotal);
+  if (!currentDist) currentDist = { total: currentTotal, inner: currentTotal, outer: 0.0, trim: 0.0, center: 0.0 };
 
   const finalDist = interpolateFuel(targetTotal);
   if (!finalDist) {
     messageEl.textContent = "超出資料範圍。";
-    updateDistribution(null); updateTimeTable(null); return;
+    updateDistribution(null, null); updateTimeTable(null); return;
   }
   messageEl.textContent = "";
-  updateDistribution(finalDist);
+  updateDistribution(currentDist, finalDist);
   const refuel = computeRefuel(currentTotal, targetTotal, finalDist);
   updateTimeTable(refuel);
 }
 
-function updateDistribution(result) {
+function updateDistribution(curr, target) {
   const tbody = document.getElementById("resultBody");
-  if (!result) {
-    tbody.innerHTML = `<tr><td>Inner Tank</td><td>-</td></tr><tr><td>Outer Tank</td><td>-</td></tr><tr><td>Trim Tank</td><td>-</td></tr><tr><td>Center Tank</td><td>-</td></tr><tr><th>Total</th><th>-</th></tr>`;
+  if (!curr || !target) {
+    tbody.innerHTML = `<tr><td>Inner Tank</td><td>-</td><td>-</td><td>-</td></tr>
+                       <tr><td>Outer Tank</td><td>-</td><td>-</td><td>-</td></tr>
+                       <tr><td>Trim Tank</td><td>-</td><td>-</td><td>-</td></tr>
+                       <tr><td>Center Tank</td><td>-</td><td>-</td><td>-</td></tr>
+                       <tr><th>Total</th><th>-</th><th>-</th><th>-</th></tr>`;
     return;
   }
-  const sum = result.inner + result.outer + result.trim + result.center;
-  tbody.innerHTML = `<tr><td>Inner Tank</td><td>${formatFuel(result.inner)}</td></tr><tr><td>Outer Tank</td><td>${formatFuel(result.outer)}</td></tr><tr><td>Trim Tank</td><td>${formatFuel(result.trim)}</td></tr><tr><td>Center Tank</td><td>${formatFuel(result.center)}</td></tr><tr><th>Total</th><th>${formatFuel(sum)}</th></tr>`;
+
+  const dInner = Math.max(0, target.inner - curr.inner);
+  const dOuter = Math.max(0, target.outer - curr.outer);
+  const dTrim = Math.max(0, target.trim - curr.trim);
+  const dCenter = Math.max(0, target.center - curr.center);
+  
+  const sumCurr = curr.inner + curr.outer + curr.trim + curr.center;
+  const sumTarg = target.inner + target.outer + target.trim + target.center;
+  const sumDiff = dInner + dOuter + dTrim + dCenter;
+
+  const cCurr = '#64748b'; 
+  const cTarg = '#007aff'; 
+  const cDiff = '#16a34a'; 
+
+  const makeRow = (name, vCurr, vTarg, vDiff, isTh = false) => {
+    const tag = isTh ? 'th' : 'td';
+    const fw = isTh ? 'font-weight: 800;' : 'font-weight: 700;';
+    return `<tr>
+      <${tag}>${name}</${tag}>
+      <${tag} style="color:${cCurr}; ${fw}">${formatFuel(vCurr)}</${tag}>
+      <${tag} style="color:${cTarg}; ${fw}">${formatFuel(vTarg)}</${tag}>
+      <${tag} style="color:${cDiff}; ${fw}">+${formatFuel(vDiff)}</${tag}>
+    </tr>`;
+  };
+
+  tbody.innerHTML = 
+    makeRow('Inner Tank', curr.inner, target.inner, dInner) +
+    makeRow('Outer Tank', curr.outer, target.outer, dOuter) +
+    makeRow('Trim Tank', curr.trim, target.trim, dTrim) +
+    makeRow('Center Tank', curr.center, target.center, dCenter) +
+    makeRow('Total (I+O+T+C)', sumCurr, sumTarg, sumDiff, true);
 }
 
 function updateTimeTable(data) {
