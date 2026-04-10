@@ -24,7 +24,7 @@
     .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 100%; height: auto; }
     @media (max-width: 768px) { .img-grid-2col img { width: 100%; } }
 
-    /* 顯著天氣 */       
+    /* 顯著天氣 */        
     .img-column { text-align: center; }
     .img-column img { display: block; width: 95%; max-width: 1200px; height: auto; margin: 0 auto 20px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
@@ -249,75 +249,105 @@
     ></iframe>
   </div>
 
-  <div class="section">
-    <h2>🛫 Turbli 航班亂流查詢</h2>
-    <label for="flightSelect">請選擇航班：</label>
-    <select id="flightSelect" style="margin-right:1em;"></select>
-    <label for="dateSelect">請選擇日期：</label>
-    <select id="dateSelect" style="margin-right:1em;">
-      <option value="today">今天</option>
-      <option value="tomorrow">明天</option>
-    </select>
-    <button id="turbliBtn" disabled>查詢</button>
-    <a href="https://turbli.com/" target="_blank" style="margin-left: 1em;">
-      <button type="button">官網</button>
-    </a>
+  <!-- 優化後的 Turbli 航班亂流查詢 -->
+  <div class="section flex flex-col gap-5">
+    <h2 class="!mb-0">🛫 Turbli 航班亂流查詢</h2>
+    <div class="flex flex-wrap items-end gap-5">
+      
+      <!-- 選擇航班 -->
+      <div class="flex flex-col gap-2">
+        <label for="flightSelect" class="text-sm font-semibold text-gray-600">請選擇航班</label>
+        <select id="flightSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[180px] outline-none transition-all cursor-pointer">
+          <!-- Options populated by JS -->
+        </select>
+      </div>
+
+      <!-- 選擇日期 -->
+      <div class="flex flex-col gap-2">
+        <label for="dateSelect" class="text-sm font-semibold text-gray-600">請選擇日期</label>
+        <select id="dateSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[140px] outline-none transition-all cursor-pointer">
+          <option value="today">今天</option>
+          <option value="tomorrow">明天</option>
+        </select>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="flex gap-3">
+        <button id="turbliBtn" disabled class="!m-0 !px-6 !py-2.5 !bg-[#3c79ff] !text-white !font-bold !rounded-lg shadow hover:!bg-blue-700 disabled:!opacity-50 disabled:!cursor-not-allowed transition-all">
+          查詢
+        </button>
+        <a href="https://turbli.com/" target="_blank" class="inline-block">
+          <button type="button" class="!m-0 !px-6 !py-2.5 !bg-white border-2 border-[#3c79ff] !text-[#3c79ff] !font-bold !rounded-lg shadow hover:!bg-blue-50 transition-all">
+            官網
+          </button>
+        </a>
+      </div>
+
+    </div>
   </div>
 
-  <div class="section">
-    <h2>🌏 D-ATIS</h2>
-    <label for="datisSelect">請選擇機場：</label>
-    <select id="datisSelect" onchange="openDatis()" style="margin-right: 1em;">
-      <option selected disabled>--請選擇機場--</option>
-      <optgroup label="台灣、香港">
-        <option value="https://atis.guru/">ATIS 官方網站</option>
-        <option value="https://atis.guru/atis/RCTP">RCTP 桃園</option>
-        <option value="https://atis.guru/atis/RCSS">RCSS 松山</option>
-        <option value="https://atis.guru/atis/RCMQ">RCMQ 台中</option>
-        <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
-        <option value="https://atis.guru/atis/VMMC">VMMC 澳門</option>
-        <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
-      </optgroup>
-      <optgroup label="日本">
-        <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
-        <option value="https://atis.guru/atis/RJFK">RJFK 鹿兒島</option>
-        <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
-        <option value="https://atis.guru/atis/RJFT">RJFT 熊本</option>
-        <option value="https://atis.guru/atis/RJBE">RJBE 神戶</option>
-        <option value="https://atis.guru/atis/RJOT">RJOT 高松</option>
-        <option value="https://atis.guru/atis/RJBB">RJBB 關西</option>
-        <option value="https://atis.guru/atis/RJGG">RJGG 中部</option>
-        <option value="https://atis.guru/atis/RJTT">RJTT 羽田</option>
-        <option value="https://atis.guru/atis/RJAA">RJAA 成田</option>
-        <option value="https://atis.guru/atis/RJSS">RJSS 仙台</option>
-        <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
-        <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
-      </optgroup>
-      <optgroup label="菲律賓">
-        <option value="https://atis.guru/atis/RPLL">RPLL 馬尼拉</option>
-        <option value="https://atis.guru/atis/RPLC">RPLC 克拉克</option>
-        <option value="https://atis.guru/atis/RPVM">RPVM 宿霧</option>
-      </optgroup>
-      <optgroup label="泰國">
-        <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
-        <option value="https://atis.guru/atis/VTCC">VTCC 清邁</option>
-        <option value="https://atis.guru/atis/VTBU">VTBU 烏打拋</option>
-      </optgroup>
-      <optgroup label="越南">
-        <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
-        <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
-        <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
-        <option value="https://atis.guru/atis/VVPQ">VVPQ 富國島</option>
-        <option value="https://atis.guru/atis/VVCR">VVCR 金蘭</option>
-      </optgroup>
-      <optgroup label="新馬印">
-        <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
-        <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
-        <option value="https://atis.guru/atis/WMKP">WMKP 檳城</option>
-        <option value="https://atis.guru/atis/WIII">WIII 雅加達</option>
-        <option value="https://atis.guru/atis/WADD">WADD 峇里島</option>        
-      </optgroup>
-    </select>
+  <!-- 優化後的 D-ATIS 查詢 -->
+  <div class="section flex flex-col gap-5">
+    <h2 class="!mb-0">🌏 D-ATIS</h2>
+    <div class="flex flex-wrap items-end gap-5">
+      
+      <!-- 選擇機場 -->
+      <div class="flex flex-col gap-2 w-full max-w-sm">
+        <label for="datisSelect" class="text-sm font-semibold text-gray-600">請選擇機場 (選取後自動開啟)</label>
+        <select id="datisSelect" onchange="openDatis()" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 w-full outline-none transition-all cursor-pointer">
+          <option selected disabled>-- 請選擇機場 --</option>
+          <optgroup label="台灣、香港">
+            <option value="https://atis.guru/">ATIS 官方網站</option>
+            <option value="https://atis.guru/atis/RCTP">RCTP 桃園</option>
+            <option value="https://atis.guru/atis/RCSS">RCSS 松山</option>
+            <option value="https://atis.guru/atis/RCMQ">RCMQ 台中</option>
+            <option value="https://atis.guru/atis/RCKH">RCKH 高雄</option>
+            <option value="https://atis.guru/atis/VMMC">VMMC 澳門</option>
+            <option value="https://atis.cad.gov.hk/ATIS/ATISweb/atis.php">VHHH 香港</option>
+          </optgroup>
+          <optgroup label="日本">
+            <option value="https://atis.guru/atis/ROAH">ROAH 沖繩</option>
+            <option value="https://atis.guru/atis/RJFK">RJFK 鹿兒島</option>
+            <option value="https://atis.guru/atis/RJFF">RJFF 福岡</option>
+            <option value="https://atis.guru/atis/RJFT">RJFT 熊本</option>
+            <option value="https://atis.guru/atis/RJBE">RJBE 神戶</option>
+            <option value="https://atis.guru/atis/RJOT">RJOT 高松</option>
+            <option value="https://atis.guru/atis/RJBB">RJBB 關西</option>
+            <option value="https://atis.guru/atis/RJGG">RJGG 中部</option>
+            <option value="https://atis.guru/atis/RJTT">RJTT 羽田</option>
+            <option value="https://atis.guru/atis/RJAA">RJAA 成田</option>
+            <option value="https://atis.guru/atis/RJSS">RJSS 仙台</option>
+            <option value="https://atis.guru/atis/RJCH">RJCH 函館</option>
+            <option value="https://atis.guru/atis/RJCC">RJCC 新千歲</option>
+          </optgroup>
+          <optgroup label="菲律賓">
+            <option value="https://atis.guru/atis/RPLL">RPLL 馬尼拉</option>
+            <option value="https://atis.guru/atis/RPLC">RPLC 克拉克</option>
+            <option value="https://atis.guru/atis/RPVM">RPVM 宿霧</option>
+          </optgroup>
+          <optgroup label="泰國">
+            <option value="https://atis.guru/atis/VTBS">VTBS 曼谷</option>
+            <option value="https://atis.guru/atis/VTCC">VTCC 清邁</option>
+            <option value="https://atis.guru/atis/VTBU">VTBU 烏打拋</option>
+          </optgroup>
+          <optgroup label="越南">
+            <option value="https://atis.guru/atis/VVTS">VVTS 胡志明</option>
+            <option value="https://atis.guru/atis/VVNB">VVNB 河內</option>
+            <option value="https://atis.guru/atis/VVDN">VVDN 峴港</option>
+            <option value="https://atis.guru/atis/VVPQ">VVPQ 富國島</option>
+            <option value="https://atis.guru/atis/VVCR">VVCR 金蘭</option>
+          </optgroup>
+          <optgroup label="新馬印">
+            <option value="https://atis.guru/atis/WSSS">WSSS 新加坡</option>
+            <option value="https://atis.guru/atis/WMKK">WMKK 吉隆坡</option>
+            <option value="https://atis.guru/atis/WMKP">WMKP 檳城</option>
+            <option value="https://atis.guru/atis/WIII">WIII 雅加達</option>
+            <option value="https://atis.guru/atis/WADD">WADD 峇里島</option>        
+          </optgroup>
+        </select>
+      </div>
+
+    </div>
   </div>
 
   <!-- ========================================================= -->
