@@ -43,6 +43,10 @@ function loadPage(pageUrl) {
                 document.getElementById("resetAltimetryBtn").addEventListener("click", resetAltimetryCalculator);
             }
             // 註：fuel.html 使用的是 HTML 內聯的 onclick，不需額外喚醒
+
+            else if (pageUrl === 'notam.html') {
+    initNotamRadar(); 
+}
         })
         .catch(error => {
             console.error('Fetch 錯誤:', error);
@@ -835,3 +839,206 @@ function resetAltimetryCalculator() {
   setAltApproach('NPA(2D)', 0);
   renderAltimetryRows(); // 重置時才強制重新渲染一次骨架
 }
+
+// ==========================================
+// 📡 NOTAM Radar 核心邏輯
+// ==========================================
+let notamMapInstance = null;
+let notamActiveLayers = [];
+let notamClockInterval = null;
+
+function initNotamRadar() {
+    // 1. 時鐘邏輯 (切換頁面時自動停止舊的計時器)
+    if (notamClockInterval) clearInterval(notamClockInterval);
+    notamClockInterval = setInterval(() => {
+        const clockEl = document.getElementById('clock');
+        if (clockEl) {
+            const now = new Date();
+            clockEl.innerText = `UTC: ${now.toISOString().replace('T', ' ').slice(0, 19)}`;
+        } else {
+            clearInterval(notamClockInterval);
+        }
+    }, 1000);
+
+    // 2. 地圖初始化 (如果之前載入過，必須先移除舊實體，避免崩潰)
+    if (notamMapInstance !== null) {
+        notamMapInstance.remove();
+    }
+    
+    // 注意：這裡對應的是新 ID 'notam-map'
+    notamMapInstance = L.map('notam-map', { zoomControl: false }).setView([25.03, 121.5], 6);
+    L.control.zoom({ position: 'bottomright' }).addTo(notamMapInstance);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(notamMapInstance);
+
+    notamActiveLayers = [];
+
+    // 3. 綁定按鈕事件 (不使用 HTML inline onclick，改在這裡動態綁定)
+    document.getElementById('btn-process-notam').addEventListener('click', processNotamData);
+    document.getElementById('btn-clear-notam').addEventListener('click', clearNotamAll);
+}
+
+// 核心解析邏輯：將航用座標轉為十進制
+function smartToDec(val) {
+    if (!val) return NaN;
+    const dirMatch = val.match(/[NSEW]/i);
+    if (!dirMatch) return NaN;
+    
+    const dir = dirMatch[0].toUpperCase();
+    const nums = val.replace(/[NSEW]/i, "").trim();
+    
+    let d, m, s;
+    if (dir === 'N' || dir === 'S') {
+        d = nums.slice(0, 2);
+        m = nums.slice(2, 4);
+        s = nums.slice(4) || "0";
+    } else {
+        d = nums.slice(0, 3);
+        m = nums.slice(3, 5);
+        s = nums.slice(5) || "0";
+    }
+    
+    let dec = parseFloat(d) + parseFloat(m)/60 + parseFloat(s)/3600;
+    return (dir === 'S' || dir === 'W') ? -dec : dec;
+}
+
+function parseNotamHeader(text) {
+    const idMatch = text.match(/([A-Z]\d{4}\/\d{2})/);
+    const timeMatchB = text.match(/B\)\s*(\d{10})/);
+    const timeMatchC = text.match(/C\)\s*(\d{10}|PERM|EST)/);
+    
+    const formatTime = (ts) => {
+        if (!ts || ts.length < 10) return ts;
+        const year = "20" + ts.slice(0, 2);
+        const month = ts.slice(2, 4);
+        const day = ts.slice(4, 6);
+        const hour = ts.slice(6, 8);
+        const min = ts.slice(8, 10);
+        const utcDate = new Date(`${year}-${month}-${day}T${hour}:${min}:00Z`);
+        const localDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+        return {
+            utc: `${year}/${month}/${day} ${hour}:${min} UTC`,
+            local: `${localDate.getFullYear()}/${(localDate.getMonth()+1).toString().padStart(2,'0')}/${localDate.getDate().toString().padStart(2,'0')} ${localDate.getHours().toString().padStart(2,'0')}:${localDate.getMinutes().toString().padStart(2,'0')} (Local)`
+        };
+    };
+
+    return {
+        id: idMatch ? idMatch[1] : "未知名編號",
+        start: timeMatchB ? formatTime(timeMatchB[1]) : null,
+        end: timeMatchC ? formatTime(timeMatchC[1]) : null
+    };
+}
+
+function parseCoordinates(text) {
+    const cleanText = text.replace(/[\t\r\n]+/g, " ");
+    let results = [];
+    
+    const universalPattern = /([NS]\s*\d{4,}(?:\.\d+)?|\d{4,}(?:\.\d+)?[NS])[\s/]*([EW]\s*\d{5,}(?:\.\d+)?|\d{5,}(?:\.\d+)?[EW])/gi;
+    let m;
+    while ((m = universalPattern.exec(cleanText)) !== null) {
+        const lat = smartToDec(m[1]);
+        const lng = smartToDec(m[2]);
+        if (!isNaN(lat) && !isNaN(lng)) results.push([lat, lng]);
+    }
+
+    if (results.length === 0) {
+        const symRegex = /([NS])\s*(\d{1,2})[°\s](\d{2})['’\s](\d{2}(?:\.\d+)?)[”"\s]*([EW])\s*(\d{1,3})[°\s](\d{2})['’\s](\d{2}(?:\.\d+)?)/gi;
+        while ((m = symRegex.exec(cleanText)) !== null) {
+            results.push([
+                parseFloat(m[2]) + parseFloat(m[3])/60 + parseFloat(m[4])/3600 * (m[1].toUpperCase()==='S'?-1:1),
+                parseFloat(m[6]) + parseFloat(m[7])/60 + parseFloat(m[8])/3600 * (m[5].toUpperCase()==='W'?-1:1)
+            ]);
+        }
+    }
+    return results;
+}
+
+function processNotamData() {
+    const input = document.getElementById('notamInput').value;
+    if (!input.trim()) return;
+
+    notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
+    notamActiveLayers = [];
+
+    const headerInfo = parseNotamHeader(input);
+    const blocks = input.split(/(?=\d\.\s*FLT AREA|AREA\s+\d+|1\.THE AREA)/i);
+    let allCoords = [];
+
+    blocks.forEach((block, index) => {
+        const coords = parseCoordinates(block);
+        if (coords.length === 0) return;
+        allCoords = allCoords.concat(coords);
+
+        const cleanBlock = block.replace(/\s+/g, " ");
+        const radiusMatch = cleanBlock.match(/(\d+(?:\.\d+)?)\s*(NM|KM)\s*RADIUS/i) || 
+                            cleanBlock.match(/RADIUS\s+(?:OF\s+)?(\d+(?:\.\d+)?)\s*(NM|KM)/i);
+
+        if (radiusMatch) {
+            const rValue = parseFloat(radiusMatch[1]);
+            const rUnit = radiusMatch[2].toUpperCase();
+            const meters = rValue * (rUnit === "NM" ? 1852 : 1000);
+            
+            const circle = L.circle(coords[0], {
+                color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: meters, weight: 2, dashArray: '5, 5'
+            }).addTo(notamMapInstance);
+            notamActiveLayers.push(circle);
+            circle.bindPopup(`<b>Radius Area</b><br>中心: ${coords[0][0].toFixed(4)}, ${coords[0][1].toFixed(4)}<br>半徑: ${rValue} ${rUnit}`);
+        } else if (coords.length >= 3) {
+            const poly = L.polygon(coords, {
+                color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 3
+            }).addTo(notamMapInstance);
+            notamActiveLayers.push(poly);
+            poly.bindPopup(`<b>Polygon Area</b><br>頂點數: ${coords.length}`);
+        } else {
+            coords.forEach(c => {
+                const marker = L.circleMarker(c, { radius: 6, color: '#f43f5e', fillOpacity: 0.8 }).addTo(notamMapInstance);
+                notamActiveLayers.push(marker);
+                marker.bindPopup(`<b>Waypoint</b><br>${c[0].toFixed(5)}, ${c[1].toFixed(5)}`);
+            });
+        }
+    });
+
+    updateNotamUI(allCoords, headerInfo, input);
+    if (notamActiveLayers.length > 0) {
+        const group = new L.featureGroup(notamActiveLayers);
+        notamMapInstance.fitBounds(group.getBounds(), { padding: [40, 40] });
+    }
+}
+
+function updateNotamUI(coords, header, raw) {
+    document.getElementById('notamInfo').classList.remove('hidden');
+    document.getElementById('logArea').classList.remove('hidden');
+    
+    let translationHint = "";
+    if (raw.includes("ACROBATIC")) translationHint = "🚩 偵測到特技飛行活動 (Acrobatic Flight)";
+    if (raw.includes("GUNNERY")) translationHint = "⚠️ 偵測到實彈射擊訓練 (Gunnery Training)";
+
+    document.getElementById('infoContent').innerHTML = `
+        <table class="notam-table w-full">
+            <tr><th>NOTAM 編號</th><td>${header.id}</td></tr>
+            <tr><th>開始時間</th><td>${header.start ? `UTC: ${header.start.utc}<br>${header.start.local}` : '---'}</td></tr>
+            <tr><th>結束時間</th><td>${header.end ? (header.end.utc || header.end) : '---'}</td></tr>
+            <tr><th>座標點數</th><td>${coords.length} Points</td></tr>
+        </table>
+        <div class="text-[11px] text-blue-600 font-bold mt-2">${translationHint}</div>
+    `;
+    
+    document.getElementById('coordList').innerHTML = coords.map((c, i) => `
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center shadow-sm">
+            <span class="block text-[9px] text-slate-400 font-bold">PT ${i+1}</span>
+            <span class="text-slate-700 font-mono">${c[0].toFixed(4)},${c[1].toFixed(4)}</span>
+        </div>
+    `).join('');
+}
+
+function clearNotamAll() {
+    notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
+    notamActiveLayers = [];
+    document.getElementById('notamInput').value = "";
+    document.getElementById('notamInfo').classList.add('hidden');
+    document.getElementById('logArea').classList.add('hidden');
+    notamMapInstance.setView([25.03, 121.5], 6);
+}
+
+
