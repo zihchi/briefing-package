@@ -1,0 +1,139 @@
+  <div class="section time-calc-section" id="timeCalcBox">
+    <h2>
+      <div>⏱️ 時間計算器</div>
+      <button id="resetTimeCalcBtn" class="app-header-btn" title="重設所有數值">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+    </h2>
+    
+    <div class="app-wrapper">
+      
+      <!-- 分頁按鈕 -->
+      <div class="time-tabs">
+        <button class="time-tab-btn active" data-tab="tab-simple" onclick="switchTimeTab('tab-simple')">純時間加減</button>
+        <button class="time-tab-btn" data-tab="tab-diff" onclick="switchTimeTab('tab-diff')">時間差計算</button>
+        <button class="time-tab-btn" data-tab="tab-addsub" onclick="switchTimeTab('tab-addsub')">時間推算</button>
+      </div>
+
+      <!-- 功能一：單純時間加減 -->
+      <div id="tab-simple" class="time-tab-content active">
+        <div class="app-card" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+          
+          <div style="flex: 1; text-align: center;">
+            <div class="app-label" style="margin-bottom: 8px;">TIME 1</div>
+            <div class="app-time-input" style="justify-content: center;">
+              <input type="number" id="simpleH1" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="simpleM1" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+          
+          <div style="flex: 0 0 140px;">
+            <div class="app-toggle" style="margin-bottom: 0;">
+              <button class="app-toggle-btn active" id="btnOpAdd" onclick="setSimpleOp('add')">➕ 加</button>
+              <button class="app-toggle-btn" id="btnOpSub" onclick="setSimpleOp('sub')">➖ 減</button>
+              <div id="simpleOpPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
+            </div>
+            <input type="hidden" id="simpleOp" value="add">
+          </div>
+
+          <div style="flex: 1; text-align: center;">
+            <div class="app-label" style="margin-bottom: 8px;">TIME 2</div>
+            <div class="app-time-input" style="justify-content: center;">
+              <input type="number" id="simpleH2" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="simpleM2" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="calculateSimple()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算總時長</button>
+        
+        <div id="simpleResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="simpleResultText" class="app-time-display"></div>
+          <div id="simpleResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
+      <!-- 功能二：計算時間差 -->
+      <div id="tab-diff" class="time-tab-content">
+        <div class="app-grid" style="margin-bottom: 1.5em;">
+          <div class="app-card" style="flex: 1; margin-bottom: 0;">
+            <div class="app-label" style="margin-bottom: 10px;">🛫 起始時間</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <input type="date" id="diffStartDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
+              <div class="app-time-input" style="justify-content: center;">
+                <select id="diffStartHour"></select>
+                <span>:</span>
+                <select id="diffStartMin"></select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="app-card" style="flex: 1; margin-bottom: 0;">
+            <div class="app-label" style="margin-bottom: 10px;">🛬 結束時間</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <input type="date" id="diffEndDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
+              <div class="app-time-input" style="justify-content: center;">
+                <select id="diffEndHour"></select>
+                <span>:</span>
+                <select id="diffEndMin"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="calculateTimeDiff()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算時間差</button>
+
+        <div id="diffResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="diffResultText" class="app-time-display"></div>
+          <div id="diffResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
+      <!-- 功能三：時間推算 -->
+      <div id="tab-addsub" class="time-tab-content">
+        <div class="app-card">
+          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px;">
+            <div class="app-label" style="min-width: 80px; margin: 0;">📍 基準</div>
+            <input type="date" id="baseDate" class="app-date-input">
+            <div class="app-time-input">
+              <select id="baseHour"></select>
+              <span>:</span>
+              <select id="baseMin"></select>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+            <div class="app-label" style="min-width: 80px; margin: 0;">⚙️ 推算</div>
+            
+            <div class="app-toggle" style="margin: 0; width: 140px;">
+              <button class="app-toggle-btn active" id="btnBaseAdd" onclick="setBaseOp('add')">往後推</button>
+              <button class="app-toggle-btn" id="btnBaseSub" onclick="setBaseOp('sub')">往前推</button>
+              <div id="baseOpPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
+            </div>
+            <input type="hidden" id="operationType" value="add">
+
+            <div class="app-time-input">
+              <input type="number" id="addDays" min="0" placeholder="0">
+              <span style="color:#555;">天</span>
+              <input type="number" id="addHours" min="0" placeholder="0">
+              <span style="color:#555;">時</span>
+              <input type="number" id="addMins" min="0" placeholder="0">
+              <span style="color:#555;">分</span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="calculateAddSub()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">開始推算</button>
+
+        <div id="addsubResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+          <div id="addsubResultText" class="app-time-display" style="font-size: 1.8em;"></div>
+          <div id="addsubResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
