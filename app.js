@@ -1,3 +1,17 @@
+// ==========================================
+// 🧹 關閉/重置顯示面板的邏輯
+// ==========================================
+function closePanel() {
+    const displayArea = document.getElementById('content-display');
+    // 把畫面恢復成剛開網頁時的預設文字
+    displayArea.innerHTML = `
+        <div class="section" style="text-align: center; color: #666;">
+            <h3>👈 請點擊上方按鈕載入計算工具</h3>
+        </div>
+    `;
+}
+
+
 // 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎
 function loadPage(pageUrl) {
     const displayArea = document.getElementById('content-display');
