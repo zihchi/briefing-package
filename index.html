@@ -197,14 +197,17 @@
   </div>
 
 <div class="section">
-    <h2>🧮 飛行計算模組 (Flight Calculators)</h2>
-    <div class="tool-grid">
-        <button class="btn" onclick="loadPage('fuel.html')">⛽ 油量與加油時間</button>
-        <button class="btn" onclick="loadPage('curfew.html')">⏳ Curfew 計算</button>
-        <button class="btn" onclick="loadPage('time.html')">⏱️ 時間計算器</button>
-        <button class="btn" onclick="loadPage('altimetry.html')">❄️ 低溫高度修正</button>
-        <button class="btn" onclick="closePanel()" style="background-color: #e74c3c;">❌ 關閉面板</button>
-    </div>
+  <h2>
+    <div>🧮 飛行計算模組 (Flight Calculators)</div>
+    <button onclick="closePanel()" style="background-color: #e74c3c; color: white; padding: 5px 12px; font-size: 0.75em; border-radius: 6px; margin: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">❌ 關閉面板</button>
+  </h2>
+  
+  <div class="tool-grid">
+    <button class="btn" onclick="loadPage('fuel.html')">⛽ 油量與加油時間</button>
+    <button class="btn" onclick="loadPage('curfew.html')">⏳ Curfew 計算</button>
+    <button class="btn" onclick="loadPage('time.html')">⏱️ 航空時間計算</button>
+    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 寒溫修正</button>
+  </div>
 </div>
 
 <main id="content-display">
