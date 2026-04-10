@@ -1,0 +1,58 @@
+ <div class="section fuel-box">
+    <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
+
+  <div class="input-row">
+    <label for="currentFuel">剩油 Fuel Remaining：</label>
+    <input type="range" id="currentFuel" min="0" max="109.1" step="0.1" value="6.0" style="width: 400px;"
+           oninput="document.getElementById('currentFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
+    <span id="currentFuelVal">6.0 t</span>
+  </div>
+    <div class="input-row">
+    <label for="targetFuel">目標油量 Target Fuel：</label>
+    <input type="range" id="targetFuel" min="0" max="109.1" step="0.1" value="25.0" style="width: 400px;"
+           oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
+    <span id="targetFuelVal">25.0 t</span>
+    <button type="button" onclick="onCalculate()">計算</button>
+  </div>
+
+    <div id="message"></div>
+
+    <h3>一、油量分布比較 (目前剩油 vs 目標油量)</h3>
+    <table>
+      <thead>
+      <tr>
+        <th>項目 (Tank)</th>
+        <th>目前剩油 (t)</th>
+        <th>目標油量 (t)</th>
+        <th>需加油量 Δ (t)</th>
+      </tr>
+      </thead>
+      <tbody id="resultBody">
+      <tr><td>Inner Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Outer Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Trim Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><td>Center Tank</td><td>-</td><td>-</td><td>-</td></tr>
+      <tr><th>Total (I+O+T+C)</th><th>-</th><th>-</th><th>-</th></tr>
+      </tbody>
+    </table>
+
+    <h3>二、加油量與加油時間</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>油箱</th>
+          <th>加油量 Δ (t)</th>
+          <th>加油流量 (t/min)</th>
+          <th>所需時間 (min)</th>
+        </tr>
+      </thead>
+      <tbody id="timeBody">
+        <tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><td>Trim Tank</td><td>-</td><td>0.10</td><td>-</td></tr>
+        <tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
+        <tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr>
+        <tr><th>總加油時間</th><th colspan="3">-</th></tr>
+      </tbody>
+    </table>
+  </div>
