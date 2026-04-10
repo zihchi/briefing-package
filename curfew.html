@@ -1,0 +1,109 @@
+ <div class="section curfew-section" id="curfewBox">
+    <h2>
+      <div>⏳ Curfew Calculator</div>
+      <button id="resetCurfewBtn" class="app-header-btn" title="重設所有數值">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+    </h2>
+
+    <div class="app-wrapper">
+      <div class="app-grid">
+        
+        <!-- 左欄：計算結果與 UTC 時鐘 -->
+        <div class="app-col-left">
+          <div class="app-card" style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0;">
+            <div class="app-result-box">
+              <div id="offBlockLabel" class="app-label">Earliest Off Block Time</div>
+              <div id="resultEOBT" class="app-time-display">--:--</div>
+            </div>
+            
+            <div class="app-result-box" style="border-bottom: none; margin-bottom:0; padding-bottom:0;">
+              <div id="takeoffLabel" class="app-label">Earliest Takeoff Time</div>
+              <div id="resultETOT" class="app-time-display">--:--</div>
+            </div>
+
+            <!-- 醒目的 UTC 數位時鐘面板 -->
+            <div class="curfew-clock-container">
+              <div class="curfew-utc-label">UTC TIME</div>
+              <div class="curfew-live-clock" id="liveUTCClock">--:--:--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右欄：設定選項與操作時間 -->
+        <div class="app-col-right">
+          
+          <!-- Curfew 條件區塊 -->
+          <div>
+            <div class="app-section-title">Curfew Settings</div>
+            <div class="app-card" style="margin-bottom: 0;">
+              
+              <!-- Landing / Parking Toggle -->
+              <div class="app-toggle">
+                <button class="app-toggle-btn curfew-type-btn" data-type="landing">Landing Curfew</button>
+                <button class="app-toggle-btn active curfew-type-btn" data-type="parking">Parking Curfew</button>
+                <div id="typeBgPill" class="app-toggle-pill" style="transform: translateX(100%);"></div>
+              </div>
+
+              <!-- Before / After Toggle -->
+              <div class="app-toggle" style="margin-bottom: 20px;">
+                <button class="app-toggle-btn active curfew-cond-btn" data-cond="before">Arrive Before</button>
+                <button class="app-toggle-btn curfew-cond-btn" data-cond="after">Arrive After</button>
+                <div id="condBgPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
+              </div>
+
+              <!-- Arrival Time Input -->
+              <div class="app-row" style="padding: 0; border: none;">
+                <span class="app-row-label">Arrival Curfew</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
+                  <div class="app-time-input">
+                    <select id="curfewHr"></select>
+                    <span>:</span>
+                    <select id="curfewMin"></select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 操作時間區塊 -->
+          <div>
+            <div class="app-section-title">Operational Times</div>
+            <div class="app-card" style="margin-bottom: 0; padding: 0.5em 1.5em;">
+              
+              <div class="app-row">
+                <span class="app-row-label">Taxi Out Time</span>
+                <div class="app-time-input">
+                  <select id="txoHr"></select>
+                  <span>:</span>
+                  <select id="txoMin"></select>
+                </div>
+              </div>
+              
+              <div class="app-row">
+                <span class="app-row-label">Flight Time</span>
+                <div class="app-time-input">
+                  <select id="ftHr"></select>
+                  <span>:</span>
+                  <select id="ftMin"></select>
+                </div>
+              </div>
+
+              <div class="app-row">
+                <span class="app-row-label">Taxi In Time</span>
+                <div class="app-time-input">
+                  <select id="txiHr"></select>
+                  <span>:</span>
+                  <select id="txiMin"></select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div> <!-- End Right Column -->
+        
+      </div> <!-- End Grid -->
+    </div>
+  </div>
