@@ -1,4 +1,4 @@
-// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎 (升級版)
+// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎 (唯一指定終極版)
 function loadPage(pageUrl) {
     const displayArea = document.getElementById('content-display');
     
@@ -11,24 +11,21 @@ function loadPage(pageUrl) {
             return response.text();
         })
         .then(html => {
-            // 將子分頁的 HTML 注入主畫面
+            // 1. 將子分頁的 HTML 注入主畫面
             displayArea.innerHTML = html;
 
-            // 🌟 【核心引擎升級】：抓出剛剛塞入的 HTML 裡所有的 <script>，並強制瀏覽器執行它們
+            // 2. 🌟 【核心引擎升級】：抓出 HTML 裡所有的 <script>，強制瀏覽器執行
             const scripts = displayArea.querySelectorAll('script');
             scripts.forEach(oldScript => {
                 const newScript = document.createElement('script');
-                // 複製原本的屬性 (如果有 src 等)
                 Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                // 複製裡面的程式碼
                 newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                // 替換掉舊的，這動作會觸發瀏覽器執行程式碼
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
 
-            // 舊有工具的初始化路由
+            // 3. 【您需要的都在這】依照載入的頁面，喚醒所有對應的邏輯
             if (pageUrl === 'curfew.html') {
-                initCurfewCalculator(); 
+                initCurfewCalculator(); // 👈 教官，您的 Curfew 計算機喚醒邏輯在這裡！毫髮無傷！
             } 
             else if (pageUrl === 'time.html') {
                 initTimeCalculator(); 
@@ -40,6 +37,9 @@ function loadPage(pageUrl) {
             }
             else if (pageUrl === 'notam.html') {
                 initNotamRadar(); 
+            }
+            else if (pageUrl === 'fids.html') { 
+                initFIDS(); // 👈 這是剛剛為您接通線路的航班動態看板
             }
         })
         .catch(error => {
@@ -78,53 +78,6 @@ function closePanel() {
     `;
 }
 
-
-// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎
-function loadPage(pageUrl) {
-    const displayArea = document.getElementById('content-display');
-    
-    // 顯示載入中的過場提示
-    displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
-
-    fetch(pageUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('網路回應異常');
-            return response.text();
-        })
-        .then(html => {
-            // 將子分頁的 HTML 注入主畫面
-            displayArea.innerHTML = html;
-
-            // 【關鍵步驟】依照載入的頁面，重新啟動對應的 JavaScript 函數
-            if (pageUrl === 'curfew.html') {
-                initCurfewCalculator(); // 喚醒 Curfew 邏輯
-            } 
-            else if (pageUrl === 'time.html') {
-                initTimeCalculator(); // 喚醒時間計算機邏輯
-                // 重新綁定時間計算機的 Reset 按鈕
-                document.getElementById("resetTimeCalcBtn").addEventListener("click", resetTimeCalculator);
-            } 
-            else if (pageUrl === 'altimetry.html') {
-                resetAltimetryCalculator(); // 喚醒並初始化寒溫修正表格
-                // 重新綁定寒溫修正的 Reset 按鈕
-                document.getElementById("resetAltimetryBtn").addEventListener("click", resetAltimetryCalculator);
-            }
-            // 註：fuel.html 使用的是 HTML 內聯的 onclick，不需額外喚醒
-
-            else if (pageUrl === 'notam.html') {
-    initNotamRadar(); 
-}
-            else if (pageUrl === 'fids.html') { // 請替換成您實際的 HTML 檔名
-                initFIDS(); 
-            }
-        })
-
-        
-        .catch(error => {
-            console.error('Fetch 錯誤:', error);
-            displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #e74c3c; font-weight: bold;">載入失敗，請確認檔案路徑是否正確。</div>';
-        });
-}
 
 // ==========================================
 // ⛽ 油量計算機邏輯 
