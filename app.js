@@ -1,4 +1,188 @@
 // ==========================================
+// 📡 雙向航班動態看板核心邏輯 (包裝成全域函數)
+// ==========================================
+window.initFIDS = function() {
+    const gasUrl = 'https://script.google.com/macros/s/AKfycbwPjs92DLM2MulEwy5d_MwzbPUNMWmhOoyxgn5r1FINV7X3XeEcAvsgcgHl69-caBYO/exec';
+    
+    let dbDepartures = [];
+    let dbArrivals = [];
+    let currentMode = 'D'; // D=離場, A=到場
+    let currentDate = '';
+    let currentAirline = 'JX';
+
+    const tbody = document.getElementById('fids-table-body');
+    const tableEl = document.getElementById('fids-flight-table');
+    const loadingMsg = document.getElementById('fids-loading-msg');
+    const emptyMsg = document.getElementById('fids-empty-msg');
+    const btnReload = document.getElementById('fids-btn-reload');
+    const reloadIcon = document.getElementById('fids-reload-icon');
+    
+    const thLocation = document.getElementById('fids-th-location');
+    const thTime = document.getElementById('fids-th-time');
+    const thCheckin = document.getElementById('fids-th-checkin');
+
+    if (!tableEl) return; // 防呆機制：若 DOM 尚未載入則退出
+
+    function getIsoDate(offset) {
+        const d = new Date();
+        d.setDate(d.getDate() + offset);
+        return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    }
+    
+    const todayStr = getIsoDate(0);
+    const tomorrowStr = getIsoDate(1);
+    currentDate = todayStr;
+
+    async function syncDataLink() {
+        tableEl.parentElement.style.display = 'none';
+        emptyMsg.style.display = 'none';
+        loadingMsg.style.display = 'block';
+        btnReload.disabled = true;
+        reloadIcon.style.animation = 'spin 1s linear infinite';
+        
+        try {
+            const res = await fetch(gasUrl);
+            const rawData = await res.json();
+            
+            if (rawData.departures && rawData.arrivals) {
+                dbDepartures = cleanAndSort(rawData.departures);
+                dbArrivals = cleanAndSort(rawData.arrivals);
+            } else {
+                throw new Error("API 格式有誤");
+            }
+            renderRadarScreen();
+        } catch (err) {
+            console.error(err);
+            emptyMsg.innerHTML = `⚠️ 連線異常: 無法取得航班資料`;
+            emptyMsg.style.display = 'block';
+            loadingMsg.style.display = 'none';
+        } finally {
+            btnReload.disabled = false;
+            reloadIcon.style.animation = 'none';
+        }
+    }
+
+    function cleanAndSort(arr) {
+        let valid = arr.filter(f => f.ScheduleDepartureTime || f.ScheduleArrivalTime);
+        valid.sort((a, b) => {
+            let tA = a.ScheduleDepartureTime || a.ScheduleArrivalTime;
+            let tB = b.ScheduleDepartureTime || b.ScheduleArrivalTime;
+            return new Date(tA) - new Date(tB);
+        });
+        return valid;
+    }
+
+    function renderRadarScreen() {
+        tbody.innerHTML = '';
+        let activeDB = (currentMode === 'D') ? dbDepartures : dbArrivals;
+        
+        if (currentMode === 'D') {
+            thLocation.textContent = '目的地 (Dest)';
+            thTime.textContent = '起飛 (STD)';
+            thCheckin.textContent = '櫃檯 (Desk)';
+        } else {
+            thLocation.textContent = '出發地 (Origin)';
+            thTime.textContent = '抵達 (STA)';
+            thCheckin.textContent = '狀態 (Status)';
+        }
+
+        const filtered = activeDB.filter(f => {
+            const timeStr = f.ScheduleDepartureTime || f.ScheduleArrivalTime;
+            const dateStr = timeStr.substring(0, 10);
+            const dateMatch = (dateStr === currentDate);
+            const airMatch = (currentAirline === 'ALL') || (f.AirlineID === currentAirline);
+            return dateMatch && airMatch;
+        });
+
+        loadingMsg.style.display = 'none';
+
+        if (filtered.length === 0) {
+            tableEl.parentElement.style.display = 'none';
+            emptyMsg.style.display = 'block';
+            return;
+        }
+
+        filtered.forEach(f => {
+            const tr = document.createElement('tr');
+            const flightNo = f.AirlineID + f.FlightNumber;
+            const rawTime = f.ScheduleDepartureTime || f.ScheduleArrivalTime;
+            const timeCode = rawTime.substring(11, 16);
+            
+            const location = (currentMode === 'D') ? f.ArrivalAirportID : (f.DepartureAirportID || f.ArrivalAirportID);
+            const gate = f.Gate || '-';
+            const terminal = f.Terminal ? `T${f.Terminal}` : '-';
+            const belt = f.BaggageClaim || '-';
+            const checkinOrStatus = (currentMode === 'D') ? (f.CheckCounter || '-') : (f.FlightStatus || 'ON TIME');
+
+            tr.innerHTML = `
+                <td><span class="fids-col-flight">${flightNo}</span></td>
+                <td class="font-bold">${location}</td>
+                <td><span class="fids-col-gate">${gate}</span></td>
+                <td><span class="fids-col-time">${timeCode}</span></td>
+                <td>${terminal}</td>
+                <td>${checkinOrStatus}</td>
+                <td><span class="fids-col-belt">${belt}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        tableEl.parentElement.style.display = 'block';
+        emptyMsg.style.display = 'none';
+    }
+
+    // 事件綁定區
+    document.querySelectorAll('.fids-mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.fids-mode-btn').forEach(b => b.classList.remove('active', 'bg-white', 'text-[#3c79ff]', 'shadow-sm'));
+            e.target.classList.add('active', 'bg-white', 'text-[#3c79ff]', 'shadow-sm');
+            currentMode = e.target.getAttribute('data-mode');
+            renderRadarScreen();
+        });
+    });
+
+    document.getElementById('fids-btn-today').addEventListener('click', (e) => {
+        currentDate = todayStr;
+        e.target.classList.add('active');
+        document.getElementById('fids-btn-tomorrow').classList.remove('active');
+        renderRadarScreen();
+    });
+
+    document.getElementById('fids-btn-tomorrow').addEventListener('click', (e) => {
+        currentDate = tomorrowStr;
+        e.target.classList.add('active');
+        document.getElementById('fids-btn-today').classList.remove('active');
+        renderRadarScreen();
+    });
+
+    document.querySelectorAll('input[name="fids-airline"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentAirline = e.target.value;
+            renderRadarScreen();
+        });
+    });
+
+    btnReload.addEventListener('click', syncDataLink);
+    syncDataLink(); // 自動載入資料
+};
+
+// ==========================================
+// 通用邏輯：勾選表、地圖等 (您原本在 index 底下的 script 可以一併放過來)
+// ==========================================
+function setupChecklist(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    setupChecklist("briefingChecklist1");
+    setupChecklist("personalChecklist");
+    
+    // 如果您原本有 map 初始化函數，也請放在這裡執行
+    // initAviationMap(); 
+});
+
+// ==========================================
 // 🧹 關閉/重置顯示面板的邏輯
 // ==========================================
 function closePanel() {
