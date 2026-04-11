@@ -114,7 +114,12 @@ function loadPage(pageUrl) {
             else if (pageUrl === 'notam.html') {
     initNotamRadar(); 
 }
+            else if (pageUrl === 'fids.html') { // 請替換成您實際的 HTML 檔名
+                initFIDS(); 
+            }
         })
+
+        
         .catch(error => {
             console.error('Fetch 錯誤:', error);
             displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #e74c3c; font-weight: bold;">載入失敗，請確認檔案路徑是否正確。</div>';
@@ -1107,3 +1112,65 @@ function clearNotamAll() {
     document.getElementById('logArea').classList.add('hidden');
     notamMapInstance.setView([25.03, 121.5], 6);
 }
+
+// ==========================================
+// 🛬 航班動態 (FIDS) 核心邏輯
+// ==========================================
+function initFIDS() {
+    // 1. 綁定「離場 (DEP) / 到場 (ARR)」按鈕切換
+    const modeBtns = document.querySelectorAll('.fids-mode-btn');
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            modeBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            // TODO: 在此處呼叫更新表格資料的函數
+            console.log("切換模式:", e.target.dataset.mode);
+        });
+    });
+
+    // 2. 綁定「今日 / 明日」按鈕切換
+    const dateBtns = document.querySelectorAll('.fids-date-btn');
+    dateBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // 排除更新按鈕
+            if (e.target.id === 'fids-btn-reload') return; 
+            
+            dateBtns.forEach(b => {
+                if (b.id !== 'fids-btn-reload') b.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            // TODO: 在此處呼叫更新表格資料的函數
+            console.log("切換日期:", e.target.innerText);
+        });
+    });
+
+    // 3. 綁定「航空公司」過濾器 (Radio Buttons)
+    const filterRadios = document.querySelectorAll('input[name="fids-airline"]');
+    filterRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const selectedAirline = e.target.value; // 'JX', 'CI', 'BR', 或 'ALL'
+            // TODO: 執行本機端隱藏/顯示 TR 標籤，或重新 fetch 資料
+            console.log("切換航空公司:", selectedAirline);
+        });
+    });
+
+    // 4. 綁定「更新」按鈕與旋轉動畫
+    const reloadBtn = document.getElementById('fids-btn-reload');
+    const reloadIcon = document.getElementById('fids-reload-icon');
+    if (reloadBtn && reloadIcon) {
+        reloadBtn.addEventListener('click', () => {
+            reloadIcon.style.animation = 'spin 1s linear infinite';
+            
+            // TODO: 在此處呼叫更新表格資料的函數
+            console.log("要求重新整理資料...");
+
+            // 模擬 API 抓取資料，1.5 秒後停止旋轉動畫
+            setTimeout(() => {
+                reloadIcon.style.animation = 'none';
+            }, 1500);
+        });
+    }
+}
+
+// 確保全域可呼叫 (預防 HTML 內的 inline script 找不到函數)
+window.initFIDS = initFIDS;
