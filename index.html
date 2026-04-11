@@ -459,15 +459,6 @@ function refreshIframe(id){
   if (iframe) iframe.src = iframe.src;
 }
 
-function setupChecklist(listId) {
-  const list = document.getElementById(listId);
-  if (!list) return;
-  list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-}
-
-setupChecklist("briefingChecklist1");
-setupChecklist("personalChecklist");
-
 window.flights = [
   { flightNo: "820", route: "TPE/KIX" }, { flightNo: "821", route: "KIX/TPE" },
   { flightNo: "822", route: "TPE/KIX" }, { flightNo: "823", route: "KIX/TPE" },
