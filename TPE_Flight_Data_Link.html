@@ -1,1 +1,91 @@
+<div class="section flex flex-col gap-4 fade-in" style="animation: fadeIn 0.3s ease-in-out;">
+  <style>
+    /* 專屬微調樣式 */
+    .fids-mode-btn { background: transparent; color: #6b7280; border: none; padding: 6px 16px; border-radius: 6px; font-size: 0.95em; font-weight: bold; cursor: pointer; transition: all 0.2s; outline: none;}
+    .fids-mode-btn.active { background: #fff; color: #3c79ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
+    .fids-date-btn { background: transparent; border: 1px solid #d1d5db; color: #6b7280; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: bold; font-size: 0.9em; outline: none;}
+    .fids-date-btn:hover { border-color: #9ca3af; color: #4b5563; }
+    .fids-date-btn.active { background: #3c79ff; color: #fff; border-color: #3c79ff; }
+
+    .fids-reload-btn { background: #3c79ff; border: none; color: white; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; outline: none;}
+    .fids-reload-btn:hover { background: #2a5edc; }
+    .fids-reload-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    
+    .fids-filter-label { padding: 6px 16px; border-radius: 20px; border: 2px solid; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: all 0.2s; background: #fff; user-select: none; }
+    input[value="JX"]:checked + .fids-filter-label { background: #fef08a; border-color: #eab308; color: #a16207; }
+    input[value="BR"]:checked + .fids-filter-label { background: #bbf7d0; border-color: #22c55e; color: #15803d; }
+    input[value="CI"]:checked + .fids-filter-label { background: #fecaca; border-color: #f43f5e; color: #be123c; }
+    input[value="ALL"]:checked + .fids-filter-label { background: #e5e7eb; border-color: #6b7280; color: #374151; }
+
+    /* 高度壓縮與對齊設定 */
+    #fids-flight-table th { background: #f3f4f6; color: #4b5563; border-bottom: 2px solid #e5e7eb; font-weight: 700; white-space: nowrap; padding: 8px 12px; font-size: 0.9em; }
+    #fids-flight-table td { padding: 6px 12px; font-size: 0.95em; color: #374151; border-bottom: 1px solid #f3f4f6; white-space: nowrap; vertical-align: middle; }
+    #fids-flight-table tr:hover { background-color: #f8fafc; }
+
+    /* 🎯 戰術重點標示 */
+    .fids-col-flight { font-weight: 900; font-family: 'Courier New', Courier, monospace; font-size: 1.15em; color: #1e3a8a; background: #e0e7ff; border-radius: 6px; padding: 2px 8px; display: inline-block;}
+    .fids-col-gate { font-weight: 900; font-size: 1.2em; color: #b91c1c; background: #fee2e2; border-radius: 6px; padding: 2px 10px; display: inline-block; min-width: 40px; text-align: center;}
+    .fids-col-time { font-weight: 900; font-size: 1.15em; font-family: 'Courier New', Courier, monospace; color: #0f766e; background: #ccfbf1; border-radius: 6px; padding: 2px 8px; display: inline-block;}
+    .fids-col-belt { font-weight: 900; font-size: 1.15em; color: #b45309; background: #fef3c7; border-radius: 6px; padding: 2px 10px; display: inline-block; min-width: 40px; text-align: center;}
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+
+  <div class="flex justify-between items-center flex-wrap gap-4 border-b border-gray-200 pb-3">
+      <h2 class="!mb-0 !border-0 flex items-center gap-2" style="font-size: 1.3em; margin:0;">
+          <span>📡</span> 雙向航班動態看板 (TPE)
+      </h2>
+      <div class="flex bg-gray-200 rounded-lg p-1 border border-gray-300">
+          <button class="fids-mode-btn active" data-mode="D">離場 (DEP)</button>
+          <button class="fids-mode-btn" data-mode="A">到場 (ARR)</button>
+      </div>
+      <div class="flex gap-2 items-center">
+          <button id="fids-btn-today" class="fids-date-btn active">今日</button>
+          <button id="fids-btn-tomorrow" class="fids-date-btn">明日</button>
+          <button id="fids-btn-reload" class="fids-reload-btn"><span id="fids-reload-icon">🔄</span> 更新</button>
+      </div>
+  </div>
+
+  <div class="flex gap-3 flex-wrap mt-1 mb-1">
+      <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
+      <label for="fids-filter-jx" class="fids-filter-label border-yellow-500 text-yellow-600 hover:bg-yellow-50">JX 星宇</label>
+
+      <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
+      <label for="fids-filter-br" class="fids-filter-label border-green-500 text-green-600 hover:bg-green-50">BR 長榮</label>
+
+      <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
+      <label for="fids-filter-ci" class="fids-filter-label border-red-500 text-red-600 hover:bg-red-50">CI 華航</label>
+
+      <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
+      <label for="fids-filter-all" class="fids-filter-label border-gray-400 text-gray-600 hover:bg-gray-100">ALL 全空域</label>
+  </div>
+
+  <div id="fids-loading-msg" class="text-center text-gray-500 py-8 font-semibold hidden">🔄 正在建立塔台資料鏈路...</div>
+  <div id="fids-empty-msg" class="text-center text-gray-500 py-8 font-semibold hidden">雷達區間內查無符合的航班資料。</div>
+
+  <div class="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+      <table id="fids-flight-table" class="w-full text-left border-collapse">
+          <thead>
+              <tr>
+                  <th>班機 (Flight)</th>
+                  <th id="fids-th-location">目的地 (Dest)</th>
+                  <th>登機口 (Gate)</th>
+                  <th id="fids-th-time">時間 (Time)</th>
+                  <th>航廈 (Term)</th>
+                  <th id="fids-th-checkin">櫃檯 (Desk)</th>
+                  <th>轉盤 (Belt)</th>
+              </tr>
+          </thead>
+          <tbody id="fids-table-body" class="bg-white"></tbody>
+      </table>
+  </div>
+</div>
+
+<script>
+  // 畫面載入完成後，自動呼叫 app.js 裡面的啟動函數
+  if (typeof window.initFIDS === 'function') {
+      window.initFIDS();
+  }
+</script>
