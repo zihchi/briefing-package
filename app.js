@@ -1067,63 +1067,174 @@ function clearNotamAll() {
 }
 
 // ==========================================
-// 🛬 航班動態 (FIDS) 核心邏輯
+// 🛬 航班動態 (FIDS) 核心邏輯 - 搭載 TDX 數據鏈
 // ==========================================
 function initFIDS() {
-    // 1. 綁定「離場 (DEP) / 到場 (ARR)」按鈕切換
+    // 🚨 替換成您的 Google Apps Script 部署網址
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwPjs92DLM2MulEwy5d_MwzbPUNMWmhOoyxgn5r1FINV7X3XeEcAvsgcgHl69-caBYO/exec"; 
+
+    // 狀態記憶庫
+    let flightData = { departures: [], arrivals: [] };
+    let currentMode = 'D'; // D: 離場, A: 到場
+    let currentDate = 'today'; // today, tomorrow
+    let currentAirline = 'JX'; // JX, CI, BR, ALL
+
+    // DOM 元素快取
+    const tbody = document.getElementById('fids-table-body');
+    const loadingMsg = document.getElementById('fids-loading-msg');
+    const emptyMsg = document.getElementById('fids-empty-msg');
+    const tableEl = document.getElementById('fids-flight-table');
+    const reloadIcon = document.getElementById('fids-reload-icon');
+
+    // 1. 綁定「離場 (DEP) / 到場 (ARR)」切換
     const modeBtns = document.querySelectorAll('.fids-mode-btn');
     modeBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             modeBtns.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            // TODO: 在此處呼叫更新表格資料的函數
-            console.log("切換模式:", e.target.dataset.mode);
+            currentMode = e.target.dataset.mode;
+            
+            // 動態切換表頭文字
+            document.getElementById('fids-th-location').textContent = currentMode === 'D' ? '目的地 (DEST)' : '起飛地 (ORIG)';
+            document.getElementById('fids-th-checkin').textContent = currentMode === 'D' ? '櫃檯 (DESK)' : '狀態 (STAT)';
+            
+            renderTable();
         });
     });
 
-    // 2. 綁定「今日 / 明日」按鈕切換
+    // 2. 綁定「今日 / 明日」切換
     const dateBtns = document.querySelectorAll('.fids-date-btn');
     dateBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // 排除更新按鈕
             if (e.target.id === 'fids-btn-reload') return; 
-            
-            dateBtns.forEach(b => {
-                if (b.id !== 'fids-btn-reload') b.classList.remove('active');
-            });
+            dateBtns.forEach(b => { if (b.id !== 'fids-btn-reload') b.classList.remove('active'); });
             e.target.classList.add('active');
-            // TODO: 在此處呼叫更新表格資料的函數
-            console.log("切換日期:", e.target.innerText);
+            currentDate = e.target.id === 'fids-btn-today' ? 'today' : 'tomorrow';
+            renderTable();
         });
     });
 
-    // 3. 綁定「航空公司」過濾器 (Radio Buttons)
+    // 3. 綁定「航空公司」過濾器
     const filterRadios = document.querySelectorAll('input[name="fids-airline"]');
     filterRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
-            const selectedAirline = e.target.value; // 'JX', 'CI', 'BR', 或 'ALL'
-            // TODO: 執行本機端隱藏/顯示 TR 標籤，或重新 fetch 資料
-            console.log("切換航空公司:", selectedAirline);
+            currentAirline = e.target.value;
+            renderTable();
         });
     });
 
-    // 4. 綁定「更新」按鈕與旋轉動畫
+    // 4. 綁定「更新」按鈕與主動抓取邏輯
     const reloadBtn = document.getElementById('fids-btn-reload');
-    const reloadIcon = document.getElementById('fids-reload-icon');
-    if (reloadBtn && reloadIcon) {
-        reloadBtn.addEventListener('click', () => {
-            reloadIcon.style.animation = 'spin 1s linear infinite';
-            
-            // TODO: 在此處呼叫更新表格資料的函數
-            console.log("要求重新整理資料...");
-
-            // 模擬 API 抓取資料，1.5 秒後停止旋轉動畫
-            setTimeout(() => {
-                reloadIcon.style.animation = 'none';
-            }, 1500);
-        });
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', fetchFIDSData);
     }
+
+    // 📡 核心網路通訊：向您的 GAS 請求資料
+    async function fetchFIDSData() {
+        if(reloadIcon) reloadIcon.style.animation = 'spin 1s linear infinite';
+        
+        // 顯示載入中，隱藏表格
+        tableEl.style.display = 'none';
+        emptyMsg.classList.add('hidden');
+        loadingMsg.innerHTML = '🔄 正在建立塔台資料鏈路...';
+        loadingMsg.classList.remove('hidden');
+
+        try {
+            const response = await fetch(GAS_URL);
+            if (!response.ok) throw new Error("API 回應異常");
+            const data = await response.json();
+            
+            // TDX API 回傳的資料可能是包裹在陣列裡，我們把它存進狀態庫
+            flightData.departures = data.departures || [];
+            flightData.arrivals = data.arrivals || [];
+            
+            // 抓取完成，進入渲染階段
+            renderTable();
+        } catch (error) {
+            console.error("資料獲取失敗:", error);
+            loadingMsg.innerHTML = '❌ 資料鏈路中斷，請確認 GAS 網址是否正確且已設定為「所有人」可存取。';
+        } finally {
+            if(reloadIcon) reloadIcon.style.animation = 'none';
+        }
+    }
+
+    // 🎨 核心畫面渲染：將 JSON 轉為 HTML 表格
+    function renderTable() {
+        // 隱藏載入訊息
+        loadingMsg.classList.add('hidden');
+        
+        // 1. 決定要看離場還是到場
+        let targetArray = currentMode === 'D' ? flightData.departures : flightData.arrivals;
+        
+        // 取得台灣今天的日期字串 (YYYY-MM-DD)
+        const now = new Date();
+        const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+        const twDate = new Date(now.getTime() + offsetMs + (8 * 60 * 60 * 1000)); 
+        const todayStr = twDate.toISOString().split('T')[0];
+        
+        twDate.setDate(twDate.getDate() + 1);
+        const tomorrowStr = twDate.toISOString().split('T')[0];
+        const targetDateStr = currentDate === 'today' ? todayStr : tomorrowStr;
+
+        // 2. 進行條件過濾 (日期 + 航空公司)
+        let filteredData = targetArray.filter(flight => {
+            // 過濾日期
+            const timeField = currentMode === 'D' ? flight.ScheduleDepartureTime : flight.ScheduleArrivalTime;
+            if (!timeField || !timeField.startsWith(targetDateStr)) return false;
+
+            // 過濾航空公司
+            if (currentAirline !== 'ALL' && flight.AirlineID !== currentAirline) return false;
+
+            return true;
+        });
+
+        // 3. 處理畫面顯示
+        if (filteredData.length === 0) {
+            tbody.innerHTML = '';
+            tableEl.style.display = 'none';
+            emptyMsg.classList.remove('hidden');
+            return;
+        }
+
+        emptyMsg.classList.add('hidden');
+        tableEl.style.display = 'table';
+        
+        // 將過濾後的資料轉化為 TR
+        tbody.innerHTML = filteredData.map(f => {
+            const flightNo = f.AirlineID + f.FlightNumber;
+            const location = currentMode === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
+            const gate = f.Gate || '--';
+            const rawTime = currentMode === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
+            const timeStr = rawTime ? rawTime.substring(11, 16) : '--:--';
+            const terminal = f.Terminal || '-';
+            const belt = f.BaggageClaim || '--';
+            
+            // 處理櫃檯/狀態欄位
+            let checkinOrStatus = '--';
+            if (currentMode === 'D') {
+                checkinOrStatus = f.CheckCounter || '--';
+            } else {
+                // TDX 到場狀態代碼，此處可做對應，暫用原始字串或預設
+                checkinOrStatus = f.ArrivalRemark || 'ON TIME';
+            }
+
+            return `
+                <tr>
+                    <td><span class="fids-col-flight">${flightNo}</span></td>
+                    <td style="font-weight: bold; color: #4b5563;">${location}</td>
+                    <td><span class="fids-col-gate">${gate}</span></td>
+                    <td><span class="fids-col-time">${timeStr}</span></td>
+                    <td style="font-weight: bold; text-align: center;">T${terminal}</td>
+                    <td style="font-weight: bold; color: #6b7280;">${checkinOrStatus}</td>
+                    <td><span class="fids-col-belt">${belt}</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // 初次載入時主動抓取一次資料
+    fetchFIDSData();
 }
 
-// 確保全域可呼叫 (預防 HTML 內的 inline script 找不到函數)
+// 確保全域可呼叫
 window.initFIDS = initFIDS;
