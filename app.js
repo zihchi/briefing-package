@@ -38,7 +38,7 @@ function loadPage(pageUrl) {
             else if (pageUrl === 'notam.html') {
                 initNotamRadar(); 
             }
-            else if (pageUrl === 'fids.html') { 
+            else if (pageUrl === 'TPE_Flight_Data_Link.html') { 
                 initFIDS(); // 👈 這是剛剛為您接通線路的航班動態看板
             }
         })
