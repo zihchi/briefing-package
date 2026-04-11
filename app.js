@@ -1,3 +1,53 @@
+// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎 (升級版)
+function loadPage(pageUrl) {
+    const displayArea = document.getElementById('content-display');
+    
+    // 顯示載入中的過場提示
+    displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
+
+    fetch(pageUrl)
+        .then(response => {
+            if (!response.ok) throw new Error('網路回應異常');
+            return response.text();
+        })
+        .then(html => {
+            // 將子分頁的 HTML 注入主畫面
+            displayArea.innerHTML = html;
+
+            // 🌟 【核心引擎升級】：抓出剛剛塞入的 HTML 裡所有的 <script>，並強制瀏覽器執行它們
+            const scripts = displayArea.querySelectorAll('script');
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement('script');
+                // 複製原本的屬性 (如果有 src 等)
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                // 複製裡面的程式碼
+                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                // 替換掉舊的，這動作會觸發瀏覽器執行程式碼
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+
+            // 舊有工具的初始化路由
+            if (pageUrl === 'curfew.html') {
+                initCurfewCalculator(); 
+            } 
+            else if (pageUrl === 'time.html') {
+                initTimeCalculator(); 
+                document.getElementById("resetTimeCalcBtn").addEventListener("click", resetTimeCalculator);
+            } 
+            else if (pageUrl === 'altimetry.html') {
+                resetAltimetryCalculator(); 
+                document.getElementById("resetAltimetryBtn").addEventListener("click", resetAltimetryCalculator);
+            }
+            else if (pageUrl === 'notam.html') {
+                initNotamRadar(); 
+            }
+        })
+        .catch(error => {
+            console.error('Fetch 錯誤:', error);
+            displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #e74c3c; font-weight: bold;">載入失敗，請確認檔案路徑是否正確。</div>';
+        });
+}
+
 // ==========================================
 // 通用邏輯：勾選表、地圖等 (您原本在 index 底下的 script 可以一併放過來)
 // ==========================================
