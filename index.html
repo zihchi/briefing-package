@@ -872,8 +872,46 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // ==========================================
-// 📻 地圖專用 D-ATIS 按需抓取邏輯
+// 📻 地圖專用 D-ATIS 按需抓取邏輯 (含時效性智能判斷)
 // ==========================================
+function calculatePopupAtisAge(rawText) {
+    if (!rawText || rawText.includes("無資料") || rawText.includes("失敗")) return "";
+    
+    // 擷取 DDHHMMZ 或 HHMMZ 格式
+    const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
+    if (!timeMatch) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">未知時間</span>`;
+
+    const atisHr = parseInt(timeMatch[1], 10);
+    const atisMin = parseInt(timeMatch[2], 10);
+    
+    const now = new Date();
+    const currHr = now.getUTCHours();
+    const currMin = now.getUTCMinutes();
+    
+    let atisTotalMins = atisHr * 60 + atisMin;
+    let currTotalMins = currHr * 60 + currMin;
+    
+    // 跨日邏輯處理 (例如電文為 2350Z，當前時間為 0010Z)
+    if (currTotalMins < atisTotalMins && (atisHr >= 22 && currHr <= 2)) {
+        currTotalMins += 24 * 60;
+    }
+    
+    // 容錯機制：若系統時間微小誤差導致負數，視為 0 分鐘前
+    let diffMins = currTotalMins - atisTotalMins;
+    if (diffMins < 0 && diffMins > -5) diffMins = 0; 
+    
+    if (diffMins < 0 || diffMins > 1440) {
+        return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">時效異常</span>`;
+    }
+    
+    // 超過 30 分鐘亮紅燈，30 分鐘內亮綠燈
+    if (diffMins > 30) {
+        return `<span style="font-size: 11px; background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 12px; font-weight: bold;">⚠️ 已過期 (${diffMins}m)</span>`;
+    } else {
+        return `<span style="font-size: 11px; background: #dcfce7; color: #10b981; padding: 2px 8px; border-radius: 12px; font-weight: bold;">✅ 最新 (${diffMins}m)</span>`;
+    }
+}
+
 function fetchPopupAtis(icao) {
     const container = document.getElementById(`popup-atis-container-${icao}`);
     const contentBox = document.getElementById(`popup-atis-content-${icao}`);
@@ -901,15 +939,25 @@ function fetchPopupAtis(icao) {
             return;
         }
 
-        // 渲染 Arrival 與 Departure ATIS 區塊 (沿用您原本的 CSS 邏輯，稍作微調以適應彈窗)
+        // 解析 Arrival 與 Departure 的時效性標籤
+        const arrAgeBadge = calculatePopupAtisAge(data.arrival);
+        const depAgeBadge = calculatePopupAtisAge(data.departure);
+
+        // 渲染帶有時效性標籤的 ATIS 區塊
         contentBox.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="background-color: #f8fafc; border-left: 4px solid #3c79ff; padding: 10px; border-radius: 6px;">
-                    <div style="font-weight: bold; color: #3c79ff; margin-bottom: 5px; font-size: 13px;">📥 ARRIVAL ATIS</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: bold; color: #3c79ff; font-size: 13px;">📥 ARRIVAL ATIS</span>
+                        ${arrAgeBadge}
+                    </div>
                     <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.arrival || "無 Arrival 資料"}</div>
                 </div>
                 <div style="background-color: #f8fafc; border-left: 4px solid #e67e22; padding: 10px; border-radius: 6px;">
-                    <div style="font-weight: bold; color: #e67e22; margin-bottom: 5px; font-size: 13px;">🛫 DEPARTURE ATIS</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: bold; color: #e67e22; font-size: 13px;">🛫 DEPARTURE ATIS</span>
+                        ${depAgeBadge}
+                    </div>
                     <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.departure || "無 Departure 資料"}</div>
                 </div>
             </div>
@@ -920,7 +968,7 @@ function fetchPopupAtis(icao) {
         btn.disabled = false;
         btn.style.opacity = "1";
       });
-}  
+}
 </script>
 <script src="app.js?v=2.0"></script>
 </body>
