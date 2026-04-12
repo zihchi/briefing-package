@@ -1,177 +1,181 @@
-<div class="app-wrapper animate-fade-in" style="max-width: 800px;">
+<div class="app-wrapper animate-fade-in" style="max-width: 900px;">
   
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
     <div>
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
-        📻 全球 D-ATIS 情報
+        📻 D-ATIS
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">擷取即時 ATIS 純文字電文</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">source:https://atis.guru/</div>
     </div>
-    <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-  </div>
-
-  <div class="app-card" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
     
-    <label style="font-size: 0.95em; font-weight: bold; color: #555;">📡 選擇或輸入機場代碼</label>
-    
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-      
-      <select id="quickIcaoSelect" onchange="quickSelectIcao(this)" style="padding: 10px; border: 1px solid #ccc; border-radius: 12px; font-size: 1em; background: rgba(243,244,246,0.8); outline: none; cursor: pointer; color: #333; font-weight: 500;">
-        <option selected disabled>-- 從常用機場清單快速選取 (選取後自動查詢) --</option>
-        <optgroup label="台灣、香港、澳門">
-          <option value="RCTP">RCTP 桃園</option>
-          <option value="RCSS">RCSS 松山</option>
-          <option value="RCKH">RCKH 高雄</option>
-          <option value="RCMQ">RCMQ 台中</option>
-          <option value="VHHH">VHHH 香港</option>
-          <option value="VMMC">VMMC 澳門</option>
-        </optgroup>
-        <optgroup label="日本">
-          <option value="RJAA">RJAA 成田</option>
-          <option value="RJTT">RJTT 羽田</option>
-          <option value="RJBB">RJBB 關西</option>
-          <option value="RJCC">RJCC 新千歲</option>
-          <option value="RJFF">RJFF 福岡</option>
-          <option value="ROAH">ROAH 沖繩</option>
-          <option value="RJGG">RJGG 中部</option>
-          <option value="RJSS">RJSS 仙台</option>
-          <option value="RJFK">RJFK 鹿兒島</option>
-          <option value="RJFT">RJFT 熊本</option>
-        </optgroup>
-        <optgroup label="東南亞與其他">
-          <option value="WSSS">WSSS 新加坡</option>
-          <option value="WMKK">WMKK 吉隆坡</option>
-          <option value="WMKP">WMKP 檳城</option>
-          <option value="VTBS">VTBS 曼谷 (蘇凡納布)</option>
-          <option value="VVTS">VVTS 胡志明</option>
-          <option value="VVNB">VVNB 河內</option>
-          <option value="VVDN">VVDN 峴港</option>
-          <option value="RPLL">RPLL 馬尼拉</option>
-          <option value="RPVM">RPVM 宿霧</option>
-          <option value="RPLC">RPLC 克拉克</option>
-        </optgroup>
-      </select>
-
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <hr style="flex: 1; border: none; border-top: 1px dashed #ccc;">
-        <span style="font-size: 0.85em; color: #aaa; font-weight: bold;">OR 手動輸入</span>
-        <hr style="flex: 1; border: none; border-top: 1px dashed #ccc;">
-      </div>
-
-      <div style="display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 10px; background: rgba(243,244,246,0.8); border-radius: 12px; padding: 5px 15px; border: 1px solid #e5e7eb;">
-          <span style="font-weight: bold; color: #555;">ICAO:</span>
-          <input type="text" id="atis-icao-input" value="RCTP" maxlength="4" placeholder="例如: RJAA" 
-                 style="background: transparent; border: none; font-size: 1.2em; font-weight: bold; color: #3c79ff; text-transform: uppercase; width: 100%; outline: none; font-family: 'Courier New', Courier, monospace;">
-        </div>
-        
-        <button onclick="fetchGlobalAtis()" 
-                style="margin: 0; background-color: #3c79ff; color: white; border: none; padding: 10px 24px; border-radius: 12px; font-weight: bold; font-size: 1.05em; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(60,121,255,0.2);">
-          查詢
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+        <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
+        <div style="background: #1e293b; padding: 8px 15px; border-radius: 10px; border: 1px solid #334155; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); text-align: center;">
+            <div style="font-size: 0.7em; color: #94a3b8; font-weight: bold; letter-spacing: 1px; margin-bottom: 2px;">TIME (UTC)</div>
+            <div id="utc-clock" style="font-family: 'Courier New', Courier, monospace; font-size: 1.4em; font-weight: bold; color: #38bdf8; letter-spacing: 2px;">00:00:00</div>
+        </div>
+    </div>
+  </div>
+
+  <div class="app-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap;">
+      
+      <div style="flex: 1.5; min-width: 250px;">
+        <select id="quickIcaoSelect" onchange="quickSelectIcao(this)" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 12px; font-size: 1em; background: rgba(243,244,246,0.8); outline: none; cursor: pointer; color: #333; font-weight: 500;">
+          <option selected disabled>-- 常用機場快速選取 --</option>
+          <optgroup label="台灣、香港、澳門">
+            <option value="RCTP">RCTP 桃園</option>
+            <option value="RCSS">RCSS 松山</option>
+            <option value="RCKH">RCKH 高雄</option>
+            <option value="VHHH">VHHH 香港</option>
+            <option value="VMMC">VMMC 澳門</option>
+          </optgroup>
+          <optgroup label="日本">
+            <option value="RJAA">RJAA 成田</option>
+            <option value="RJTT">RJTT 羽田</option>
+            <option value="RJBB">RJBB 關西</option>
+            <option value="RJCC">RJCC 新千歲</option>
+            <option value="RJFF">RJFF 福岡</option>
+            <option value="ROAH">ROAH 沖繩</option>
+            <option value="RJGG">RJGG 中部</option>
+          </optgroup>
+          <optgroup label="東南亞與其他">
+            <option value="WSSS">WSSS 新加坡</option>
+            <option value="WMKK">WMKK 吉隆坡</option>
+            <option value="VTBS">VTBS 曼谷</option>
+            <option value="VVTS">VVTS 胡志明</option>
+            <option value="RPLL">RPLL 馬尼拉</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div style="flex: 1; min-width: 200px; display: flex; gap: 8px;">
+        <div style="flex: 1; display: flex; align-items: center; gap: 8px; background: rgba(243,244,246,0.8); border-radius: 12px; padding: 0 12px; border: 1px solid #e5e7eb;">
+          <span style="font-weight: bold; color: #555;">ICAO:</span>
+          <input type="text" id="atis-icao-input" value="RCTP" maxlength="4" placeholder="ICAO" 
+                 style="background: transparent; border: none; font-size: 1.1em; font-weight: bold; color: #3c79ff; text-transform: uppercase; width: 100%; outline: none; font-family: 'Courier New', Courier, monospace;">
+        </div>
+        <button onclick="fetchGlobalAtis()" style="background-color: #3c79ff; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">查詢</button>
       </div>
     </div>
     
-    <div id="atis-status" style="margin-top: 5px; font-size: 0.95em; font-weight: bold; color: #64748b; text-align: center;">
-      請選擇機場或手動輸入 ICAO 後點擊查詢
+    <div id="atis-status" style="font-size: 0.9em; font-weight: bold; color: #64748b; text-align: center;">
+      請輸入代碼後查詢
     </div>
   </div>
 
-  <div class="app-card">
-    <div class="app-section-title">Arrival ATIS</div>
-    <div id="arr-atis" class="raw-text" style="min-height: 100px; margin-bottom: 25px; border-left-color: #3c79ff;">
-      等待資料載入...
+  <div class="atis-grid-container">
+    <div class="app-card atis-sub-card">
+      <div class="app-section-title" style="color: #3c79ff;">Arrival ATIS</div>
+      <div id="arr-atis" class="raw-text atis-content-box">等待載入...</div>
     </div>
 
-    <div class="app-section-title">Departure ATIS</div>
-    <div id="dep-atis" class="raw-text" style="min-height: 100px; border-left-color: #e67e22;">
-      等待資料載入...
+    <div class="app-card atis-sub-card">
+      <div class="app-section-title" style="color: #e67e22;">Departure ATIS</div>
+      <div id="dep-atis" class="raw-text atis-content-box">等待載入...</div>
     </div>
   </div>
+
 </div>
 
 <style>
-  /* 確保切換頁面時有平滑的淡入效果 */
   .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   
-  /* 覆寫部分樣式以適應 ATIS 顯示需求 */
-  #arr-atis, #dep-atis {
-      font-size: 15px; 
+  /* 報文左右對稱分格佈局 */
+  .atis-grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 左右對稱 */
+      gap: 15px;
+      align-items: stretch;
+  }
+
+  .atis-sub-card {
+      margin-bottom: 0 !important;
+      display: flex;
+      flex-direction: column;
+  }
+
+  .atis-content-box {
+      flex-grow: 1;
+      font-size: 14px; 
       line-height: 1.5; 
       white-space: pre-wrap; 
       word-break: break-word;
       background-color: #f8fafc;
+      min-height: 250px; /* 增加最小高度確保閱讀舒適度 */
+      border-left: 4px solid #ddd;
+  }
+
+  /* 行動裝置優化：寬度不足時自動切換回上下分格 */
+  @media (max-width: 768px) {
+      .atis-grid-container {
+          grid-template-columns: 1fr;
+      }
   }
 </style>
 
 <script>
-  // 快速選單連動功能：選取後自動填入 input 並執行查詢
+  // 實時 UTC 時鐘
+  function updateUtcClock() {
+    const now = new Date();
+    const h = String(now.getUTCHours()).padStart(2, '0');
+    const m = String(now.getUTCMinutes()).padStart(2, '0');
+    const s = String(now.getUTCSeconds()).padStart(2, '0');
+    const clockEl = document.getElementById('utc-clock');
+    if (clockEl) clockEl.innerText = `${h}:${m}:${s}`;
+  }
+  setInterval(updateUtcClock, 1000);
+  updateUtcClock();
+
   function quickSelectIcao(selectObj) {
     const icaoInput = document.getElementById("atis-icao-input");
     if (selectObj.value) {
       icaoInput.value = selectObj.value;
-      fetchGlobalAtis(); // 自動觸發查詢
-      selectObj.selectedIndex = 0; // 查詢後將選單重置回預設字樣，保持畫面乾淨
+      fetchGlobalAtis();
+      selectObj.selectedIndex = 0;
     }
   }
 
   function fetchGlobalAtis() {
     const icaoInput = document.getElementById("atis-icao-input");
     const icao = icaoInput.value.trim().toUpperCase() || "RCTP";
-    
-    // 更新輸入框為大寫
     icaoInput.value = icao;
     
     const statusEl = document.getElementById("atis-status");
     const arrEl = document.getElementById("arr-atis");
     const depEl = document.getElementById("dep-atis");
 
-    // UI 狀態切換：載入中
-    statusEl.innerText = `🔄 正在攔截 ${icao} 的 ATIS 電文...`;
-    statusEl.style.color = "#3b82f6"; // 藍色
+    statusEl.innerText = `🔄 正在擷取 ${icao} 電文...`;
+    statusEl.style.color = "#3b82f6";
     arrEl.innerText = "連線中...";
     depEl.innerText = "連線中...";
 
-    // ==========================================
-    // ⚠️ 確保這裡是您最新部署的 GAS URL
-    // ==========================================
     const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
-    
-    // 透過 GET 請求將參數傳遞給 GAS
-    const requestUrl = `${gasUrl}?icao=${icao}`;
-
-    fetch(requestUrl)
-      .then(response => {
-        if (!response.ok) throw new Error("網路連線異常");
-        return response.json();
-      })
+    fetch(`${gasUrl}?icao=${icao}`)
+      .then(response => response.json())
       .then(data => {
         if (data.error) {
           statusEl.innerText = `❌ ${data.error}`;
-          statusEl.style.color = "#ef4444"; // 紅色
+          statusEl.style.color = "#ef4444";
           arrEl.innerText = "無資料";
           depEl.innerText = "無資料";
           return;
         }
-
-        statusEl.innerText = `✅ ${icao} 資料更新完成！`;
-        statusEl.style.color = "#10b981"; // 綠色
-
-        arrEl.innerText = data.arrival || "無 Arrival ATIS 資料";
-        depEl.innerText = data.departure || "無 Departure ATIS 資料";
+        statusEl.innerText = `✅ ${icao} 更新完成 (${new Date().getUTCHours().toString().padStart(2,'0')}${new Date().getUTCMinutes().toString().padStart(2,'0')}Z)`;
+        statusEl.style.color = "#10b981";
+        arrEl.innerText = data.arrival || "無 Arrival 資料";
+        depEl.innerText = data.departure || "無 Departure 資料";
       })
       .catch(error => {
-        statusEl.innerText = `❌ 通訊失敗，請檢查網路連線或 GAS 服務狀態。`;
+        statusEl.innerText = `❌ 通訊失敗`;
         statusEl.style.color = "#ef4444";
         arrEl.innerText = "連線失敗";
         depEl.innerText = "連線失敗";
-        console.error("ATIS Fetch Error:", error);
       });
   }
 
-  // 面板載入時自動執行一次查詢
   fetchGlobalAtis();
 </script>
