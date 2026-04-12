@@ -866,14 +866,14 @@ function resetAltimetryCalculator() {
 }
 
 // ==========================================
-// 📡 NOTAM Radar 核心邏輯
+// 📡 NOTAM Radar 核心邏輯 (強化升級版)
 // ==========================================
 let notamMapInstance = null;
 let notamActiveLayers = [];
 let notamClockInterval = null;
 
 function initNotamRadar() {
-    // 1. 時鐘邏輯 (切換頁面時自動停止舊的計時器)
+    // 1. 時鐘邏輯
     if (notamClockInterval) clearInterval(notamClockInterval);
     notamClockInterval = setInterval(() => {
         const clockEl = document.getElementById('clock');
@@ -885,12 +885,11 @@ function initNotamRadar() {
         }
     }, 1000);
 
-    // 2. 地圖初始化 (如果之前載入過，必須先移除舊實體，避免崩潰)
+    // 2. 地圖初始化
     if (notamMapInstance !== null) {
         notamMapInstance.remove();
     }
     
-    // 注意：這裡對應的是新 ID 'notam-map'
     notamMapInstance = L.map('notam-map', { zoomControl: false }).setView([25.03, 121.5], 6);
     L.control.zoom({ position: 'bottomright' }).addTo(notamMapInstance);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -899,37 +898,67 @@ function initNotamRadar() {
 
     notamActiveLayers = [];
 
-    // 3. 綁定按鈕事件 (不使用 HTML inline onclick，改在這裡動態綁定)
+    // 3. 綁定按鈕事件
     document.getElementById('btn-process-notam').addEventListener('click', processNotamData);
     document.getElementById('btn-clear-notam').addEventListener('click', clearNotamAll);
 }
 
-// 核心解析邏輯：將航用座標轉為十進制
+// 核心解析邏輯：智慧型經緯度轉換引擎 (修正寫死長度的盲點)
 function smartToDec(val) {
     if (!val) return NaN;
-    const dirMatch = val.match(/[NSEW]/i);
+    // 移除多餘空白並轉大寫，確保格式乾淨
+    const cleanVal = val.toUpperCase().replace(/\s+/g, '');
+    const dirMatch = cleanVal.match(/[NSEW]/);
     if (!dirMatch) return NaN;
     
-    const dir = dirMatch[0].toUpperCase();
-    const nums = val.replace(/[NSEW]/i, "").trim();
+    const dir = dirMatch[0];
+    const nums = cleanVal.replace(/[NSEW]/, "");
     
-    let d, m, s;
-    if (dir === 'N' || dir === 'S') {
-        d = nums.slice(0, 2);
-        m = nums.slice(2, 4);
-        s = nums.slice(4) || "0";
+    let dec = NaN;
+
+    // 判斷是否為純十進位 (例如: N25.12345，整數部分長度小於等於3)
+    if (nums.includes('.') && nums.split('.')[0].length <= 3) {
+       dec = parseFloat(nums);
     } else {
-        d = nums.slice(0, 3);
-        m = nums.slice(3, 5);
-        s = nums.slice(5) || "0";
+        // 處理傳統航用座標 DDMMSS 或 DDMM.MM
+        const isLat = (dir === 'N' || dir === 'S');
+        const degLen = isLat ? 2 : 3;
+
+        if (nums.length >= degLen + 2) {
+            const d = parseFloat(nums.slice(0, degLen));
+            const rest = nums.slice(degLen);
+            
+            // 檢查是否有小數點，用以動態區分分鐘帶小數或秒鐘帶小數
+            if (rest.includes('.')) {
+                 const dotIndex = rest.indexOf('.');
+                 if (dotIndex === 2) { 
+                     // 分鐘帶小數 (例如 DDMM.MMM)
+                     const m = parseFloat(rest);
+                     dec = d + (m / 60);
+                 } else if (dotIndex === 4) { 
+                     // 秒鐘帶小數 (例如 DDMMSS.SS)
+                     const m = parseFloat(rest.slice(0, 2));
+                     const s = parseFloat(rest.slice(2));
+                     dec = d + (m / 60) + (s / 3600);
+                 }
+            } else {
+                // 標準的 DDMM 或 DDMMSS
+                const m = parseFloat(rest.slice(0, 2));
+                const s = rest.length >= 4 ? parseFloat(rest.slice(2, 4)) : 0;
+                dec = d + (m / 60) + (s / 3600);
+            }
+        }
     }
     
-    let dec = parseFloat(d) + parseFloat(m)/60 + parseFloat(s)/3600;
-    return (dir === 'S' || dir === 'W') ? -dec : dec;
+    if (!isNaN(dec)) {
+         return (dir === 'S' || dir === 'W') ? -dec : dec;
+    }
+    return NaN;
 }
 
 function parseNotamHeader(text) {
-    const idMatch = text.match(/([A-Z]\d{4}\/\d{2})/);
+    // 放寬年份判定，支援 2碼 或 4碼 年份
+    const idMatch = text.match(/([A-Z]\d{4}\/\d{2,4})/);
     const timeMatchB = text.match(/B\)\s*(\d{10})/);
     const timeMatchC = text.match(/C\)\s*(\d{10}|PERM|EST)/);
     
@@ -996,26 +1025,37 @@ function processNotamData() {
         allCoords = allCoords.concat(coords);
 
         const cleanBlock = block.replace(/\s+/g, " ");
-        const radiusMatch = cleanBlock.match(/(\d+(?:\.\d+)?)\s*(NM|KM)\s*RADIUS/i) || 
-                            cleanBlock.match(/RADIUS\s+(?:OF\s+)?(\d+(?:\.\d+)?)\s*(NM|KM)/i);
+        
+        // 尋找所有的半徑宣告 (解鎖多重圖形共存)
+        const radiusRegex = /(?:RADIUS\s+(?:OF\s+)?(\d+(?:\.\d+)?)\s*(NM|KM))|(\d+(?:\.\d+)?)\s*(NM|KM)\s*RADIUS/gi;
+        let radiusMatches = [...cleanBlock.matchAll(radiusRegex)];
 
-        if (radiusMatch) {
-            const rValue = parseFloat(radiusMatch[1]);
-            const rUnit = radiusMatch[2].toUpperCase();
-            const meters = rValue * (rUnit === "NM" ? 1852 : 1000);
-            
-            const circle = L.circle(coords[0], {
-                color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: meters, weight: 2, dashArray: '5, 5'
-            }).addTo(notamMapInstance);
-            notamActiveLayers.push(circle);
-            circle.bindPopup(`<b>Radius Area</b><br>中心: ${coords[0][0].toFixed(4)}, ${coords[0][1].toFixed(4)}<br>半徑: ${rValue} ${rUnit}`);
-        } else if (coords.length >= 3) {
+        if (radiusMatches.length > 0) {
+            radiusMatches.forEach(match => {
+                const rValue = parseFloat(match[1] || match[3]);
+                const rUnit = (match[2] || match[4]).toUpperCase();
+                const meters = rValue * (rUnit === "NM" ? 1852 : 1000);
+                const center = coords[0]; // 預設使用區塊內第一個點當圓心
+
+                const circle = L.circle(center, {
+                    color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: meters, weight: 2, dashArray: '5, 5'
+                }).addTo(notamMapInstance);
+                notamActiveLayers.push(circle);
+                circle.bindPopup(`<b>Radius Area</b><br>中心: ${center[0].toFixed(4)}, ${center[1].toFixed(4)}<br>半徑: ${rValue} ${rUnit}`);
+            });
+        } 
+        
+        // 獨立判定：只要座標大於等於3個，就畫出多邊形 (解除與圓形的互斥)
+        if (coords.length >= 3) {
             const poly = L.polygon(coords, {
                 color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 3
             }).addTo(notamMapInstance);
             notamActiveLayers.push(poly);
             poly.bindPopup(`<b>Polygon Area</b><br>頂點數: ${coords.length}`);
-        } else {
+        } 
+        
+        // 若非多邊形且無半徑，才畫航路點
+        if (radiusMatches.length === 0 && coords.length < 3) {
             coords.forEach(c => {
                 const marker = L.circleMarker(c, { radius: 6, color: '#f43f5e', fillOpacity: 0.8 }).addTo(notamMapInstance);
                 notamActiveLayers.push(marker);
@@ -1065,7 +1105,6 @@ function clearNotamAll() {
     document.getElementById('logArea').classList.add('hidden');
     notamMapInstance.setView([25.03, 121.5], 6);
 }
-
 // ==========================================
 // 🛬 航班動態 (FIDS) 核心邏輯 - 搭載 TDX 數據鏈
 // ==========================================
