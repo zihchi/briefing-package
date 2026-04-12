@@ -94,6 +94,35 @@
     #btn-refresh-map { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
     #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
 
+    /* 讓 popup 內部保有內距，避免卷軸貼齊文字 */
+    .weather-popup { 
+        width: 100%; 
+        max-width: 100%; 
+        text-align: left !important; 
+        box-sizing: border-box; 
+        padding-right: 5px; 
+    }
+
+    /* 針對 Leaflet 預設的滾動視窗進行美化 (類 iOS 風格) */
+    .leaflet-popup-content {
+        margin: 15px !important; /* 覆蓋預設 margin */
+    }
+
+    /* 自訂卷軸樣式 */
+    .leaflet-popup-content::-webkit-scrollbar {
+        width: 6px;
+    }
+    .leaflet-popup-content::-webkit-scrollbar-track {
+        background: transparent; 
+    }
+    .leaflet-popup-content::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 10px;
+    }
+    .leaflet-popup-content::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+    }
+
     /* =========================================
        通用工具樣式 (iOS 風格 / 包含 Curfew, Time Calc, Altimetry)
        ========================================= */
@@ -753,7 +782,7 @@ function initAviationMap() {
 
         marker.on('click', function() {
             if (!isDataReady) {
-                L.popup({ maxWidth: 450 })
+                L.popup({ maxWidth: 500, maxHeight: 450 })
                     .setLatLng(marker.getLatLng())
                     .setContent(`
                     <div class="weather-popup">
@@ -779,7 +808,7 @@ function initAviationMap() {
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
-            L.popup({ maxWidth: 500 })
+            L.popup({ maxWidth: 500, maxHeight: 450 })
     .setLatLng(marker.getLatLng())
     .setContent(`
     <div class="weather-popup">
