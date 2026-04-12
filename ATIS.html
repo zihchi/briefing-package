@@ -3,20 +3,14 @@
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
     <div>
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
-        📻 D-ATIS
+        📻 全球 D-ATIS 情報
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">source:https://atis.guru/</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">擷取即時 ATIS 純文字電文，並自動判斷時效性</div>
     </div>
     
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
-        <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-        <div style="background: #1e293b; padding: 8px 15px; border-radius: 10px; border: 1px solid #334155; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); text-align: center;">
-            <div style="font-size: 0.7em; color: #94a3b8; font-weight: bold; letter-spacing: 1px; margin-bottom: 2px;">TIME (UTC)</div>
-            <div id="utc-clock" style="font-family: 'Courier New', Courier, monospace; font-size: 1.4em; font-weight: bold; color: #38bdf8; letter-spacing: 2px;">00:00:00</div>
-        </div>
-    </div>
+    <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
   </div>
 
   <div class="app-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
@@ -67,15 +61,27 @@
   </div>
 
   <div class="atis-grid-container">
+    
     <div class="app-card atis-sub-card">
-      <div class="app-section-title" style="color: #3c79ff;">Arrival ATIS</div>
-      <div id="arr-atis" class="raw-text atis-content-box">等待載入...</div>
+      <div class="app-section-title atis-title-bar">
+        <div>
+            <span style="color: #3c79ff; font-size: 1.1em;">Arrival ATIS</span>
+            <span class="atis-clock-display">(Time Now : <span class="utc-clock">00:00:00</span>z)</span>
+        </div>
+        <div id="arr-age"></div> </div>
+      <div id="arr-atis" class="raw-text atis-content-box" style="border-left-color: #3c79ff;">等待載入...</div>
     </div>
 
     <div class="app-card atis-sub-card">
-      <div class="app-section-title" style="color: #e67e22;">Departure ATIS</div>
-      <div id="dep-atis" class="raw-text atis-content-box">等待載入...</div>
+      <div class="app-section-title atis-title-bar">
+        <div>
+            <span style="color: #e67e22; font-size: 1.1em;">Departure ATIS</span>
+            <span class="atis-clock-display">(Time Now : <span class="utc-clock">00:00:00</span>z)</span>
+        </div>
+        <div id="dep-age"></div> </div>
+      <div id="dep-atis" class="raw-text atis-content-box" style="border-left-color: #e67e22;">等待載入...</div>
     </div>
+
   </div>
 
 </div>
@@ -85,51 +91,115 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   
   /* 報文左右對稱分格佈局 */
-  .atis-grid-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr; /* 左右對稱 */
-      gap: 15px;
-      align-items: stretch;
+  .atis-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: stretch; }
+  .atis-sub-card { margin-bottom: 0 !important; display: flex; flex-direction: column; padding: 15px; }
+  
+  /* 標題列佈局 (包含時鐘與徽章) */
+  .atis-title-bar {
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-end; 
+      flex-wrap: wrap; 
+      gap: 10px; 
+      margin-bottom: 12px;
   }
-
-  .atis-sub-card {
-      margin-bottom: 0 !important;
-      display: flex;
-      flex-direction: column;
+  .atis-clock-display {
+      font-size: 0.85em; 
+      color: #64748b; 
+      font-family: 'Courier New', monospace; 
+      font-weight: bold; 
+      margin-left: 8px;
   }
 
   .atis-content-box {
       flex-grow: 1;
-      font-size: 14px; 
-      line-height: 1.5; 
+      font-size: 14.5px; 
+      line-height: 1.6; 
       white-space: pre-wrap; 
       word-break: break-word;
       background-color: #f8fafc;
-      min-height: 250px; /* 增加最小高度確保閱讀舒適度 */
+      min-height: 250px; 
       border-left: 4px solid #ddd;
+      padding: 12px;
+      border-radius: 8px;
   }
 
-  /* 行動裝置優化：寬度不足時自動切換回上下分格 */
+  /* 時效性徽章樣式 */
+  .age-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; letter-spacing: 0.5px; }
+  .age-fresh { background-color: #dcfce7; color: #10b981; }
+  .age-expired { background-color: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+
   @media (max-width: 768px) {
-      .atis-grid-container {
-          grid-template-columns: 1fr;
-      }
+      .atis-grid-container { grid-template-columns: 1fr; }
   }
 </style>
 
 <script>
-  // 實時 UTC 時鐘
+  // ==========================================
+  // 1. 即時 UTC 雙時鐘更新系統
+  // ==========================================
   function updateUtcClock() {
     const now = new Date();
     const h = String(now.getUTCHours()).padStart(2, '0');
     const m = String(now.getUTCMinutes()).padStart(2, '0');
     const s = String(now.getUTCSeconds()).padStart(2, '0');
-    const clockEl = document.getElementById('utc-clock');
-    if (clockEl) clockEl.innerText = `${h}:${m}:${s}`;
+    
+    // 更新畫面上所有掛載 .utc-clock 的元素
+    document.querySelectorAll('.utc-clock').forEach(clock => {
+        clock.innerText = `${h}:${m}:${s}`;
+    });
   }
   setInterval(updateUtcClock, 1000);
   updateUtcClock();
 
+  // ==========================================
+  // 2. ATIS 報文時效性解析引擎 (Time Stamp Parser)
+  // ==========================================
+  function calculateAtisAge(rawText) {
+    if (!rawText || rawText.includes("無資料") || rawText.includes("連線失敗") || rawText.includes("等待載入")) {
+        return "";
+    }
+
+    // 利用正規表達式捕捉標準航空氣象格式：DDHHMMZ 或 HHMMZ
+    // 擷取 Z 結尾前 4 碼作為 (時)(分)
+    const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
+    if (!timeMatch) {
+        return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時間戳記未知)</span>";
+    }
+
+    const atisHr = parseInt(timeMatch[1], 10);
+    const atisMin = parseInt(timeMatch[2], 10);
+
+    const now = new Date();
+    const currHr = now.getUTCHours();
+    const currMin = now.getUTCMinutes();
+
+    let atisTotalMins = atisHr * 60 + atisMin;
+    let currTotalMins = currHr * 60 + currMin;
+
+    // 處理跨日邏輯 (例如 ATIS 是 23:50Z 發佈，現在是 00:10Z)
+    if (currTotalMins < atisTotalMins && (atisHr === 23 && currHr === 0)) {
+        currTotalMins += 24 * 60;
+    }
+
+    const diffMins = currTotalMins - atisTotalMins;
+
+    // 異常處理 (例如未來時間，或相差過大)
+    if (diffMins < 0 || diffMins > 1440) {
+        return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時效異常)</span>";
+    }
+
+    // 業務邏輯：大於 30 分鐘標示為已過期
+    if (diffMins > 30) {
+        return `<span class='age-badge age-expired'>⚠️ 已發佈 ${diffMins} 分鐘 (已過期)</span>`;
+    } else {
+        return `<span class='age-badge age-fresh'>✓ 發佈於 ${diffMins} 分鐘前</span>`;
+    }
+  }
+
+  // ==========================================
+  // 3. API 擷取與 UI 控制邏輯
+  // ==========================================
   function quickSelectIcao(selectObj) {
     const icaoInput = document.getElementById("atis-icao-input");
     if (selectObj.value) {
@@ -147,15 +217,24 @@
     const statusEl = document.getElementById("atis-status");
     const arrEl = document.getElementById("arr-atis");
     const depEl = document.getElementById("dep-atis");
+    const arrAgeEl = document.getElementById("arr-age");
+    const depAgeEl = document.getElementById("dep-age");
 
-    statusEl.innerText = `🔄 正在擷取 ${icao} 電文...`;
+    // UI 切換至載入狀態
+    statusEl.innerText = `🔄 正在擷取 ${icao} 數位電文...`;
     statusEl.style.color = "#3b82f6";
     arrEl.innerText = "連線中...";
     depEl.innerText = "連線中...";
+    arrAgeEl.innerHTML = "";
+    depAgeEl.innerHTML = "";
 
     const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
+    
     fetch(`${gasUrl}?icao=${icao}`)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error("網路狀態異常");
+        return response.json();
+      })
       .then(data => {
         if (data.error) {
           statusEl.innerText = `❌ ${data.error}`;
@@ -164,18 +243,30 @@
           depEl.innerText = "無資料";
           return;
         }
-        statusEl.innerText = `✅ ${icao} 更新完成 (${new Date().getUTCHours().toString().padStart(2,'0')}${new Date().getUTCMinutes().toString().padStart(2,'0')}Z)`;
+
+        const now = new Date();
+        const fetchZ = `${String(now.getUTCHours()).padStart(2,'0')}${String(now.getUTCMinutes()).padStart(2,'0')}Z`;
+        
+        statusEl.innerText = `✅ ${icao} 資料擷取完畢 (擷取時間: ${fetchZ})`;
         statusEl.style.color = "#10b981";
+        
         arrEl.innerText = data.arrival || "無 Arrival 資料";
         depEl.innerText = data.departure || "無 Departure 資料";
+
+        // 計算並渲染時效徽章
+        arrAgeEl.innerHTML = calculateAtisAge(arrEl.innerText);
+        depAgeEl.innerHTML = calculateAtisAge(depEl.innerText);
       })
       .catch(error => {
-        statusEl.innerText = `❌ 通訊失敗`;
+        statusEl.innerText = `❌ 通訊失敗，請檢查網路連線`;
         statusEl.style.color = "#ef4444";
         arrEl.innerText = "連線失敗";
         depEl.innerText = "連線失敗";
+        arrAgeEl.innerHTML = "";
+        depAgeEl.innerHTML = "";
       });
   }
 
+  // 初始載入自動查詢
   fetchGlobalAtis();
 </script>
