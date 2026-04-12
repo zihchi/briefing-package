@@ -492,12 +492,6 @@ function initFlightSelect() {
   dateSelectEl.addEventListener("change", updateTurbliUrl);
 }
 
-function openDatis() {
-  const sel = document.getElementById("datisSelect");
-  const url = sel.value;
-  if (url) window.open(url, '_blank');
-}
-
 // ==========================================
 // 🌤️ 惡劣天氣表情符號解析器
 // ==========================================
@@ -600,7 +594,7 @@ function initAviationMap() {
         for (let i = 0; i < fetchStrategies.length; i++) {
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); 
+                const timeoutId = setTimeout(() => controller.abort(), 5000); 
                 
                 const res = await fetch(fetchStrategies[i](targetUrl), { signal: controller.signal });
                 clearTimeout(timeoutId);
@@ -770,9 +764,15 @@ function initAviationMap() {
         }
     };
 
-    const refreshBtn = document.getElementById('btn-refresh-map');
+const refreshBtn = document.getElementById('btn-refresh-map');
     if(refreshBtn) {
         refreshBtn.addEventListener('click', () => {
+            // 1. 觸發瞬間立刻禁用按鈕，並給予視覺回饋 (變灰、游標改變、文字改變)
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = "0.5";
+            refreshBtn.style.cursor = "not-allowed";
+            refreshBtn.innerText = "⏳ 同步中...";
+
             isDataReady = false;
             const statusIndicator = document.getElementById('sync-status');
             statusIndicator.classList.remove('status-loaded', 'status-error');
@@ -781,6 +781,14 @@ function initAviationMap() {
             
             airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
             bootSequence();
+
+            // 2. 強制設定 2 秒（2000 毫秒）後，才能再次點擊按鈕
+            setTimeout(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = "1";
+                refreshBtn.style.cursor = "pointer";
+                refreshBtn.innerText = "手動更新氣象";
+            }, 2000);
         });
     }
 
