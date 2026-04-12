@@ -1,7 +1,6 @@
-<div class="section gpsjam-section" style="max-width: 900px; margin: 0 auto;">
-  <h2>📡 GPSJAM 即時干擾地圖 
-    <button onclick="refreshGpsIframe('gpsjamMap')">重新整理</button>
-  </h2>
+<div class="section gpsjam-section" style="margin: 0 auto;">
+  <h2>📡 GPSJAM 即時干擾地圖</h2>
+  
   <iframe id="gpsjamMap" 
     style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);" 
     allowfullscreen>
@@ -9,20 +8,14 @@
 </div>
 
 <script>
-  // 1. 為了避免與主網頁的其他函數命名衝突，稍微將函數改名
-  function refreshGpsIframe(id) {
-    const iframe = document.getElementById(id);
-    if (iframe) iframe.src = iframe.src;
-  }
-
-  // 2. 啟動程序：動態推算日期與載入地圖
+  // 啟動程序：動態推算日期與載入地圖
   (function() {
     // 設定與 Windy 同步的參數 (以台灣為中心)
     const lat = "25.07970";
     const lon = "121.23420";
-    const zoom = "6.0";
+    const zoom = "7.0";
 
-    // 計算兩天前的日期 (解決資料延遲問題)
+    // 計算兩天前的日期 (解決 GPSJAM 資料處理延遲問題)
     let d = new Date();
     d.setDate(d.getDate() - 2);
     let targetDate = d.toISOString().split('T')[0]; // 格式化為 YYYY-MM-DD
