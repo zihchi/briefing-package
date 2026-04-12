@@ -217,7 +217,7 @@
   <h1>📦 簡報箱（Briefing Package）</h1>
 
   <div class="section">
-    <h2>🗺️ 快速工具連結</h2>
+    <h2>🗺️ 外部網站</h2>
     <div class="tool-grid">
       <a class="btn" href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank">☁️Weathernews Flight Plan Editor</a>
       <a class="btn" href="https://pilotstarspace.starlux-airlines.com/#/" target="_blank">🌟SJX Pilot Space</a>
@@ -234,7 +234,7 @@
 
 <div class="section">
   <h2>
-    <div>🧮 飛行計算模組 (Flight Calculators)</div>
+    <div>🧮 內部模組</div>
     <button onclick="closePanel()" style="background-color: #e74c3c; color: white; padding: 5px 12px; font-size: 0.75em; border-radius: 6px; margin: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">❌ 關閉面板</button>
   </h2>
   
@@ -322,7 +322,7 @@
   <div class="map-header">
     <h2 style="margin: 0;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        🌍 NOAA AWC METAR/TAF
+        🌍 NOAA AWC METAR/TAF & D-ATIS
         <div id="sync-status" style="background-color: #34495e;">⏸️ 待命：請手動更新氣象</div>
       </div>
     </h2>
@@ -422,57 +422,71 @@ function refreshIframe(id){
   if (iframe) iframe.src = iframe.src;
 }
 
-window.flights = [
-  
-  // 東北亞航線 (日本)
-  { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
-  { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
-  { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" },
-  { flightNo: "820", route: "TPE/KIX" }, { flightNo: "821", route: "KIX/TPE" },
-  { flightNo: "822", route: "TPE/KIX" }, { flightNo: "823", route: "KIX/TPE" },
-  { flightNo: "834", route: "TPE/UKB" }, { flightNo: "835", route: "UKB/TPE" },
-  { flightNo: "838", route: "TPE/NGO" }, { flightNo: "839", route: "NGO/TPE" },
-  { flightNo: "840", route: "TPE/FUK" }, { flightNo: "841", route: "FUK/TPE" },
-  { flightNo: "846", route: "TPE/KMJ" }, { flightNo: "847", route: "KMJ/TPE" },
-  { flightNo: "850", route: "TPE/CTS" }, { flightNo: "851", route: "CTS/TPE" },
-  { flightNo: "860", route: "TPE/HKD" }, { flightNo: "861", route: "HKD/TPE" },
-  { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
-  { flightNo: "870", route: "TPE/OKA" }, { flightNo: "871", route: "OKA/TPE" },
-  { flightNo: "886", route: "TPE/SHI" }, { flightNo: "887", route: "SHI/TPE" },
-
-  // 港澳航線
-  { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
-  { flightNo: "205", route: "TPE/MFM" }, { flightNo: "206", route: "MFM/TPE" },
-  { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
-  { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" },
-      
-  // 東南亞航線
-  { flightNo: "703", route: "TPE/DAD" }, { flightNo: "704", route: "DAD/TPE" },
-  { flightNo: "705", route: "TPE/PQC" }, { flightNo: "706", route: "PQC/TPE" },
-  { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
-  { flightNo: "713", route: "TPE/SGN" }, { flightNo: "714", route: "SGN/TPE" },
-  { flightNo: "715", route: "TPE/HAN" }, { flightNo: "716", route: "HAN/TPE" },
-  { flightNo: "717", route: "TPE/HAN" }, { flightNo: "718", route: "HAN/TPE" },
-  { flightNo: "725", route: "TPE/KUL" }, { flightNo: "726", route: "KUL/TPE" },
-  { flightNo: "741", route: "TPE/BKK" }, { flightNo: "742", route: "BKK/TPE" },
-  { flightNo: "745", route: "TPE/BKK" }, { flightNo: "746", route: "BKK/TPE" },
-  { flightNo: "751", route: "TPE/CNX" }, { flightNo: "752", route: "CNX/TPE" },
-  { flightNo: "761", route: "TPE/CGK" }, { flightNo: "762", route: "CGK/TPE" },
-  { flightNo: "771", route: "TPE/SIN" }, { flightNo: "772", route: "SIN/TPE" },
-  { flightNo: "781", route: "TPE/CEB" }, { flightNo: "782", route: "CEB/TPE" },
-  { flightNo: "783", route: "TPE/CEB" }, { flightNo: "784", route: "CEB/TPE" },
-  { flightNo: "785", route: "TPE/MNL" }, { flightNo: "786", route: "MNL/TPE" },
-  { flightNo: "789", route: "TPE/CRK" }, { flightNo: "790", route: "CRK/TPE" },
-  { flightNo: "791", route: "TPE/CRK" }, { flightNo: "792", route: "CRK/TPE" },
-
-  // 北美航線
-  { flightNo: "001", route: "LAX/TPE" }, { flightNo: "002", route: "TPE/LAX" },
-  { flightNo: "009", route: "ONT/TPE" }, { flightNo: "010", route: "TPE/ONT" },
-  { flightNo: "011", route: "SFO/TPE" }, { flightNo: "012", route: "TPE/SFO" },
-  { flightNo: "025", route: "PHX/TPE" }, { flightNo: "026", route: "TPE/PHX" },
-  { flightNo: "031", route: "SEA/TPE" }, { flightNo: "032", route: "TPE/SEA" }
-
+const flightGroups = [
+  {
+    region: "東北亞航線 (日本)",
+    flights: [
+      { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
+      { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
+      { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" },
+      { flightNo: "820", route: "TPE/KIX" }, { flightNo: "821", route: "KIX/TPE" },
+      { flightNo: "822", route: "TPE/KIX" }, { flightNo: "823", route: "KIX/TPE" },
+      { flightNo: "834", route: "TPE/UKB" }, { flightNo: "835", route: "UKB/TPE" },
+      { flightNo: "838", route: "TPE/NGO" }, { flightNo: "839", route: "NGO/TPE" },
+      { flightNo: "840", route: "TPE/FUK" }, { flightNo: "841", route: "FUK/TPE" },
+      { flightNo: "846", route: "TPE/KMJ" }, { flightNo: "847", route: "KMJ/TPE" },
+      { flightNo: "850", route: "TPE/CTS" }, { flightNo: "851", route: "CTS/TPE" },
+      { flightNo: "860", route: "TPE/HKD" }, { flightNo: "861", route: "HKD/TPE" },
+      { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
+      { flightNo: "870", route: "TPE/OKA" }, { flightNo: "871", route: "OKA/TPE" },
+      { flightNo: "886", route: "TPE/SHI" }, { flightNo: "887", route: "SHI/TPE" }
+    ]
+  },
+  {
+    region: "港澳航線",
+    flights: [
+      { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
+      { flightNo: "205", route: "TPE/MFM" }, { flightNo: "206", route: "MFM/TPE" },
+      { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
+      { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" }
+    ]
+  },
+  {
+    region: "東南亞航線",
+    flights: [
+      { flightNo: "703", route: "TPE/DAD" }, { flightNo: "704", route: "DAD/TPE" },
+      { flightNo: "705", route: "TPE/PQC" }, { flightNo: "706", route: "PQC/TPE" },
+      { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
+      { flightNo: "713", route: "TPE/SGN" }, { flightNo: "714", route: "SGN/TPE" },
+      { flightNo: "715", route: "TPE/HAN" }, { flightNo: "716", route: "HAN/TPE" },
+      { flightNo: "717", route: "TPE/HAN" }, { flightNo: "718", route: "HAN/TPE" },
+      { flightNo: "725", route: "TPE/KUL" }, { flightNo: "726", route: "KUL/TPE" },
+      { flightNo: "741", route: "TPE/BKK" }, { flightNo: "742", route: "BKK/TPE" },
+      { flightNo: "745", route: "TPE/BKK" }, { flightNo: "746", route: "BKK/TPE" },
+      { flightNo: "751", route: "TPE/CNX" }, { flightNo: "752", route: "CNX/TPE" },
+      { flightNo: "761", route: "TPE/CGK" }, { flightNo: "762", route: "CGK/TPE" },
+      { flightNo: "771", route: "TPE/SIN" }, { flightNo: "772", route: "SIN/TPE" },
+      { flightNo: "781", route: "TPE/CEB" }, { flightNo: "782", route: "CEB/TPE" },
+      { flightNo: "783", route: "TPE/CEB" }, { flightNo: "784", route: "CEB/TPE" },
+      { flightNo: "785", route: "TPE/MNL" }, { flightNo: "786", route: "MNL/TPE" },
+      { flightNo: "789", route: "TPE/CRK" }, { flightNo: "790", route: "CRK/TPE" },
+      { flightNo: "791", route: "TPE/CRK" }, { flightNo: "792", route: "CRK/TPE" }
+    ]
+  },
+  {
+    region: "北美航線",
+    flights: [
+      { flightNo: "001", route: "LAX/TPE" }, { flightNo: "002", route: "TPE/LAX" },
+      { flightNo: "009", route: "ONT/TPE" }, { flightNo: "010", route: "TPE/ONT" },
+      { flightNo: "011", route: "SFO/TPE" }, { flightNo: "012", route: "TPE/SFO" },
+      { flightNo: "025", route: "PHX/TPE" }, { flightNo: "026", route: "TPE/PHX" },
+      { flightNo: "031", route: "SEA/TPE" }, { flightNo: "032", route: "TPE/SEA" }
+    ]
+  }
 ];
+
+// 利用 flatMap 將群組資料攤平，保留給後續尋找路由時使用
+window.flights = flightGroups.flatMap(group => group.flights);
 
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
@@ -486,14 +500,25 @@ function initFlightSelect() {
   defaultOption.textContent = "-- 請選擇航班 --";
   selectEl.appendChild(defaultOption);
 
-  window.flights
-    .sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }))
-    .forEach(item => {
-      const opt = document.createElement("option");
-      opt.value = item.flightNo;
-      opt.textContent = item.flightNo;
-      selectEl.appendChild(opt);
-    });
+  // 依序疊加我們定義好的分類群組
+  flightGroups.forEach(group => {
+    // 建立 optgroup 作為分類大標題
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.region;
+
+    // 將該群組內的航班進行數字排序後，加入 optgroup 內部
+    group.flights
+      .sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }))
+      .forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.flightNo;
+        opt.textContent = item.flightNo;
+        optgroup.appendChild(opt);
+      });
+
+    // 最後將整組分類塞進前端選單中
+    selectEl.appendChild(optgroup);
+  });
 
   function updateTurbliUrl() {
     const selectedFlight = selectEl.value;
