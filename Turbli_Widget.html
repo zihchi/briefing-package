@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turbli 亂流觀景窗 (開發校準版)</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f9f7f3;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 儀表板外框 */
+    .dashboard-panel {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-left: 6px solid #3c79ff;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* 控制面板 */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 8px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 15px;
+      font-weight: bold;
+      color: white;
+      background-color: #3c79ff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover { background-color: #2c5edc; }
+    
+    .btn-calib { background-color: #e67e22; }
+    .btn-calib:hover { background-color: #d35400; }
+
+    /* ==========================================
+       重點：觀景窗遮罩 (Iframe Masking)
+       ========================================== */
+    .viewfinder {
+      width: 100%;
+      height: 480px; /* 這裡決定你想要露出多高的畫面，剛好包住圖表 */
+      overflow: hidden; /* 隱藏框框以外的所有東西 */
+      position: relative;
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      background-color: #f0f0f0;
+    }
+
+    .viewfinder iframe {
+      position: absolute;
+      /* 關鍵參數：強制 iframe 保持電腦版寬度，防止文字 RWD 換行導致圖表高度亂跑 */
+      width: 850px; 
+      height: 2000px;
+      left: 50%;
+      transform: translateX(-50%); /* 讓網頁保持水平置中 */
+      border: none;
+      transition: top 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-panel">
+    <h2 style="margin-top: 0;">✈️ 航班亂流精準截圖</h2>
+    
+    <div class="controls">
+      <input type="text" id="turbliUrl" value="https://turbli.com/HKG/TPE/2026-04-12/JX-236/" placeholder="貼上 Turbli 航班網址">
+      <button onclick="loadGraph()">載入圖表</button>
+    </div>
+
+    <div class="controls" style="background: #fff3cd; padding: 10px; border-radius: 8px; color: #856404; font-size: 14px;">
+      <b>🔧 高度校準器：</b>
+      <button class="btn-calib" onclick="adjustOffset(-20)">⬆️ 畫面上移</button>
+      <button class="btn-calib" onclick="adjustOffset(20)">⬇️ 畫面下移</button>
+      <span id="currentOffset">目前 Y 軸偏移量: -420px</span>
+    </div>
+
+    <div class="viewfinder">
+      <iframe id="targetFrame" src="about:blank" scrolling="no"></iframe>
+    </div>
+    
+  </div>
+
+  <script>
+    // 預設的圖表起始高度 (因螢幕與機型而異，可以透過校準器調整)
+    let currentTopOffset = -420; 
+
+    function loadGraph() {
+      const url = document.getElementById('turbliUrl').value;
+      const iframe = document.getElementById('targetFrame');
+      
+      iframe.src = url;
+      iframe.style.top = currentTopOffset + "px";
+    }
+
+    function adjustOffset(amount) {
+      const iframe = document.getElementById('targetFrame');
+      currentTopOffset += amount;
+      iframe.style.top = currentTopOffset + "px";
+      document.getElementById('currentOffset').innerText = `目前 Y 軸偏移量: ${currentTopOffset}px`;
+      
+      // 你可以在調整出最完美的數字後，把那個數字記下來，寫死到最終版的程式碼裡！
+    }
+  </script>
+
+</body>
+</html>
