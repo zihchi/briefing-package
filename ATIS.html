@@ -1,89 +1,119 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-    <script>
-      function fetchAtis() {
-        // 從輸入框取得 ICAO 代碼，若空白則預設使用 RCTP
-        var icao = document.getElementById("icao-input").value.trim() || "RCTP";
-        
-        // 改變狀態提示，並清空舊資料避免混亂
-        document.getElementById("status").innerText = "正在攔截 " + icao.toUpperCase() + " 的資料，請稍候...";
-        document.getElementById("status").style.color = "#0056b3";
-        document.getElementById("arr-atis").innerText = "載入中...";
-        document.getElementById("dep-atis").innerText = "載入中...";
-        document.getElementById("metar").innerText = "載入中...";
-        document.getElementById("taf").innerText = "載入中...";
+<div class="app-wrapper animate-fade-in" style="max-width: 800px;">
+  
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+      <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
+        📻 全球 D-ATIS 情報
+      </h2>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">透過 ICAO 代碼即時擷取數位廣播</div>
+    </div>
+    <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
 
-        // 呼叫 GAS 後端，並把 icao 變數傳遞進去
-        google.script.run
-          .withSuccessHandler(function(data) {
-             var atis = JSON.parse(data);
-             
-             if(atis.error) {
-                 document.getElementById("status").innerText = atis.error;
-                 document.getElementById("status").style.color = "red";
-                 return;
-             }
-             
-             document.getElementById("status").innerText = icao.toUpperCase() + " 資料更新完成！";
-             document.getElementById("status").style.color = "green";
-             
-             document.getElementById("arr-atis").innerText = atis.arrival || "無資料";
-             document.getElementById("dep-atis").innerText = atis.departure || "無資料";
-             document.getElementById("metar").innerText = atis.metar || "無資料";
-             document.getElementById("taf").innerText = atis.taf || "無資料";
-          })
-          .withFailureHandler(function(error) {
-             document.getElementById("status").innerText = "通訊異常，請檢查網路連線。";
-             document.getElementById("status").style.color = "red";
-          })
-          .getAirportAtis(icao); // 注意這裡函式名稱已更改並傳入參數
-      }
+  <div class="app-card" style="padding: 20px;">
+    <div style="display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 10px; background: rgba(243,244,246,0.8); border-radius: 12px; padding: 5px 15px;">
+        <span style="font-weight: bold; color: #555;">ICAO:</span>
+        <input type="text" id="atis-icao-input" value="RCTP" maxlength="4" placeholder="例如: RJAA" 
+               style="background: transparent; border: none; font-size: 1.2em; font-weight: bold; color: #3c79ff; text-transform: uppercase; width: 100%; outline: none; font-family: 'Courier New', Courier, monospace;">
+      </div>
       
-      // 網頁準備完畢後，先執行一次預設的 RCTP 查詢
-      window.onload = fetchAtis;
-    </script>
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-      .search-bar { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-      input { padding: 8px; font-size: 16px; width: 100px; text-transform: uppercase; border: 1px solid #ccc; border-radius: 4px; }
-      button { padding: 8px 16px; font-size: 16px; background-color: #c9a050; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
-      button:hover { background-color: #b38b42; }
-      .data-box {
-          background-color: #f4f4f4;
-          padding: 15px;
-          margin-bottom: 20px;
-          font-family: monospace;
-          font-size: 14px;
-          white-space: pre-wrap; 
-          border: 1px solid #ccc;
-          border-radius: 5px;
-      }
-      h4 { margin-bottom: 5px; color: #333; }
-    </style>
-  </head>
-  <body>
-    <h2>全球 D-ATIS 數位情報儀表板</h2>
-    
-    <div class="search-bar">
-      <label for="icao-input"><b>ICAO 代碼：</b></label>
-      <input type="text" id="icao-input" value="RCTP" maxlength="4" placeholder="例: RJAA">
-      <button onclick="fetchAtis()">查詢 / 更新</button>
+      <button onclick="fetchGlobalAtis()" 
+              style="margin: 0; background-color: #3c79ff; color: white; border: none; padding: 10px 24px; border-radius: 12px; font-weight: bold; font-size: 1.05em; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(60,121,255,0.2);">
+        查詢
+      </button>
     </div>
     
-    <div id="status" style="font-weight: bold; margin-bottom: 15px;"></div>
+    <div id="atis-status" style="margin-top: 15px; font-size: 0.95em; font-weight: bold; color: #64748b; text-align: center;">
+      請輸入機場代碼並點擊查詢
+    </div>
+  </div>
+
+  <div class="app-card">
+    <div class="app-section-title">Arrival ATIS</div>
+    <div id="arr-atis" class="raw-text" style="min-height: 100px; margin-bottom: 25px; border-left-color: #3c79ff;">
+      等待資料載入...
+    </div>
+
+    <div class="app-section-title">Departure ATIS</div>
+    <div id="dep-atis" class="raw-text" style="min-height: 100px; border-left-color: #e67e22;">
+      等待資料載入...
+    </div>
+  </div>
+</div>
+
+<style>
+  /* 確保切換頁面時有平滑的淡入效果 */
+  .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* 覆寫部分樣式以適應 ATIS 顯示需求 */
+  #arr-atis, #dep-atis {
+      font-size: 15px; 
+      line-height: 1.5; 
+      white-space: pre-wrap; 
+      word-break: break-word;
+      background-color: #f8fafc;
+  }
+</style>
+
+<script>
+  function fetchGlobalAtis() {
+    const icaoInput = document.getElementById("atis-icao-input");
+    const icao = icaoInput.value.trim().toUpperCase() || "RCTP";
     
-    <h4>Arrival ATIS</h4>
-    <div id="arr-atis" class="data-box">載入中...</div>
+    // 更新輸入框為大寫
+    icaoInput.value = icao;
     
-    <h4>Departure ATIS</h4>
-    <div id="dep-atis" class="data-box">載入中...</div>
+    const statusEl = document.getElementById("atis-status");
+    const arrEl = document.getElementById("arr-atis");
+    const depEl = document.getElementById("dep-atis");
+
+    // UI 狀態切換：載入中
+    statusEl.innerText = `🔄 正在攔截 ${icao} 的 ATIS 電文...`;
+    statusEl.style.color = "#3b82f6"; // 藍色
+    arrEl.innerText = "連線中...";
+    depEl.innerText = "連線中...";
+
+    // ==========================================
+    // ⚠️ 請將下方的 URL 替換為你在 GAS 部署的網頁應用程式網址
+    // ==========================================
+    const gasUrl = "YOUR_GAS_WEB_APP_URL"; 
     
-    <h4>METAR</h4>
-    <div id="metar" class="data-box">載入中...</div>
-    
-    <h4>TAF</h4>
-    <div id="taf" class="data-box">載入中...</div>
-  </body>
-</html>
+    // 透過 GET 請求將參數傳遞給 GAS
+    const requestUrl = `${gasUrl}?icao=${icao}`;
+
+    fetch(requestUrl)
+      .then(response => {
+        if (!response.ok) throw new Error("網路連線異常");
+        return response.json();
+      })
+      .then(data => {
+        if (data.error) {
+          statusEl.innerText = `❌ ${data.error}`;
+          statusEl.style.color = "#ef4444"; // 紅色
+          arrEl.innerText = "無資料";
+          depEl.innerText = "無資料";
+          return;
+        }
+
+        statusEl.innerText = `✅ ${icao} 資料更新完成！`;
+        statusEl.style.color = "#10b981"; // 綠色
+
+        arrEl.innerText = data.arrival || "無 Arrival ATIS 資料";
+        depEl.innerText = data.departure || "無 Departure ATIS 資料";
+      })
+      .catch(error => {
+        statusEl.innerText = `❌ 通訊失敗，請檢查網路連線或 GAS 服務狀態。`;
+        statusEl.style.color = "#ef4444";
+        arrEl.innerText = "連線失敗";
+        depEl.innerText = "連線失敗";
+        console.error("ATIS Fetch Error:", error);
+      });
+  }
+
+  // 頁面載入時自動執行一次查詢
+  fetchGlobalAtis();
+</script>
