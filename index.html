@@ -284,14 +284,6 @@
       src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pubhtml?widget=true&headers=false"
       style="width:100%; height:480px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
     ></iframe>
-
-    <iframe 
-  src="https://gpsjam.org/?lat=45.00000&lon=35.00000&z=3.0&date=2026-04-10" 
-  width="100%" 
-  height="600px" 
-  frameborder="0" 
-  allowfullscreen>
-</iframe>
   </div>
 
   <div class="section flex flex-col gap-5">
@@ -421,6 +413,16 @@
       </div>
   </div>
 
+<div class="section gpsjam-section">
+  <h2>📡 GPSJAM 即時干擾地圖 
+    <button onclick="refreshIframe('gpsjamMap')">重新整理</button>
+  </h2>
+  <iframe id="gpsjamMap" 
+    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);" 
+    allowfullscreen>
+  </iframe>
+</div>
+  
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -1042,6 +1044,24 @@ function fetchPopupAtis(icao) {
         btn.style.opacity = "1";
       });
 }
+
+  (function() {
+    // 1. 設定與 Windy 同步的參數
+    const lat = "23.50000";
+    const lon = "120.90000";
+    const zoom = "7.0";
+
+    // 2. 計算兩天前的日期 (解決資料延遲問題)
+    let d = new Date();
+    d.setDate(d.getDate() - 2);
+    let targetDate = d.toISOString().split('T')[0]; // 格式化為 YYYY-MM-DD
+
+    // 3. 注入網址
+    const iframe = document.getElementById("gpsjamMap");
+    iframe.src = `https://gpsjam.org/?lat=${lat}&lon=${lon}&z=${zoom}&date=${targetDate}`;
+  })();
+
+  
 </script>
 <script src="app.js?v=2.0"></script>
 </body>
