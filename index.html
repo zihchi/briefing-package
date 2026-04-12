@@ -5,7 +5,6 @@
   <title>簡報箱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- 引入 Leaflet 的 CSS 樣式表以正確渲染地圖 -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -210,8 +209,7 @@
     <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
     <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
     <button class="btn" onclick="loadPage('正式啟用在刪除TPE_Flight_Data_Link.html')">測試中，無法使用</button>
-    <button class="btn" onclick="loadPage('ATIS.html')">📻 D-ATIS</button>
-  </div>
+    </div>
 </div>
 
 <main id="content-display">
@@ -251,20 +249,16 @@
     ></iframe>
   </div>
 
-  <!-- 優化後的 Turbli 航班亂流查詢 -->
   <div class="section flex flex-col gap-5">
     <h2 class="!mb-0">🛫 Turbli 航班亂流查詢</h2>
     <div class="flex flex-wrap items-end gap-5">
       
-      <!-- 選擇航班 -->
       <div class="flex flex-col gap-2">
         <label for="flightSelect" class="text-sm font-semibold text-gray-600">請選擇航班</label>
         <select id="flightSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[180px] outline-none transition-all cursor-pointer">
-          <!-- Options populated by JS -->
-        </select>
+          </select>
       </div>
 
-      <!-- 選擇日期 -->
       <div class="flex flex-col gap-2">
         <label for="dateSelect" class="text-sm font-semibold text-gray-600">請選擇日期</label>
         <select id="dateSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[140px] outline-none transition-all cursor-pointer">
@@ -273,7 +267,6 @@
         </select>
       </div>
 
-      <!-- 操作按鈕 -->
       <div class="flex gap-3">
         <button id="turbliBtn" disabled class="!m-0 !px-6 !py-2.5 !bg-[#3c79ff] !text-white !font-bold !rounded-lg shadow hover:!bg-blue-700 disabled:!opacity-50 disabled:!cursor-not-allowed transition-all">
           查詢
@@ -288,12 +281,13 @@
     </div>
   </div>
 
-  <!-- 優化後的 D-ATIS 查詢 -->
   <div class="section flex flex-col gap-5">
-    <h2 class="!mb-0">🌏 D-ATIS</h2>
+    <div>
+      <button class="btn" onclick="loadPage('ATIS.html')">📻 D-ATIS</button>
+    </div>
+    
     <div class="flex flex-wrap items-end gap-5">
       
-      <!-- 選擇機場 -->
       <div class="flex flex-col gap-2 w-full max-w-sm">
         <label for="datisSelect" class="text-sm font-semibold text-gray-600">請選擇機場 (選取後自動開啟)</label>
         <select id="datisSelect" onchange="openDatis()" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 w-full outline-none transition-all cursor-pointer">
@@ -352,9 +346,6 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- 🛩️ 東亞航空氣象戰術儀表板 (搭載表情符號解析與自動分類) -->
-  <!-- ========================================================= -->
   <div class="section">
   <div class="map-header">
     <h2 style="margin: 0;">
@@ -451,7 +442,6 @@
   </div>
 
 
-<!-- 引入 Leaflet 的核心 JavaScript 函式庫 -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
