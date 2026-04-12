@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JX FDP & Rest Calculator v4.5</title>
+<style>
+    /* --- Core Styles --- */
+    :root {
+        --jx-gold: #bfa276;
+        --jx-gold-dark: #9f8358;
+        --jx-gray: #1f2937;
+        --bg-color: #f9fafb;
+        --panel-bg: #ffffff;
+        --border-color: #e5e7eb;
+        --color-success: #10b981;
+        --color-danger: #ef4444;
+        --color-info: #3b82f6;
+        --color-wocl: #8b5cf6;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--jx-gray);
+        margin: 0;
+        padding: 20px;
+        line-height: 1.5;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; }
+    .hidden { display: none !important; }
+
+    /* Header */
+    .header {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-bottom: 3px solid var(--jx-gold);
+        border-radius: 8px;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .title { font-size: 1.4rem; font-weight: 800; color: #111827; display: flex; align-items: center; letter-spacing: 0.5px; }
+    .title i { color: var(--jx-gold); margin-right: 10px; font-style: normal; font-size: 1.6rem; }
+    .subtitle { font-size: 0.8rem; color: #6b7280; font-weight: 500; margin-left: 38px; margin-top: -5px; }
+
+    /* Layout */
+    .main-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+    @media (max-width: 850px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* Panels */
+    .panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        height: 100%;
+    }
+    .panel-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #4b5563;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--jx-gold);
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Forms */
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-size: 0.75rem; font-weight: 700; color: #6b7280; margin-bottom: 5px; text-transform: uppercase; }
+    
+    select, input[type="date"], input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 0.95rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background-color: #fff;
+        color: #111827;
+        outline: none;
+        transition: border-color 0.2s;
+        font-family: monospace; 
+        -webkit-appearance: none; appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
+    
+    select:focus, input:focus { border-color: var(--jx-gold); }
+
+    /* Custom Date Input Styling */
+    .date-wrapper {
+        position: relative;
+        flex: 2;
+        min-width: 100px;
+        height: 38px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: #fff;
+        cursor: pointer;
+    }
+    .date-wrapper:hover { border-color: #9ca3af; }
+    .date-display {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; align-items: center; padding-left: 10px;
+        font-family: monospace; font-size: 0.95rem; color: #111827;
+        pointer-events: none;
+    }
+    .date-input-hidden {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    /* Time Row */
+    .time-row { display: flex; gap: 5px; align-items: center; }
+    .time-row select { flex: 1; min-width: 55px; font-weight: bold; cursor: pointer; }
+    .colon { font-weight: bold; color: #9ca3af; }
+
+    /* Radio Group Styling */
+    .radio-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 5px;
+        margin-bottom: 8px;
+    }
+    .radio-label {
+        display: flex;
+        align-items: center;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #4b5563;
+        cursor: pointer;
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+    }
+    .radio-label:hover { background: #e5e7eb; }
+    .radio-label input { margin-right: 5px; cursor: pointer; }
+    
+    .radio-label.selected {
+        background: #fef3c7;
+        border-color: var(--jx-gold);
+        color: #92400e;
+    }
+
+    /* Buttons & Toggles */
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+    .btn-gold { background: linear-gradient(to right, #d4b077, #bfa276); color: white; box-shadow: 0 2px 4px rgba(191, 162, 118, 0.2); }
+    .btn-gold:hover { background: linear-gradient(to right, #bfa276, #9f8358); }
+    
+    .mode-switch {
+        display: flex;
+        background: #f3f4f6;
+        padding: 4px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+    .mode-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+    .mode-btn.active { background: white; color: var(--jx-gold-dark); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+    /* Checkbox Logic Style */
+    .logic-chk {
+        display: flex; align-items: start; cursor: pointer; font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; padding: 8px; border-radius: 4px; border: 1px dashed transparent; transition: background 0.2s;
+    }
+    .logic-chk:hover { background: #f3f4f6; }
+    .logic-chk input { margin-right: 8px; margin-top: 3px; width: 16px; height: 16px; cursor: pointer; }
+    
+    .logic-chk.active { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+    .logic-chk.warn { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+    .logic-chk.discretion { background: #f3e8ff; border-color: #9333ea; color: #6b21a8; }
+
+    /* Results */
+    .result-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+    .res-card { background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb; border-left: 4px solid #ccc; position: relative; transition: all 0.3s; }
+    
+    /* Status Colors */
+    .res-card.ok { border-left-color: var(--color-success); }
+    .res-card.warn { border-left-color: var(--color-danger); }
+    
+    /* 醒目紅 - 全卡片變紅 (High Visibility) */
+    .res-card.violation { 
+        background-color: #fee2e2 !important; /* bg-red-100 */
+        border-color: #ef4444 !important;
+        border-left-color: #b91c1c !important; /* deeper red border */
+        color: #991b1b;
+    }
+    .res-card.violation .res-title { color: #b91c1c; }
+    .res-card.violation .res-val { color: #7f1d1d; }
+    .res-card.violation .res-sub { color: #991b1b; font-weight: bold; }
+    
+    .res-title { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+    .res-val { font-size: 1.6rem; font-weight: 700; font-family: monospace; color: #111827; }
+    .res-sub { font-size: 0.75rem; color: #6b7280; margin-top: 5px; display:flex; justify-content: space-between; }
+
+    /* Timeline */
+    .timeline-box { margin-top: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
+    .timeline-container { position: relative; height: 180px; background: #f9fafb; border-top: 2px solid #9ca3af; margin-top: 30px; overflow-x: auto; }
+    
+    .block { position: absolute; height: 30px; line-height: 30px; text-align: center; color: white; font-size: 12px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; font-weight: 500; }
+    
+    .bg-fdp { background: var(--color-success); top: 10px; z-index: 5;}
+    .bg-mfdp { background: repeating-linear-gradient(45deg, #60a5fa, #60a5fa 10px, #3b82f6 10px, #3b82f6 20px); top: 50px; opacity: 0.9; }
+    .bg-mrp { background: repeating-linear-gradient(45deg, #fbbf24, #fbbf24 10px, #f59e0b 10px, #f59e0b 20px); top: 90px; opacity: 0.9; }
+    .bg-rp { background: #4b5563; top: 130px; } 
+    .bg-dhd { background: repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 5px, #9ca3af 5px, #9ca3af 10px); top: 10px; opacity: 0.7; z-index: 4; } 
+    .bg-ext { background: repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 10px, #8b5cf6 10px, #8b5cf6 20px); top: 50px; opacity: 0.8; z-index: 1; }
+
+    /* WOCL Visual */
+    .bg-wocl { 
+        background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.3) 100%);
+        border-left: 1px dashed var(--color-wocl);
+        border-right: 1px dashed var(--color-wocl);
+        top: 0; height: 100%; z-index: 1; pointer-events: none;
+    }
+    .wocl-label {
+        position: absolute; top: 165px; font-size: 10px; color: var(--color-wocl); font-weight: bold; transform: translateX(5px);
+    }
+
+    .violation { background: var(--color-danger) !important; }
+
+    .tick { position: absolute; top: 0; height: 100%; border-left: 1px dashed #9ca3af; pointer-events: none; z-index: 1; }
+    .tick-label { position: absolute; top: 155px; transform: translateX(-50%); font-size: 11px; background: #fff; padding: 2px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #4b5563; text-align: center; z-index: 4; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 15px; font-size: 0.8rem; color: #4b5563; }
+    .leg-dot { width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; display: inline-block; }
+
+    .notes { background: #f3f4f6; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 0.85rem; color: #4b5563; border: 1px solid #e5e7eb; }
+    .notes ul { padding-left: 20px; margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <div class="title"><i>✈</i> 飛時管理計算工具</div>
+            <div class="subtitle">請參閱 FOM 4.7.5</div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        
+        <!-- LEFT: Settings -->
+        <div class="panel">
+            <div class="panel-title"><span>⚙</span>派遣設定</div>
+            
+            <div class="form-group">
+                <label>組員人數 (Crew)</label>
+                <select id="crew" onchange="updateUI()">
+                    <option value="2">2 人 (Single Crew)</option>
+                    <option value="3">3 人 (Multiple Crew)</option>
+                    <option value="4">4 人 (Double Crew)</option>
+                </select>
+            </div>
+
+            <div id="class1Box" class="form-group hidden">
+                <label>Class 1 休息設施</label>
+                <select id="class1">
+                    <option value="yes">有 (Yes)</option>
+                    <option value="no">無 (No)</option>
+                </select>
+            </div>
+
+            <!-- LOGIC: Commander's Discretion (Conditionally Visible) -->
+            <div id="picDiscretionBox" class="form-group hidden" style="border-top:1px solid #eee; padding-top:10px;">
+                <label class="logic-chk discretion">
+                    <input type="checkbox" id="picDiscretion" onchange="safeCalculate()">
+                    <div>
+                        Commander's Discretion (+2h)
+                        <div style="font-size:0.7rem; font-weight:normal; color:#6b21a8;">(不可抗力因素且PIC同意)</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- LOGIC: Time Diff -->
+            <div class="form-group">
+                <label class="logic-chk warn">
+                    <input type="checkbox" id="timeDiff6h" onchange="safeCalculate()">
+                    <div>
+                        Time Diff ≥ 6h & Stay > 48h
+                        <div style="font-size:0.7rem; font-weight:normal; color:#b45309;">(時差大於6hr且待超過48hr)</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- LOGIC: WOCL Zone -->
+            <div class="form-group">
+    <label for="baseTz" style="color:#7c3aed;">Base Timezone (For WOCL)</label>
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+        <span style="color:#7c3aed; font-weight: bold;">UTC + </span>
+        <input type="number" id="baseTz" value="8" min="-12" max="14" step="1.0" onchange="safeCalculate()" style="padding: 4px; border-radius: 4px; border: 1px solid #7c3aed; width: 80px;">
+    </div>
+    <p style="font-size:0.7rem; color:#7c3aed; margin-top:4px;">*用於計算 Circadian Low (02:00-05:00 LT)。請輸入時差數字，預設為正值（例：8, -7）</p>
+</div>
+
+            <div class="form-group" style="border-top:1px solid #eee; padding-top:10px;">
+                <label>飛行時間 (Flight Time)</label>
+                <div class="time-row">
+                    <select id="ftHour"></select>
+                    <span class="colon">:</span>
+                    <select id="ftMinute"></select>
+                </div>
+            </div>
+
+            <button class="btn btn-gold" onclick="safeCalculate()" style="margin-top:20px;">
+                計算 (CALCULATE)
+            </button>
+        </div>
+
+        <!-- RIGHT: Timeline Inputs -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>🕒</span>時間軸輸入 (UTC)
+                <span id="locDisplay" style="color:var(--jx-gold); font-size:0.7rem;">HOME BASE</span>
+            </div>
+            
+            <!-- Location Switch -->
+            <div class="mode-switch">
+                <div id="modeHome" class="mode-btn active" onclick="setLocation('home')">
+                    <i class="fas fa-home"></i> Home Base (基地)
+                </div>
+                <div id="modeOut" class="mode-btn" onclick="setLocation('outstation')">
+                    <i class="fas fa-suitcase"></i> Outstation (外站)
+                </div>
+            </div>
+
+            <!-- FDP Times -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <!-- FDP Start -->
+                <div class="form-group">
+                    <label style="color:var(--color-success);">FDP Start Time</label>
+                    <div class="radio-group" id="startTypeGroup">
+                        <label class="radio-label selected"><input type="radio" name="startType" value="report" checked onchange="updateRadioStyles()">Report</label>
+                        <label class="radio-label"><input type="radio" name="startType" value="dhd" onchange="updateRadioStyles()">DHD</label>
+                        <label class="radio-label"><input type="radio" name="startType" value="other" onchange="updateRadioStyles()">Other Duty</label>
+                    </div>
+                    <div class="time-row">
+                        <div class="date-wrapper">
+                            <div class="date-display" id="disp_reportDate">MM/DD</div>
+                            <input type="date" id="reportDate" class="date-input-hidden" onchange="updateDateDisplay('reportDate')">
+                        </div>
+                        <select id="reportHour"></select>
+                        <select id="reportMinute"></select>
+                    </div>
+                </div>
+
+                <!-- FDP End -->
+                <div class="form-group">
+                    <label style="color:var(--color-success);">FDP End Time</label>
+                    <div class="radio-group" id="endTypeGroup">
+                        <label class="radio-label selected"><input type="radio" name="endType" value="block30" checked onchange="updateRadioStyles()">Block-In +30min</label>
+                        <label class="radio-label"><input type="radio" name="endType" value="actual" onchange="updateRadioStyles()">Actual End</label>
+                    </div>
+                    <div class="time-row">
+                        <div class="date-wrapper">
+                            <div class="date-display" id="disp_releaseDate">MM/DD</div>
+                            <input type="date" id="releaseDate" class="date-input-hidden" onchange="updateDateDisplay('releaseDate')">
+                        </div>
+                        <select id="releaseHour"></select>
+                        <select id="releaseMinute"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accommodation Break Logic (Strict > 3h) -->
+            <div class="form-group" style="margin-top:10px;">
+                <label class="logic-chk active" style="font-weight:700; color:#059669;">
+                    <input type="checkbox" id="hasRestAcc" onchange="toggleRestAcc()">
+                    Rest in Appropriate accommodation in Duty Time Period
+                </label>
+            </div>
+
+            <div id="restAccBox" class="acc-break-section hidden">
+                <div class="form-group">
+                    <label style="color:#059669;">Rest Duration (休息時長)</label>
+                    <div class="time-row">
+                        <select id="restDurHour" style="flex:1;" onchange="safeCalculate()"></select>
+                        <span style="font-weight:bold; padding:0 5px;">hr</span>
+                        <select id="restDurMinute" style="flex:1;" onchange="safeCalculate()"></select>
+                        <span style="font-weight:bold; padding:0 5px;">min</span>
+                    </div>
+                </div>
+                
+                <!-- Logic Section: Only show if Duration > 3h -->
+                <div id="restLogicOptions" class="form-group" style="margin-top:10px;">
+                    <label style="color:#059669;">Scenario Type</label>
+                    <div style="display:flex; gap:10px;">
+                        <label style="font-size:0.8rem; font-weight:normal; display:flex; align-items:center; cursor:pointer;">
+                            <input type="radio" name="restScenario" value="not_start" checked onchange="safeCalculate()">
+                            First Sector NOT Start
+                        </label>
+                        <label style="font-size:0.8rem; font-weight:normal; display:flex; align-items:center; cursor:pointer;">
+                            <input type="radio" name="restScenario" value="start" onchange="safeCalculate()">
+                            First Sector Start
+                        </label>
+                    </div>
+                    <p id="restNote" style="font-size:0.7rem; color:#059669; margin-top:5px;">
+                        *Mode: FDP deducts rest time (Unlimited Max FDP Ext)
+                    </p>
+                </div>
+                
+                <!-- Warning if too short -->
+                <p id="restWarning" class="hidden" style="font-size:0.75rem; color:#ef4444; margin-top:5px; font-weight:bold;">
+                    <i class="fas fa-ban"></i> 休息時長需 > 3小時 (180min) 才能適用延長規則 (不含3小時)。
+                </p>
+            </div>
+
+            <!-- REST PERIOD -->
+            <div class="rest-section">
+                <div class="rest-header">
+                    <i>🌙</i> REST PERIOD CALCULATION
+                </div>
+                
+                <!-- Home Base UI -->
+                <div id="uiHome">
+                    <p style="font-size:0.8rem; color:#6b7280; margin-bottom:10px;">Logic: From Duty End to Next Report.</p>
+                    
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label style="display:flex; align-items:center; cursor:pointer; font-size:0.85rem; font-weight:600; color:#b45309;">
+                            <input type="checkbox" id="followingDHD" onchange="toggleDHD()" style="width:auto; margin-right:8px;">
+                            Following DHD (Duty ends later)
+                        </label>
+                    </div>
+
+                    <div id="dhdInputBox" class="form-group hidden" style="background:rgba(255,255,255,0.6); padding:10px; border-radius:6px; border:1px dashed #d97706; margin-bottom:15px;">
+                        <label style="color:#d97706;">DHD End Time (Rest Start)</label>
+                        <div class="time-row">
+                            <div class="date-wrapper">
+                                <div class="date-display" id="disp_dhdEndDate">MM/DD</div>
+                                <input type="date" id="dhdEndDate" class="date-input-hidden" onchange="updateDateDisplay('dhdEndDate')">
+                            </div>
+                            <select id="dhdEndHour"></select>
+                            <select id="dhdEndMinute"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color:var(--color-info);">Next Duty Report</label>
+                        <div class="time-row">
+                            <div class="date-wrapper">
+                                <div class="date-display" id="disp_nextReportDate">MM/DD</div>
+                                <input type="date" id="nextReportDate" class="date-input-hidden" onchange="updateDateDisplay('nextReportDate')">
+                            </div>
+                            <select id="nextReportHour"></select>
+                            <select id="nextReportMinute"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outstation UI -->
+                <div id="uiOut" class="hidden">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div class="form-group">
+                            <label style="color:#4b5563;">Hotel Check-in</label>
+                            <div class="time-row">
+                                <div class="date-wrapper">
+                                    <div class="date-display" id="disp_hotelInDate">MM/DD</div>
+                                    <input type="date" id="hotelInDate" class="date-input-hidden" onchange="updateDateDisplay('hotelInDate')">
+                                </div>
+                                <select id="hotelInHour"></select>
+                                <select id="hotelInMinute"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="color:#4b5563;">Hotel Check-out</label>
+                            <div class="time-row">
+                                <div class="date-wrapper">
+                                    <div class="date-display" id="disp_hotelOutDate">MM/DD</div>
+                                    <input type="date" id="hotelOutDate" class="date-input-hidden" onchange="updateDateDisplay('hotelOutDate')">
+                                </div>
+                                <select id="hotelOutHour"></select>
+                                <select id="hotelOutMinute"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultBox" class="hidden">
+        
+        <!-- WOCL Alert (Detailed) -->
+        <div id="woclAlert" class="hidden mb-4 p-4 bg-purple-50 border border-purple-400 text-purple-900 rounded">
+            <div class="flex items-start mb-2">
+                <i class="fas fa-moon mr-2 text-xl mt-1"></i>
+                <div>
+                    <strong class="text-sm">WOCL 侵犯警示 (FDP touches 02:00-05:00 LT)</strong>
+                </div>
+            </div>
+            <div class="text-xs text-gray-700 bg-white p-3 rounded border border-purple-100">
+                <p class="mb-1 font-semibold text-purple-800">Regulation Rules:</p>
+                <p class="mb-2 pl-2 border-l-2 border-purple-300">
+                    (1) A minimum rest period of <strong>34 consecutive hours</strong> shall be provided if a pilot operated for flight duty periods that infringed upon the window of circadian low on 2 consecutive days.
+                </p>
+                <p class="mb-2 pl-2 border-l-2 border-purple-300">
+                    (2) A minimum rest period of <strong>54 consecutive hours</strong> shall be provided if a pilot operated for flight duty periods that infringed upon the window of circadian low on 3 consecutive days.
+                </p>
+                <p class="italic text-gray-500 mt-2">
+                    * Exception: Both restrictions above are not applicable for a pilot when a rest period of at least <strong>14 consecutive hours</strong> is provided after each flight duty period that infringed upon the window of circadian low.
+                </p>
+            </div>
+        </div>
+
+        <div class="result-cards">
+            <!-- FDP -->
+            <div id="cardFDP" class="res-card">
+                <div class="res-title">Actual FDP</div>
+                <div id="valFDP" class="res-val">--:--</div>
+                <div class="res-sub">
+                    <span id="txtMaxFDP">Max: --:--</span>
+                    <span id="txtExtFDP" style="color:#059669; font-weight:bold; display:none;"></span>
+                </div>
+            </div>
+            <!-- FT -->
+            <div id="cardFT" class="res-card">
+                <div class="res-title">Flight Time</div>
+                <div id="valFT" class="res-val">--:--</div>
+                <div class="res-sub"><span id="txtMaxFT">Max: --:--</span></div>
+            </div>
+            <!-- Rest -->
+            <div id="cardRest" class="res-card">
+                <div class="res-title">Actual Rest</div>
+                <div id="valRest" class="res-val">--:--</div>
+                <div class="res-sub"><span id="txtMinRest">Min Req: --:--</span></div>
+                
+                <!-- Exemption Info (Hidden by default) -->
+                <div id="exemptionInfo" class="hidden mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                    <strong style="color:#b45309;">豁免條款 (Exemptions):</strong>
+                    <ul style="list-style:disc; padding-left:15px; margin-top:4px;">
+                        <li>回馬槍/相近時區 (Return to origin/Similar TZ)</li>
+                        <li>純搭機任務 (Deadhead Only)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-box">
+            <h4 style="margin:0; font-size:0.8rem; color:#999; text-transform:uppercase;">Visual Timeline</h4>
+            <div id="timeline" class="timeline-container"></div>
+            <div class="legend">
+                <div><span class="leg-dot" style="background:var(--color-success);"></span>FDP</div>
+                <div><span class="leg-dot" style="background:var(--color-wocl); opacity:0.4;"></span>WOCL (02-05)</div>
+                <div><span class="leg-dot" style="background:var(--color-info); opacity:0.5;"></span>Max FDP</div>
+                <div><span class="leg-dot" style="background:repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 3px, #8b5cf6 3px, #8b5cf6 6px);"></span>Ext</div>
+                <div><span class="leg-dot" style="background:#4b5563;"></span>Rest</div>
+                <div><span class="leg-dot" style="background:repeating-linear-gradient(-45deg, #d1d5db, #d1d5db 2px, #9ca3af 2px, #9ca3af 4px);"></span>DHD</div>
+            </div>
+        </div>
+
+        <div class="notes">
+            <strong>📌 邏輯說明：</strong>
+            <ul>
+                <li><strong>Commander's Discretion:</strong> 僅於組員為 3 人 (Multiple Crew) 時顯示，勾選後 Max FDP 自動增加 2 小時。</li>
+                <li><strong>Accommodation (Not Start):</strong> Actual FDP 扣除休息時數 (無上限延長)。</li>
+                <li><strong>Accommodation (Started):</strong> Max FDP 增加休息時數的 50% (上限 24h)。</li>
+                <li><strong>Time Diff ≥ 6h:</strong> 若勾選，基地最小休息時間顯示為 "No FD at least 48hr"。</li>
+                <li><strong>WOCL (02:00-05:00 LT):</strong> 依據所選 Base Timezone 計算夜間勤務。</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* --- LOGIC V4.5 --- */
+const pad = (n) => n.toString().padStart(2, '0');
+const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
+
+let currentLocation = 'home'; 
+
+function initSelectors() {
+    const hours = Array.from({length:24}, (_,i) => pad(i));
+    const minutes = Array.from({length:60}, (_,i) => pad(i));
+    
+    // Add restDurHour etc
+    const hIds = ["reportHour","releaseHour","ftHour","nextReportHour","hotelInHour","hotelOutHour","dhdEndHour", "origReportHour"];
+    const mIds = ["reportMinute","releaseMinute","ftMinute","nextReportMinute","hotelInMinute","hotelOutMinute","dhdEndMinute", "origReportMinute"];
+
+    hIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.innerHTML=""; hours.forEach(h => el.add(new Option(h,h))); }
+    });
+    mIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.innerHTML=""; minutes.forEach(m => el.add(new Option(m,m))); }
+    });
+
+    // Special range for Rest Duration (e.g. 0-24h)
+    const restH = document.getElementById('restDurHour');
+    const restM = document.getElementById('restDurMinute');
+    restH.innerHTML = ""; restM.innerHTML = "";
+    for(let i=0; i<=24; i++) restH.add(new Option(i, i)); // 0-24h
+    for(let i=0; i<60; i++) restM.add(new Option(pad(i), i));
+    
+    // Default rest to 3h 0m
+    restH.value = 3;
+}
+
+function setDefaults() {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    ["reportDate", "releaseDate", "nextReportDate", "hotelInDate", "hotelOutDate", "dhdEndDate", "origReportDate"].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) { el.value = today; updateDateDisplay(id); }
+    });
+
+    document.getElementById('reportHour').value = pad(now.getUTCHours());
+    
+    const rel = new Date(now.getTime() + 8*3600000);
+    document.getElementById('releaseDate').value = rel.toISOString().split('T')[0];
+    updateDateDisplay('releaseDate');
+    document.getElementById('releaseHour').value = pad(rel.getUTCHours());
+    
+    const dhd = new Date(now.getTime() + 9*3600000);
+    document.getElementById('dhdEndDate').value = dhd.toISOString().split('T')[0];
+    updateDateDisplay('dhdEndDate');
+    document.getElementById('dhdEndHour').value = pad(dhd.getUTCHours());
+
+    const next = new Date(rel.getTime() + 24*3600000);
+    document.getElementById('nextReportDate').value = next.toISOString().split('T')[0];
+    updateDateDisplay('nextReportDate');
+    document.getElementById('nextReportHour').value = pad(next.getUTCHours());
+    
+    document.getElementById('ftHour').value = "07";
+}
+
+function updateDateDisplay(inputId) {
+    const input = document.getElementById(inputId);
+    const disp = document.getElementById('disp_' + inputId);
+    if(input.value) {
+        const parts = input.value.split('-'); 
+        if(parts.length === 3) {
+            disp.innerText = `${parts[1]}/${parts[2]}`; 
+            disp.style.color = "#111827";
+        }
+    } else {
+        disp.innerText = "MM/DD";
+        disp.style.color = "#9ca3af";
+    }
+}
+
+function updateRadioStyles() {
+    document.querySelectorAll('.radio-label').forEach(lbl => {
+        const radio = lbl.querySelector('input');
+        if(radio.checked) lbl.classList.add('selected');
+        else lbl.classList.remove('selected');
+    });
+}
+
+function updateUI() {
+    const crew = document.getElementById('crew').value;
+    const c1Box = document.getElementById('class1Box');
+    const picBox = document.getElementById('picDiscretionBox');
+    
+    // Class 1 toggle
+    if(crew === "2") c1Box.classList.add('hidden');
+    else c1Box.classList.remove('hidden');
+
+    // 3-Crew Logic
+    if(crew === "3") {
+        picBox.classList.remove('hidden'); 
+    } else {
+        picBox.classList.add('hidden'); 
+        
+        // Auto uncheck & recalc if hiding
+        if(document.getElementById('picDiscretion').checked) {
+            document.getElementById('picDiscretion').checked = false;
+            safeCalculate();
+        }
+    }
+}
+
+function toggleDHD() {
+    const chk = document.getElementById('followingDHD').checked;
+    const box = document.getElementById('dhdInputBox');
+    if(chk) box.classList.remove('hidden');
+    else box.classList.add('hidden');
+}
+
+function toggleRestAcc() {
+    const chk = document.getElementById('hasRestAcc').checked;
+    const box = document.getElementById('restAccBox');
+    if(chk) box.classList.remove('hidden');
+    else box.classList.add('hidden');
+    safeCalculate();
+}
+
+function setLocation(loc) {
+    currentLocation = loc;
+    const homeBtn = document.getElementById('modeHome');
+    const outBtn = document.getElementById('modeOut');
+    const uiHome = document.getElementById('uiHome');
+    const uiOut = document.getElementById('uiOut');
+    const locDisp = document.getElementById('locDisplay');
+
+    if(loc === 'home') {
+        homeBtn.classList.add('active');
+        outBtn.classList.remove('active');
+        uiHome.classList.remove('hidden');
+        uiOut.classList.add('hidden');
+        locDisp.innerText = "HOME BASE";
+    } else {
+        outBtn.classList.add('active');
+        homeBtn.classList.remove('active');
+        uiOut.classList.remove('hidden');
+        uiHome.classList.add('hidden');
+        locDisp.innerText = "OUTSTATION";
+    }
+}
+
+function safeCalculate() {
+    try { calculate(); } catch(e) { alert("Error: " + e.message); }
+}
+
+function calculate() {
+    const getDT = (p) => {
+        const d = document.getElementById(p+'Date').value;
+        const h = document.getElementById(p+'Hour').value;
+        const m = document.getElementById(p+'Minute').value;
+        if(!d) return null;
+        return new Date(`${d}T${h}:${m}:00Z`);
+    };
+
+    const report = getDT('report'); 
+    const release = getDT('release'); 
+    
+    if(!report || !release) throw new Error("請輸入完整的 FDP Start/End 時間");
+    if(release <= report) throw new Error("FDP End 時間必須晚於 Start 時間");
+
+    // Settings
+    const crew = document.getElementById('crew').value;
+    const hasClass1 = document.getElementById('class1').value === 'yes';
+    const ftMin = parseInt(document.getElementById('ftHour').value)*60 + parseInt(document.getElementById('ftMinute').value);
+    const baseOffset = parseInt(document.getElementById('baseTz').value);
+
+    // 3. FDP & FT Logic
+    let rawFDP = (release - report)/60000;
+    let actFDP = rawFDP;
+    const actFT = ftMin;
+
+    let maxFDP = 0, maxFT = 0;
+    if(crew === "2") { maxFDP = 14*60; maxFT = 10*60; }
+    else if(crew === "3") { maxFDP = 18*60; maxFT = hasClass1 ? 16*60 : 12*60; }
+    else { maxFDP = 24*60; maxFT = hasClass1 ? 18*60 : 12*60; }
+
+    // --- ACCOMMODATION LOGIC v4.2 (Strict > 180 min) ---
+    let extMin = 0;
+    let deductMin = 0;
+    let isAccActive = document.getElementById('hasRestAcc').checked;
+    
+    // UI Elements
+    const logicBox = document.getElementById('restLogicOptions');
+    const warningBox = document.getElementById('restWarning');
+    const noteEl = document.getElementById('restNote');
+    
+    if(isAccActive) {
+        const rH = parseInt(document.getElementById('restDurHour').value);
+        const rM = parseInt(document.getElementById('restDurMinute').value);
+        const restDuration = rH*60 + rM;
+        
+        // Threshold: Must be > 3 hours (Strictly > 180 mins)
+        if(restDuration > 180) {
+            // Valid duration -> Show Logic Options
+            logicBox.classList.remove('hidden');
+            warningBox.classList.add('hidden');
+            
+            const scenario = document.querySelector('input[name="restScenario"]:checked').value;
+            
+            if(scenario === 'not_start') {
+                deductMin = restDuration;
+                actFDP = Math.max(0, rawFDP - deductMin);
+                noteEl.innerText = `*Mode: Deducting ${fmt(deductMin)} from Actual FDP`;
+            } else {
+                let added = Math.floor(restDuration * 0.5);
+                let tempMax = maxFDP + added;
+                if(tempMax > 1440) tempMax = 1440;
+                
+                extMin = tempMax - maxFDP; 
+                maxFDP = tempMax;
+                noteEl.innerText = `*Mode: Max FDP increased by ${fmt(extMin)} (50% Rest)`;
+            }
+        } else {
+            // Invalid duration -> Hide Options, Show Warning
+            logicBox.classList.add('hidden');
+            warningBox.classList.remove('hidden');
+            // Logic effects are reset (extMin=0, deductMin=0)
+        }
+    }
+
+    // --- COMMANDER'S DISCRETION ---
+    let extPic = 0;
+    if(document.getElementById('picDiscretion').checked) {
+        extPic = 120; // 2 hours
+        maxFDP += extPic;
+    }
+
+    // 4. Rest Logic
+    let actRest = 0;
+    let restStart, restEnd;
+    let hasDHD = false;
+    let dhdEnd = null;
+    
+    if(currentLocation === 'home') {
+        const nextReport = getDT('nextReport');
+        if(!nextReport) throw new Error("請輸入 Next Duty Report 時間");
+        
+        hasDHD = document.getElementById('followingDHD').checked;
+        if(hasDHD) {
+            dhdEnd = getDT('dhdEnd');
+            if(!dhdEnd) throw new Error("請輸入 DHD End Time");
+            if(dhdEnd <= release) throw new Error("DHD End Time 必須晚於 FDP End Time");
+            restStart = dhdEnd;
+        } else {
+            restStart = release;
+        }
+        
+        restEnd = nextReport;
+        if(restEnd <= restStart) actRest = 0;
+        else actRest = (restEnd - restStart)/60000;
+
+    } else {
+        const hotelIn = getDT('hotelIn');
+        const hotelOut = getDT('hotelOut');
+        if(!hotelIn || !hotelOut) throw new Error("請輸入 Hotel Check-in / Check-out 時間");
+        
+        restStart = hotelIn;
+        restEnd = hotelOut;
+        if(restEnd <= restStart) throw new Error("Hotel Check-out 必須晚於 Check-in");
+        actRest = (restEnd - restStart)/60000;
+    }
+
+    // Min Rest Limit
+    let minRestH = 0;
+    const ftH = actFT / 60;
+    if(crew === "2") minRestH = (ftH <= 8) ? 10 : 18;
+    else if(crew === "3") minRestH = (ftH <= 8) ? 10 : (ftH <= 12 ? 18 : 24);
+    else minRestH = (ftH <= 8) ? 10 : (ftH <= 16 ? 18 : 22);
+    
+    const minRest = minRestH * 60;
+
+    // --- WOCL CHECK ---
+    let touchesWOCL = false;
+    const offsetMs = baseOffset * 3600000;
+    const localStart = new Date(report.getTime() + offsetMs);
+    const localEnd = new Date(release.getTime() + offsetMs);
+    let checkTime = new Date(localStart);
+    checkTime.setUTCHours(0,0,0,0);
+    for(let i=0; i<3; i++) {
+        let woclStart = new Date(checkTime.getTime() + 2*3600000); // 02:00
+        let woclEnd = new Date(checkTime.getTime() + 5*3600000);   // 05:00
+        if(localStart < woclEnd && localEnd > woclStart) {
+            touchesWOCL = true;
+            break;
+        }
+        checkTime.setDate(checkTime.getDate() + 1);
+    }
+
+    // 5. Render
+    const updateCard = (id, act, lim, isMin) => {
+        const elVal = document.getElementById('val'+id);
+        const elLim = document.getElementById(isMin ? 'txtMin'+id : 'txtMax'+id);
+        const card = document.getElementById('card'+id);
+        const elExcep = document.getElementById('exemptionInfo');
+        
+        elVal.innerText = fmt(act);
+        
+        let bad = false;
+        if(id === 'Rest' && document.getElementById('timeDiff6h').checked && currentLocation === 'home') {
+            elLim.innerText = "Req: No FD at least 48hr";
+            bad = act < 48*60; 
+            if(bad) elExcep.classList.remove('hidden');
+            else elExcep.classList.add('hidden');
+        } else {
+            if(id === 'Rest') elExcep.classList.add('hidden');
+            elLim.innerText = (isMin ? "Min Req: " : "Max: ") + fmt(lim);
+            bad = isMin ? (act < lim) : (act > lim);
+        }
+
+        // Apply violation style (whole card red)
+        if(bad) {
+            card.classList.add('violation');
+            card.classList.remove('ok', 'warn');
+        } else {
+            card.classList.remove('violation', 'warn');
+            card.classList.add('ok');
+        }
+    };
+
+    updateCard('FDP', actFDP, maxFDP, false);
+    updateCard('FT', actFT, maxFT, false);
+    updateCard('Rest', actRest, minRest, true);
+    
+    // Extension/Deduct Text
+    const elExt = document.getElementById('txtExtFDP');
+    let totalExt = 0;
+    let txt = "";
+    
+    if(deductMin > 0) {
+        txt = `(Deduct -${fmt(deductMin)}) `;
+    }
+    
+    if(extMin > 0) txt += `(Split +${fmt(extMin)}) `;
+    if(extPic > 0) txt += `(PIC +${fmt(extPic)}) `;
+    
+    if(txt !== "") {
+        elExt.style.display = 'inline';
+        elExt.innerText = txt;
+        elExt.style.color = (deductMin > 0 && extMin===0 && extPic===0) ? "#059669" : "#8b5cf6"; 
+    } else {
+        elExt.style.display = 'none';
+    }
+
+    // WOCL Alert
+    const wBox = document.getElementById('woclAlert');
+    if(touchesWOCL) wBox.classList.remove('hidden');
+    else wBox.classList.add('hidden');
+
+    // 6. Timeline
+    drawTimeline(report, release, restStart, restEnd, actFDP, maxFDP, minRest, hasDHD, dhdEnd, baseOffset, extMin, deductMin, extPic);
+    document.getElementById('resultBox').classList.remove('hidden');
+}
+
+function drawTimeline(rep, rel, rStart, rEnd, actFDP, maxFDP, minRest, hasDHD, dhdEnd, offset, extMin, deductMin, extPic) {
+    const container = document.getElementById('timeline');
+    container.innerHTML = "";
+    
+    const minRestPoint = new Date(rel.getTime() + minRest*60000); 
+    const minRestStartPoint = rStart;
+    const minRestEndPoint = new Date(minRestStartPoint.getTime() + minRest*60000);
+
+    const finalPoint = new Date(Math.max(rEnd.getTime(), minRestEndPoint.getTime()));
+    
+    const cvsStart = new Date(rep.getTime() - 60*60000);
+    const cvsEnd = new Date(finalPoint.getTime() + 120*60000);
+    const totalMin = (cvsEnd - cvsStart) / 60000;
+
+    const getX = (d) => ((d - cvsStart)/60000 / totalMin) * 100;
+    const getW = (m) => (m / totalMin) * 100;
+
+    const addBlock = (x, w, txt, cls) => {
+        const d = document.createElement('div');
+        d.className = "block " + cls;
+        d.style.left = x + "%";
+        d.style.width = w + "%";
+        d.innerHTML = txt;
+        container.appendChild(d);
+    };
+
+    const addTick = (d, txt) => {
+        const x = getX(d);
+        const t = document.createElement('div');
+        t.className = "tick"; t.style.left = x+"%";
+        container.appendChild(t);
+        const l = document.createElement('div');
+        l.className = "tick-label"; l.style.left = x+"%";
+        l.innerHTML = txt;
+        container.appendChild(l);
+    };
+
+    // WOCL Zones
+    const offsetMs = offset * 3600000;
+    let iterTime = new Date(cvsStart.getTime() + offsetMs);
+    iterTime.setUTCHours(0,0,0,0);
+    for(let i=0; i<5; i++) {
+        let wStartLocal = new Date(iterTime.getTime() + 2*3600000); 
+        let wEndLocal = new Date(iterTime.getTime() + 5*3600000);
+        let wStartUTC = new Date(wStartLocal.getTime() - offsetMs);
+        let wEndUTC = new Date(wEndLocal.getTime() - offsetMs);
+        if(wEndUTC > cvsStart && wStartUTC < cvsEnd) {
+            let start = Math.max(wStartUTC, cvsStart);
+            let end = Math.min(wEndUTC, cvsEnd);
+            let dur = (end - start)/60000;
+            if(dur > 0) {
+                let d = document.createElement('div');
+                d.className = "block bg-wocl";
+                d.style.left = getX(start) + "%";
+                d.style.width = getW(dur) + "%";
+                if(dur > 30) {
+                    let l = document.createElement('div');
+                    l.className = "wocl-label";
+                    l.innerText = "WOCL";
+                    d.appendChild(l);
+                }
+                container.appendChild(d);
+            }
+        }
+        iterTime.setDate(iterTime.getDate() + 1);
+    }
+
+    // FDP Visualization
+    const rawFDP = (rel - rep)/60000;
+    
+    addBlock(getX(rep), getW(rawFDP), `Actual ${fmt(actFDP)}`, "bg-fdp" + (actFDP > maxFDP ? " violation":""));
+    
+    // Max FDP Base (Includes Split Duty Ext)
+    let baseMax = maxFDP - extPic; 
+    addBlock(getX(rep), getW(baseMax), `Max ${fmt(baseMax)}`, "bg-mfdp");
+    
+    // Draw PIC Ext separately if exists
+    if(extPic > 0) {
+        const extStart = new Date(rep.getTime() + baseMax*60000);
+        addBlock(getX(extStart), getW(extPic), `PIC +2h`, "bg-ext");
+    }
+
+    // DHD
+    if(hasDHD && dhdEnd) {
+        const dhdDur = (dhdEnd - rel)/60000;
+        addBlock(getX(rel), getW(dhdDur), `DHD ${fmt(dhdDur)}`, "bg-dhd");
+    }
+
+    // Actual Rest
+    const actRestVal = (rEnd - rStart)/60000;
+    addBlock(getX(rStart), getW(actRestVal), `Rest ${fmt(actRestVal)}`, "bg-rp" + (actRestVal < minRest ? " violation":""));
+    
+    // Min Rest
+    addBlock(getX(rStart), getW(minRest), `Min Req ${fmt(minRest)}`, "bg-mrp");
+
+    // Ticks
+    const fT = (d) => `${d.getUTCMonth()+1}/${d.getUTCDate()}\n${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    addTick(rep, "Start\n"+fT(rep));
+    addTick(rel, "End\n"+fT(rel));
+    
+    if(currentLocation === 'home') {
+        if(hasDHD && dhdEnd) {
+            addTick(dhdEnd, "DHD End\n"+fT(dhdEnd));
+        } else {
+            addTick(rStart, "Rst Start\n(FDP End)");
+        }
+        addTick(rEnd, "Next Rpt\n"+fT(rEnd));
+    } else {
+        addTick(rStart, "Hotel In\n"+fT(rStart));
+        addTick(rEnd, "Hotel Out\n"+fT(rEnd));
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    initSelectors();
+    setDefaults();
+    updateUI();
+});
+</script>
+
+</body>
+</html>
