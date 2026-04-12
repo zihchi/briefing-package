@@ -703,14 +703,14 @@ function calculateCorrectedFPA(temp, elevation, nominalFPA) {
 function getRabText(type, rowId) {
   switch(type) {
     case 'NPA(2D)':
-      if (['iaf', 'if', 'faf', 'da'].includes(rowId)) return 'Required';
+      if (['iaf', 'if', 'faf', 'da'].includes(rowId)) return 'Required 必須修正';
       break;
     case 'APV-Baro(3D)':
-      if (['iaf', 'if'].includes(rowId)) return 'Not Recommended\n(see note)';
-      if (['faf', 'da'].includes(rowId)) return 'Not Required';
+      if (['iaf', 'if'].includes(rowId)) return 'Not Recommended 不建議\n(see note)';
+      if (['faf', 'da'].includes(rowId)) return 'Not Required 不需要';
       break;
     case 'PA (ILS)':
-      if (['iaf', 'if', 'faf'].includes(rowId)) return 'Required\n(see note)';
+      if (['iaf', 'if', 'faf'].includes(rowId)) return 'Required 必須修正\n(see note)';
       if (rowId === 'da') return 'Required';
       break;
   }
@@ -728,7 +728,7 @@ function setAltApproach(type, index) {
 
   const notesBox = document.getElementById('altNotesBox');
   if (type === 'APV-Baro(3D)') {
-    notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#d97706; font-weight:bold;">Not Recommended:</span> Not recommended when FMC coded with "above".`;
+    notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#d97706; font-weight:bold;">Not Recommended:</span> Not recommended for IF and IAF when FMC coded with "above" to generate a stable CDFA to FAP.`;
     notesBox.classList.add('active');
   } else if (type === 'PA (ILS)') {
     notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#e74c3c; font-weight:bold;">Required:</span> If overflying IF/IAF/FAF/FAP, and not being Radar Vectored, unless already descending on G/S.`;
