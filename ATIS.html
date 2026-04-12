@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script>
+      function fetchAtis() {
+        // 從輸入框取得 ICAO 代碼，若空白則預設使用 RCTP
+        var icao = document.getElementById("icao-input").value.trim() || "RCTP";
+        
+        // 改變狀態提示，並清空舊資料避免混亂
+        document.getElementById("status").innerText = "正在攔截 " + icao.toUpperCase() + " 的資料，請稍候...";
+        document.getElementById("status").style.color = "#0056b3";
+        document.getElementById("arr-atis").innerText = "載入中...";
+        document.getElementById("dep-atis").innerText = "載入中...";
+        document.getElementById("metar").innerText = "載入中...";
+        document.getElementById("taf").innerText = "載入中...";
+
+        // 呼叫 GAS 後端，並把 icao 變數傳遞進去
+        google.script.run
+          .withSuccessHandler(function(data) {
+             var atis = JSON.parse(data);
+             
+             if(atis.error) {
+                 document.getElementById("status").innerText = atis.error;
+                 document.getElementById("status").style.color = "red";
+                 return;
+             }
+             
+             document.getElementById("status").innerText = icao.toUpperCase() + " 資料更新完成！";
+             document.getElementById("status").style.color = "green";
+             
+             document.getElementById("arr-atis").innerText = atis.arrival || "無資料";
+             document.getElementById("dep-atis").innerText = atis.departure || "無資料";
+             document.getElementById("metar").innerText = atis.metar || "無資料";
+             document.getElementById("taf").innerText = atis.taf || "無資料";
+          })
+          .withFailureHandler(function(error) {
+             document.getElementById("status").innerText = "通訊異常，請檢查網路連線。";
+             document.getElementById("status").style.color = "red";
+          })
+          .getAirportAtis(icao); // 注意這裡函式名稱已更改並傳入參數
+      }
+      
+      // 網頁準備完畢後，先執行一次預設的 RCTP 查詢
+      window.onload = fetchAtis;
+    </script>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+      .search-bar { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+      input { padding: 8px; font-size: 16px; width: 100px; text-transform: uppercase; border: 1px solid #ccc; border-radius: 4px; }
+      button { padding: 8px 16px; font-size: 16px; background-color: #c9a050; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+      button:hover { background-color: #b38b42; }
+      .data-box {
+          background-color: #f4f4f4;
+          padding: 15px;
+          margin-bottom: 20px;
+          font-family: monospace;
+          font-size: 14px;
+          white-space: pre-wrap; 
+          border: 1px solid #ccc;
+          border-radius: 5px;
+      }
+      h4 { margin-bottom: 5px; color: #333; }
+    </style>
+  </head>
+  <body>
+    <h2>全球 D-ATIS 數位情報儀表板</h2>
+    
+    <div class="search-bar">
+      <label for="icao-input"><b>ICAO 代碼：</b></label>
+      <input type="text" id="icao-input" value="RCTP" maxlength="4" placeholder="例: RJAA">
+      <button onclick="fetchAtis()">查詢 / 更新</button>
+    </div>
+    
+    <div id="status" style="font-weight: bold; margin-bottom: 15px;"></div>
+    
+    <h4>Arrival ATIS</h4>
+    <div id="arr-atis" class="data-box">載入中...</div>
+    
+    <h4>Departure ATIS</h4>
+    <div id="dep-atis" class="data-box">載入中...</div>
+    
+    <h4>METAR</h4>
+    <div id="metar" class="data-box">載入中...</div>
+    
+    <h4>TAF</h4>
+    <div id="taf" class="data-box">載入中...</div>
+  </body>
+</html>
