@@ -1,0 +1,95 @@
+
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>GPSJAM 獨立監測模組</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* 基礎排版與背景 */
+    body { 
+        background-color: #f9f7f3; 
+        font-family: "Segoe UI", sans-serif; 
+        color: #333; 
+        padding: 2em; 
+    }
+    
+    /* 區塊質感設計 */
+    .section { 
+        border-left: 6px solid #3c79ff; 
+        background: #fff; 
+        padding: 1.5em; 
+        border-radius: 16px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+        max-width: 900px;
+        margin: 0 auto; /* 置中對齊 */
+    }
+    
+    /* 標題與按鈕並排 */
+    .section h2 { 
+        font-size: 1.4em; 
+        margin-top: 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        margin-bottom: 15px;
+    }
+    
+    /* 按鈕懸停效果 */
+    button { 
+        background: none; 
+        border: 2px solid #3c79ff; 
+        border-radius: 6px; 
+        padding: 6px 12px; 
+        font-size: 0.85em; 
+        color: #3c79ff; 
+        font-weight: bold; 
+        cursor: pointer; 
+        transition: background-color 0.2s, color 0.2s; 
+    }
+    button:hover { 
+        background-color: rgba(60,121,255,0.1); 
+        color: #2c5edc; 
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 模組主要區塊 -->
+  <div class="section gpsjam-section">
+    <h2>📡 GPSJAM 即時干擾地圖 
+      <!-- 改用局部刷新函數，避免整個網頁重載 -->
+      <button onclick="refreshIframe('gpsjamMap')">重新整理</button>
+    </h2>
+    <iframe id="gpsjamMap" 
+      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);" 
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <script>
+    // 1. 局部重新整理功能 (只刷新指定的 iframe)
+    function refreshIframe(id) {
+      const iframe = document.getElementById(id);
+      if (iframe) iframe.src = iframe.src;
+    }
+
+    // 2. 啟動程序：動態推算日期與載入地圖
+    (function() {
+      // 設定與 Windy 同步的參數 (以台灣為中心)
+      const lat = "25.07970";
+      const lon = "121.23420";
+      const zoom = "6.0";
+
+      // 計算兩天前的日期 (解決資料延遲問題)
+      let d = new Date();
+      d.setDate(d.getDate() - 2);
+      let targetDate = d.toISOString().split('T')[0]; // 格式化為 YYYY-MM-DD
+
+      // 注入網址
+      const iframe = document.getElementById("gpsjamMap");
+      iframe.src = `https://gpsjam.org/?lat=${lat}&lon=${lon}&z=${zoom}&date=${targetDate}`;
+    })();
+  </script>
+
+</body>
+</html>
