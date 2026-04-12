@@ -227,7 +227,6 @@
       <a class="btn" href="https://www.skyinfo.jp" target="_blank">🇯🇵日本NOTAM地圖</a>
       <a class="btn" href="https://app.cwa.gov.tw/web/obsmap/typhoon.html" target="_blank">🌀颱風路徑圖</a>
       <a class="btn" href="https://zihchi.github.io/flight-time/" target="_blank">💻飛時計算工具</a>
-      <a class="btn" href="https://gpsjam.org/" target="_blank">🛰️GPS干擾區域</a>
       <a class="btn" href="https://zihchi.github.io/Holdovertime/" target="_blank">🥶Holdovertime工具</a>
     </div>
   </div>
@@ -241,10 +240,10 @@
   <div class="tool-grid">
     <button class="btn" onclick="loadPage('fuel.html')">⛽ 油量與加油時間</button>
     <button class="btn" onclick="loadPage('time.html')">⏱️ 時間計算機</button>
-    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
+    <button class="btn" onclick="loadPage('GPSJAM.html')">🛰️ GPS干擾區域</button>    
     <button class="btn" onclick="loadPage('curfew.html')">⏳ Curfew 倒數</button>   
     <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
-    <button class="btn" onclick="loadPage('XXXATIS.html')">測試中，無法使用</button> 
+    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button> 
     <button class="btn" onclick="loadPage('ATIS.html')">📻 D-ATIS</button> 
     </div>
 </div>
@@ -413,15 +412,6 @@
       </div>
   </div>
 
-<div class="section gpsjam-section">
-  <h2>📡 GPSJAM 即時干擾地圖 
-    <button onclick="refreshIframe('gpsjamMap')">重新整理</button>
-  </h2>
-  <iframe id="gpsjamMap" 
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);" 
-    allowfullscreen>
-  </iframe>
-</div>
   
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1044,23 +1034,6 @@ function fetchPopupAtis(icao) {
         btn.style.opacity = "1";
       });
 }
-
-  (function() {
-    // 1. 設定與 Windy 同步的參數
-    const lat = "23.50000";
-    const lon = "120.90000";
-    const zoom = "5.0";
-
-    // 2. 計算兩天前的日期 (解決資料延遲問題)
-    let d = new Date();
-    d.setDate(d.getDate() - 2);
-    let targetDate = d.toISOString().split('T')[0]; // 格式化為 YYYY-MM-DD
-
-    // 3. 注入網址
-    const iframe = document.getElementById("gpsjamMap");
-    iframe.src = `https://gpsjam.org/?lat=${lat}&lon=${lon}&z=${zoom}&date=${targetDate}`;
-  })();
-
   
 </script>
 <script src="app.js?v=2.0"></script>
