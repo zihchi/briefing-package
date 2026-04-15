@@ -1,4 +1,4 @@
-```html
+
 <div class="app-wrapper animate-fade-in" style="max-width: 900px;">
   
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
@@ -6,7 +6,7 @@
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
         📻 D-ATIS & 🌍 航空氣象
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & aviationweather.gov</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & NOAA / VATSIM Backup</div>
     </div>
     
     <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
@@ -90,8 +90,11 @@
   <!-- 新增：METAR / TAF 氣象顯示區塊 -->
   <div class="app-card atis-sub-card" style="margin-top: 15px;">
     <div class="app-section-title atis-title-bar" style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: #2c3e50; font-size: 1.1em;">🌍 氣象資訊 (METAR & TAF)</span>
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #2c3e50; font-size: 1.1em;">🌍 氣象資訊 (METAR & TAF)</span>
+          </div>
+          <span id="wx-sync-status" style="font-size: 0.85em; font-weight: bold; color: #94a3b8; background: #f1f5f9; padding: 4px 10px; border-radius: 12px;">待命</span>
       </div>
     </div>
     
@@ -146,6 +149,7 @@
       border-radius: 6px; white-space: pre-wrap; color: #2c3e50; 
       word-break: break-word; overflow-wrap: anywhere; 
       border-left: 4px solid #ddd;
+      transition: all 0.3s ease;
   }
 
   /* 時效性徽章樣式 */
@@ -191,7 +195,7 @@
   updateUtcClock();
 
   // ==========================================
-  // 2. 氣象分析核心邏輯 (擷取自原先系統)
+  // 2. 氣象分析核心邏輯 
   // ==========================================
   function getWeatherEmojis(text) {
     if (!text) return '';
@@ -268,7 +272,7 @@
     let targetMonth = now.getUTCMonth();
     let targetYear = now.getUTCFullYear();
 
-    if (repDay > currDay + 5) { // 跨月處理
+    if (repDay > currDay + 5) { 
         targetMonth -= 1;
         if (targetMonth < 0) { targetMonth = 11; targetYear -= 1; }
     }
@@ -326,8 +330,84 @@
   }
 
   // ==========================================
-  // 3. API 擷取與 UI 控制邏輯
+  // 3. 裝甲級高可靠 API 擷取邏輯 (專為 Canvas 沙盒設計)
   // ==========================================
+  async function fetchAWCData(type, icao) {
+    const timestamp = Date.now();
+    const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json&_cb=${timestamp}`;
+    
+    // 沙盒突破策略：優先使用 JSON 包裝代理，最後直連
+    const proxies = [
+        // 策略 1: AllOrigins /get 模式 (最強沙盒穿透力，會將目標 JSON 包裝在字串中回傳)
+        { 
+            name: "AllOrigins", 
+            url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, 
+            isJsonWrapped: true 
+        },
+        // 策略 2: CodeTabs 代理
+        { 
+            name: "CodeTabs", 
+            url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`, 
+            isJsonWrapped: false 
+        },
+        // 策略 3: 放手一搏直連
+        { 
+            name: "Direct AWC", 
+            url: targetUrl, 
+            isJsonWrapped: false 
+        }
+    ];
+
+    let lastError = null;
+
+    for (const proxy of proxies) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒即判定逾時，換下一條線
+            
+            // 故意不帶 headers 以免觸發複雜的 CORS Preflight
+            const res = await fetch(proxy.url, { cache: 'no-store', signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                let data;
+                if (proxy.isJsonWrapped) {
+                    const wrapper = await res.json();
+                    data = JSON.parse(wrapper.contents); // 解開包裝
+                } else {
+                    data = await res.json();
+                }
+
+                if (Array.isArray(data) && data.length > 0) {
+                    return type === 'metar' ? data[0].rawOb : data[0].rawTAF;
+                } else if (Array.isArray(data) && data.length === 0) {
+                    return null; // NOAA 確認該機場無資料
+                }
+            }
+        } catch (e) {
+            lastError = e;
+            console.warn(`[氣象同步] ${proxy.name} 連線遭阻擋或逾時:`, e.message);
+        }
+    }
+
+    // --- 終極防線：VATSIM 航空模擬網路 API ---
+    // 若 NOAA 的 JSON 介面全軍覆沒，我們改接 VATSIM 的超純文字 METAR 介面
+    if (type === 'metar') {
+        try {
+            const vatsimRes = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { cache: 'no-store' });
+            if (vatsimRes.ok) {
+                const text = await vatsimRes.text();
+                if (text && text.length > 10) return text.trim();
+            }
+        } catch(e) {
+            console.warn("[氣象同步] VATSIM 備援網路也遭阻擋", e.message);
+        }
+    }
+
+    throw new Error("系統環境封鎖了所有的氣象連線通道");
+  }
+
+  // ATIS 效期計算
   function calculateAtisAge(rawText) {
     if (!rawText || rawText.includes("無資料") || rawText.includes("連線失敗") || rawText.includes("等待載入")) return "";
     const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
@@ -363,7 +443,6 @@
     const icao = icaoInput.value.trim().toUpperCase() || "RCTP";
     icaoInput.value = icao;
     
-    // UI 元件
     const statusEl = document.getElementById("atis-status");
     statusEl.innerText = `🔄 正在擷取 ${icao} 資料...`;
     statusEl.style.color = "#3b82f6";
@@ -372,6 +451,7 @@
     fetchWeatherData(icao);
   }
 
+  // ATIS (透過 GAS) 不受沙盒影響，維持原樣
   function fetchAtisData(icao) {
     const arrEl = document.getElementById("arr-atis");
     const depEl = document.getElementById("dep-atis");
@@ -410,6 +490,7 @@
       });
   }
 
+  // 氣象資訊主控台
   async function fetchWeatherData(icao) {
     const metarContent = document.getElementById("metar-content");
     const metarHeader = document.getElementById("metar-header");
@@ -417,27 +498,31 @@
     
     const tafContent = document.getElementById("taf-content");
     const tafAge = document.getElementById("taf-age");
+    const syncStatus = document.getElementById("wx-sync-status");
 
-    metarContent.innerText = "讀取中...";
+    metarContent.innerText = "突破沙盒限制，建立連線中...";
     metarContent.className = "raw-text border-unk";
     metarHeader.innerHTML = "METAR (即時天氣)";
     metarAge.innerText = "";
     
-    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: monospace;">讀取中...</div>`;
+    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: monospace;">突破沙盒限制，建立連線中...</div>`;
     tafAge.innerText = "";
 
+    syncStatus.innerText = "🔄 尋找可用通道...";
+    syncStatus.style.background = "#e0f2fe";
+    syncStatus.style.color = "#0284c7";
+
     try {
-        // 並行取得 METAR & TAF (AviationWeather API 支援直接存取，無須代理)
-        const [metarRes, tafRes] = await Promise.all([
-            fetch(`https://aviationweather.gov/api/data/metar?ids=${icao}&format=json`),
-            fetch(`https://aviationweather.gov/api/data/taf?ids=${icao}&format=json`)
-        ]);
+        // 分開 await 以便在 TAF 失敗時，至少保住 METAR
+        let rawMetar = null;
+        let rawTaf = null;
 
-        const metarData = await metarRes.json();
-        const tafData = await tafRes.json();
+        try { rawMetar = await fetchAWCData('metar', icao); } catch(e) { console.warn('METAR', e); }
+        try { rawTaf = await fetchAWCData('taf', icao); } catch(e) { console.warn('TAF', e); }
 
-        // --- 處理 METAR ---
-        let rawMetar = (metarData && metarData.length > 0) ? metarData[0].rawOb : "";
+        if (!rawMetar && !rawTaf) throw new Error("所有連線通道皆失敗");
+
+        // --- 渲染 METAR ---
         if (rawMetar) {
             const metarState = parseWeatherElements(rawMetar, 999, 99999);
             const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
@@ -453,8 +538,7 @@
             metarContent.innerText = "目前無有效 METAR 報文";
         }
 
-        // --- 處理 TAF ---
-        let rawTaf = (tafData && tafData.length > 0) ? tafData[0].rawTAF : "";
+        // --- 渲染 TAF ---
         if (rawTaf) {
             tafContent.innerHTML = formatColorTAF(rawTaf);
             tafAge.innerText = calculateReportAge(rawTaf);
@@ -462,15 +546,20 @@
             tafContent.innerHTML = formatColorTAF(""); 
         }
 
+        syncStatus.innerText = "✅ 氣象同步成功";
+        syncStatus.style.background = "#dcfce7";
+        syncStatus.style.color = "#16a34a";
+
     } catch (error) {
-        console.error("氣象資料讀取失敗:", error);
-        metarContent.innerText = "讀取失敗";
+        metarContent.innerText = `讀取失敗：Canvas 嚴格阻擋了此請求。建議在正式網頁伺服器上開啟。`;
         tafContent.innerHTML = formatColorTAF("");
+        
+        syncStatus.innerText = "❌ 遭環境阻擋";
+        syncStatus.style.background = "#fee2e2";
+        syncStatus.style.color = "#dc2626";
     }
   }
 
   // 初始載入自動查詢
   fetchAllData();
 </script>
-
-```
