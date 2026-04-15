@@ -1,11 +1,12 @@
+```html
 <div class="app-wrapper animate-fade-in" style="max-width: 900px;">
   
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
     <div>
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
-        📻 D-ATIS
+        📻 D-ATIS & 🌍 航空氣象
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: https://atis.guru/</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & aviationweather.gov</div>
     </div>
     
     <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
@@ -13,6 +14,7 @@
     </button>
   </div>
 
+  <!-- 搜尋與控制區塊 -->
   <div class="app-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
     <div style="display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap;">
       
@@ -51,7 +53,7 @@
           <input type="text" id="atis-icao-input" value="RCTP" maxlength="4" placeholder="ICAO" 
                  style="background: transparent; border: none; font-size: 1.1em; font-weight: bold; color: #3c79ff; text-transform: uppercase; width: 100%; outline: none; font-family: 'Courier New', Courier, monospace;">
         </div>
-        <button onclick="fetchGlobalAtis()" style="background-color: #3c79ff; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">查詢</button>
+        <button onclick="fetchAllData()" style="background-color: #3c79ff; color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;">查詢</button>
       </div>
     </div>
     
@@ -60,15 +62,16 @@
     </div>
   </div>
 
+  <!-- ATIS 顯示區塊 -->
   <div class="atis-grid-container">
-    
     <div class="app-card atis-sub-card">
       <div class="app-section-title atis-title-bar">
         <div>
             <span style="color: #3c79ff; font-size: 1.1em;">Arrival ATIS</span>
             <span class="atis-clock-display">(Time Now : <span class="utc-clock">00:00:00</span>z)</span>
         </div>
-        <div id="arr-age"></div> </div>
+        <div id="arr-age"></div> 
+      </div>
       <div id="arr-atis" class="raw-text atis-content-box" style="border-left-color: #3c79ff;">等待載入...</div>
     </div>
 
@@ -78,10 +81,41 @@
             <span style="color: #e67e22; font-size: 1.1em;">Departure ATIS</span>
             <span class="atis-clock-display">(Time Now : <span class="utc-clock">00:00:00</span>z)</span>
         </div>
-        <div id="dep-age"></div> </div>
+        <div id="dep-age"></div> 
+      </div>
       <div id="dep-atis" class="raw-text atis-content-box" style="border-left-color: #e67e22;">等待載入...</div>
     </div>
+  </div>
 
+  <!-- 新增：METAR / TAF 氣象顯示區塊 -->
+  <div class="app-card atis-sub-card" style="margin-top: 15px;">
+    <div class="app-section-title atis-title-bar" style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #2c3e50; font-size: 1.1em;">🌍 氣象資訊 (METAR & TAF)</span>
+      </div>
+    </div>
+    
+    <!-- METAR 區塊 -->
+    <div class="data-block" style="margin-bottom: 20px;">
+        <div class="section-title">
+            <span style="display:inline-flex; align-items:center;" id="metar-header">
+                METAR (即時天氣)
+            </span>
+            <span id="metar-age" style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;"></span>
+        </div>
+        <div id="metar-content" class="raw-text border-unk">等待載入...</div>
+    </div>
+    
+    <!-- TAF 區塊 -->
+    <div class="data-block">
+        <div class="section-title">
+            <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
+            <span id="taf-age" style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;"></span>
+        </div>
+        <div id="taf-content">
+            <div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50;">等待載入...</div>
+        </div>
+    </div>
   </div>
 
 </div>
@@ -90,44 +124,52 @@
   .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   
-  /* 報文左右對稱分格佈局 */
+  /* 通用卡片與排版 */
+  .app-card { background: #fdfdfd; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; }
+  .app-header-btn { background: none; border: 2px solid #e74c3c; color: #e74c3c; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 0; margin-top: 0; margin-left: auto;}
+  .app-header-btn:hover { background: rgba(231,76,60,0.1); transform: scale(1.05); }
+
+  /* 報文左右對稱分格佈局 (ATIS專用) */
   .atis-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: stretch; }
   .atis-sub-card { margin-bottom: 0 !important; display: flex; flex-direction: column; padding: 15px; }
   
   /* 標題列佈局 (包含時鐘與徽章) */
-  .atis-title-bar {
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-end; 
-      flex-wrap: wrap; 
-      gap: 10px; 
-      margin-bottom: 12px;
-  }
-  .atis-clock-display {
-      font-size: 0.85em; 
-      color: #64748b; 
-      font-family: 'Courier New', monospace; 
-      font-weight: bold; 
-      margin-left: 8px;
-  }
+  .atis-title-bar { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .app-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+  .atis-clock-display { font-size: 0.85em; color: #64748b; font-family: 'Courier New', monospace; font-weight: bold; margin-left: 8px; }
 
-  .atis-content-box {
-      flex-grow: 1;
-      font-size: 14.5px; 
-      line-height: 1.6; 
-      white-space: pre-wrap; 
-      word-break: break-word;
-      background-color: #f8fafc;
-      min-height: 250px; 
+  /* 報文內容通用樣式 */
+  .atis-content-box { flex-grow: 1; min-height: 250px; }
+  .raw-text { 
+      font-family: 'Courier New', Courier, monospace; 
+      font-size: 13.5px; line-height: 1.6; background-color: #f8fafc; padding: 12px; 
+      border-radius: 6px; white-space: pre-wrap; color: #2c3e50; 
+      word-break: break-word; overflow-wrap: anywhere; 
       border-left: 4px solid #ddd;
-      padding: 12px;
-      border-radius: 8px;
   }
 
   /* 時效性徽章樣式 */
   .age-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; letter-spacing: 0.5px; }
   .age-fresh { background-color: #dcfce7; color: #10b981; }
   .age-expired { background-color: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+
+  /* 氣象標籤與顏色 (同款儀表板樣式) */
+  .data-block { border-bottom: 2px dashed #bdc3c7; padding-bottom: 15px; margin-bottom: 15px; }
+  .data-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
+  
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; vertical-align: middle; }
+  .bg-vfr { background-color: #2ecc71; } 
+  .bg-mvfr { background-color: #3498db; } 
+  .bg-ifr { background-color: #e74c3c; } 
+  .bg-lifr { background-color: #9b59b6; } 
+  .bg-unk { background-color: #95a5a6; } 
+  
+  .border-vfr { border-left-color: #2ecc71 !important; }
+  .border-mvfr { border-left-color: #3498db !important; }
+  .border-ifr { border-left-color: #e74c3c !important; }
+  .border-lifr { border-left-color: #9b59b6 !important; }
+  .border-unk { border-left-color: #95a5a6 !important; }
 
   @media (max-width: 768px) {
       .atis-grid-container { grid-template-columns: 1fr; }
@@ -143,130 +185,292 @@
     const h = String(now.getUTCHours()).padStart(2, '0');
     const m = String(now.getUTCMinutes()).padStart(2, '0');
     const s = String(now.getUTCSeconds()).padStart(2, '0');
-    
-    // 更新畫面上所有掛載 .utc-clock 的元素
-    document.querySelectorAll('.utc-clock').forEach(clock => {
-        clock.innerText = `${h}:${m}:${s}`;
-    });
+    document.querySelectorAll('.utc-clock').forEach(clock => clock.innerText = `${h}:${m}:${s}`);
   }
   setInterval(updateUtcClock, 1000);
   updateUtcClock();
 
   // ==========================================
-  // 2. ATIS 報文時效性解析引擎 (Time Stamp Parser)
+  // 2. 氣象分析核心邏輯 (擷取自原先系統)
   // ==========================================
-  function calculateAtisAge(rawText) {
-    if (!rawText || rawText.includes("無資料") || rawText.includes("連線失敗") || rawText.includes("等待載入")) {
-        return "";
+  function getWeatherEmojis(text) {
+    if (!text) return '';
+    let emojis = [];
+    const tokens = text.split(/\s+/);
+    let hasTSWS = false; let hasRA = false; let hasSN = false; let hasGust = false;
+
+    const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
+    const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
+    const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
+
+    for (let token of tokens) {
+        if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
+        if (raRegex.test(token)) hasRA = true;
+        if (snRegex.test(token)) hasSN = true;
+        if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
+    }
+    if (hasTSWS) emojis.push('🚨');
+    if (hasRA) emojis.push('☔️');
+    if (hasSN) emojis.push('☃️');
+    if (hasGust) emojis.push('⚠️');
+    return emojis.join(' ');
+  }
+
+  function parseWeatherElements(text, prevVis, prevCeil) {
+    let vis = prevVis; let ceil = prevCeil;
+    if (/\b(CAVOK|SKC|CLR|NSC)\b/.test(text)) {
+        if (/\bCAVOK\b/.test(text)) vis = 10;
+        ceil = 99999;
+    }
+    const metricMatch = text.match(/(?:\s|^)([0-9]{4})(?:NDV)?(?:\s|$)/);
+    if (metricMatch) {
+        const meters = parseInt(metricMatch[1], 10);
+        vis = meters === 9999 ? 10 : meters / 1609.34;
+    }
+    const smMatch = text.match(/(?:\s|^)(P|M)?(\d+)?\s?(\d+\/\d+)?SM(?:\s|$)/);
+    if (smMatch) {
+        let val = 0;
+        if (smMatch[2]) val += parseInt(smMatch[2], 10);
+        if (smMatch[3]) {
+            const [num, den] = smMatch[3].split('/');
+            val += parseInt(num, 10) / parseInt(den, 10);
+        }
+        if (val === 0 && smMatch[1] === 'M') val = 0.25;
+        if (val === 0 && smMatch[1] === 'P') val = 6.0;
+        vis = val;
+    }
+    const cloudMatches = text.match(/(BKN|OVC|VV)(\d{3})/g);
+    if (cloudMatches) {
+        const bases = cloudMatches.map(c => parseInt(c.slice(3, 6), 10) * 100);
+        ceil = Math.min(...bases);
+    }
+    return { vis, ceil };
+  }
+
+  function getFlightCategory(vis, ceil) {
+    if (ceil < 500 || vis < 1) return "lifr";
+    if (ceil < 1000 || vis < 3) return "ifr";
+    if (ceil <= 3000 || vis <= 5) return "mvfr";
+    return "vfr";
+  }
+
+  function calculateReportAge(rawText) {
+    if (!rawText) return "";
+    const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
+    if (!match) return "";
+
+    const repDay = parseInt(match[1], 10);
+    const repHour = parseInt(match[2], 10);
+    const repMin = parseInt(match[3], 10);
+
+    const now = new Date();
+    const currDay = now.getUTCDate();
+    let targetMonth = now.getUTCMonth();
+    let targetYear = now.getUTCFullYear();
+
+    if (repDay > currDay + 5) { // 跨月處理
+        targetMonth -= 1;
+        if (targetMonth < 0) { targetMonth = 11; targetYear -= 1; }
     }
 
-    // 利用正規表達式捕捉標準航空氣象格式：DDHHMMZ 或 HHMMZ
-    // 擷取 Z 結尾前 4 碼作為 (時)(分)
-    const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
-    if (!timeMatch) {
-        return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時間戳記未知)</span>";
+    const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
+    const diffMs = now.getTime() - reportDate.getTime();
+    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+    if (diffMins < 60) {
+        return `(已發佈 ${diffMins} 分鐘)`;
+    } else {
+        const h = Math.floor(diffMins / 60);
+        const m = diffMins % 60;
+        return `(已發佈 ${h} 小時 ${m} 分鐘)`;
     }
+  }
+
+  function formatColorTAF(rawTaf) {
+    if (!rawTaf) return `<div style="background-color: #f8fafc; padding: 12px; border-radius: 6px; text-align: left; border-left: 4px solid #95a5a6;">目前無有效 TAF 報文</div>`;
+    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+    
+    const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
+    const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
+    const lines = markedTaf.split('|||');
+
+    let prevailingVis = 999; let prevailingCeil = 99999;
+    let htmlOutput = `<div style="background-color: #f8fafc; padding: 12px; border-radius: 6px; text-align: left;">`;
+
+    lines.forEach((line, index) => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return;
+
+        let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
+        const cat = getFlightCategory(current.vis, current.ceil);
+        const color = catColors[cat];
+        const catLabel = cat.toUpperCase();
+        
+        const emojis = getWeatherEmojis(cleanLine);
+        const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
+
+        if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
+            prevailingVis = current.vis; prevailingCeil = current.ceil;
+        }
+
+        htmlOutput += `
+            <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
+                <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
+                ${emojiHtml}
+                <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle;">${cleanLine}</span>
+            </div>
+        `;
+    });
+    htmlOutput += `</div>`;
+    return htmlOutput;
+  }
+
+  // ==========================================
+  // 3. API 擷取與 UI 控制邏輯
+  // ==========================================
+  function calculateAtisAge(rawText) {
+    if (!rawText || rawText.includes("無資料") || rawText.includes("連線失敗") || rawText.includes("等待載入")) return "";
+    const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
+    if (!timeMatch) return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時間戳記未知)</span>";
 
     const atisHr = parseInt(timeMatch[1], 10);
     const atisMin = parseInt(timeMatch[2], 10);
-
     const now = new Date();
     const currHr = now.getUTCHours();
     const currMin = now.getUTCMinutes();
 
     let atisTotalMins = atisHr * 60 + atisMin;
     let currTotalMins = currHr * 60 + currMin;
-
-    // 處理跨日邏輯 (例如 ATIS 是 23:50Z 發佈，現在是 00:10Z)
-    if (currTotalMins < atisTotalMins && (atisHr === 23 && currHr === 0)) {
-        currTotalMins += 24 * 60;
-    }
-
+    if (currTotalMins < atisTotalMins && (atisHr === 23 && currHr === 0)) currTotalMins += 24 * 60;
     const diffMins = currTotalMins - atisTotalMins;
 
-    // 異常處理 (例如未來時間，或相差過大)
-    if (diffMins < 0 || diffMins > 1440) {
-        return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時效異常)</span>";
-    }
-
-    // 業務邏輯：大於 30 分鐘標示為已過期
-    if (diffMins > 30) {
-        return `<span class='age-badge age-expired'>⚠️ 已發佈 ${diffMins} 分鐘 (已過期)</span>`;
-    } else {
-        return `<span class='age-badge age-fresh'>✓ 發佈於 ${diffMins} 分鐘前</span>`;
-    }
+    if (diffMins < 0 || diffMins > 1440) return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時效異常)</span>";
+    if (diffMins > 30) return `<span class='age-badge age-expired'>⚠️ 已發佈 ${diffMins} 分鐘 (已過期)</span>`;
+    return `<span class='age-badge age-fresh'>✓ 發佈於 ${diffMins} 分鐘前</span>`;
   }
 
-  // ==========================================
-  // 3. API 擷取與 UI 控制邏輯
-  // ==========================================
   function quickSelectIcao(selectObj) {
     const icaoInput = document.getElementById("atis-icao-input");
     if (selectObj.value) {
       icaoInput.value = selectObj.value;
-      fetchGlobalAtis();
+      fetchAllData();
       selectObj.selectedIndex = 0;
     }
   }
 
-  function fetchGlobalAtis() {
+  function fetchAllData() {
     const icaoInput = document.getElementById("atis-icao-input");
     const icao = icaoInput.value.trim().toUpperCase() || "RCTP";
     icaoInput.value = icao;
     
+    // UI 元件
     const statusEl = document.getElementById("atis-status");
+    statusEl.innerText = `🔄 正在擷取 ${icao} 資料...`;
+    statusEl.style.color = "#3b82f6";
+    
+    fetchAtisData(icao);
+    fetchWeatherData(icao);
+  }
+
+  function fetchAtisData(icao) {
     const arrEl = document.getElementById("arr-atis");
     const depEl = document.getElementById("dep-atis");
     const arrAgeEl = document.getElementById("arr-age");
     const depAgeEl = document.getElementById("dep-age");
+    const statusEl = document.getElementById("atis-status");
 
-    // UI 切換至載入狀態
-    statusEl.innerText = `🔄 正在擷取 ${icao} 數位電文...`;
-    statusEl.style.color = "#3b82f6";
-    arrEl.innerText = "連線中...";
-    depEl.innerText = "連線中...";
-    arrAgeEl.innerHTML = "";
-    depAgeEl.innerHTML = "";
+    arrEl.innerText = "連線中..."; depEl.innerText = "連線中...";
+    arrAgeEl.innerHTML = ""; depAgeEl.innerHTML = "";
 
     const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
     
     fetch(`${gasUrl}?icao=${icao}`)
-      .then(response => {
-        if (!response.ok) throw new Error("網路狀態異常");
-        return response.json();
-      })
+      .then(res => { if (!res.ok) throw new Error("網路狀態異常"); return res.json(); })
       .then(data => {
         if (data.error) {
-          statusEl.innerText = `❌ ${data.error}`;
+          statusEl.innerText = `❌ ATIS 擷取失敗: ${data.error}`;
           statusEl.style.color = "#ef4444";
-          arrEl.innerText = "無資料";
-          depEl.innerText = "無資料";
+          arrEl.innerText = "無資料"; depEl.innerText = "無資料";
           return;
         }
-
-        const now = new Date();
-        const fetchZ = `${String(now.getUTCHours()).padStart(2,'0')}${String(now.getUTCMinutes()).padStart(2,'0')}Z`;
         
-        statusEl.innerText = `✅ ${icao} 資料擷取完畢 (擷取時間: ${fetchZ})`;
+        statusEl.innerText = `✅ ${icao} 資料擷取完畢`;
         statusEl.style.color = "#10b981";
         
         arrEl.innerText = data.arrival || "無 Arrival 資料";
         depEl.innerText = data.departure || "無 Departure 資料";
 
-        // 計算並渲染時效徽章
         arrAgeEl.innerHTML = calculateAtisAge(arrEl.innerText);
         depAgeEl.innerHTML = calculateAtisAge(depEl.innerText);
       })
       .catch(error => {
         statusEl.innerText = `❌ 通訊失敗，請檢查網路連線`;
         statusEl.style.color = "#ef4444";
-        arrEl.innerText = "連線失敗";
-        depEl.innerText = "連線失敗";
-        arrAgeEl.innerHTML = "";
-        depAgeEl.innerHTML = "";
+        arrEl.innerText = "連線失敗"; depEl.innerText = "連線失敗";
       });
   }
 
+  async function fetchWeatherData(icao) {
+    const metarContent = document.getElementById("metar-content");
+    const metarHeader = document.getElementById("metar-header");
+    const metarAge = document.getElementById("metar-age");
+    
+    const tafContent = document.getElementById("taf-content");
+    const tafAge = document.getElementById("taf-age");
+
+    metarContent.innerText = "讀取中...";
+    metarContent.className = "raw-text border-unk";
+    metarHeader.innerHTML = "METAR (即時天氣)";
+    metarAge.innerText = "";
+    
+    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: monospace;">讀取中...</div>`;
+    tafAge.innerText = "";
+
+    try {
+        // 並行取得 METAR & TAF (AviationWeather API 支援直接存取，無須代理)
+        const [metarRes, tafRes] = await Promise.all([
+            fetch(`https://aviationweather.gov/api/data/metar?ids=${icao}&format=json`),
+            fetch(`https://aviationweather.gov/api/data/taf?ids=${icao}&format=json`)
+        ]);
+
+        const metarData = await metarRes.json();
+        const tafData = await tafRes.json();
+
+        // --- 處理 METAR ---
+        let rawMetar = (metarData && metarData.length > 0) ? metarData[0].rawOb : "";
+        if (rawMetar) {
+            const metarState = parseWeatherElements(rawMetar, 999, 99999);
+            const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
+            const displayCat = metarCat.toUpperCase();
+            const emojis = getWeatherEmojis(rawMetar);
+            const emojiHtml = emojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${emojis}</span>` : '';
+            
+            metarContent.innerText = rawMetar;
+            metarContent.className = `raw-text border-${metarCat}`;
+            metarHeader.innerHTML = `METAR (即時天氣) <span class="badge bg-${metarCat}">${displayCat}</span>${emojiHtml}`;
+            metarAge.innerText = calculateReportAge(rawMetar);
+        } else {
+            metarContent.innerText = "目前無有效 METAR 報文";
+        }
+
+        // --- 處理 TAF ---
+        let rawTaf = (tafData && tafData.length > 0) ? tafData[0].rawTAF : "";
+        if (rawTaf) {
+            tafContent.innerHTML = formatColorTAF(rawTaf);
+            tafAge.innerText = calculateReportAge(rawTaf);
+        } else {
+            tafContent.innerHTML = formatColorTAF(""); 
+        }
+
+    } catch (error) {
+        console.error("氣象資料讀取失敗:", error);
+        metarContent.innerText = "讀取失敗";
+        tafContent.innerHTML = formatColorTAF("");
+    }
+  }
+
   // 初始載入自動查詢
-  fetchGlobalAtis();
+  fetchAllData();
 </script>
+
+```
