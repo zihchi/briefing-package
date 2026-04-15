@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -66,17 +67,19 @@
     .status-loaded { background-color: #2ecc71 !important; }
     .status-error { background-color: #e74c3c !important; }
     
-    .weather-popup { width: 100%; max-width: 100%; text-align: left !important; box-sizing: border-box; }
     .airport-title { font-size: 16px; font-weight: bold; color: #1a252f; margin-bottom: 15px; border-bottom: 2px solid #34495e; padding-bottom: 8px; }
     
     .data-block { border-bottom: 2px dashed #bdc3c7; padding-bottom: 15px; margin-bottom: 15px; }
     .data-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
     
+    /* 👇 優化：強制斷行避免爆框 */
     .raw-text { 
         font-family: 'Courier New', Courier, monospace; 
         font-size: 13.5px; line-height: 1.6; background-color: #ebedef; padding: 12px; 
-        border-radius: 6px; white-space: pre-wrap; color: #2c3e50; word-wrap: break-word; border-left: 5px solid #95a5a6;
+        border-radius: 6px; white-space: pre-wrap; color: #2c3e50; 
+        word-break: break-word; overflow-wrap: anywhere; /* 關鍵防爆框屬性 */
+        border-left: 5px solid #95a5a6;
     }
     
     .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; vertical-align: middle; }
@@ -94,16 +97,16 @@
     #btn-refresh-map { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
     #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
 
-    /* 讓 popup 內部保有內距，避免卷軸貼齊文字，並強制動態內容產生卷軸 */
+    /* 👇 優化：確保彈出視窗不出界，且隱藏橫向卷軸 */
     .weather-popup { 
         width: 100%; 
         max-width: 100%; 
         text-align: left !important; 
         box-sizing: border-box; 
         padding-right: 5px; 
-        /* 👇 加入這兩行：強制限制這個 div 的最大高度，超過一律轉成垂直卷軸 */
         max-height: 400px; 
         overflow-y: auto; 
+        overflow-x: hidden; /* 關鍵防爆框屬性 */
     }
 
     /* 針對 Leaflet 預設的滾動視窗進行邊距優化 */
@@ -111,7 +114,6 @@
         margin: 15px !important; 
     }
 
-    /* 👇 將自訂卷軸樣式同時套用到我們的 .weather-popup 上 */
     .weather-popup::-webkit-scrollbar,
     .leaflet-popup-content::-webkit-scrollbar {
         width: 6px;
@@ -836,10 +838,9 @@ function initAviationMap() {
         }
     };
 
-const refreshBtn = document.getElementById('btn-refresh-map');
+    const refreshBtn = document.getElementById('btn-refresh-map');
     if(refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-            // 1. 觸發瞬間立刻禁用按鈕，並給予視覺回饋 (變灰、游標改變、文字改變)
             refreshBtn.disabled = true;
             refreshBtn.style.opacity = "0.5";
             refreshBtn.style.cursor = "not-allowed";
@@ -854,7 +855,6 @@ const refreshBtn = document.getElementById('btn-refresh-map');
             airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
             bootSequence();
 
-            // 2. 強制設定 2 秒（2000 毫秒）後，才能再次點擊按鈕
             setTimeout(() => {
                 refreshBtn.disabled = false;
                 refreshBtn.style.opacity = "1";
@@ -868,8 +868,13 @@ const refreshBtn = document.getElementById('btn-refresh-map');
         const marker = L.marker([airport.lat, airport.lng]).addTo(map);
 
         marker.on('click', function() {
+            // ▼ 動態偵測螢幕寬度，計算最適合的安全邊界
+            const isMobile = window.innerWidth < 768;
+            const dynamicMaxWidth = isMobile ? window.innerWidth * 0.85 : 500;
+            const popupOpts = { maxWidth: dynamicMaxWidth, maxHeight: 450, autoPanPadding: [15, 15] };
+
             if (!isDataReady) {
-                L.popup({ maxWidth: 500, maxHeight: 450 })
+                L.popup(popupOpts)
                     .setLatLng(marker.getLatLng())
                     .setContent(`
                     <div class="weather-popup">
@@ -895,7 +900,7 @@ const refreshBtn = document.getElementById('btn-refresh-map');
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
-            L.popup({ maxWidth: 500, maxHeight: 450 })
+            L.popup(popupOpts)
     .setLatLng(marker.getLatLng())
     .setContent(`
     <div class="weather-popup">
@@ -931,9 +936,17 @@ const refreshBtn = document.getElementById('btn-refresh-map');
     `).openOn(map);
         });
     });
+
+    // ▼ 網頁載入後，延遲半秒在背景自動啟動資料同步
+    setTimeout(() => {
+        const statusIndicator = document.getElementById('sync-status');
+        if (statusIndicator) {
+            statusIndicator.style.backgroundColor = "#f39c12"; 
+            statusIndicator.innerText = "🔄 背景自動同步中...";
+        }
+        bootSequence();
+    }, 500);
 }
-
-
 
 // ==========================================
 // 🚀 網頁載入啟動程序
@@ -1054,3 +1067,5 @@ function fetchPopupAtis(icao) {
 <script src="app.js?v=2.0"></script>
 </body>
 </html>
+
+```
