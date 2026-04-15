@@ -39,7 +39,10 @@ function loadPage(pageUrl) {
                 initNotamRadar(); 
             }
             else if (pageUrl === 'TPE_Flight_Data_Link.html') { 
-                initFIDS(); // 👈 這是剛剛為您接通線路的航班動態看板
+                // 💡 系統優化：由於 HTML 的腳本是動態注入的，給予微小延遲確保編譯完成再喚醒
+                setTimeout(() => {
+                    if (typeof initFIDS === 'function') initFIDS();
+                }, 50);
             }
         })
         .catch(error => {
@@ -49,7 +52,7 @@ function loadPage(pageUrl) {
 }
 
 // ==========================================
-// 通用邏輯：勾選表、地圖等 (您原本在 index 底下的 script 可以一併放過來)
+// 通用邏輯：勾選表、地圖等 
 // ==========================================
 function setupChecklist(listId) {
     const list = document.getElementById(listId);
@@ -60,9 +63,6 @@ function setupChecklist(listId) {
 document.addEventListener("DOMContentLoaded", function () {
     setupChecklist("briefingChecklist1");
     setupChecklist("personalChecklist");
-    
-    // 如果您原本有 map 初始化函數，也請放在這裡執行
-    // initAviationMap(); 
 });
 
 // ==========================================
@@ -78,21 +78,20 @@ function closePanel() {
     `;
 }
 
-
 // ==========================================
 // ⛽ 油量計算機邏輯 
 // ==========================================
 const fuelTable = [
-  { total: 9.0,     inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 },
-  { total: 14.73,   inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 },
-  { total: 23.9,    inner: 18.17,  outer: 5.73,  trim: 0.0,  center: 0.0 }, // 修改點：Inner 停止於 18.17，Trim 開始進油
-  { total: 27.5,    inner: 18.17,  outer: 5.73,  trim: 3.60, center: 0.0 }, // 新增點：Trim 滿載於 3.60
-  { total: 30.0,    inner: 20.67,  outer: 5.73,  trim: 3.60, center: 0.0 },
-  { total: 40.0,    inner: 30.39,  outer: 5.73,  trim: 3.88, center: 0.0 },
-  { total: 60.0,    inner: 49.83,  outer: 5.73,  trim: 4.44, center: 0.0 },
-  { total: 75.0,    inner: 64.40,  outer: 5.73,  trim: 4.87, center: 0.0 },
-  { total: 100.0,   inner: 65.50,  outer: 5.73,  trim: 4.88, center: 23.89 },
-  { total: 109.18,  inner: 65.94,  outer: 5.73,  trim: 4.89, center: 32.62 }
+  { total: 9.0,    inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 },
+  { total: 14.73,  inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 },
+  { total: 23.9,   inner: 18.17,  outer: 5.73,  trim: 0.0,  center: 0.0 }, 
+  { total: 27.5,   inner: 18.17,  outer: 5.73,  trim: 3.60, center: 0.0 }, 
+  { total: 30.0,   inner: 20.67,  outer: 5.73,  trim: 3.60, center: 0.0 },
+  { total: 40.0,   inner: 30.39,  outer: 5.73,  trim: 3.88, center: 0.0 },
+  { total: 60.0,   inner: 49.83,  outer: 5.73,  trim: 4.44, center: 0.0 },
+  { total: 75.0,   inner: 64.40,  outer: 5.73,  trim: 4.87, center: 0.0 },
+  { total: 100.0,  inner: 65.50,  outer: 5.73,  trim: 4.88, center: 23.89 },
+  { total: 109.18, inner: 65.94,  outer: 5.73,  trim: 4.89, center: 32.62 }
 ];
 
 function interpolateFuel(total) {
@@ -737,7 +736,6 @@ function setAltApproach(type, index) {
     notesBox.classList.remove('active');
   }
 
-  // 直接更新數值，不破壞DOM
   recalculateAltimetryValues();
 }
 
@@ -748,7 +746,6 @@ function updateAltimetry() {
 function handleAltRowChange(id, value) {
   const row = altimetryRows.find(r => r.id === id);
   if(row) row.altitude = value;
-  // 只做數值重新計算，不重新渲染DOM，解決打字卡住的問題
   recalculateAltimetryValues();
 }
 
@@ -760,15 +757,14 @@ function handleAltLabelChange(id, value) {
 function addAltCustomRow() {
   const newId = `custom-${Date.now()}`;
   altimetryRows.push({ id: newId, label: 'Custom', altitude: '', isCustom: true });
-  renderAltimetryRows(); // 新增時才重新渲染結構
+  renderAltimetryRows(); 
 }
 
 function removeAltRow(id) {
   altimetryRows = altimetryRows.filter(r => r.id !== id);
-  renderAltimetryRows(); // 刪除時才重新渲染結構
+  renderAltimetryRows(); 
 }
 
-// 這個函數只負責計算與更新數值，不再摧毀重建 HTML
 function recalculateAltimetryValues() {
   const temp = document.getElementById('altTemp').value;
   const elev = document.getElementById('altElev').value;
@@ -788,7 +784,6 @@ function recalculateAltimetryValues() {
     if (rabText.includes('Required') && !rabText.includes('Not Required')) rabColor = '#ef4444';
     if (rabText.includes('Not Recommended')) rabColor = '#f59e0b';
 
-    // 局部更新 DOM
     const rabEl = document.getElementById(`alt-rab-${row.id}`);
     if (rabEl) {
       rabEl.textContent = rabText;
@@ -808,7 +803,6 @@ function recalculateAltimetryValues() {
   });
 }
 
-// 僅在初始化、新增或刪除行時才調用此函數，建立骨架
 function renderAltimetryRows() {
   const container = document.getElementById('altRowsContainer');
   container.innerHTML = '';
@@ -842,7 +836,6 @@ function renderAltimetryRows() {
     container.appendChild(rowDiv);
   });
 
-  // 骨架建立後，計算填入一次數值
   recalculateAltimetryValues();
 }
 
@@ -862,7 +855,7 @@ function resetAltimetryCalculator() {
   ];
 
   setAltApproach('NPA(2D)', 0);
-  renderAltimetryRows(); // 重置時才強制重新渲染一次骨架
+  renderAltimetryRows(); 
 }
 
 // ==========================================
@@ -903,10 +896,8 @@ function initNotamRadar() {
     document.getElementById('btn-clear-notam').addEventListener('click', clearNotamAll);
 }
 
-// 核心解析邏輯：智慧型經緯度轉換引擎 (修正寫死長度的盲點)
 function smartToDec(val) {
     if (!val) return NaN;
-    // 移除多餘空白並轉大寫，確保格式乾淨
     const cleanVal = val.toUpperCase().replace(/\s+/g, '');
     const dirMatch = cleanVal.match(/[NSEW]/);
     if (!dirMatch) return NaN;
@@ -916,11 +907,9 @@ function smartToDec(val) {
     
     let dec = NaN;
 
-    // 判斷是否為純十進位 (例如: N25.12345，整數部分長度小於等於3)
     if (nums.includes('.') && nums.split('.')[0].length <= 3) {
        dec = parseFloat(nums);
     } else {
-        // 處理傳統航用座標 DDMMSS 或 DDMM.MM
         const isLat = (dir === 'N' || dir === 'S');
         const degLen = isLat ? 2 : 3;
 
@@ -928,21 +917,17 @@ function smartToDec(val) {
             const d = parseFloat(nums.slice(0, degLen));
             const rest = nums.slice(degLen);
             
-            // 檢查是否有小數點，用以動態區分分鐘帶小數或秒鐘帶小數
             if (rest.includes('.')) {
                  const dotIndex = rest.indexOf('.');
                  if (dotIndex === 2) { 
-                     // 分鐘帶小數 (例如 DDMM.MMM)
                      const m = parseFloat(rest);
                      dec = d + (m / 60);
                  } else if (dotIndex === 4) { 
-                     // 秒鐘帶小數 (例如 DDMMSS.SS)
                      const m = parseFloat(rest.slice(0, 2));
                      const s = parseFloat(rest.slice(2));
                      dec = d + (m / 60) + (s / 3600);
                  }
             } else {
-                // 標準的 DDMM 或 DDMMSS
                 const m = parseFloat(rest.slice(0, 2));
                 const s = rest.length >= 4 ? parseFloat(rest.slice(2, 4)) : 0;
                 dec = d + (m / 60) + (s / 3600);
@@ -957,7 +942,6 @@ function smartToDec(val) {
 }
 
 function parseNotamHeader(text) {
-    // 放寬年份判定，支援 2碼 或 4碼 年份
     const idMatch = text.match(/([A-Z]\d{4}\/\d{2,4})/);
     const timeMatchB = text.match(/B\)\s*(\d{10})/);
     const timeMatchC = text.match(/C\)\s*(\d{10}|PERM|EST)/);
@@ -1026,7 +1010,6 @@ function processNotamData() {
 
         const cleanBlock = block.replace(/\s+/g, " ");
         
-        // 尋找所有的半徑宣告 (解鎖多重圖形共存)
         const radiusRegex = /(?:RADIUS\s+(?:OF\s+)?(\d+(?:\.\d+)?)\s*(NM|KM))|(\d+(?:\.\d+)?)\s*(NM|KM)\s*RADIUS/gi;
         let radiusMatches = [...cleanBlock.matchAll(radiusRegex)];
 
@@ -1035,7 +1018,7 @@ function processNotamData() {
                 const rValue = parseFloat(match[1] || match[3]);
                 const rUnit = (match[2] || match[4]).toUpperCase();
                 const meters = rValue * (rUnit === "NM" ? 1852 : 1000);
-                const center = coords[0]; // 預設使用區塊內第一個點當圓心
+                const center = coords[0]; 
 
                 const circle = L.circle(center, {
                     color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: meters, weight: 2, dashArray: '5, 5'
@@ -1045,7 +1028,6 @@ function processNotamData() {
             });
         } 
         
-        // 獨立判定：只要座標大於等於3個，就畫出多邊形 (解除與圓形的互斥)
         if (coords.length >= 3) {
             const poly = L.polygon(coords, {
                 color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 3
@@ -1054,7 +1036,6 @@ function processNotamData() {
             poly.bindPopup(`<b>Polygon Area</b><br>頂點數: ${coords.length}`);
         } 
         
-        // 若非多邊形且無半徑，才畫航路點
         if (radiusMatches.length === 0 && coords.length < 3) {
             coords.forEach(c => {
                 const marker = L.circleMarker(c, { radius: 6, color: '#f43f5e', fillOpacity: 0.8 }).addTo(notamMapInstance);
@@ -1105,175 +1086,3 @@ function clearNotamAll() {
     document.getElementById('logArea').classList.add('hidden');
     notamMapInstance.setView([25.03, 121.5], 6);
 }
-// ==========================================
-// 🛬 航班動態 (FIDS) 核心邏輯 - 搭載 TDX 數據鏈
-// ==========================================
-function initFIDS() {
-    // 🚨 替換成您的 Google Apps Script 部署網址
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwPjs92DLM2MulEwy5d_MwzbPUNMWmhOoyxgn5r1FINV7X3XeEcAvsgcgHl69-caBYO/exec"; 
-
-    // 狀態記憶庫
-    let flightData = { departures: [], arrivals: [] };
-    let currentMode = 'D'; // D: 離場, A: 到場
-    let currentDate = 'today'; // today, tomorrow
-    let currentAirline = 'JX'; // JX, CI, BR, ALL
-
-    // DOM 元素快取
-    const tbody = document.getElementById('fids-table-body');
-    const loadingMsg = document.getElementById('fids-loading-msg');
-    const emptyMsg = document.getElementById('fids-empty-msg');
-    const tableEl = document.getElementById('fids-flight-table');
-    const reloadIcon = document.getElementById('fids-reload-icon');
-
-    // 1. 綁定「離場 (DEP) / 到場 (ARR)」切換
-    const modeBtns = document.querySelectorAll('.fids-mode-btn');
-    modeBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            modeBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentMode = e.target.dataset.mode;
-            
-            // 動態切換表頭文字
-            document.getElementById('fids-th-location').textContent = currentMode === 'D' ? '目的地 (DEST)' : '起飛地 (ORIG)';
-            document.getElementById('fids-th-checkin').textContent = currentMode === 'D' ? '櫃檯 (DESK)' : '狀態 (STAT)';
-            
-            renderTable();
-        });
-    });
-
-    // 2. 綁定「今日 / 明日」切換
-    const dateBtns = document.querySelectorAll('.fids-date-btn');
-    dateBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (e.target.id === 'fids-btn-reload') return; 
-            dateBtns.forEach(b => { if (b.id !== 'fids-btn-reload') b.classList.remove('active'); });
-            e.target.classList.add('active');
-            currentDate = e.target.id === 'fids-btn-today' ? 'today' : 'tomorrow';
-            renderTable();
-        });
-    });
-
-    // 3. 綁定「航空公司」過濾器
-    const filterRadios = document.querySelectorAll('input[name="fids-airline"]');
-    filterRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            currentAirline = e.target.value;
-            renderTable();
-        });
-    });
-
-    // 4. 綁定「更新」按鈕與主動抓取邏輯
-    const reloadBtn = document.getElementById('fids-btn-reload');
-    if (reloadBtn) {
-        reloadBtn.addEventListener('click', fetchFIDSData);
-    }
-
-    // 📡 核心網路通訊：向您的 GAS 請求資料
-    async function fetchFIDSData() {
-        if(reloadIcon) reloadIcon.style.animation = 'spin 1s linear infinite';
-        
-        // 顯示載入中，隱藏表格
-        tableEl.style.display = 'none';
-        emptyMsg.classList.add('hidden');
-        loadingMsg.innerHTML = '🔄 正在建立塔台資料鏈路...';
-        loadingMsg.classList.remove('hidden');
-
-        try {
-            const response = await fetch(GAS_URL);
-            if (!response.ok) throw new Error("API 回應異常");
-            const data = await response.json();
-            
-            // TDX API 回傳的資料可能是包裹在陣列裡，我們把它存進狀態庫
-            flightData.departures = data.departures || [];
-            flightData.arrivals = data.arrivals || [];
-            
-            // 抓取完成，進入渲染階段
-            renderTable();
-        } catch (error) {
-            console.error("資料獲取失敗:", error);
-            loadingMsg.innerHTML = '❌ 資料鏈路中斷，請確認 GAS 網址是否正確且已設定為「所有人」可存取。';
-        } finally {
-            if(reloadIcon) reloadIcon.style.animation = 'none';
-        }
-    }
-
-    // 🎨 核心畫面渲染：將 JSON 轉為 HTML 表格
-    function renderTable() {
-        // 隱藏載入訊息
-        loadingMsg.classList.add('hidden');
-        
-        // 1. 決定要看離場還是到場
-        let targetArray = currentMode === 'D' ? flightData.departures : flightData.arrivals;
-        
-        // 取得台灣今天的日期字串 (YYYY-MM-DD)
-        const now = new Date();
-        const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-        const twDate = new Date(now.getTime() + offsetMs + (8 * 60 * 60 * 1000)); 
-        const todayStr = twDate.toISOString().split('T')[0];
-        
-        twDate.setDate(twDate.getDate() + 1);
-        const tomorrowStr = twDate.toISOString().split('T')[0];
-        const targetDateStr = currentDate === 'today' ? todayStr : tomorrowStr;
-
-        // 2. 進行條件過濾 (日期 + 航空公司)
-        let filteredData = targetArray.filter(flight => {
-            // 過濾日期
-            const timeField = currentMode === 'D' ? flight.ScheduleDepartureTime : flight.ScheduleArrivalTime;
-            if (!timeField || !timeField.startsWith(targetDateStr)) return false;
-
-            // 過濾航空公司
-            if (currentAirline !== 'ALL' && flight.AirlineID !== currentAirline) return false;
-
-            return true;
-        });
-
-        // 3. 處理畫面顯示
-        if (filteredData.length === 0) {
-            tbody.innerHTML = '';
-            tableEl.style.display = 'none';
-            emptyMsg.classList.remove('hidden');
-            return;
-        }
-
-        emptyMsg.classList.add('hidden');
-        tableEl.style.display = 'table';
-        
-        // 將過濾後的資料轉化為 TR
-        tbody.innerHTML = filteredData.map(f => {
-            const flightNo = f.AirlineID + f.FlightNumber;
-            const location = currentMode === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
-            const gate = f.Gate || '--';
-            const rawTime = currentMode === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
-            const timeStr = rawTime ? rawTime.substring(11, 16) : '--:--';
-            const terminal = f.Terminal || '-';
-            const belt = f.BaggageClaim || '--';
-            
-            // 處理櫃檯/狀態欄位
-            let checkinOrStatus = '--';
-            if (currentMode === 'D') {
-                checkinOrStatus = f.CheckCounter || '--';
-            } else {
-                // TDX 到場狀態代碼，此處可做對應，暫用原始字串或預設
-                checkinOrStatus = f.ArrivalRemark || 'ON TIME';
-            }
-
-            return `
-                <tr>
-                    <td><span class="fids-col-flight">${flightNo}</span></td>
-                    <td style="font-weight: bold; color: #4b5563;">${location}</td>
-                    <td><span class="fids-col-gate">${gate}</span></td>
-                    <td><span class="fids-col-time">${timeStr}</span></td>
-                    <td style="font-weight: bold; text-align: center;">T${terminal}</td>
-                    <td style="font-weight: bold; color: #6b7280;">${checkinOrStatus}</td>
-                    <td><span class="fids-col-belt">${belt}</span></td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    // 初次載入時主動抓取一次資料
-    fetchFIDSData();
-}
-
-// 確保全域可呼叫
-window.initFIDS = initFIDS;
