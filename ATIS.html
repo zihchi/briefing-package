@@ -1,12 +1,11 @@
 
-<div class="app-wrapper animate-fade-in" style="max-width: 900px;">
   
   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
     <div>
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
         📻 D-ATIS & 🌍 航空氣象
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & NOAA / VATSIM Backup</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & NOAA / VATSIM Backup (Extreme Speed)</div>
     </div>
     
     <button class="app-header-btn" onclick="closePanel()" title="關閉面板">
@@ -87,7 +86,7 @@
     </div>
   </div>
 
-  <!-- 新增：METAR / TAF 氣象顯示區塊 -->
+  <!-- METAR / TAF 氣象顯示區塊 -->
   <div class="app-card atis-sub-card" style="margin-top: 15px;">
     <div class="app-section-title atis-title-bar" style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
@@ -330,81 +329,79 @@
   }
 
   // ==========================================
-  // 3. 裝甲級高可靠 API 擷取邏輯 (專為 Canvas 沙盒設計)
+  // 3. 極速平行競速 API 擷取邏輯 (取代舊版迴圈代理)
   // ==========================================
   async function fetchAWCData(type, icao) {
-    const timestamp = Date.now();
-    const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json&_cb=${timestamp}`;
+    const ts = Date.now();
+    const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json&_cb=${ts}`;
+    const textUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&_cb=${ts}`;
     
-    // 沙盒突破策略：優先使用 JSON 包裝代理，最後直連
-    const proxies = [
-        // 策略 1: AllOrigins /get 模式 (最強沙盒穿透力，會將目標 JSON 包裝在字串中回傳)
-        { 
-            name: "AllOrigins", 
-            url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, 
-            isJsonWrapped: true 
-        },
-        // 策略 2: CodeTabs 代理
-        { 
-            name: "CodeTabs", 
-            url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`, 
-            isJsonWrapped: false 
-        },
-        // 策略 3: 放手一搏直連
-        { 
-            name: "Direct AWC", 
-            url: targetUrl, 
-            isJsonWrapped: false 
-        }
+    // 賽車 1 號：直連 NOAA Text (速度最快，但可能被 CORS 擋)
+    const fetchDirectText = async () => {
+        const res = await fetch(textUrl, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Direct Text failed');
+        const text = await res.text();
+        if (!text.trim() || text.includes('<html>') || text.includes('Not Found')) throw new Error('Invalid Text');
+        return text.trim();
+    };
+
+    // 賽車 2 號：直連 NOAA JSON (資料精確，可能被 CORS 擋)
+    const fetchDirectJson = async () => {
+        const res = await fetch(jsonUrl, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Direct JSON failed');
+        const data = await res.json();
+        if (!data || data.length === 0) return null; // 確實無此機場的 TAF/METAR
+        return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw);
+    };
+
+    // 賽車 3 號：CodeTabs 代理 Text (穿透 CORS 防線)
+    const fetchProxyText = async () => {
+        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Proxy Text failed');
+        const text = await res.text();
+        if (!text.trim() || text.includes('<html>') || text.includes('Error')) throw new Error('Invalid Proxy Text');
+        return text.trim();
+    };
+
+    // 賽車 4 號：AllOrigins 代理 JSON (穩定穿透 CORS 防線)
+    const fetchProxyJson = async () => {
+        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('AllOrigins failed');
+        const wrapper = await res.json();
+        if (!wrapper.contents) throw new Error('AllOrigins empty');
+        const data = JSON.parse(wrapper.contents);
+        if (!data || data.length === 0) return null;
+        return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw);
+    };
+
+    // 賽車 5 號：VATSIM (航空模擬網路，僅支援 METAR)
+    const fetchVatsim = async () => {
+        if (type !== 'metar') throw new Error('VATSIM 不支援 TAF');
+        const res = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('VATSIM 連線異常');
+        const text = await res.text();
+        if (!text.trim() || text.length < 10) throw new Error('VATSIM 格式異常');
+        return text.trim();
+    };
+
+    // 將所有賽車推上起跑線 (陣列中)
+    const racers = [
+        fetchDirectText(), 
+        fetchDirectJson(), 
+        fetchProxyText(), 
+        fetchProxyJson()
     ];
+    
+    // 只有抓 METAR 的時候才讓 VATSIM 這台賽車加入
+    if (type === 'metar') racers.push(fetchVatsim());
 
-    let lastError = null;
-
-    for (const proxy of proxies) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒即判定逾時，換下一條線
-            
-            // 故意不帶 headers 以免觸發複雜的 CORS Preflight
-            const res = await fetch(proxy.url, { cache: 'no-store', signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (res.ok) {
-                let data;
-                if (proxy.isJsonWrapped) {
-                    const wrapper = await res.json();
-                    data = JSON.parse(wrapper.contents); // 解開包裝
-                } else {
-                    data = await res.json();
-                }
-
-                if (Array.isArray(data) && data.length > 0) {
-                    return type === 'metar' ? data[0].rawOb : data[0].rawTAF;
-                } else if (Array.isArray(data) && data.length === 0) {
-                    return null; // NOAA 確認該機場無資料
-                }
-            }
-        } catch (e) {
-            lastError = e;
-            console.warn(`[氣象同步] ${proxy.name} 連線遭阻擋或逾時:`, e.message);
-        }
+    try {
+        // 發令槍響！Promise.any 會直接採用「第一台成功回傳結果 (包含確認無資料的 null)」的賽車
+        // 任何被 CORS 擋下或報錯的連線都會被無情拋棄，不會卡住整個流程
+        return await Promise.any(racers);
+    } catch (error) {
+        throw new Error("連線失敗：所有伺服器通道皆無回應");
     }
-
-    // --- 終極防線：VATSIM 航空模擬網路 API ---
-    // 若 NOAA 的 JSON 介面全軍覆沒，我們改接 VATSIM 的超純文字 METAR 介面
-    if (type === 'metar') {
-        try {
-            const vatsimRes = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { cache: 'no-store' });
-            if (vatsimRes.ok) {
-                const text = await vatsimRes.text();
-                if (text && text.length > 10) return text.trim();
-            }
-        } catch(e) {
-            console.warn("[氣象同步] VATSIM 備援網路也遭阻擋", e.message);
-        }
-    }
-
-    throw new Error("系統環境封鎖了所有的氣象連線通道");
   }
 
   // ATIS 效期計算
@@ -444,7 +441,7 @@
     icaoInput.value = icao;
     
     const statusEl = document.getElementById("atis-status");
-    statusEl.innerText = `🔄 正在擷取 ${icao} 資料...`;
+    statusEl.innerText = `🔄 擷取 ${icao} 資料中...`;
     statusEl.style.color = "#3b82f6";
     
     fetchAtisData(icao);
@@ -500,15 +497,15 @@
     const tafAge = document.getElementById("taf-age");
     const syncStatus = document.getElementById("wx-sync-status");
 
-    metarContent.innerText = "突破沙盒限制，建立連線中...";
+    metarContent.innerText = "連線中...";
     metarContent.className = "raw-text border-unk";
     metarHeader.innerHTML = "METAR (即時天氣)";
     metarAge.innerText = "";
     
-    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: monospace;">突破沙盒限制，建立連線中...</div>`;
+    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: monospace;">連線中...</div>`;
     tafAge.innerText = "";
 
-    syncStatus.innerText = "🔄 尋找可用通道...";
+    syncStatus.innerText = "⚡ 平行加速處理中...";
     syncStatus.style.background = "#e0f2fe";
     syncStatus.style.color = "#0284c7";
 
@@ -546,15 +543,15 @@
             tafContent.innerHTML = formatColorTAF(""); 
         }
 
-        syncStatus.innerText = "✅ 氣象同步成功";
+        syncStatus.innerText = "同步成功";
         syncStatus.style.background = "#dcfce7";
         syncStatus.style.color = "#16a34a";
 
     } catch (error) {
-        metarContent.innerText = `讀取失敗：Canvas 嚴格阻擋了此請求。建議在正式網頁伺服器上開啟。`;
+        metarContent.innerText = `讀取失敗：所有平行伺服器通道皆無回應，請確認網路狀態。`;
         tafContent.innerHTML = formatColorTAF("");
         
-        syncStatus.innerText = "❌ 遭環境阻擋";
+        syncStatus.innerText = "❌ 連線失敗";
         syncStatus.style.background = "#fee2e2";
         syncStatus.style.color = "#dc2626";
     }
