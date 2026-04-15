@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雙向航班動態看板 (TPE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 20px;
+        }
+        .section {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 專屬微調樣式與按鈕 */
+        .fids-mode-btn { background: transparent; color: #6b7280; border: none; padding: 6px 16px; border-radius: 6px; font-size: 0.95em; font-weight: bold; cursor: pointer; transition: all 0.2s; outline: none;}
+        .fids-mode-btn.active { background: #fff; color: #3c79ff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .fids-date-btn { background: transparent; border: 1px solid #d1d5db; color: #6b7280; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: bold; font-size: 0.9em; outline: none;}
+        .fids-date-btn:hover { border-color: #9ca3af; color: #4b5563; }
+        .fids-date-btn.active { background: #3c79ff; color: #fff; border-color: #3c79ff; }
+
+        .fids-reload-btn { background: #3c79ff; border: none; color: white; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; outline: none;}
+        .fids-reload-btn:hover { background: #2a5edc; transform: translateY(-1px); }
+        .fids-reload-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+        
+        .fids-filter-label { padding: 6px 16px; border-radius: 20px; border: 2px solid; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: all 0.2s; background: #fff; user-select: none; }
+        input[value="JX"]:checked + .fids-filter-label { background: #fef08a; border-color: #eab308; color: #a16207; }
+        input[value="CI"]:checked + .fids-filter-label { background: #fecaca; border-color: #f43f5e; color: #be123c; }
+        input[value="BR"]:checked + .fids-filter-label { background: #bbf7d0; border-color: #22c55e; color: #15803d; }
+        input[value="ALL"]:checked + .fids-filter-label { background: #e5e7eb; border-color: #6b7280; color: #374151; }
+
+        /* 高度擴張與對齊設定 (與其他計算工具欄位高度一致) */
+        #fids-flight-table { min-width: 900px; width: 100%; border-collapse: collapse; }
+        #fids-flight-table th { background: #f3f4f6; color: #6b7280; border-bottom: 2px solid #e5e7eb; font-weight: 700; white-space: nowrap; padding: 12px 16px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; }
+        #fids-flight-table td { padding: 10px 16px; font-size: 1.05em; color: #374151; border-bottom: 1px solid #f3f4f6; white-space: nowrap; vertical-align: middle; height: 52px; font-weight: 500; }
+        #fids-flight-table tr:hover { background-color: #f8fafc; }
+
+        /* 🎯 四大戰術重點標示 (強烈視覺對比) */
+        .fids-col-flight { font-weight: 900; font-family: 'Courier New', Courier, monospace; font-size: 1.25em; color: #1e40af; background: #dbeafe; border-radius: 8px; padding: 4px 12px; display: inline-block; border: 1px solid #bfdbfe; box-shadow: 0 1px 2px rgba(0,0,0,0.05); letter-spacing: 1px;}
+        .fids-col-gate { font-weight: 900; font-size: 1.35em; color: #991b1b; background: #fee2e2; border-radius: 8px; padding: 4px 16px; display: inline-block; min-width: 50px; text-align: center; border: 1px solid #fecaca; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .fids-col-time { font-weight: 900; font-size: 1.3em; font-family: 'Courier New', Courier, monospace; color: #0f766e; background: #ccfbf1; border-radius: 8px; padding: 4px 12px; display: inline-block; border: 1px solid #99f6e4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .fids-col-belt { font-weight: 900; font-size: 1.25em; color: #9a3412; background: #fef3c7; border-radius: 8px; padding: 4px 16px; display: inline-block; min-width: 50px; text-align: center; border: 1px solid #fde68a; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="section flex flex-col gap-4 fade-in" style="animation: fadeIn 0.3s ease-in-out;">
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-gray-200 pb-3 mt-1">
+        <h2 class="!mb-0 !border-0 flex items-center gap-2 text-gray-800" style="font-size: 1.35em; margin:0; font-weight: 700;">
+            <span>🛬</span> 雙向航班動態看板 (TPE)
+        </h2>
+        
+        <div class="flex bg-gray-200 rounded-lg p-1 border border-gray-300 shadow-inner">
+            <button class="fids-mode-btn active" data-mode="D">離場 (DEP)</button>
+            <button class="fids-mode-btn" data-mode="A">到場 (ARR)</button>
+        </div>
+        
+        <div class="flex gap-2 items-center">
+            <button id="fids-btn-today" class="fids-date-btn active">今日</button>
+            <button id="fids-btn-tomorrow" class="fids-date-btn">明日</button>
+            <button id="fids-btn-reload" class="fids-reload-btn"><span id="fids-reload-icon">🔄</span> 更新</button>
+        </div>
+    </div>
+
+    <div class="flex gap-3 flex-wrap mt-2 mb-3">
+        <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
+        <label for="fids-filter-jx" class="fids-filter-label border-yellow-500 text-yellow-600 hover:bg-yellow-50">JX 星宇</label>
+
+        <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
+        <label for="fids-filter-ci" class="fids-filter-label border-red-500 text-red-600 hover:bg-red-50">CI 華航</label>
+
+        <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
+        <label for="fids-filter-br" class="fids-filter-label border-green-500 text-green-600 hover:bg-green-50">BR 長榮</label>
+
+        <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
+        <label for="fids-filter-all" class="fids-filter-label border-gray-400 text-gray-600 hover:bg-gray-100">ALL 全空域</label>
+    </div>
+
+    <div id="fids-loading-msg" class="text-center text-blue-600 py-16 font-bold text-lg hidden">🔄 正在建立塔台資料鏈路...</div>
+    <div id="fids-empty-msg" class="text-center text-red-500 py-16 font-bold text-lg hidden">⚠️ 雷達區間內查無符合的航班資料。</div>
+
+    <div class="overflow-x-auto border border-gray-200 rounded-xl shadow-sm bg-white">
+        <table id="fids-flight-table" class="w-full text-left">
+            <thead>
+                <tr>
+                    <th style="border-top-left-radius: 0.75rem;">班機 (Flight)</th>
+                    <th id="fids-th-location">目的地 (Dest)</th>
+                    <th>登機口 (Gate)</th>
+                    <th id="fids-th-time">時間 (Time)</th>
+                    <th>航廈 (Term)</th>
+                    <th id="fids-th-checkin">櫃檯 (Desk)</th>
+                    <th style="border-top-right-radius: 0.75rem;">轉盤 (Belt)</th>
+                </tr>
+            </thead>
+            <tbody id="fids-table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 🛬 航班動態 (FIDS) 核心邏輯 - 搭載 TDX 數據鏈
+// ==========================================
+function initFIDS() {
+    // 🚨 這是您的 Google Apps Script 部署網址
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzUorxZk_0JhhxkfGveUHezl14cINUMHC9ELbXeEsqkPqzVfIMYwRxH3gIIoh64W8ZX/exec"; 
+
+    // 狀態記憶庫
+    let flightData = { departures: [], arrivals: [] };
+    let currentMode = 'D'; // D: 離場, A: 到場
+    let currentDate = 'today'; // today, tomorrow
+    let currentAirline = 'JX'; // JX, CI, BR, ALL
+
+    // DOM 元素快取
+    const tbody = document.getElementById('fids-table-body');
+    const loadingMsg = document.getElementById('fids-loading-msg');
+    const emptyMsg = document.getElementById('fids-empty-msg');
+    const tableEl = document.getElementById('fids-flight-table');
+    const reloadIcon = document.getElementById('fids-reload-icon');
+
+    // 1. 綁定「離場 (DEP) / 到場 (ARR)」切換
+    const modeBtns = document.querySelectorAll('.fids-mode-btn');
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            modeBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentMode = e.target.dataset.mode;
+            
+            // 動態切換表頭文字
+            document.getElementById('fids-th-location').textContent = currentMode === 'D' ? '目的地 (DEST)' : '起飛地 (ORIG)';
+            document.getElementById('fids-th-checkin').textContent = currentMode === 'D' ? '櫃檯 (DESK)' : '狀態 (STAT)';
+            
+            renderTable();
+        });
+    });
+
+    // 2. 綁定「今日 / 明日」切換
+    const dateBtns = document.querySelectorAll('.fids-date-btn');
+    dateBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (e.target.id === 'fids-btn-reload') return; 
+            dateBtns.forEach(b => { if (b.id !== 'fids-btn-reload') b.classList.remove('active'); });
+            e.target.classList.add('active');
+            currentDate = e.target.id === 'fids-btn-today' ? 'today' : 'tomorrow';
+            renderTable();
+        });
+    });
+
+    // 3. 綁定「航空公司」過濾器
+    const filterRadios = document.querySelectorAll('input[name="fids-airline"]');
+    filterRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentAirline = e.target.value;
+            renderTable();
+        });
+    });
+
+    // 4. 綁定「更新」按鈕與主動抓取邏輯
+    const reloadBtn = document.getElementById('fids-btn-reload');
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', fetchFIDSData);
+    }
+
+    // 📡 核心網路通訊：向您的 GAS 請求資料
+    async function fetchFIDSData() {
+        if(reloadIcon) reloadIcon.style.animation = 'spin 1s linear infinite';
+        
+        // 顯示載入中，隱藏表格
+        tableEl.style.display = 'none';
+        emptyMsg.classList.add('hidden');
+        loadingMsg.innerHTML = '🔄 正在建立塔台資料鏈路...';
+        loadingMsg.classList.remove('hidden');
+
+        try {
+            const response = await fetch(GAS_URL);
+            if (!response.ok) throw new Error("API 回應異常");
+            const data = await response.json();
+            
+            // 存進狀態庫
+            flightData.departures = data.departures || [];
+            flightData.arrivals = data.arrivals || [];
+            
+            // 抓取完成，進入渲染階段
+            renderTable();
+        } catch (error) {
+            console.error("資料獲取失敗:", error);
+            loadingMsg.innerHTML = '❌ 資料鏈路中斷，請確認 GAS 網址是否正確且已設定為「所有人」可存取。';
+        } finally {
+            if(reloadIcon) reloadIcon.style.animation = 'none';
+        }
+    }
+
+    // 🎨 核心畫面渲染：將 JSON 轉為 HTML 表格
+    function renderTable() {
+        // 隱藏載入訊息
+        loadingMsg.classList.add('hidden');
+        
+        // 1. 決定要看離場還是到場
+        let targetArray = currentMode === 'D' ? flightData.departures : flightData.arrivals;
+        
+        // 取得台灣今天的日期字串 (YYYY-MM-DD)
+        const now = new Date();
+        const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+        const twDate = new Date(now.getTime() + offsetMs + (8 * 60 * 60 * 1000)); 
+        const todayStr = twDate.toISOString().split('T')[0];
+        
+        twDate.setDate(twDate.getDate() + 1);
+        const tomorrowStr = twDate.toISOString().split('T')[0];
+        const targetDateStr = currentDate === 'today' ? todayStr : tomorrowStr;
+
+        // 2. 進行條件過濾 (日期 + 航空公司)
+        let filteredData = targetArray.filter(flight => {
+            // 過濾日期
+            const timeField = currentMode === 'D' ? flight.ScheduleDepartureTime : flight.ScheduleArrivalTime;
+            if (!timeField || !timeField.startsWith(targetDateStr)) return false;
+
+            // 過濾航空公司
+            if (currentAirline !== 'ALL' && flight.AirlineID !== currentAirline) return false;
+
+            return true;
+        });
+
+        // 3. 處理畫面顯示
+        if (filteredData.length === 0) {
+            tbody.innerHTML = '';
+            tableEl.style.display = 'none';
+            emptyMsg.classList.remove('hidden');
+            return;
+        }
+
+        emptyMsg.classList.add('hidden');
+        tableEl.style.display = 'table';
+        
+        // 將過濾後的資料轉化為 TR
+        tbody.innerHTML = filteredData.map(f => {
+            const flightNo = f.AirlineID + f.FlightNumber;
+            const location = currentMode === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
+            const gate = f.Gate || '--';
+            const rawTime = currentMode === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
+            const timeStr = rawTime ? rawTime.substring(11, 16) : '--:--';
+            const terminal = f.Terminal || '-';
+            const belt = f.BaggageClaim || '--';
+            
+            // 處理櫃檯/狀態欄位
+            let checkinOrStatus = '--';
+            if (currentMode === 'D') {
+                checkinOrStatus = f.CheckCounter || '--';
+            } else {
+                checkinOrStatus = f.ArrivalRemark || 'ON TIME';
+            }
+
+            return `
+                <tr>
+                    <td><span class="fids-col-flight">${flightNo}</span></td>
+                    <td style="font-weight: bold; color: #4b5563;">${location}</td>
+                    <td><span class="fids-col-gate">${gate}</span></td>
+                    <td><span class="fids-col-time">${timeStr}</span></td>
+                    <td style="font-weight: bold; text-align: center;">T${terminal}</td>
+                    <td style="font-weight: bold; color: #6b7280;">${checkinOrStatus}</td>
+                    <td><span class="fids-col-belt">${belt}</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // 初次載入時主動抓取一次資料
+    fetchFIDSData();
+}
+
+// 確保網頁一載入就自動啟動 FIDS 邏輯
+document.addEventListener("DOMContentLoaded", initFIDS);
+
+</script>
+</body>
+</html>
