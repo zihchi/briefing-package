@@ -541,4 +541,14 @@
         syncStatus.style.color = "#ef4444";
     }
   }
+  // ==========================================
+  // 5. 系統自動點火程序 (Auto-Ignition)
+  // ==========================================
+  // 當面板結構一載入完成，給予微小的 DOM 緩衝時間後，直接觸發查詢，拔除手動點擊的麻煩。
+  setTimeout(() => {
+    const inputEl = document.getElementById("atis-icao-input");
+    if (inputEl && inputEl.value) {
+        fetchAllData();
+    }
+  }, 100);
 </script>
