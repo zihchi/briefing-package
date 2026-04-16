@@ -74,18 +74,18 @@
                 </button>
             </div>
 
-                        <div class="flex justify-between items-center mb-3">
-                <div class="flex bg-slate-200 rounded-lg p-1">
-                    <button class="fids-mode-btn active" data-mode="D">離場 (DEP)</button>
-                    <button class="fids-mode-btn" data-mode="A">到場 (ARR)</button>
-                </div>
-                <div class="flex gap-1.5 overflow-x-auto scrollbar-hide">
-                    <button id="fids-btn-yesterday" class="fids-date-btn">昨日</button>
-                    <button id="fids-btn-today" class="fids-date-btn active">今日</button>
-                    <button id="fids-btn-tomorrow" class="fids-date-btn">明日</button>
-                    <button id="fids-btn-alldate" class="fids-date-btn !border-purple-300 text-purple-700">ALL 日期</button>
-                </div>
-            </div>
+<div class="flex flex-wrap justify-between items-center gap-3 mb-3">
+                <div class="flex bg-slate-200 rounded-lg p-1 shrink-0">
+                    <button class="fids-mode-btn active" data-mode="D">離場 (DEP)</button>
+                    <button class="fids-mode-btn" data-mode="A">到場 (ARR)</button>
+                </div>
+                <div class="flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0 w-full md:w-auto">
+                    <button id="fids-btn-yesterday" class="fids-date-btn">昨日</button>
+                    <button id="fids-btn-today" class="fids-date-btn active">今日</button>
+                    <button id="fids-btn-tomorrow" class="fids-date-btn">明日</button>
+                    <button id="fids-btn-alldate" class="fids-date-btn !border-purple-300 text-purple-700">ALL 日期</button>
+                </div>
+            </div>
 
                         <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
                 <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
