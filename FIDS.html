@@ -63,66 +63,68 @@
 </style>
 
 <div class="text-slate-800">
-        <div class="fids-control-panel px-4 py-4">
-        <div class="max-w-5xl mx-auto">
-                        <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-black tracking-tight flex items-center gap-2" style="margin: 0;">
-                    <span>✈️</span> TPE 戰術看板
-                </h1>
-                <button id="fids-btn-refresh" class="fids-btn-refresh text-sm">
-                    <span id="fids-icon-refresh">🔄</span> 立即更新
-                </button>
-            </div>
+        <div class="fids-control-panel p-3 md:p-5 text-slate-800">
+        <div class="max-w-5xl mx-auto">
+            
+            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-5 gap-2 md:gap-4">
+                <h1 class="text-lg md:text-xl font-black tracking-tight flex items-center gap-2 m-0 p-0">
+                    <span>✈️</span> TPE 戰術看板
+                </h1>
+                <button id="fids-btn-refresh" class="!m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] !bg-slate-900 !text-white !rounded-xl !text-xs md:!text-sm !font-bold !border-none flex items-center justify-center gap-1.5 md:gap-2 hover:bg-slate-800 active:scale-95 transition-all shrink-0 shadow-sm">
+                    <span id="fids-icon-refresh">🔄</span> 立即更新
+                </button>
+            </div>
 
-<div class="flex flex-wrap justify-between items-center gap-3 mb-3">
-                <div class="flex bg-slate-200 rounded-lg p-1 shrink-0">
-                    <button class="fids-mode-btn active" data-mode="D">離場 (DEP)</button>
-                    <button class="fids-mode-btn" data-mode="A">到場 (ARR)</button>
+            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-5 gap-3 md:gap-4">
+                
+                <div class="flex items-center bg-slate-200 rounded-xl p-1 shrink-0 w-full sm:w-auto">
+                    <button class="fids-mode-btn active flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="D">離場 (DEP)</button>
+                    <button class="fids-mode-btn flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="A">到場 (ARR)</button>
                 </div>
-                <div class="flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0 w-full md:w-auto">
-                    <button id="fids-btn-yesterday" class="fids-date-btn">昨日</button>
-                    <button id="fids-btn-today" class="fids-date-btn active">今日</button>
-                    <button id="fids-btn-tomorrow" class="fids-date-btn">明日</button>
-                    <button id="fids-btn-alldate" class="fids-date-btn !border-purple-300 text-purple-700">ALL 日期</button>
+                
+                <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto scrollbar-hide shrink-0 pb-1 w-full sm:w-auto snap-x">
+                    <button id="fids-btn-yesterday" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">昨日</button>
+                    <button id="fids-btn-today" class="fids-date-btn active snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">今日</button>
+                    <button id="fids-btn-tomorrow" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">明日</button>
+                    <button id="fids-btn-alldate" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !border-purple-300 !text-purple-700 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">ALL 日期</button>
                 </div>
             </div>
 
-                        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
-                <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
-                <label for="fids-filter-jx" class="fids-filter-label">JX 星宇</label>
+            <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
+                <label for="fids-filter-jx" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX 星宇</label>
 
-                <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
-                <label for="fids-filter-ci" class="fids-filter-label">CI 華航</label>
+                <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
+                <label for="fids-filter-ci" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">CI 華航</label>
 
-                <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
-                <label for="fids-filter-br" class="fids-filter-label">BR 長榮</label>
+                <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
+                <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
 
-                <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
-                <label for="fids-filter-all" class="fids-filter-label">JX+CI+BR 聯軍</label>
-            </div>
+                <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
+                <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR 聯軍</label>
+            </div>
 
-                        <div class="flex gap-2 overflow-x-auto pb-1 mt-2 scrollbar-hide" style="-ms-overflow-style: none; scrollbar-width: none;">
-                <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
-                <label for="fids-time-now2" class="fids-filter-label text-[0.8rem] !border-blue-300 text-blue-700">±2hr 即時</label>
+            <div class="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 mt-1 md:mt-2 scrollbar-hide snap-x">
+                <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
+                <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold !border-blue-300 !text-blue-700 transition-all shadow-sm">±2hr 即時</label>
 
-                <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
-                <label for="fids-time-0006" class="fids-filter-label text-[0.8rem]">00-06</label>
+                <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
+                <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
 
-                <input type="radio" id="fids-time-0612" name="fids-time" value="06-12" class="hidden">
-                <label for="fids-time-0612" class="fids-filter-label text-[0.8rem]">06-12</label>
+                <input type="radio" id="fids-time-0612" name="fids-time" value="06-12" class="hidden">
+                <label for="fids-time-0612" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">06-12</label>
 
-                <input type="radio" id="fids-time-1218" name="fids-time" value="12-18" class="hidden">
-                <label for="fids-time-1218" class="fids-filter-label text-[0.8rem]">12-18</label>
+                <input type="radio" id="fids-time-1218" name="fids-time" value="12-18" class="hidden">
+                <label for="fids-time-1218" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">12-18</label>
 
-                <input type="radio" id="fids-time-1824" name="fids-time" value="18-24" class="hidden">
-                <label for="fids-time-1824" class="fids-filter-label text-[0.8rem]">18-24</label>
+                <input type="radio" id="fids-time-1824" name="fids-time" value="18-24" class="hidden">
+                <label for="fids-time-1824" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">18-24</label>
 
-                <input type="radio" id="fids-time-all" name="fids-time" value="ALL" class="hidden">
-                <label for="fids-time-all" class="fids-filter-label text-[0.8rem]">ALL 全日</label>
-            </div>
-        </div>
-    </div>
-
+                <input type="radio" id="fids-time-all" name="fids-time" value="ALL" class="hidden">
+                <label for="fids-time-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">ALL 全日</label>
+            </div>
+        </div>
+    </div>
         <div class="max-w-5xl mx-auto mb-4">
         <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
             <div class="text-3xl mb-3 animate-pulse">📡</div>
