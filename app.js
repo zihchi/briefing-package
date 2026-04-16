@@ -449,14 +449,14 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 極速平行競速 API 擷取邏輯：嚴格 4.5 秒 AbortController 死線
+    // 🚀 平行競速 API 擷取邏輯：放寬死線，兼顧速度與網路容錯率
     const fetchBulkWeatherFast = async (icaoList, type) => {
         const ts = Date.now();
         const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${ts}`;
 
-        // 建立 4.5 秒的死線，預留 0.5 秒進行渲染，保證整體不超過 5 秒
+        // 建立 15 秒的安全死線，避免 API 伺服器掛點時無止境等待
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4500);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         // 賽車 1 號：直連 NOAA JSON
         const fetchDirectJson = fetch(jsonUrl, { cache: 'no-store', signal: controller.signal })
@@ -477,14 +477,14 @@ function initAviationMap() {
             });
 
         try {
-            // 發令槍響！誰先拿到資料就用誰的，只要有任一成功就清除 Timeout
+            // 發令槍響！兩條通道只要任一成功，就立刻回傳並解除等待
             const result = await Promise.any([fetchDirectJson, fetchProxyJson]);
             clearTimeout(timeoutId);
             return Array.isArray(result) ? result : [];
         } catch (error) {
             clearTimeout(timeoutId);
-            console.warn(`極速通道獲取 ${type} 失敗或超時:`, error);
-            throw new Error(`獲取 ${type} 失敗`); // 強制拋出錯誤，讓 bootSequence 攔截
+            console.warn(`通道獲取 ${type} 失敗或超時:`, error);
+            throw new Error(`獲取 ${type} 失敗`); // 強制拋出錯誤，讓外層攔截
         }
     };
 
