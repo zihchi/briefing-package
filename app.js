@@ -1734,3 +1734,11 @@ function clearNotamAll() {
     if (infoEl) infoEl.classList.add('hidden');
     if (logEl) logEl.classList.add('hidden');
 }
+
+// ==========================================
+// 🔄 UI 小工具：重新整理 iframe (Windy 地圖用)
+// ==========================================
+function refreshIframe(id) {
+    const iframe = document.getElementById(id);
+    if (iframe) iframe.src = iframe.src;
+}
