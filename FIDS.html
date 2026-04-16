@@ -131,7 +131,7 @@
         <!-- 注意：把 mb-3 移到內部的狀態方塊，避免隱藏時仍有空白 -->
         <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
             <div class="text-3xl mb-3 animate-pulse">📡</div>
-            <div class="font-bold text-blue-600">正在與塔台建立數據鏈路 (6000架次)...</div>
+            <div class="font-bold text-blue-600">正在與塔台建立數據鏈路...</div>
             <div class="text-sm text-slate-400 mt-1">Acquiring TDX Data Link</div>
         </div>
         <div id="fids-msg-empty" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
@@ -147,11 +147,11 @@
         <div class="bg-white sm:rounded-xl shadow-sm border-t sm:border border-slate-200 overflow-x-auto">
             <div class="min-w-[800px]">
                 <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
-                    <div class="w-[12%]">航班 Flight</div>
-                    <div class="w-[12%]">起訖地 Route</div>
-                    <div class="w-[12%] text-center">登機口 Gate</div>
-                    <div class="w-[16%] text-center" id="fids-th-time">時間 Time</div>
-                    <div class="w-[24%] text-center" id="fids-th-belt">轉盤 Belt</div>
+                    <div class="w-[12%]">Flight</div>
+                    <div class="w-[12%]">Route</div>
+                    <div class="w-[10%] text-center">Gate</div>
+                    <div class="w-[18%] text-center" id="fids-th-time">Time</div>
+                    <div class="w-[24%] text-center" id="fids-th-belt">Belt</div>
                     <div class="w-[24%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
                 </div>
                 <div id="fids-flight-list" class="flex flex-col pb-2"></div>
@@ -207,7 +207,7 @@ function initFIDS() {
             e.target.classList.add('active');
             fidsState.mode = e.target.dataset.mode;
             
-            fidsUI.thBelt.innerText = fidsState.mode === 'D' ? '狀態 Stat' : '轉盤 Belt';
+            fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
             fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
             renderFIDS();
         };
@@ -421,10 +421,10 @@ function renderFIDS() {
                 <div class="w-[12%] flex items-center pr-2">
                     <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
                 </div>
-                <div class="w-[12%] flex justify-center items-center">
+                <div class="w-[10%] flex justify-center items-center">
                     <span class="font-black text-red-600 text-[1.25rem]">${gate}</span>
                 </div>
-                <div class="w-[16%] flex justify-center items-center">
+                <div class="w-[18%] flex justify-center items-center">
                     <span class="font-mono font-bold text-teal-700 text-[1.2rem]">${timeStr}</span>
                 </div>
                 <div class="w-[24%] flex justify-center items-center">
