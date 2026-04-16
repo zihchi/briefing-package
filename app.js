@@ -153,9 +153,10 @@ function loadPage(pageUrl) {
             else if (pageUrl.includes('notam.html')) {
                 initNotamRadar(); 
             }
-            else if (pageUrl.includes('FIDS.html') || pageUrl.includes('TPE_Flight_Data_Link')) { 
+            else if (pageUrl.includes('FIDS.html') || pageUrl.includes('TPE_Flight_Data_Link') || pageUrl.includes('ATIS.html')) { 
                 setTimeout(() => {
                     if (typeof initFIDS === 'function') initFIDS();
+                    if (typeof fetchAllData === 'function') fetchAllData();
                 }, 50);
             }
         })
@@ -450,12 +451,12 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 取代 GAS 的極速平行競速 API 擷取邏輯 (專注 JSON 陣列解析)
+    // 🚀 全新三路備援軍規級代理 API 擷取邏輯 (徹底解決 API 連線異常)
     const fetchBulkWeatherFast = async (icaoList, type) => {
         const ts = Date.now();
         const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${ts}`;
 
-        // 賽車 1 號：直連 NOAA JSON
+        // 賽車 1 號：直連 NOAA JSON (無 CORS 阻擋時最快)
         const fetchDirectJson = async () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -471,17 +472,31 @@ function initAviationMap() {
             }
         };
 
-        // 賽車 2 號：AllOrigins 代理 JSON (穩定穿透 CORS)
-        const fetchProxyJson = async () => {
+        // 賽車 2 號：CodeTabs 代理 JSON (最穩定不阻擋)
+        const fetchCodeTabs = async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            try {
+                const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error('CodeTabs failed');
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            } catch (e) {
+                clearTimeout(timeoutId);
+                throw e;
+            }
+        };
+
+        // 賽車 3 號：CORSProxy 代理 JSON (終極備援)
+        const fetchCorsProxy = async () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000);
             try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal });
+                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal });
                 clearTimeout(timeoutId);
-                if (!res.ok) throw new Error('AllOrigins failed');
-                const wrapper = await res.json();
-                if (!wrapper.contents) throw new Error('AllOrigins empty');
-                const data = JSON.parse(wrapper.contents);
+                if (!res.ok) throw new Error('CorsProxy failed');
+                const data = await res.json();
                 return Array.isArray(data) ? data : [];
             } catch (e) {
                 clearTimeout(timeoutId);
@@ -490,8 +505,8 @@ function initAviationMap() {
         };
 
         try {
-            // 發令槍響！捨棄等待，誰先解析完就用誰的
-            return await Promise.any([fetchDirectJson(), fetchProxyJson()]);
+            // 發令槍響！三路並行，最先成功解析成 JSON 陣列的直接通關
+            return await Promise.any([fetchDirectJson(), fetchCodeTabs(), fetchCorsProxy()]);
         } catch (error) {
             console.warn(`極速通道獲取 ${type} 失敗:`, error);
             return [];
