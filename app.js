@@ -345,7 +345,6 @@ function fetchPopupAtis(icao) {
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
-    // ATIS 依然需依賴 GAS (因為 atis.guru 有嚴格 CORS)
     const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
     
     fetch(`${gasUrl}?icao=${icao}`)
@@ -395,16 +394,16 @@ function initAviationMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) return;
 
-    if (aviationMapInstance !== null) {
-        aviationMapInstance.remove();
+    if (window.aviationMapInstance) {
+        window.aviationMapInstance.remove();
     }
 
-    aviationMapInstance = L.map('map').setView([31.0, 130.0], 5);
+    window.aviationMapInstance = L.map('map').setView([31.0, 130.0], 5);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
         maxZoom: 20
-    }).addTo(aviationMapInstance);
+    }).addTo(window.aviationMapInstance);
 
     const airports = [
         { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
@@ -450,51 +449,42 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 取代 GAS 的極速平行競速 API 擷取邏輯 (專注 JSON 陣列解析)
+    // 🚀 極速平行競速 API 擷取邏輯：嚴格 4.5 秒 AbortController 死線
     const fetchBulkWeatherFast = async (icaoList, type) => {
         const ts = Date.now();
         const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${ts}`;
 
-        // 賽車 1 號：直連 NOAA JSON
-        const fetchDirectJson = async () => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            try {
-                const res = await fetch(jsonUrl, { cache: 'no-store', signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!res.ok) throw new Error('Direct JSON failed');
-                const data = await res.json();
-                return Array.isArray(data) ? data : [];
-            } catch (e) {
-                clearTimeout(timeoutId);
-                throw e;
-            }
-        };
+        // 建立 4.5 秒的死線，預留 0.5 秒進行渲染，保證整體不超過 5 秒
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-        // 賽車 2 號：AllOrigins 代理 JSON (穩定穿透 CORS)
-        const fetchProxyJson = async () => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            try {
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal });
-                clearTimeout(timeoutId);
+        // 賽車 1 號：直連 NOAA JSON
+        const fetchDirectJson = fetch(jsonUrl, { cache: 'no-store', signal: controller.signal })
+            .then(res => {
+                if (!res.ok) throw new Error('Direct JSON failed');
+                return res.json();
+            });
+
+        // 賽車 2 號：AllOrigins 代理 JSON
+        const fetchProxyJson = fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal })
+            .then(res => {
                 if (!res.ok) throw new Error('AllOrigins failed');
-                const wrapper = await res.json();
+                return res.json();
+            })
+            .then(wrapper => {
                 if (!wrapper.contents) throw new Error('AllOrigins empty');
-                const data = JSON.parse(wrapper.contents);
-                return Array.isArray(data) ? data : [];
-            } catch (e) {
-                clearTimeout(timeoutId);
-                throw e;
-            }
-        };
+                return JSON.parse(wrapper.contents);
+            });
 
         try {
-            // 發令槍響！捨棄等待，誰先解析完就用誰的
-            return await Promise.any([fetchDirectJson(), fetchProxyJson()]);
+            // 發令槍響！誰先拿到資料就用誰的，只要有任一成功就清除 Timeout
+            const result = await Promise.any([fetchDirectJson, fetchProxyJson]);
+            clearTimeout(timeoutId);
+            return Array.isArray(result) ? result : [];
         } catch (error) {
-            console.warn(`極速通道獲取 ${type} 失敗:`, error);
-            return [];
+            clearTimeout(timeoutId);
+            console.warn(`極速通道獲取 ${type} 失敗或超時:`, error);
+            throw new Error(`獲取 ${type} 失敗`); // 強制拋出錯誤，讓 bootSequence 攔截
         }
     };
 
@@ -611,45 +601,50 @@ function initAviationMap() {
 
     const bootSequence = async () => {
         const statusIndicator = document.getElementById('sync-status');
+        if (statusIndicator) {
+            statusIndicator.style.backgroundColor = "#f39c12"; 
+            statusIndicator.innerText = "🚀 極速同步 METAR / TAF 中...";
+        }
+        
         const icaoString = airports.map(a => a.icao).join(',');
 
         try {
+            // 🛡️ 嚴禁單邊顯示：強制 METAR 和 TAF 一起完成，任一失敗即進入 Catch
             const [allMetars, allTafs] = await Promise.all([
                 fetchBulkWeatherFast(icaoString, 'metar'),
                 fetchBulkWeatherFast(icaoString, 'taf')
             ]);
 
-            if (allMetars.length > 0) {
-                allMetars.forEach(m => { 
-                    if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
-                });
-            }
-            if (allTafs.length > 0) {
-                allTafs.forEach(t => { 
-                    if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
-                });
+            // 再次驗證長度，確保雙邊都有獲取到資料
+            if (allMetars.length === 0 || allTafs.length === 0) {
+                throw new Error("資料不對稱！METAR 或 TAF 發生單邊遺失。");
             }
 
-            if (allMetars.length === 0 && allTafs.length === 0) {
-                statusIndicator.innerText = "❌ 氣象同步失敗 (API 連線異常)";
-                statusIndicator.classList.remove('status-loaded');
-                statusIndicator.classList.add('status-error');
-                statusIndicator.style.backgroundColor = ""; 
-                return;
-            }
+            allMetars.forEach(m => { 
+                if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
+            });
+            
+            allTafs.forEach(t => { 
+                if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
+            });
 
             isDataReady = true;
-            statusIndicator.innerText = "✅ 氣象同步完成";
-            statusIndicator.classList.remove('status-error');
-            statusIndicator.classList.add('status-loaded');
-            statusIndicator.style.backgroundColor = ""; 
+            if (statusIndicator) {
+                statusIndicator.innerText = "✅ 氣象同步完成";
+                statusIndicator.classList.remove('status-error');
+                statusIndicator.classList.add('status-loaded');
+                statusIndicator.style.backgroundColor = ""; 
+            }
 
         } catch (error) {
-            console.error("同步程序中斷：", error);
-            statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
-            statusIndicator.classList.remove('status-loaded');
-            statusIndicator.classList.add('status-error');
-            statusIndicator.style.backgroundColor = "";
+            console.error("同步程序中斷：", error.message);
+            isDataReady = false; // 阻斷 UI 顯示殘缺資料
+            if (statusIndicator) {
+                statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線或重試)";
+                statusIndicator.classList.remove('status-loaded');
+                statusIndicator.classList.add('status-error');
+                statusIndicator.style.backgroundColor = "";
+            }
         }
     };
 
@@ -662,12 +657,8 @@ function initAviationMap() {
             refreshBtn.innerText = "⏳ 同步中...";
 
             isDataReady = false;
-            const statusIndicator = document.getElementById('sync-status');
-            statusIndicator.classList.remove('status-loaded', 'status-error');
-            statusIndicator.style.backgroundColor = "#f39c12"; 
-            statusIndicator.innerText = "🔄 重新同步資料中...";
-            
             airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
+            
             bootSequence();
 
             setTimeout(() => {
@@ -680,7 +671,7 @@ function initAviationMap() {
     }
 
     airports.forEach(airport => {
-        const marker = L.marker([airport.lat, airport.lng]).addTo(aviationMapInstance);
+        const marker = L.marker([airport.lat, airport.lng]).addTo(window.aviationMapInstance);
 
         marker.on('click', function() {
             const isMobile = window.innerWidth < 768;
@@ -693,9 +684,9 @@ function initAviationMap() {
                     .setContent(`
                     <div class="weather-popup">
                         <div class="airport-title">${airport.name} (${airport.icao})</div>
-                        <div style="color: #e67e22; font-weight: bold;">⚠️ 氣象資料尚未同步，請點擊上方「手動更新氣象」按鈕。</div>
+                        <div style="color: #e67e22; font-weight: bold;">⚠️ 氣象資料尚未同步，或同步失敗。請點擊上方「手動更新氣象」按鈕。</div>
                     </div>
-                `).openOn(aviationMapInstance);
+                `).openOn(window.aviationMapInstance);
                 return;
             }
 
@@ -746,18 +737,12 @@ function initAviationMap() {
                         </div>
                 </div>
             </div>
-            `).openOn(aviationMapInstance);
+            `).openOn(window.aviationMapInstance);
         });
     });
 
-    setTimeout(() => {
-        const statusIndicator = document.getElementById('sync-status');
-        if (statusIndicator) {
-            statusIndicator.style.backgroundColor = "#f39c12"; 
-            statusIndicator.innerText = "🔄 背景自動同步中...";
-        }
-        bootSequence();
-    }, 500);
+    // 🚀 零延遲啟動：拔除原本的 setTimeout 等待，一開啟網頁直接拉取資料
+    bootSequence();
 }
 
 // ==========================================
