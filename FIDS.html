@@ -1,82 +1,80 @@
 <style>
-    /* 針對嵌入首頁後的控制面板微調 */
-    .fids-control-panel {
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        margin-bottom: 1rem;
-    }
-
-    /* 按鈕與過濾器樣式 (加入防禦性 CSS 與防擠壓設定) */
-    .fids-mode-btn { 
-        background: transparent; color: #64748b; border: none; padding: 8px 16px; border-radius: 8px; 
-        font-weight: 700; transition: 0.2s; cursor: pointer; 
-        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
+   /* 針對嵌入首頁後的控制面板微調 */
+    .fids-control-panel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        margin-bottom: 0.5rem; /* 縮小底部外距 */
     }
-    .fids-mode-btn.active { background: #ffffff; color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-    .fids-date-btn { 
-        background: transparent; border: 1px solid #cbd5e1; color: #64748b; padding: 6px 14px; border-radius: 8px; 
-        font-weight: 700; transition: 0.2s; font-size: 0.9em; cursor: pointer; 
-        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
+    /* 離場 / 到場 按鈕樣式 */
+    .fids-mode-btn { background: transparent !important; color: #64748b !important; }
+    .fids-mode-btn.active { background: #ffffff !important; color: #2563eb !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; font-weight: 800 !important;}
+
+    /* 日期按鈕樣式 */
+    .fids-date-btn { background: transparent !important; border-color: #cbd5e1 !important; color: #64748b !important; }
+    .fids-date-btn.active { background: #2563eb !important; color: #ffffff !important; border-color: #2563eb !important; }
+
+    /* 過濾標籤基礎樣式 (移除 HTML 內的強制白底，改由這裡控制) */
+    .fids-filter-label { background: #ffffff; border-color: #e2e8f0; color: #475569; }
+
+    /* 航空公司過濾標籤狀態 (選中時變色) */
+    input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a !important; border-color: #eab308 !important; color: #854d0e !important; }
+    input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca !important; border-color: #f43f5e !important; color: #9f1239 !important; }
+    input[name="fids-airline"][value="BR"]:checked + .fids-filter-label { background: #bbf7d0 !important; border-color: #22c55e !important; color: #166534 !important; }
+    input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #e2e8f0 !important; border-color: #64748b !important; color: #334155 !important; }
+
+    /* 時段過濾標籤狀態 (選中時變色) */
+    input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe !important; border-color: #3b82f6 !important; color: #1e3a8a !important; }
+
+    /* 🎯 立即更新按鈕 (完全同步 index.html 重新整理風格) */
+    .fids-btn-refresh {
+        background: transparent !important;
+        border: 2px solid #3c79ff !important;
+        border-radius: 6px !important;
+        padding: 4px 12px !important;
+        font-size: 0.9em !important;
+        color: #3c79ff !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+        transition: background-color 0.2s, color 0.2s, transform 0.1s !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin: 0 !important;
     }
-    .fids-date-btn.active { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+    .fids-btn-refresh:hover { background-color: rgba(60,121,255,0.1) !important; color: #2c5edc !important; }
+    .fids-btn-refresh:active { transform: scale(0.95) !important; }
+    .fids-btn-refresh:disabled { border-color: #94a3b8 !important; color: #94a3b8 !important; cursor: not-allowed; transform: none !important; }
 
-    .fids-filter-label { 
-        padding: 6px 14px; border-radius: 20px; border: 2px solid; cursor: pointer; font-size: 0.9em; 
-        font-weight: 700; transition: 0.2s; background: #fff; user-select: none; display: inline-block; 
-        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
-    }
-    
-   
-    .fids-btn-refresh:active { transform: scale(0.96); }
-    .fids-btn-refresh:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
-    /* 航空公司過濾標籤狀態 */
-    input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a; border-color: #eab308; color: #854d0e; }
-    input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca; border-color: #f43f5e; color: #9f1239; }
-    input[name="fids-airline"][value="BR"]:checked + .fids-filter-label { background: #bbf7d0; border-color: #22c55e; color: #166534; }
-    input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #e2e8f0; border-color: #64748b; color: #334155; }
+    /* 🎯 極簡高密度清單樣式 */
+    .fids-list-row { transition: background-color 0.15s ease-in-out; }
+    .fids-list-row:hover { background-color: #f8fafc; }
+    .fids-list-row:active { background-color: #f1f5f9; }
 
-    /* 時段過濾標籤狀態 */
-    input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
-
-    /* 更新按鈕 */
-    .fids-btn-refresh { 
-        background: #0f172a; color: white; border-radius: 8px; padding: 8px 16px; font-weight: 700; 
-        transition: 0.2s; display: flex; align-items: center; gap: 6px; cursor: pointer; border: none; 
-        margin: 0 !important; white-space: nowrap; flex-shrink: 0;
-    }
-    .fids-btn-refresh:active { transform: scale(0.96); }
-    .fids-btn-refresh:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
-    
-    /* 🎯 極簡高密度清單樣式 */
-    .fids-list-row { transition: background-color 0.15s ease-in-out; }
-    .fids-list-row:hover { background-color: #f8fafc; }
-    .fids-list-row:active { background-color: #f1f5f9; }
-    
-    /* 狀態標示 */
-    .fids-status-tag { font-size: 0.65rem; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: #f1f5f9; color: #64748b; margin-left: 6px; border: 1px solid #e2e8f0; white-space: nowrap;}
-
-    @keyframes fids-spin { 100% { transform: rotate(360deg); } }
-    .fids-animate-spin-fast { animation: fids-spin 0.8s linear infinite; display: inline-block;}
+    /* 狀態標示與動畫 */
+    .fids-status-tag { font-size: 0.65rem; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: #f1f5f9; color: #64748b; margin-left: 6px; border: 1px solid #e2e8f0; white-space: nowrap;}
+    @keyframes fids-spin { 100% { transform: rotate(360deg); } }
+    .fids-animate-spin-fast { animation: fids-spin 0.8s linear infinite; display: inline-block;}
 </style>
 
 <div class="text-slate-800">
-        <div class="fids-control-panel p-3 md:p-5 text-slate-800">
+    <!-- 控制面板 -->
+    <div class="fids-control-panel p-3 md:p-4 text-slate-800">
         <div class="max-w-5xl mx-auto">
             
-            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-5 gap-2 md:gap-4">
+            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-2 md:gap-4">
                 <h1 class="text-lg md:text-xl font-black tracking-tight flex items-center gap-2 m-0 p-0">
                     <span>✈️</span> TPE 戰術看板
                 </h1>
-                <button id="fids-btn-refresh" class="!m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] !bg-slate-900 !text-white !rounded-xl !text-xs md:!text-sm !font-bold !border-none flex items-center justify-center gap-1.5 md:gap-2 hover:bg-slate-800 active:scale-95 transition-all shrink-0 shadow-sm">
+                <!-- 立即更新按鈕：樣式已完全交給 CSS -->
+                <button id="fids-btn-refresh" class="fids-btn-refresh shrink-0">
                     <span id="fids-icon-refresh">🔄</span> 立即更新
                 </button>
             </div>
 
-            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-5 gap-3 md:gap-4">
-                
+            <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-3 md:gap-4">
                 <div class="flex items-center bg-slate-200 rounded-xl p-1 shrink-0 w-full sm:w-auto">
                     <button class="fids-mode-btn active flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="D">離場 (DEP)</button>
                     <button class="fids-mode-btn flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="A">到場 (ARR)</button>
@@ -90,74 +88,77 @@
                 </div>
             </div>
 
+            <!-- 航空公司過濾 (移除 !bg-white 以釋放預設顏色) -->
             <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x">
                 <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
-                <label for="fids-filter-jx" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX 星宇</label>
+                <label for="fids-filter-jx" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX 星宇</label>
 
                 <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
-                <label for="fids-filter-ci" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">CI 華航</label>
+                <label for="fids-filter-ci" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">CI 華航</label>
 
                 <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
-                <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
+                <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
 
                 <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
-                <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR 聯軍</label>
+                <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR</label>
             </div>
 
+            <!-- 時間過濾 (移除 !bg-white 以釋放預設顏色) -->
             <div class="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 mt-1 md:mt-2 scrollbar-hide snap-x">
                 <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
-                <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold !border-blue-300 !text-blue-700 transition-all shadow-sm">±2hr 即時</label>
+                <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">±2hr 即時</label>
 
                 <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
-                <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
+                <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
 
                 <input type="radio" id="fids-time-0612" name="fids-time" value="06-12" class="hidden">
-                <label for="fids-time-0612" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">06-12</label>
+                <label for="fids-time-0612" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">06-12</label>
 
                 <input type="radio" id="fids-time-1218" name="fids-time" value="12-18" class="hidden">
-                <label for="fids-time-1218" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">12-18</label>
+                <label for="fids-time-1218" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">12-18</label>
 
                 <input type="radio" id="fids-time-1824" name="fids-time" value="18-24" class="hidden">
-                <label for="fids-time-1824" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">18-24</label>
+                <label for="fids-time-1824" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">18-24</label>
 
                 <input type="radio" id="fids-time-all" name="fids-time" value="ALL" class="hidden">
-                <label for="fids-time-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !bg-white !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">ALL 全日</label>
+                <label for="fids-time-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">ALL 全日</label>
             </div>
         </div>
     </div>
-        <div class="max-w-5xl mx-auto mb-4">
-        <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
-            <div class="text-3xl mb-3 animate-pulse">📡</div>
-            <div class="font-bold text-blue-600">正在與塔台建立數據鏈路 (6000架次)...</div>
-            <div class="text-sm text-slate-400 mt-1">Acquiring TDX Data Link</div>
-        </div>
-        <div id="fids-msg-empty" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
-            <div class="text-3xl mb-3">📭</div>
-            <div class="font-bold text-slate-600">目前設定的條件下無航班。</div>
-            <div id="fids-empty-diag" class="mt-4 px-4"></div>
-        </div>
-        <div id="fids-msg-error" class="hidden text-center py-12 px-4 bg-red-50 rounded-xl border border-red-200">
-            <div class="text-3xl mb-3">⚠️</div>
-            <div id="fids-error-text" class="text-red-600">資料鏈路異常</div>
-        </div>
-    </div>
 
-        <div class="max-w-5xl mx-auto bg-white sm:rounded-xl shadow-sm border-t sm:border border-slate-200 overflow-x-auto">
-        <div class="min-w-[800px]">
-            <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
-                <div class="w-[18%]">航班 Flight</div>
-                <div class="w-[18%]">起訖地 Route</div>
-                <div class="w-[12%] text-center">登機口 Gate</div>
-                <div class="w-[16%] text-center" id="fids-th-time">時間 Time</div>
-                <div class="w-[12%] text-center" id="fids-th-belt">轉盤 Belt</div>
-                <div class="w-[24%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
-            </div>
-            <div id="fids-flight-list" class="flex flex-col pb-2">
-                            </div>
-        </div>
-    </div>
+    <!-- 狀態與表格區 (修正了隱藏容器占用外距的問題) -->
+    <div class="max-w-5xl mx-auto">
+        <!-- 注意：把 mb-3 移到內部的狀態方塊，避免隱藏時仍有空白 -->
+        <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
+            <div class="text-3xl mb-3 animate-pulse">📡</div>
+            <div class="font-bold text-blue-600">正在與塔台建立數據鏈路 (6000架次)...</div>
+            <div class="text-sm text-slate-400 mt-1">Acquiring TDX Data Link</div>
+        </div>
+        <div id="fids-msg-empty" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
+            <div class="text-3xl mb-3">📭</div>
+            <div class="font-bold text-slate-600">目前設定的條件下無航班。</div>
+            <div id="fids-empty-diag" class="mt-4 px-4"></div>
+        </div>
+        <div id="fids-msg-error" class="hidden text-center py-12 px-4 bg-red-50 rounded-xl border border-red-200 mb-3">
+            <div class="text-3xl mb-3">⚠️</div>
+            <div id="fids-error-text" class="text-red-600">資料鏈路異常</div>
+        </div>
+
+        <div class="bg-white sm:rounded-xl shadow-sm border-t sm:border border-slate-200 overflow-x-auto">
+            <div class="min-w-[800px]">
+                <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
+                    <div class="w-[18%]">航班 Flight</div>
+                    <div class="w-[18%]">起訖地 Route</div>
+                    <div class="w-[12%] text-center">登機口 Gate</div>
+                    <div class="w-[16%] text-center" id="fids-th-time">時間 Time</div>
+                    <div class="w-[12%] text-center" id="fids-th-belt">轉盤 Belt</div>
+                    <div class="w-[24%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
+                </div>
+                <div id="fids-flight-list" class="flex flex-col pb-2"></div>
+            </div>
+        </div>
+    </div>
 </div>
-
 <script>
 // ==========================================
 // ✈️ 戰術儀表板核心邏輯 (隔離全域變數版)
@@ -417,7 +418,7 @@ function renderFIDS() {
                 <div class="w-[18%] flex items-center">
                     <span class="font-bold text-[1.15rem] tracking-wide ${airlineColorClass}">${flightNo}</span>
                 </div>
-                <div class="w-[24%] flex items-center pr-2">
+                <div class="w-[18%] flex items-center pr-2">
                     <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
                 </div>
                 <div class="w-[12%] flex justify-center items-center">
@@ -429,7 +430,7 @@ function renderFIDS() {
                 <div class="w-[12%] flex justify-center items-center">
                     <span class="font-bold text-slate-600 text-[1.1rem]">${beltValue}</span>
                 </div>
-                <div class="w-[18%] flex justify-end items-center">
+                <div class="w-[24%] flex justify-end items-center">
                     <span class="font-medium text-slate-500 text-[1rem]">
                         ${terminal} ${fidsState.mode === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
                     </span>
