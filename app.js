@@ -1,13 +1,10 @@
 // ==========================================
-// 📦 簡報箱主核心引擎 (Core Engine) - 終極整合除錯版
+// 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版
 // ==========================================
 
 // ------------------------------------------
 // 🌐 全域變數與系統資料庫 (Global State)
 // ------------------------------------------
-
-// 🎯 已為您正確配置氣象 GAS 網址，繞過 CORS 限制
-const WEATHER_GAS_URL = "https://script.google.com/macros/s/AKfycbx1VjfKAJb9ndU7xS4BjQLgQuqBy4SizQ7mYl5hDtsN4XBW_L3INH7MvmlLW6hMrjvDag/exec";
 
 let notamMapInstance = null;
 let notamActiveLayers = [];
@@ -277,7 +274,7 @@ function initFlightSelect() {
 }
 
 // ==========================================
-// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (GAS 繞過 CORS 版)
+// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (極速平行競速版)
 // ==========================================
 function getWeatherEmojis(text) {
   if (!text) return '';
@@ -348,6 +345,7 @@ function fetchPopupAtis(icao) {
     btn.disabled = true;
     btn.style.opacity = "0.7";
 
+    // ATIS 依然需依賴 GAS (因為 atis.guru 有嚴格 CORS)
     const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
     
     fetch(`${gasUrl}?icao=${icao}`)
@@ -452,26 +450,52 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 NOAA GAS 中繼站抓取邏輯
-    const fetchWeatherViaGAS = async (icaoList, type) => {
-        if (!WEATHER_GAS_URL || WEATHER_GAS_URL.includes("請將這裡替換")) {
-            console.error("⚠️ 請先在 app.js 頂部填寫您的 WEATHER_GAS_URL");
-            return [];
-        }
-        const targetUrl = `${WEATHER_GAS_URL}?type=${type}&ids=${icaoList}`;
-        try {
+    // 🚀 取代 GAS 的極速平行競速 API 擷取邏輯 (專注 JSON 陣列解析)
+    const fetchBulkWeatherFast = async (icaoList, type) => {
+        const ts = Date.now();
+        const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_cb=${ts}`;
+
+        // 賽車 1 號：直連 NOAA JSON
+        const fetchDirectJson = async () => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000); 
-            const res = await fetch(targetUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            if (res.ok) {
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            try {
+                const res = await fetch(jsonUrl, { cache: 'no-store', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error('Direct JSON failed');
                 const data = await res.json();
                 return Array.isArray(data) ? data : [];
+            } catch (e) {
+                clearTimeout(timeoutId);
+                throw e;
             }
-        } catch (e) {
-            console.warn(`氣象 GAS 中繼站獲取 ${type} 失敗:`, e.message);
+        };
+
+        // 賽車 2 號：AllOrigins 代理 JSON (穩定穿透 CORS)
+        const fetchProxyJson = async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            try {
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(jsonUrl)}`, { cache: 'no-store', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error('AllOrigins failed');
+                const wrapper = await res.json();
+                if (!wrapper.contents) throw new Error('AllOrigins empty');
+                const data = JSON.parse(wrapper.contents);
+                return Array.isArray(data) ? data : [];
+            } catch (e) {
+                clearTimeout(timeoutId);
+                throw e;
+            }
+        };
+
+        try {
+            // 發令槍響！捨棄等待，誰先解析完就用誰的
+            return await Promise.any([fetchDirectJson(), fetchProxyJson()]);
+        } catch (error) {
+            console.warn(`極速通道獲取 ${type} 失敗:`, error);
+            return [];
         }
-        return [];
     };
 
     const calculateReportAge = (rawText) => {
@@ -591,19 +615,23 @@ function initAviationMap() {
 
         try {
             const [allMetars, allTafs] = await Promise.all([
-                fetchWeatherViaGAS(icaoString, 'metar'),
-                fetchWeatherViaGAS(icaoString, 'taf')
+                fetchBulkWeatherFast(icaoString, 'metar'),
+                fetchBulkWeatherFast(icaoString, 'taf')
             ]);
 
             if (allMetars.length > 0) {
-                allMetars.forEach(m => { if(m.icaoId) weatherCache[m.icaoId].metar = m.rawOb; });
+                allMetars.forEach(m => { 
+                    if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
+                });
             }
             if (allTafs.length > 0) {
-                allTafs.forEach(t => { if(t.icaoId) weatherCache[t.icaoId].taf = t.rawTAF; });
+                allTafs.forEach(t => { 
+                    if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
+                });
             }
 
             if (allMetars.length === 0 && allTafs.length === 0) {
-                statusIndicator.innerText = "❌ 氣象同步失敗 (GAS API 連線異常)";
+                statusIndicator.innerText = "❌ 氣象同步失敗 (API 連線異常)";
                 statusIndicator.classList.remove('status-loaded');
                 statusIndicator.classList.add('status-error');
                 statusIndicator.style.backgroundColor = ""; 
