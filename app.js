@@ -140,23 +140,23 @@ function loadPage(pageUrl) {
             });
 
             // 安全喚醒對應邏輯
-            if (pageUrl.includes('curfew')) {
+            if (pageUrl.includes('curfew.html')) {
                 initCurfewCalculator(); 
             } 
-            else if (pageUrl.includes('time')) {
+            else if (pageUrl.includes('time.html')) {
                 initTimeCalculator(); 
                 const resetBtn = document.getElementById("resetTimeCalcBtn");
                 if (resetBtn) resetBtn.onclick = resetTimeCalculator;
             } 
-            else if (pageUrl.includes('altimetry')) {
+            else if (pageUrl.includes('altimetry.html')) {
                 resetAltimetryCalculator(); 
                 const resetAltBtn = document.getElementById("resetAltimetryBtn");
                 if (resetAltBtn) resetAltBtn.onclick = resetAltimetryCalculator;
             }
-            else if (pageUrl.includes('notam')) {
+            else if (pageUrl.includes('notam.html')) {
                 initNotamRadar(); 
             }
-            else if (pageUrl.includes('FIDS') || pageUrl.includes('TPE_Flight_Data_Link')) { 
+            else if (pageUrl.includes('FIDS.html') || pageUrl.includes('TPE_Flight_Data_Link')) { 
                 setTimeout(() => {
                     if (typeof initFIDS === 'function') initFIDS();
                 }, 50);
