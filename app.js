@@ -1,86 +1,16 @@
-// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎 (唯一指定終極版)
-function loadPage(pageUrl) {
-    const displayArea = document.getElementById('content-display');
-    
-    // 顯示載入中的過場提示
-    displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
-
-    fetch(pageUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('網路回應異常');
-            return response.text();
-        })
-        .then(html => {
-            // 1. 將子分頁的 HTML 注入主畫面
-            displayArea.innerHTML = html;
-
-            // 2. 🌟 【核心引擎升級】：抓出 HTML 裡所有的 <script>，強制瀏覽器執行
-            const scripts = displayArea.querySelectorAll('script');
-            scripts.forEach(oldScript => {
-                const newScript = document.createElement('script');
-                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            });
-
-            // 3. 【您需要的都在這】依照載入的頁面，喚醒所有對應的邏輯
-            if (pageUrl === 'curfew.html') {
-                initCurfewCalculator(); // 👈 教官，您的 Curfew 計算機喚醒邏輯在這裡！毫髮無傷！
-            } 
-            else if (pageUrl === 'time.html') {
-                initTimeCalculator(); 
-                document.getElementById("resetTimeCalcBtn").addEventListener("click", resetTimeCalculator);
-            } 
-            else if (pageUrl === 'altimetry.html') {
-                resetAltimetryCalculator(); 
-                document.getElementById("resetAltimetryBtn").addEventListener("click", resetAltimetryCalculator);
-            }
-            else if (pageUrl === 'notam.html') {
-                initNotamRadar(); 
-            }
-            else if (pageUrl === 'TPE_Flight_Data_Link.html') { 
-                // 💡 系統優化：由於 HTML 的腳本是動態注入的，給予微小延遲確保編譯完成再喚醒
-                setTimeout(() => {
-                    if (typeof initFIDS === 'function') initFIDS();
-                }, 50);
-            }
-        })
-        .catch(error => {
-            console.error('Fetch 錯誤:', error);
-            displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #e74c3c; font-weight: bold;">載入失敗，請確認檔案路徑是否正確。</div>';
-        });
-}
-
 // ==========================================
-// 通用邏輯：勾選表、地圖等 
+// 📦 簡報箱主核心引擎 (Core Engine) - app.js
 // ==========================================
-function setupChecklist(listId) {
-    const list = document.getElementById(listId);
-    if (!list) return;
-    list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-}
 
-document.addEventListener("DOMContentLoaded", function () {
-    setupChecklist("briefingChecklist1");
-    setupChecklist("personalChecklist");
-});
+// ------------------------------------------
+// 🌐 全域變數集中管理區 (Global State)
+// ------------------------------------------
+let notamMapInstance = null;
+let notamActiveLayers = [];
+let notamClockInterval = null;
+let curfewClockInterval = null;
 
-// ==========================================
-// 🧹 關閉/重置顯示面板的邏輯
-// ==========================================
-function closePanel() {
-    const displayArea = document.getElementById('content-display');
-    // 把畫面恢復成剛開網頁時的預設文字
-    displayArea.innerHTML = `
-        <div class="section" style="text-align: center; color: #666;">
-            <h3>👈 請點擊上方按鈕載入計算工具</h3>
-        </div>
-    `;
-}
-
-// ==========================================
-// ⛽ 油量計算機邏輯 
-// ==========================================
+// ⛽ 油量計算機基礎數據
 const fuelTable = [
   { total: 9.0,    inner: 9.0,    outer: 0.0,   trim: 0.0,  center: 0.0 },
   { total: 14.73,  inner: 9.0,    outer: 5.73,  trim: 0.0,  center: 0.0 },
@@ -94,6 +24,126 @@ const fuelTable = [
   { total: 109.18, inner: 65.94,  outer: 5.73,  trim: 4.89, center: 32.62 }
 ];
 
+// ❄️ 高度修正基礎數據
+let altimetryRows = [
+  { id: 'msa', label: 'MSA', altitude: '', isCustom: false },
+  { id: 'iaf', label: 'IAF', altitude: '', isCustom: false },
+  { id: 'if', label: 'IF', altitude: '', isCustom: false },
+  { id: 'faf', label: 'FAF/FAP', altitude: '', isCustom: false },
+  { id: 'da', label: 'DA/MDA', altitude: '', isCustom: false },
+  { id: 'maa', label: 'MAA', altitude: '', isCustom: false },
+  { id: 'eo', label: 'EO ACC', altitude: '', isCustom: false }
+];
+
+// ------------------------------------------
+// 🚀 面板切換與生命週期管理
+// ------------------------------------------
+
+// 🧹 記憶體釋放邏輯 (防護機制)
+function cleanUpPanel() {
+    // 主動卸載 NOTAM 地圖實例，避免重複初始化導致當機
+    if (typeof notamMapInstance !== 'undefined' && notamMapInstance !== null) {
+        notamMapInstance.remove();
+        notamMapInstance = null;
+    }
+    // 清理殘留的時鐘計時器，釋放 CPU 資源
+    if (typeof notamClockInterval !== 'undefined' && notamClockInterval !== null) {
+        clearInterval(notamClockInterval);
+        notamClockInterval = null;
+    }
+    if (typeof curfewClockInterval !== 'undefined' && curfewClockInterval !== null) {
+        clearInterval(curfewClockInterval);
+        curfewClockInterval = null;
+    }
+
+    // 清除上次動態載入的腳本，防止事件疊加
+    const oldScripts = document.querySelectorAll('.dynamic-script');
+    oldScripts.forEach(script => script.remove());
+}
+
+// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎
+function loadPage(pageUrl) {
+    const displayArea = document.getElementById('content-display');
+    
+    cleanUpPanel(); // 載入前先執行大掃除
+
+    displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
+
+    fetch(pageUrl)
+        .then(response => {
+            if (!response.ok) throw new Error('網路回應異常');
+            return response.text();
+        })
+        .then(html => {
+            displayArea.innerHTML = html;
+
+            // 抓出 HTML 裡所有的 <script> 並強制瀏覽器執行
+            const scripts = displayArea.querySelectorAll('script');
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement('script');
+                newScript.className = 'dynamic-script'; // 標記為動態，方便下次清除
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+
+            // 依照載入的頁面，安全喚醒對應邏輯 (改用 onclick 防止事件疊加)
+            if (pageUrl === 'curfew.html') {
+                initCurfewCalculator(); 
+            } 
+            else if (pageUrl === 'time.html') {
+                initTimeCalculator(); 
+                const resetBtn = document.getElementById("resetTimeCalcBtn");
+                if (resetBtn) resetBtn.onclick = resetTimeCalculator;
+            } 
+            else if (pageUrl === 'altimetry.html') {
+                resetAltimetryCalculator(); 
+                const resetAltBtn = document.getElementById("resetAltimetryBtn");
+                if (resetAltBtn) resetAltBtn.onclick = resetAltimetryCalculator;
+            }
+            else if (pageUrl === 'notam.html') {
+                initNotamRadar(); 
+            }
+            else if (pageUrl === 'TPE_Flight_Data_Link.html') { 
+                setTimeout(() => {
+                    if (typeof initFIDS === 'function') initFIDS();
+                }, 50);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch 錯誤:', error);
+            displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #e74c3c; font-weight: bold;">載入失敗，請確認檔案路徑是否正確。</div>';
+        });
+}
+
+function closePanel() {
+    const displayArea = document.getElementById('content-display');
+    cleanUpPanel(); // 關閉面板時徹底清理記憶體
+    displayArea.innerHTML = `
+        <div class="section" style="text-align: center; color: #666;">
+            <h3>👈 請點擊上方按鈕載入計算工具</h3>
+        </div>
+    `;
+}
+
+// ------------------------------------------
+// 📋 總指揮中心與勾選表初始化
+// ------------------------------------------
+function setupChecklist(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    setupChecklist("briefingChecklist1");
+    setupChecklist("personalChecklist");
+    console.log("✈️ 簡報箱主核心系統已啟動 (Core Engine Online)");
+});
+
+// ==========================================
+// ⛽ 油量計算機邏輯 
+// ==========================================
 function interpolateFuel(total) {
   const table = fuelTable;
   const n = table.length;
@@ -284,9 +334,12 @@ function initCurfewCalculator() {
         const h = String(now.getUTCHours()).padStart(2, '0');
         const m = String(now.getUTCMinutes()).padStart(2, '0');
         const s = String(now.getUTCSeconds()).padStart(2, '0');
-        els.liveClock.textContent = `${h}:${m}:${s}`;
+        if(els.liveClock) els.liveClock.textContent = `${h}:${m}:${s}`;
     }
-    setInterval(updateClock, 1000);
+    
+    // 清理殘留的計時器後重新綁定
+    if(curfewClockInterval) clearInterval(curfewClockInterval);
+    curfewClockInterval = setInterval(updateClock, 1000);
     updateClock();
 
     function populateDropdowns() {
@@ -300,21 +353,26 @@ function initCurfewCalculator() {
             return html;
         };
 
-        document.getElementById('curfewHr').innerHTML = generateOptions(23, '');
-        document.getElementById('curfewMin').innerHTML = generateOptions(59, '');
-        document.getElementById('txoHr').innerHTML = generateOptions(23, '00');
-        document.getElementById('txoMin').innerHTML = generateOptions(59, '15');
-        document.getElementById('ftHr').innerHTML = generateOptions(23, '');
-        document.getElementById('ftMin').innerHTML = generateOptions(59, '');
-        document.getElementById('txiHr').innerHTML = generateOptions(23, '00');
-        document.getElementById('txiMin').innerHTML = generateOptions(59, '15');
+        const setOptions = (id, max, def) => {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = generateOptions(max, def);
+        };
+
+        setOptions('curfewHr', 23, '');
+        setOptions('curfewMin', 59, '');
+        setOptions('txoHr', 23, '00');
+        setOptions('txoMin', 59, '15');
+        setOptions('ftHr', 23, '');
+        setOptions('ftMin', 59, '');
+        setOptions('txiHr', 23, '00');
+        setOptions('txiMin', 59, '15');
     }
 
     function getTimeStr(hrId, minId) {
-        const h = document.getElementById(hrId).value;
-        const m = document.getElementById(minId).value;
-        if (h === '' || m === '') return null;
-        return `${h}:${m}`;
+        const hEl = document.getElementById(hrId);
+        const mEl = document.getElementById(minId);
+        if (!hEl || !mEl || hEl.value === '' || mEl.value === '') return null;
+        return `${hEl.value}:${mEl.value}`;
     }
 
     function timeToMins(timeStr) {
@@ -332,8 +390,8 @@ function initCurfewCalculator() {
 
     function calculateTimes() {
         const isBefore = state.curfewCondition === 'before';
-        els.offBlockLabel.textContent = isBefore ? 'Latest Off Block Time' : 'Earliest Off Block Time';
-        els.takeoffLabel.textContent = isBefore ? 'Latest Takeoff Time' : 'Earliest Takeoff Time';
+        if(els.offBlockLabel) els.offBlockLabel.textContent = isBefore ? 'Latest Off Block Time' : 'Earliest Off Block Time';
+        if(els.takeoffLabel) els.takeoffLabel.textContent = isBefore ? 'Latest Takeoff Time' : 'Earliest Takeoff Time';
 
         const curfewTime = getTimeStr('curfewHr', 'curfewMin');
         const ftTime = getTimeStr('ftHr', 'ftMin');
@@ -341,8 +399,8 @@ function initCurfewCalculator() {
         const txiTime = getTimeStr('txiHr', 'txiMin');
 
         if (!curfewTime || !ftTime || !txoTime || !txiTime) {
-            els.resultEOBT.textContent = '--:--';
-            els.resultETOT.textContent = '--:--';
+            if(els.resultEOBT) els.resultEOBT.textContent = '--:--';
+            if(els.resultETOT) els.resultETOT.textContent = '--:--';
             return;
         }
 
@@ -352,7 +410,6 @@ function initCurfewCalculator() {
         const txiMins = timeToMins(txiTime);
 
         let targetTouchdownMins = curfewMins;
-
         if (state.curfewType === 'parking') {
             targetTouchdownMins = curfewMins - txiMins;
         }
@@ -360,60 +417,58 @@ function initCurfewCalculator() {
         const takeoffMins = targetTouchdownMins - ftMins;
         const offBlockMins = takeoffMins - txoMins;
 
-        els.resultETOT.textContent = minsToTime(takeoffMins);
-        els.resultEOBT.textContent = minsToTime(offBlockMins);
+        if(els.resultETOT) els.resultETOT.textContent = minsToTime(takeoffMins);
+        if(els.resultEOBT) els.resultEOBT.textContent = minsToTime(offBlockMins);
     }
 
     function updateTypeToggleUI() {
         els.typeBtns.forEach(btn => {
-            if (btn.dataset.type === state.curfewType) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if (btn.dataset.type === state.curfewType) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
-        els.typeBgPill.style.transform = state.curfewType === 'landing' ? 'translateX(0)' : 'translateX(100%)';
+        if(els.typeBgPill) els.typeBgPill.style.transform = state.curfewType === 'landing' ? 'translateX(0)' : 'translateX(100%)';
     }
 
     function updateCondToggleUI() {
         els.condBtns.forEach(btn => {
-            if (btn.dataset.cond === state.curfewCondition) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if (btn.dataset.cond === state.curfewCondition) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
-        els.condBgPill.style.transform = state.curfewCondition === 'before' ? 'translateX(0)' : 'translateX(100%)';
+        if(els.condBgPill) els.condBgPill.style.transform = state.curfewCondition === 'before' ? 'translateX(0)' : 'translateX(100%)';
     }
 
+    // 替換 addEventListener 為 onclick，確保防護連點重疊
     els.typeBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.onclick = (e) => {
             state.curfewType = e.target.dataset.type;
             updateTypeToggleUI();
             calculateTimes();
-        });
+        };
     });
 
     els.condBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.onclick = (e) => {
             state.curfewCondition = e.target.dataset.cond;
             updateCondToggleUI();
             calculateTimes();
-        });
+        };
     });
 
     dropdownIds.forEach(id => {
-        document.getElementById(id).addEventListener('change', calculateTimes);
+        const el = document.getElementById(id);
+        if(el) el.onchange = calculateTimes;
     });
 
-    els.resetBtn.addEventListener('click', () => {
-        state.curfewType = 'parking'; // Reset 時也回到新預設
-        state.curfewCondition = 'before';
-        updateTypeToggleUI();
-        updateCondToggleUI();
-        populateDropdowns();
-        calculateTimes();
-    });
+    if(els.resetBtn) {
+        els.resetBtn.onclick = () => {
+            state.curfewType = 'parking'; 
+            state.curfewCondition = 'before';
+            updateTypeToggleUI();
+            updateCondToggleUI();
+            populateDropdowns();
+            calculateTimes();
+        };
+    }
 
     populateDropdowns();
     updateTypeToggleUI();
@@ -601,17 +656,6 @@ function resetTimeCalculator() {
 // ==========================================
 // ❄️ ICAO 寒冷溫度修正 (Altimetry) 核心邏輯
 // ==========================================
-
-let altimetryRows = [
-  { id: 'msa', label: 'MSA', altitude: '', isCustom: false },
-  { id: 'iaf', label: 'IAF', altitude: '', isCustom: false },
-  { id: 'if', label: 'IF', altitude: '', isCustom: false },
-  { id: 'faf', label: 'FAF/FAP', altitude: '', isCustom: false },
-  { id: 'da', label: 'DA/MDA', altitude: '', isCustom: false },
-  { id: 'maa', label: 'MAA', altitude: '', isCustom: false },
-  { id: 'eo', label: 'EO ACC', altitude: '', isCustom: false }
-];
-
 function calculateCorrection(temp, elevation, altitude) {
   if (temp === '' || elevation === '' || altitude === '') return '';
   
@@ -723,17 +767,19 @@ function setAltApproach(type, index) {
   document.querySelector(`#altimetryBox .app-toggle-btn[data-type="${type}"]`).classList.add('active');
   
   const pill = document.getElementById('altAppPill');
-  pill.style.transform = `translateX(${index * 100}%)`;
+  if(pill) pill.style.transform = `translateX(${index * 100}%)`;
 
   const notesBox = document.getElementById('altNotesBox');
-  if (type === 'APV-Baro(3D)') {
-    notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#d97706; font-weight:bold;">Not Recommended:</span> Not recommended for IF and IAF when FMC coded with "above" to generate a stable CDFA to FAP.`;
-    notesBox.classList.add('active');
-  } else if (type === 'PA (ILS)') {
-    notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#e74c3c; font-weight:bold;">Required:</span> If overflying IF/IAF/FAF/FAP, and not being Radar Vectored, unless already descending on G/S.`;
-    notesBox.classList.add('active');
-  } else {
-    notesBox.classList.remove('active');
+  if(notesBox) {
+      if (type === 'APV-Baro(3D)') {
+        notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#d97706; font-weight:bold;">Not Recommended:</span> Not recommended for IF and IAF when FMC coded with "above" to generate a stable CDFA to FAP.`;
+        notesBox.classList.add('active');
+      } else if (type === 'PA (ILS)') {
+        notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#e74c3c; font-weight:bold;">Required:</span> If overflying IF/IAF/FAF/FAP, and not being Radar Vectored, unless already descending on G/S.`;
+        notesBox.classList.add('active');
+      } else {
+        notesBox.classList.remove('active');
+      }
   }
 
   recalculateAltimetryValues();
@@ -766,13 +812,20 @@ function removeAltRow(id) {
 }
 
 function recalculateAltimetryValues() {
-  const temp = document.getElementById('altTemp').value;
-  const elev = document.getElementById('altElev').value;
-  const appType = document.getElementById('altAppType').value;
-  const fpa = document.getElementById('altFpa').value;
+  const tempEl = document.getElementById('altTemp');
+  const elevEl = document.getElementById('altElev');
+  const appTypeEl = document.getElementById('altAppType');
+  const fpaEl = document.getElementById('altFpa');
+  if (!tempEl || !elevEl || !appTypeEl || !fpaEl) return;
+
+  const temp = tempEl.value;
+  const elev = elevEl.value;
+  const appType = appTypeEl.value;
+  const fpa = fpaEl.value;
 
   const fpaRes = calculateCorrectedFPA(temp, elev, fpa);
-  document.getElementById('altFpaResult').textContent = fpaRes ? `${fpaRes}°` : '--°';
+  const altFpaResEl = document.getElementById('altFpaResult');
+  if(altFpaResEl) altFpaResEl.textContent = fpaRes ? `${fpaRes}°` : '--°';
 
   altimetryRows.forEach(row => {
     const correction = calculateCorrection(temp, elev, row.altitude);
@@ -805,6 +858,7 @@ function recalculateAltimetryValues() {
 
 function renderAltimetryRows() {
   const container = document.getElementById('altRowsContainer');
+  if(!container) return;
   container.innerHTML = '';
 
   altimetryRows.forEach(row => {
@@ -840,9 +894,13 @@ function renderAltimetryRows() {
 }
 
 function resetAltimetryCalculator() {
-  document.getElementById('altElev').value = '';
-  document.getElementById('altTemp').value = '';
-  document.getElementById('altFpa').value = '3.0';
+  const altElev = document.getElementById('altElev');
+  const altTemp = document.getElementById('altTemp');
+  const altFpa = document.getElementById('altFpa');
+  
+  if(altElev) altElev.value = '';
+  if(altTemp) altTemp.value = '';
+  if(altFpa) altFpa.value = '3.0';
   
   altimetryRows = [
     { id: 'msa', label: 'MSA', altitude: '', isCustom: false },
@@ -861,12 +919,8 @@ function resetAltimetryCalculator() {
 // ==========================================
 // 📡 NOTAM Radar 核心邏輯 (強化升級版)
 // ==========================================
-let notamMapInstance = null;
-let notamActiveLayers = [];
-let notamClockInterval = null;
-
 function initNotamRadar() {
-    // 1. 時鐘邏輯
+    // 1. 時鐘邏輯 (防護殘留計時器)
     if (notamClockInterval) clearInterval(notamClockInterval);
     notamClockInterval = setInterval(() => {
         const clockEl = document.getElementById('clock');
@@ -878,11 +932,15 @@ function initNotamRadar() {
         }
     }, 1000);
 
-    // 2. 地圖初始化
+    // 2. 地圖初始化 (防護重複載入)
     if (notamMapInstance !== null) {
         notamMapInstance.remove();
+        notamMapInstance = null;
     }
     
+    const mapContainer = document.getElementById('notam-map');
+    if (!mapContainer) return;
+
     notamMapInstance = L.map('notam-map', { zoomControl: false }).setView([25.03, 121.5], 6);
     L.control.zoom({ position: 'bottomright' }).addTo(notamMapInstance);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -891,9 +949,12 @@ function initNotamRadar() {
 
     notamActiveLayers = [];
 
-    // 3. 綁定按鈕事件
-    document.getElementById('btn-process-notam').addEventListener('click', processNotamData);
-    document.getElementById('btn-clear-notam').addEventListener('click', clearNotamAll);
+    // 3. 綁定按鈕事件 (改用 onclick 防止疊加)
+    const btnProcess = document.getElementById('btn-process-notam');
+    if (btnProcess) btnProcess.onclick = processNotamData;
+    
+    const btnClear = document.getElementById('btn-clear-notam');
+    if (btnClear) btnClear.onclick = clearNotamAll;
 }
 
 function smartToDec(val) {
@@ -993,8 +1054,10 @@ function parseCoordinates(text) {
 }
 
 function processNotamData() {
-    const input = document.getElementById('notamInput').value;
-    if (!input.trim()) return;
+    const inputEl = document.getElementById('notamInput');
+    if (!inputEl) return;
+    const input = inputEl.value;
+    if (!input.trim() || !notamMapInstance) return;
 
     notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
     notamActiveLayers = [];
@@ -1053,36 +1116,52 @@ function processNotamData() {
 }
 
 function updateNotamUI(coords, header, raw) {
-    document.getElementById('notamInfo').classList.remove('hidden');
-    document.getElementById('logArea').classList.remove('hidden');
+    const infoEl = document.getElementById('notamInfo');
+    const logEl = document.getElementById('logArea');
+    const contentEl = document.getElementById('infoContent');
+    const coordListEl = document.getElementById('coordList');
+    
+    if (infoEl) infoEl.classList.remove('hidden');
+    if (logEl) logEl.classList.remove('hidden');
     
     let translationHint = "";
     if (raw.includes("ACROBATIC")) translationHint = "🚩 偵測到特技飛行活動 (Acrobatic Flight)";
     if (raw.includes("GUNNERY")) translationHint = "⚠️ 偵測到實彈射擊訓練 (Gunnery Training)";
 
-    document.getElementById('infoContent').innerHTML = `
-        <table class="notam-table w-full">
-            <tr><th>NOTAM 編號</th><td>${header.id}</td></tr>
-            <tr><th>開始時間</th><td>${header.start ? `UTC: ${header.start.utc}<br>${header.start.local}` : '---'}</td></tr>
-            <tr><th>結束時間</th><td>${header.end ? (header.end.utc || header.end) : '---'}</td></tr>
-            <tr><th>座標點數</th><td>${coords.length} Points</td></tr>
-        </table>
-        <div class="text-[11px] text-blue-600 font-bold mt-2">${translationHint}</div>
-    `;
+    if (contentEl) {
+        contentEl.innerHTML = `
+            <table class="notam-table w-full">
+                <tr><th>NOTAM 編號</th><td>${header.id}</td></tr>
+                <tr><th>開始時間</th><td>${header.start ? `UTC: ${header.start.utc}<br>${header.start.local}` : '---'}</td></tr>
+                <tr><th>結束時間</th><td>${header.end ? (header.end.utc || header.end) : '---'}</td></tr>
+                <tr><th>座標點數</th><td>${coords.length} Points</td></tr>
+            </table>
+            <div class="text-[11px] text-blue-600 font-bold mt-2">${translationHint}</div>
+        `;
+    }
     
-    document.getElementById('coordList').innerHTML = coords.map((c, i) => `
-        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center shadow-sm">
-            <span class="block text-[9px] text-slate-400 font-bold">PT ${i+1}</span>
-            <span class="text-slate-700 font-mono">${c[0].toFixed(4)},${c[1].toFixed(4)}</span>
-        </div>
-    `).join('');
+    if (coordListEl) {
+        coordListEl.innerHTML = coords.map((c, i) => `
+            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center shadow-sm">
+                <span class="block text-[9px] text-slate-400 font-bold">PT ${i+1}</span>
+                <span class="text-slate-700 font-mono">${c[0].toFixed(4)},${c[1].toFixed(4)}</span>
+            </div>
+        `).join('');
+    }
 }
 
 function clearNotamAll() {
-    notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
+    if(notamMapInstance) {
+        notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
+        notamMapInstance.setView([25.03, 121.5], 6);
+    }
     notamActiveLayers = [];
-    document.getElementById('notamInput').value = "";
-    document.getElementById('notamInfo').classList.add('hidden');
-    document.getElementById('logArea').classList.add('hidden');
-    notamMapInstance.setView([25.03, 121.5], 6);
+    
+    const inputEl = document.getElementById('notamInput');
+    const infoEl = document.getElementById('notamInfo');
+    const logEl = document.getElementById('logArea');
+    
+    if (inputEl) inputEl.value = "";
+    if (infoEl) infoEl.classList.add('hidden');
+    if (logEl) logEl.classList.add('hidden');
 }
