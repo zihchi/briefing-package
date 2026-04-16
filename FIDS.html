@@ -8,15 +8,30 @@
         margin-bottom: 1rem;
     }
 
-    /* 按鈕與過濾器樣式 */
-    .fids-mode-btn { background: transparent; color: #64748b; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; transition: 0.2s; cursor: pointer; }
-    .fids-mode-btn.active { background: #ffffff; color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    /* 按鈕與過濾器樣式 (加入防禦性 CSS 與防擠壓設定) */
+    .fids-mode-btn { 
+        background: transparent; color: #64748b; border: none; padding: 8px 16px; border-radius: 8px; 
+        font-weight: 700; transition: 0.2s; cursor: pointer; 
+        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
+    }
+    .fids-mode-btn.active { background: #ffffff; color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-    .fids-date-btn { background: transparent; border: 1px solid #cbd5e1; color: #64748b; padding: 6px 14px; border-radius: 8px; font-weight: 700; transition: 0.2s; font-size: 0.9em; cursor: pointer; }
-    .fids-date-btn.active { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+    .fids-date-btn { 
+        background: transparent; border: 1px solid #cbd5e1; color: #64748b; padding: 6px 14px; border-radius: 8px; 
+        font-weight: 700; transition: 0.2s; font-size: 0.9em; cursor: pointer; 
+        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
+    }
+    .fids-date-btn.active { background: #2563eb; color: #ffffff; border-color: #2563eb; }
 
-    .fids-filter-label { padding: 6px 14px; border-radius: 20px; border: 2px solid; cursor: pointer; font-size: 0.9em; font-weight: 700; transition: 0.2s; background: #fff; user-select: none; display: inline-block; white-space: nowrap;}
-    
+    .fids-filter-label { 
+        padding: 6px 14px; border-radius: 20px; border: 2px solid; cursor: pointer; font-size: 0.9em; 
+        font-weight: 700; transition: 0.2s; background: #fff; user-select: none; display: inline-block; 
+        margin: 0 !important; white-space: nowrap; flex-shrink: 0; 
+    }
+    
+   
+    .fids-btn-refresh:active { transform: scale(0.96); }
+    .fids-btn-refresh:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
     /* 航空公司過濾標籤狀態 */
     input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a; border-color: #eab308; color: #854d0e; }
     input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca; border-color: #f43f5e; color: #9f1239; }
@@ -27,10 +42,14 @@
     input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
 
     /* 更新按鈕 */
-    .fids-btn-refresh { background: #0f172a; color: white; border-radius: 8px; padding: 8px 16px; font-weight: 700; transition: 0.2s; display: flex; align-items: center; gap: 6px; cursor: pointer; border: none;}
-    .fids-btn-refresh:active { transform: scale(0.96); }
-    .fids-btn-refresh:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
-
+    .fids-btn-refresh { 
+        background: #0f172a; color: white; border-radius: 8px; padding: 8px 16px; font-weight: 700; 
+        transition: 0.2s; display: flex; align-items: center; gap: 6px; cursor: pointer; border: none; 
+        margin: 0 !important; white-space: nowrap; flex-shrink: 0;
+    }
+    .fids-btn-refresh:active { transform: scale(0.96); }
+    .fids-btn-refresh:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+    
     /* 🎯 極簡高密度清單樣式 */
     .fids-list-row { transition: background-color 0.15s ease-in-out; }
     .fids-list-row:hover { background-color: #f8fafc; }
