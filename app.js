@@ -274,7 +274,7 @@ function initFlightSelect() {
 }
 
 // ==========================================
-// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (純淨直連極速版)
+// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (終極三層裝甲極速版)
 // ==========================================
 function getWeatherEmojis(text) {
   if (!text) return '';
@@ -449,31 +449,50 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 極淨直連 API 擷取邏輯：拔除 Proxy 與干擾參數，直接向 NOAA 索取
+    // 🚀 終極三層裝甲 API 擷取邏輯 (不夾帶任何敏感 Headers，確保通過防火牆)
     const fetchBulkWeatherFast = async (icaoList, type) => {
-        // 清潔的官方 API 網址 (移除會導致 400 錯誤的無效參數)
-        const jsonUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+        const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
 
-        // 設定 7 秒安全死線，確保不會無限期掛起
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-        try {
-            const res = await fetch(jsonUrl, { cache: 'no-store', signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            if (!res.ok) {
-                console.warn(`[${type.toUpperCase()}] NOAA 伺服器回傳異常狀態: ${res.status}`);
-                return []; 
+        // 最純粹的 fetch 執行器，拔除所有容易引發 CORS 預檢的參數
+        const executeFetch = async (targetUrl, timeoutMs) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(targetUrl, { signal: controller.signal }); // 拔除 cache: 'no-store'
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
             }
-            
-            const data = await res.json();
+        };
+
+        // 🛡️ 防線一：NOAA 直連 (時限 4.5 秒)
+        try {
+            const data = await executeFetch(cleanUrl, 4500);
             return Array.isArray(data) ? data : [];
-        } catch (error) {
-            clearTimeout(timeoutId);
-            console.warn(`[${type.toUpperCase()}] 通訊中斷或逾時:`, error);
-            // 不直接拋出致命錯誤，回傳空陣列讓流程繼續走，由外層總攬大局
-            return [];
+        } catch (errorA) {
+            console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
+            
+            // 🛡️ 防線二：高速備援代理 CodeTabs (時限 5.5 秒)
+            try {
+                const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
+                const dataA = await executeFetch(proxyA, 5500);
+                return Array.isArray(dataA) ? dataA : [];
+            } catch (errorB) {
+                console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
+                
+                // 🛡️ 防線三：終極防線 AllOrigins (時限 6 秒)
+                try {
+                    const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+                    const dataB = await executeFetch(proxyB, 6000);
+                    return Array.isArray(dataB) ? dataB : [];
+                } catch (errorC) {
+                    console.error(`[全面失效] 無法為 ${type.toUpperCase()} 建立任何資料鏈路。`);
+                    throw new Error(`無法連接至氣象資料庫`); // 將錯誤往上拋，阻斷殘缺畫面顯示
+                }
+            }
         }
     };
 
@@ -598,18 +617,18 @@ function initAviationMap() {
         const icaoString = airports.map(a => a.icao).join(',');
 
         try {
-            // 🛡️ 同步啟動：確保兩組資料都請求完畢才往下走
+            // 🛡️ 同步發車：METAR 和 TAF 必須雙雙通過三層防線的考驗
             const [allMetars, allTafs] = await Promise.all([
                 fetchBulkWeatherFast(icaoString, 'metar'),
                 fetchBulkWeatherFast(icaoString, 'taf')
             ]);
 
-            // 若「兩者」都空手而歸，才是真正的嚴重故障
+            // 雙重驗證：陣列為空代表沒抓到東西
             if (allMetars.length === 0 && allTafs.length === 0) {
-                throw new Error("無法連接 NOAA 伺服器，請確認網路狀態。");
+                throw new Error("無法連接天氣伺服器");
             }
 
-            // 將獲取的資料穩定寫入快取
+            // 寫入快取 (API 回傳欄位為 rawOb 與 rawTAF)
             allMetars.forEach(m => { 
                 if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
             });
@@ -630,7 +649,7 @@ function initAviationMap() {
             console.error("同步程序中斷：", error.message);
             isDataReady = false; 
             if (statusIndicator) {
-                statusIndicator.innerText = "❌ 同步失敗 (請檢查連線)";
+                statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
                 statusIndicator.classList.remove('status-loaded');
                 statusIndicator.classList.add('status-error');
                 statusIndicator.style.backgroundColor = "";
@@ -694,7 +713,7 @@ function initAviationMap() {
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
-            // 這裡滿足「METAR / TAF 一起顯示」的堅持：不論有沒有拿到，版面框架都會同時出現
+            // 這裡滿足「METAR / TAF 一起顯示」的堅持
             L.popup(popupOpts)
             .setLatLng(marker.getLatLng())
             .setContent(`
