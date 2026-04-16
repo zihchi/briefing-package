@@ -149,10 +149,10 @@
                 <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
                     <div class="w-[12%]">Flight</div>
                     <div class="w-[12%]">Route</div>
-                    <div class="w-[10%] text-center">Gate</div>
+                    <div class="w-[8%] text-center">Gate</div>
                     <div class="w-[18%] text-center" id="fids-th-time">Time</div>
-                    <div class="w-[24%] text-center" id="fids-th-belt">Belt</div>
-                    <div class="w-[24%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
+                    <div class="w-[28%] text-center" id="fids-th-belt">Belt</div>
+                    <div class="w-[22%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
                 </div>
                 <div id="fids-flight-list" class="flex flex-col pb-2"></div>
             </div>
@@ -421,16 +421,16 @@ function renderFIDS() {
                 <div class="w-[12%] flex items-center pr-2">
                     <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
                 </div>
-                <div class="w-[10%] flex justify-center items-center">
+                <div class="w-[8%] flex justify-center items-center">
                     <span class="font-black text-red-600 text-[1.25rem]">${gate}</span>
                 </div>
                 <div class="w-[18%] flex justify-center items-center">
                     <span class="font-mono font-bold text-teal-700 text-[1.2rem]">${timeStr}</span>
                 </div>
-                <div class="w-[24%] flex justify-center items-center">
+                <div class="w-[28%] flex justify-center items-center">
                     <span class="font-bold text-slate-600 text-[1.1rem]">${beltValue}</span>
                 </div>
-                <div class="w-[24%] flex justify-end items-center">
+                <div class="w-[22%] flex justify-end items-center">
                     <span class="font-medium text-slate-500 text-[1rem]">
                         ${terminal} ${fidsState.mode === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
                     </span>
