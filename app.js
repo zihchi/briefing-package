@@ -1,14 +1,68 @@
 // ==========================================
-// 📦 簡報箱主核心引擎 (Core Engine) - app.js
+// 📦 簡報箱主核心引擎 (Core Engine) - 終極整合版
 // ==========================================
 
 // ------------------------------------------
-// 🌐 全域變數集中管理區 (Global State)
+// 🌐 全域變數與系統資料庫 (Global State)
 // ------------------------------------------
 let notamMapInstance = null;
 let notamActiveLayers = [];
 let notamClockInterval = null;
 let curfewClockInterval = null;
+let aviationMapInstance = null; // 航空天氣圖實例
+
+// ✈️ Turbli 航班資料庫
+const flightGroups = [
+  { region: "東北亞航線 (日本)", flights: [
+      { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
+      { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
+      { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" },
+      { flightNo: "820", route: "TPE/KIX" }, { flightNo: "821", route: "KIX/TPE" },
+      { flightNo: "822", route: "TPE/KIX" }, { flightNo: "823", route: "KIX/TPE" },
+      { flightNo: "834", route: "TPE/UKB" }, { flightNo: "835", route: "UKB/TPE" },
+      { flightNo: "838", route: "TPE/NGO" }, { flightNo: "839", route: "NGO/TPE" },
+      { flightNo: "840", route: "TPE/FUK" }, { flightNo: "841", route: "FUK/TPE" },
+      { flightNo: "846", route: "TPE/KMJ" }, { flightNo: "847", route: "KMJ/TPE" },
+      { flightNo: "850", route: "TPE/CTS" }, { flightNo: "851", route: "CTS/TPE" },
+      { flightNo: "860", route: "TPE/HKD" }, { flightNo: "861", route: "HKD/TPE" },
+      { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
+      { flightNo: "870", route: "TPE/OKA" }, { flightNo: "871", route: "OKA/TPE" },
+      { flightNo: "886", route: "TPE/SHI" }, { flightNo: "887", route: "SHI/TPE" }
+  ]},
+  { region: "港澳航線", flights: [
+      { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
+      { flightNo: "205", route: "TPE/MFM" }, { flightNo: "206", route: "MFM/TPE" },
+      { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
+      { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" }
+  ]},
+  { region: "東南亞航線", flights: [
+      { flightNo: "703", route: "TPE/DAD" }, { flightNo: "704", route: "DAD/TPE" },
+      { flightNo: "705", route: "TPE/PQC" }, { flightNo: "706", route: "PQC/TPE" },
+      { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
+      { flightNo: "713", route: "TPE/SGN" }, { flightNo: "714", route: "SGN/TPE" },
+      { flightNo: "715", route: "TPE/HAN" }, { flightNo: "716", route: "HAN/TPE" },
+      { flightNo: "717", route: "TPE/HAN" }, { flightNo: "718", route: "HAN/TPE" },
+      { flightNo: "725", route: "TPE/KUL" }, { flightNo: "726", route: "KUL/TPE" },
+      { flightNo: "741", route: "TPE/BKK" }, { flightNo: "742", route: "BKK/TPE" },
+      { flightNo: "745", route: "TPE/BKK" }, { flightNo: "746", route: "BKK/TPE" },
+      { flightNo: "751", route: "TPE/CNX" }, { flightNo: "752", route: "CNX/TPE" },
+      { flightNo: "761", route: "TPE/CGK" }, { flightNo: "762", route: "CGK/TPE" },
+      { flightNo: "771", route: "TPE/SIN" }, { flightNo: "772", route: "SIN/TPE" },
+      { flightNo: "781", route: "TPE/CEB" }, { flightNo: "782", route: "CEB/TPE" },
+      { flightNo: "783", route: "TPE/CEB" }, { flightNo: "784", route: "CEB/TPE" },
+      { flightNo: "785", route: "TPE/MNL" }, { flightNo: "786", route: "MNL/TPE" },
+      { flightNo: "789", route: "TPE/CRK" }, { flightNo: "790", route: "CRK/TPE" },
+      { flightNo: "791", route: "TPE/CRK" }, { flightNo: "792", route: "CRK/TPE" }
+  ]},
+  { region: "北美航線", flights: [
+      { flightNo: "001", route: "LAX/TPE" }, { flightNo: "002", route: "TPE/LAX" },
+      { flightNo: "009", route: "ONT/TPE" }, { flightNo: "010", route: "TPE/ONT" },
+      { flightNo: "011", route: "SFO/TPE" }, { flightNo: "012", route: "TPE/SFO" },
+      { flightNo: "025", route: "PHX/TPE" }, { flightNo: "026", route: "TPE/PHX" },
+      { flightNo: "031", route: "SEA/TPE" }, { flightNo: "032", route: "TPE/SEA" }
+  ]}
+];
+window.flights = flightGroups.flatMap(group => group.flights);
 
 // ⛽ 油量計算機基礎數據
 const fuelTable = [
@@ -41,12 +95,10 @@ let altimetryRows = [
 
 // 🧹 記憶體釋放邏輯 (防護機制)
 function cleanUpPanel() {
-    // 主動卸載 NOTAM 地圖實例，避免重複初始化導致當機
     if (typeof notamMapInstance !== 'undefined' && notamMapInstance !== null) {
         notamMapInstance.remove();
         notamMapInstance = null;
     }
-    // 清理殘留的時鐘計時器，釋放 CPU 資源
     if (typeof notamClockInterval !== 'undefined' && notamClockInterval !== null) {
         clearInterval(notamClockInterval);
         notamClockInterval = null;
@@ -55,8 +107,6 @@ function cleanUpPanel() {
         clearInterval(curfewClockInterval);
         curfewClockInterval = null;
     }
-
-    // 清除上次動態載入的腳本，防止事件疊加
     const oldScripts = document.querySelectorAll('.dynamic-script');
     oldScripts.forEach(script => script.remove());
 }
@@ -64,8 +114,7 @@ function cleanUpPanel() {
 // 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎
 function loadPage(pageUrl) {
     const displayArea = document.getElementById('content-display');
-    
-    cleanUpPanel(); // 載入前先執行大掃除
+    cleanUpPanel(); 
 
     displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
 
@@ -77,34 +126,34 @@ function loadPage(pageUrl) {
         .then(html => {
             displayArea.innerHTML = html;
 
-            // 抓出 HTML 裡所有的 <script> 並強制瀏覽器執行
             const scripts = displayArea.querySelectorAll('script');
             scripts.forEach(oldScript => {
                 const newScript = document.createElement('script');
-                newScript.className = 'dynamic-script'; // 標記為動態，方便下次清除
+                newScript.className = 'dynamic-script'; 
                 Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                 newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
 
-            // 依照載入的頁面，安全喚醒對應邏輯 (改用 onclick 防止事件疊加)
-            if (pageUrl === 'curfew.html') {
+            // 安全喚醒對應邏輯
+            if (pageUrl.includes('curfew')) {
                 initCurfewCalculator(); 
             } 
-            else if (pageUrl === 'time.html') {
+            else if (pageUrl.includes('time')) {
                 initTimeCalculator(); 
                 const resetBtn = document.getElementById("resetTimeCalcBtn");
                 if (resetBtn) resetBtn.onclick = resetTimeCalculator;
             } 
-            else if (pageUrl === 'altimetry.html') {
+            else if (pageUrl.includes('altimetry')) {
                 resetAltimetryCalculator(); 
                 const resetAltBtn = document.getElementById("resetAltimetryBtn");
                 if (resetAltBtn) resetAltBtn.onclick = resetAltimetryCalculator;
             }
-            else if (pageUrl === 'notam.html') {
+            else if (pageUrl.includes('notam')) {
                 initNotamRadar(); 
             }
-            else if (pageUrl === 'TPE_Flight_Data_Link.html') { 
+            // 🎯 FIDS 模組精準介接 (支援檔名包含 FIDS 即可觸發)
+            else if (pageUrl.includes('FIDS') || pageUrl.includes('TPE_Flight_Data_Link')) { 
                 setTimeout(() => {
                     if (typeof initFIDS === 'function') initFIDS();
                 }, 50);
@@ -118,7 +167,7 @@ function loadPage(pageUrl) {
 
 function closePanel() {
     const displayArea = document.getElementById('content-display');
-    cleanUpPanel(); // 關閉面板時徹底清理記憶體
+    cleanUpPanel(); 
     displayArea.innerHTML = `
         <div class="section" style="text-align: center; color: #666;">
             <h3>👈 請點擊上方按鈕載入計算工具</h3>
@@ -127,7 +176,7 @@ function closePanel() {
 }
 
 // ------------------------------------------
-// 📋 總指揮中心與勾選表初始化
+// 📋 總指揮中心與首頁模組初始化 (AppInit)
 // ------------------------------------------
 function setupChecklist(listId) {
     const list = document.getElementById(listId);
@@ -136,10 +185,537 @@ function setupChecklist(listId) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    // 1. 初始化 Checklist
     setupChecklist("briefingChecklist1");
     setupChecklist("personalChecklist");
-    console.log("✈️ 簡報箱主核心系統已啟動 (Core Engine Online)");
+    
+    // 2. 初始化 Turbli 航班選單
+    initFlightSelect();
+
+    // 3. 初始化 NOAA 氣象儀表板
+    initAviationMap();
+
+    // 4. 綁定 Turbli 查詢按鈕
+    const turbliBtn = document.getElementById("turbliBtn");
+    if(turbliBtn) {
+        turbliBtn.addEventListener("click", function () {
+            const url = this.dataset.url;
+            if (url) window.open(url, "_blank");
+        });
+    }
+
+    console.log("✈️ 簡報箱主核心系統已全面整合上線 (Core Engine Online)");
 });
+
+// ==========================================
+// 🛫 首頁模組一：Turbli 航班亂流查詢
+// ==========================================
+function initFlightSelect() {
+  const selectEl = document.getElementById("flightSelect");
+  const dateSelectEl = document.getElementById("dateSelect");
+  const btn = document.getElementById("turbliBtn");
+
+  if (!selectEl || !dateSelectEl || !btn) return;
+
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.textContent = "-- 請選擇航班 --";
+  selectEl.appendChild(defaultOption);
+
+  flightGroups.forEach(group => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.region;
+    group.flights
+      .sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }))
+      .forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.flightNo;
+        opt.textContent = item.flightNo;
+        optgroup.appendChild(opt);
+      });
+    selectEl.appendChild(optgroup);
+  });
+
+  function updateTurbliUrl() {
+    const selectedFlight = selectEl.value;
+    const selectedDate = dateSelectEl.value;
+
+    if (!selectedFlight) {
+      btn.disabled = true;
+      btn.dataset.url = "";
+      return;
+    }
+
+    const date = new Date();
+    if (selectedDate === "tomorrow") date.setDate(date.getDate() + 1);
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const flight = window.flights.find(f => f.flightNo === selectedFlight);
+    if (!flight) return;
+
+    btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
+    btn.disabled = false;
+  }
+
+  selectEl.addEventListener("change", updateTurbliUrl);
+  dateSelectEl.addEventListener("change", updateTurbliUrl);
+}
+
+// ==========================================
+// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (直連提速版)
+// ==========================================
+function getWeatherEmojis(text) {
+  if (!text) return '';
+  let emojis = [];
+  const tokens = text.split(/\s+/);
+  
+  let hasTSWS = false;
+  let hasRA = false;
+  let hasSN = false;
+  let hasGust = false;
+
+  const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
+  const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
+  const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
+
+  for (let token of tokens) {
+      if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
+      if (raRegex.test(token)) hasRA = true;
+      if (snRegex.test(token)) hasSN = true;
+      if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
+  }
+
+  if (hasTSWS) emojis.push('🚨');
+  if (hasRA) emojis.push('☔️');
+  if (hasSN) emojis.push('☃️');
+  if (hasGust) emojis.push('⚠️');
+
+  return emojis.join(' ');
+}
+
+function calculatePopupAtisAge(rawText) {
+    if (!rawText || rawText.includes("無資料") || rawText.includes("失敗")) return "";
+    const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
+    if (!timeMatch) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">未知時間</span>`;
+
+    const atisHr = parseInt(timeMatch[1], 10);
+    const atisMin = parseInt(timeMatch[2], 10);
+    
+    const now = new Date();
+    const currHr = now.getUTCHours();
+    const currMin = now.getUTCMinutes();
+    
+    let atisTotalMins = atisHr * 60 + atisMin;
+    let currTotalMins = currHr * 60 + currMin;
+    
+    if (currTotalMins < atisTotalMins && (atisHr >= 22 && currHr <= 2)) {
+        currTotalMins += 24 * 60;
+    }
+    
+    let diffMins = currTotalMins - atisTotalMins;
+    if (diffMins < 0 && diffMins > -5) diffMins = 0; 
+    
+    if (diffMins < 0 || diffMins > 1440) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">時效異常</span>`;
+    
+    if (diffMins > 30) {
+        return `<span style="font-size: 11px; background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 12px; font-weight: bold;">⚠️ 已過期 (${diffMins}m)</span>`;
+    } else {
+        return `<span style="font-size: 11px; background: #dcfce7; color: #10b981; padding: 2px 8px; border-radius: 12px; font-weight: bold;">✅ 最新 (${diffMins}m)</span>`;
+    }
+}
+
+function fetchPopupAtis(icao) {
+    const container = document.getElementById(`popup-atis-container-${icao}`);
+    const contentBox = document.getElementById(`popup-atis-content-${icao}`);
+    const btn = container.querySelector('button');
+
+    btn.innerText = "🔄 正在建立資料鏈路 (Datalink)...";
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+
+    const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
+    
+    fetch(`${gasUrl}?icao=${icao}`)
+      .then(response => {
+        if (!response.ok) throw new Error("網路狀態異常");
+        return response.json();
+      })
+      .then(data => {
+        btn.style.display = "none";
+        contentBox.style.display = "block";
+
+        if (data.error) {
+            contentBox.innerHTML = `<div style="color: #ef4444; font-weight: bold; text-align: center;">❌ ${data.error}</div>`;
+            return;
+        }
+
+        const arrAgeBadge = calculatePopupAtisAge(data.arrival);
+        const depAgeBadge = calculatePopupAtisAge(data.departure);
+
+        contentBox.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="background-color: #f8fafc; border-left: 4px solid #3c79ff; padding: 10px; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: bold; color: #3c79ff; font-size: 13px;">📥 ARRIVAL ATIS</span>
+                        ${arrAgeBadge}
+                    </div>
+                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.arrival || "無 Arrival 資料"}</div>
+                </div>
+                <div style="background-color: #f8fafc; border-left: 4px solid #e67e22; padding: 10px; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-weight: bold; color: #e67e22; font-size: 13px;">🛫 DEPARTURE ATIS</span>
+                        ${depAgeBadge}
+                    </div>
+                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.departure || "無 Departure 資料"}</div>
+                </div>
+            </div>
+        `;
+      })
+      .catch(error => {
+        btn.innerText = "❌ 通訊失敗，點擊重試";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      });
+}
+
+function initAviationMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
+
+    if (aviationMapInstance !== null) {
+        aviationMapInstance.remove();
+    }
+
+    aviationMapInstance = L.map('map').setView([31.0, 130.0], 5);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap & CARTO',
+        maxZoom: 20
+    }).addTo(aviationMapInstance);
+
+    const airports = [
+        { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
+        { icao: 'RCSS', name: '臺北松山機場', lat: 25.0043, lng: 122.2451 },
+        { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
+        { icao: 'RCMQ', name: '臺中清泉崗機場', lat: 24.2646, lng: 120.6200 },
+        { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
+        { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
+        { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
+        { icao: 'RJCH', name: '函館機場', lat: 41.7700, lng: 140.8220 },
+        { icao: 'RJFF', name: '福岡機場', lat: 33.5859, lng: 130.4507 },
+        { icao: 'RJFK', name: '鹿兒島機場', lat: 31.8034, lng: 130.7194 },
+        { icao: 'RJFT', name: '熊本機場', lat: 32.8372, lng: 130.8553 },
+        { icao: 'RJGG', name: '中部國際機場', lat: 34.8583, lng: 136.8053 },
+        { icao: 'RJSS', name: '仙台機場', lat: 38.1397, lng: 140.9169 },
+        { icao: 'RJTT', name: '東京羽田國際機場', lat: 35.5523, lng: 139.7797 },
+        { icao: 'RJOT', name: '高松機場', lat: 34.2144, lng: 134.0156 }, 
+        { icao: 'RJBE', name: '神戶機場', lat: 34.6328, lng: 135.2239 }, 
+        { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 },
+        { icao: 'VHHH', name: '香港國際機場', lat: 22.3089, lng: 113.9146 },
+        { icao: 'VMMC', name: '澳門國際機場', lat: 22.1496, lng: 113.5915 },
+        { icao: 'WMKK', name: '吉隆坡國際機場', lat: 2.7456, lng: 101.7099 },
+        { icao: 'VDPP', name: '金邊國際機場', lat: 11.5466, lng: 104.8441 },
+        { icao: 'VVCR', name: '金蘭國際機場', lat: 11.9981, lng: 109.2193 },
+        { icao: 'WMKP', name: '檳城國際機場', lat: 5.2971, lng: 100.2769 },
+        { icao: 'RPLC', name: '克拉克國際機場', lat: 15.1858, lng: 120.5599 },
+        { icao: 'RPLL', name: '馬尼拉國際機場', lat: 14.5090, lng: 121.0194 },
+        { icao: 'WSSS', name: '新加坡樟宜機場', lat: 1.3592, lng: 103.9893 },
+        { icao: 'VTBD', name: '曼谷廊曼國際機場', lat: 13.9126, lng: 100.6068 },
+        { icao: 'VTBS', name: '曼谷蘇凡納布機場', lat: 13.6811, lng: 100.7473 },
+        { icao: 'VVDN', name: '峴港國際機場', lat: 16.0439, lng: 108.1994 },
+        { icao: 'VVNB', name: '河內內排國際機場', lat: 21.2212, lng: 105.8072 },
+        { icao: 'VVPQ', name: '富國國際機場', lat: 10.1656, lng: 103.9944 },
+        { icao: 'VVTS', name: '胡志明市新山一機場', lat: 10.8188, lng: 106.6520 },
+        { icao: 'VTBU', name: '芭達雅-烏塔拋國際機場', lat: 12.6797, lng: 101.0051 }, 
+        { icao: 'RPVM', name: '麥克坦-宿霧國際機場', lat: 10.3075, lng: 123.9794 }, 
+        { icao: 'WIII', name: '雅加達-蘇加諾-哈達國際機場', lat: -6.1256, lng: 106.6558 }, 
+        { icao: 'WADD', name: '峇里島-伍拉·賴國際機場', lat: -8.7482, lng: 115.1675 }, 
+        { icao: 'WARR', name: '泗水-朱安達國際機場', lat: -7.3798, lng: 112.7836 }
+    ];
+
+    const weatherCache = {};
+    let isDataReady = false;
+    airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
+
+    // 🚀 NOAA 直連優化 (捨棄 Proxy，直接透過 CORS 抓取)
+    const fetchDirectNOAA = async (icaoList, type) => {
+        const targetUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); 
+            const res = await fetch(targetUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            }
+        } catch (e) {
+            console.warn(`NOAA 直連獲取 ${type} 失敗:`, e.message);
+        }
+        return [];
+    };
+
+    const calculateReportAge = (rawText) => {
+        if (!rawText) return "";
+        const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
+        if (!match) return "";
+
+        const repDay = parseInt(match[1], 10);
+        const repHour = parseInt(match[2], 10);
+        const repMin = parseInt(match[3], 10);
+
+        const now = new Date();
+        const currDay = now.getUTCDate();
+        let targetMonth = now.getUTCMonth();
+        let targetYear = now.getUTCFullYear();
+
+        if (repDay > currDay + 5) {
+            targetMonth -= 1;
+            if (targetMonth < 0) {
+                targetMonth = 11;
+                targetYear -= 1;
+            }
+        }
+
+        const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
+        const diffMs = now.getTime() - reportDate.getTime();
+        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+        if (diffMins < 60) return `(已發佈 ${diffMins} 分鐘)`;
+        else {
+            const h = Math.floor(diffMins / 60);
+            const m = diffMins % 60;
+            return `(已發佈 ${h} 小時 ${m} 分鐘)`;
+        }
+    };
+
+    const parseWeatherElements = (text, prevVis, prevCeil) => {
+        let vis = prevVis; let ceil = prevCeil;
+        if (/\b(CAVOK|SKC|CLR|NSC)\b/.test(text)) {
+            if (/\bCAVOK\b/.test(text)) vis = 10;
+            ceil = 99999;
+        }
+        const metricMatch = text.match(/(?:\s|^)([0-9]{4})(?:NDV)?(?:\s|$)/);
+        if (metricMatch) {
+            const meters = parseInt(metricMatch[1], 10);
+            vis = meters === 9999 ? 10 : meters / 1609.34;
+        }
+        const smMatch = text.match(/(?:\s|^)(P|M)?(\d+)?\s?(\d+\/\d+)?SM(?:\s|$)/);
+        if (smMatch) {
+            let val = 0;
+            if (smMatch[2]) val += parseInt(smMatch[2], 10);
+            if (smMatch[3]) {
+                const [num, den] = smMatch[3].split('/');
+                val += parseInt(num, 10) / parseInt(den, 10);
+            }
+            if (val === 0 && smMatch[1] === 'M') val = 0.25;
+            if (val === 0 && smMatch[1] === 'P') val = 6.0;
+            vis = val;
+        }
+        const cloudMatches = text.match(/(BKN|OVC|VV)(\d{3})/g);
+        if (cloudMatches) {
+            const bases = cloudMatches.map(c => parseInt(c.slice(3, 6), 10) * 100);
+            ceil = Math.min(...bases);
+        }
+        return { vis, ceil };
+    };
+
+    const getFlightCategory = (vis, ceil) => {
+        if (ceil < 500 || vis < 1) return "lifr";
+        if (ceil < 1000 || vis < 3) return "ifr";
+        if (ceil <= 3000 || vis <= 5) return "mvfr";
+        return "vfr";
+    };
+
+    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+
+    const formatColorTAF = (rawTaf) => {
+        if (!rawTaf) return "目前無有效或無法載入 TAF 報文";
+        const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
+        const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
+        const lines = markedTaf.split('|||');
+
+        let prevailingVis = 999; let prevailingCeil = 99999;
+        let htmlOutput = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left;">`;
+
+        lines.forEach((line, index) => {
+            const cleanLine = line.trim();
+            if (!cleanLine) return;
+
+            let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
+            const cat = getFlightCategory(current.vis, current.ceil);
+            const color = catColors[cat];
+            const catLabel = cat.toUpperCase();
+            
+            const emojis = getWeatherEmojis(cleanLine);
+            const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
+
+            if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
+                prevailingVis = current.vis; prevailingCeil = current.ceil;
+            }
+
+            htmlOutput += `
+                <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
+                    <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
+                    ${emojiHtml}
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle;">${cleanLine}</span>
+                </div>
+            `;
+        });
+        htmlOutput += `</div>`;
+        return htmlOutput;
+    };
+
+    const bootSequence = async () => {
+        const statusIndicator = document.getElementById('sync-status');
+        const icaoString = airports.map(a => a.icao).join(',');
+
+        try {
+            const [allMetars, allTafs] = await Promise.all([
+                fetchDirectNOAA(icaoString, 'metar'),
+                fetchDirectNOAA(icaoString, 'taf')
+            ]);
+
+            if (allMetars.length > 0) {
+                allMetars.forEach(m => { if(m.icaoId) weatherCache[m.icaoId].metar = m.rawOb; });
+            }
+            if (allTafs.length > 0) {
+                allTafs.forEach(t => { if(t.icaoId) weatherCache[t.icaoId].taf = t.rawTAF; });
+            }
+
+            if (allMetars.length === 0 && allTafs.length === 0) {
+                statusIndicator.innerText = "❌ 氣象同步失敗 (NOAA API 連線異常)";
+                statusIndicator.classList.remove('status-loaded');
+                statusIndicator.classList.add('status-error');
+                statusIndicator.style.backgroundColor = ""; 
+                return;
+            }
+
+            isDataReady = true;
+            statusIndicator.innerText = "✅ 氣象同步完成";
+            statusIndicator.classList.remove('status-error');
+            statusIndicator.classList.add('status-loaded');
+            statusIndicator.style.backgroundColor = ""; 
+
+        } catch (error) {
+            console.error("同步程序中斷：", error);
+            statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
+            statusIndicator.classList.remove('status-loaded');
+            statusIndicator.classList.add('status-error');
+            statusIndicator.style.backgroundColor = "";
+        }
+    };
+
+    const refreshBtn = document.getElementById('btn-refresh-map');
+    if(refreshBtn) {
+        refreshBtn.onclick = () => {
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = "0.5";
+            refreshBtn.style.cursor = "not-allowed";
+            refreshBtn.innerText = "⏳ 同步中...";
+
+            isDataReady = false;
+            const statusIndicator = document.getElementById('sync-status');
+            statusIndicator.classList.remove('status-loaded', 'status-error');
+            statusIndicator.style.backgroundColor = "#f39c12"; 
+            statusIndicator.innerText = "🔄 重新同步資料中...";
+            
+            airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
+            bootSequence();
+
+            setTimeout(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.style.opacity = "1";
+                refreshBtn.style.cursor = "pointer";
+                refreshBtn.innerText = "手動更新氣象";
+            }, 2000);
+        };
+    }
+
+    airports.forEach(airport => {
+        const marker = L.marker([airport.lat, airport.lng]).addTo(aviationMapInstance);
+
+        marker.on('click', function() {
+            const isMobile = window.innerWidth < 768;
+            const dynamicMaxWidth = isMobile ? window.innerWidth * 0.85 : 500;
+            const popupOpts = { maxWidth: dynamicMaxWidth, maxHeight: 450, autoPanPadding: [15, 15] };
+
+            if (!isDataReady) {
+                L.popup(popupOpts)
+                    .setLatLng(marker.getLatLng())
+                    .setContent(`
+                    <div class="weather-popup">
+                        <div class="airport-title">${airport.name} (${airport.icao})</div>
+                        <div style="color: #e67e22; font-weight: bold;">⚠️ 氣象資料尚未同步，請點擊上方「手動更新氣象」按鈕。</div>
+                    </div>
+                `).openOn(aviationMapInstance);
+                return;
+            }
+
+            const rawMetarText = weatherCache[airport.icao].metar;
+            const rawTafText = weatherCache[airport.icao].taf;
+            
+            const metarState = parseWeatherElements(rawMetarText, 999, 99999);
+            const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
+            const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
+
+            const metarAgeStr = calculateReportAge(rawMetarText);
+            const tafAgeStr = calculateReportAge(rawTafText);
+            const coloredTafHtml = formatColorTAF(rawTafText);
+
+            const metarEmojis = getWeatherEmojis(rawMetarText);
+            const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
+
+            L.popup(popupOpts)
+            .setLatLng(marker.getLatLng())
+            .setContent(`
+            <div class="weather-popup">
+                <div class="airport-title">${airport.name} (${airport.icao})</div>
+                
+                <div class="data-block">
+                    <div class="section-title">
+                        <span style="display:inline-flex; align-items:center;">
+                            METAR (即時天氣)
+                            ${rawMetarText ? `<span class="badge bg-${metarCat}">${displayCat}</span>${metarEmojiHtml}` : ''}
+                        </span>
+                        <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
+                    </div>
+                    <div class="raw-text border-${metarCat}">${rawMetarText || "目前無有效 METAR 報文"}</div>
+                </div>
+                
+                <div class="data-block">
+                    <div class="section-title">
+                        <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
+                        <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${tafAgeStr}</span>
+                    </div>
+                    ${coloredTafHtml}
+                </div>
+
+                <div class="data-block" id="popup-atis-container-${airport.icao}" style="border-bottom: none; margin-top: 15px;">
+                    <button class="btn-outline" style="width: 100%; margin: 0;" onclick="fetchPopupAtis('${airport.icao}')">
+                        📻 獲取 ${airport.icao} 即時 D-ATIS
+                    </button>
+                    <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;">
+                        </div>
+                </div>
+            </div>
+            `).openOn(aviationMapInstance);
+        });
+    });
+
+    setTimeout(() => {
+        const statusIndicator = document.getElementById('sync-status');
+        if (statusIndicator) {
+            statusIndicator.style.backgroundColor = "#f39c12"; 
+            statusIndicator.innerText = "🔄 背景自動同步中...";
+        }
+        bootSequence();
+    }, 500);
+}
 
 // ==========================================
 // ⛽ 油量計算機邏輯 
@@ -310,8 +886,8 @@ function updateTimeTable(data) {
 // ==========================================
 function initCurfewCalculator() {
     let state = {
-        curfewType: 'parking', // 預設: parking
-        curfewCondition: 'before' // 預設: before
+        curfewType: 'parking', 
+        curfewCondition: 'before' 
     };
 
     const els = {
@@ -337,7 +913,6 @@ function initCurfewCalculator() {
         if(els.liveClock) els.liveClock.textContent = `${h}:${m}:${s}`;
     }
     
-    // 清理殘留的計時器後重新綁定
     if(curfewClockInterval) clearInterval(curfewClockInterval);
     curfewClockInterval = setInterval(updateClock, 1000);
     updateClock();
@@ -437,7 +1012,6 @@ function initCurfewCalculator() {
         if(els.condBgPill) els.condBgPill.style.transform = state.curfewCondition === 'before' ? 'translateX(0)' : 'translateX(100%)';
     }
 
-    // 替換 addEventListener 為 onclick，確保防護連點重疊
     els.typeBtns.forEach(btn => {
         btn.onclick = (e) => {
             state.curfewType = e.target.dataset.type;
@@ -618,7 +1192,6 @@ function initTimeCalculator() {
         }
     }
 
-    // Init Diff Tab
     document.getElementById('diffStartDate').value = today; 
     document.getElementById('diffEndDate').value = today;
     populate('diffStartHour', 23); populate('diffEndHour', 23);
@@ -626,7 +1199,6 @@ function initTimeCalculator() {
     document.getElementById('diffStartHour').value = currentHour; 
     document.getElementById('diffEndHour').value = nextHour;
 
-    // Init AddSub Tab
     document.getElementById('baseDate').value = today;
     populate('baseHour', 23); populate('baseMin', 59);
     document.getElementById('baseHour').value = currentHour;
@@ -920,7 +1492,6 @@ function resetAltimetryCalculator() {
 // 📡 NOTAM Radar 核心邏輯 (強化升級版)
 // ==========================================
 function initNotamRadar() {
-    // 1. 時鐘邏輯 (防護殘留計時器)
     if (notamClockInterval) clearInterval(notamClockInterval);
     notamClockInterval = setInterval(() => {
         const clockEl = document.getElementById('clock');
@@ -932,7 +1503,6 @@ function initNotamRadar() {
         }
     }, 1000);
 
-    // 2. 地圖初始化 (防護重複載入)
     if (notamMapInstance !== null) {
         notamMapInstance.remove();
         notamMapInstance = null;
@@ -949,7 +1519,6 @@ function initNotamRadar() {
 
     notamActiveLayers = [];
 
-    // 3. 綁定按鈕事件 (改用 onclick 防止疊加)
     const btnProcess = document.getElementById('btn-process-notam');
     if (btnProcess) btnProcess.onclick = processNotamData;
     
