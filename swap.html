@@ -81,9 +81,10 @@
             display: flex;
             gap: 8px;
             margin-bottom: 8px;
+            flex-wrap: wrap;
         }
         .flex-row select { width: 100px; flex-shrink: 0; }
-        .flex-row input { flex-grow: 1; }
+        .flex-row input { flex-grow: 1; min-width: 120px; }
         
         .duty-row {
             display: flex;
@@ -194,7 +195,7 @@
             border: 2px dashed transparent;
             border-radius: 4px;
             transition: background-color 0.2s, border-color 0.2s;
-            height: 80px; /* 控制放在表單上的簽名顯示高度 */
+            height: 80px; /* 預設高度，後續由拉桿覆蓋 */
         }
         .sig-overlay:hover, .sig-overlay:active {
             border-color: rgba(46, 204, 113, 0.8);
@@ -216,7 +217,6 @@
             gap: 10px;
         }
 
-        /* 響應式調整：在小螢幕時簽名區塊改為上下排列 */
         @media (max-width: 768px) {
             .signature-container { flex-direction: column; }
         }
@@ -232,7 +232,15 @@
         </div>
 
         <div class="header-title">
-            第二步：輸入換班資訊與簽名
+            第二步：輸入換班資訊與設定
+            <!-- 字體大小調整區塊 -->
+            <div style="font-size: 14px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label style="margin: 0;">字體大小:</label>
+                    <input type="range" id="font-size-ctrl" min="12" max="36" value="16" step="1" oninput="updateFontSize()">
+                    <span id="font-size-display">16px</span>
+                </div>
+            </div>
         </div>
         
         <div class="controls-grid">
@@ -303,9 +311,17 @@
                 </div>
             </div>
 
-            <!-- 新增手寫簽名區塊 -->
             <div class="form-group" style="grid-column: span 2; border-top: 1px solid #ecf0f1; padding-top: 15px;">
-                <label style="font-size: 16px;">✍️ 組員手寫簽名 (Crew Signatures)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                    <label style="font-size: 16px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
+                    <!-- 簽名大小調整拉桿移至此處 -->
+                    <div style="font-size: 14px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 5px;">
+                        <label style="margin: 0;">簽名大小:</label>
+                        <input type="range" id="sig-size-ctrl" min="40" max="150" value="80" step="1" oninput="updateSigSize()">
+                        <span id="sig-size-display">80px</span>
+                    </div>
+                </div>
+                
                 <div class="signature-container">
                     <div class="signature-pad-wrapper">
                         <label style="font-weight: normal; color: #7f8c8d;">Crew A 簽名區</label>
@@ -329,7 +345,7 @@
         </div>
     </div>
 
-    <!-- 合成區塊 (底圖 Image + 上層黑字與簽名) -->
+    <!-- 合成區塊 -->
     <div id="export-wrapper">
         <img id="pdf-bg-img" alt="PDF Background" draggable="false">
         
@@ -349,7 +365,6 @@
         <div id="out-b-duty-3" class="text-overlay"></div>
         <div id="out-b-duty-4" class="text-overlay"></div>
 
-        <!-- 簽名圖片疊加層 (預設隱藏，有畫圖才會顯示) -->
         <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
         <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
     </div>
@@ -434,7 +449,9 @@
                         
                         initDragPositions();
                         syncText();
-                        initSignaturePads(); // 啟動簽名板功能
+                        updateFontSize();
+                        updateSigSize(); 
+                        initSignaturePads(); 
                     };
                     
                     bgImg.src = imgUrl;
@@ -486,7 +503,22 @@
             }
         }
 
-        // --- 手寫簽名核心邏輯 ---
+        function updateFontSize() {
+            const size = document.getElementById('font-size-ctrl').value;
+            document.getElementById('font-size-display').innerText = size + 'px';
+            document.querySelectorAll('.text-overlay').forEach(el => {
+                el.style.fontSize = size + 'px';
+            });
+        }
+
+        function updateSigSize() {
+            const size = document.getElementById('sig-size-ctrl').value;
+            document.getElementById('sig-size-display').innerText = size + 'px';
+            document.querySelectorAll('.sig-overlay').forEach(el => {
+                el.style.height = size + 'px'; 
+            });
+        }
+
         function initSignaturePads() {
             setupSignaturePad('pad-a', 'out-sig-a');
             setupSignaturePad('pad-b', 'out-sig-b');
@@ -497,7 +529,6 @@
             const ctx = canvas.getContext('2d');
             let isDrawing = false;
 
-            // 取得真實繪圖座標 (校正 CSS 縮放)
             function getPointerPos(e) {
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
@@ -532,10 +563,9 @@
 
             function draw(e) {
                 if (!isDrawing) return;
-                e.preventDefault(); // 防止手機滑動頁面
+                e.preventDefault(); 
                 const pos = getPointerPos(e);
                 
-                // 簽名筆觸設定
                 ctx.lineWidth = 3;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -547,13 +577,11 @@
                 ctx.moveTo(pos.x, pos.y);
             }
 
-            // 滑鼠事件
             canvas.addEventListener('mousedown', startDrawing);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stopDrawing);
             canvas.addEventListener('mouseout', stopDrawing);
 
-            // 觸控事件
             canvas.addEventListener('touchstart', startDrawing, { passive: false });
             canvas.addEventListener('touchmove', draw, { passive: false });
             canvas.addEventListener('touchend', stopDrawing);
@@ -562,8 +590,6 @@
         function syncSignatureToOverlay(canvas, overlayId) {
             const overlay = document.getElementById(overlayId);
             const dataUrl = canvas.toDataURL('image/png');
-            
-            // 檢查是否為空畫布 (簡化判斷，實務上如果點過就有紀錄)
             overlay.src = dataUrl;
             overlay.style.display = 'block';
         }
@@ -578,6 +604,7 @@
             overlay.style.display = 'none';
         }
 
+        // 套用最新的完美座標
         function initDragPositions() {
             const overlays = [
                 { id: 'out-date-y', top: '70px', left: '933px' },
@@ -596,9 +623,8 @@
                 { id: 'out-b-duty-3', top: '366px', left: '516px' },
                 { id: 'out-b-duty-4', top: '396px', left: '516px' },
 
-                // 簽名圖片的預設預估座標 (位於組員簽名列)
-                { id: 'out-sig-a', top: '430px', left: '350px' },
-                { id: 'out-sig-b', top: '430px', left: '650px' }
+                { id: 'out-sig-a', top: '437px', left: '202.5px' },
+                { id: 'out-sig-b', top: '439px', left: '431.5px' }
             ];
 
             overlays.forEach(item => {
@@ -619,7 +645,7 @@
 
             function dragMouseDown(e) {
                 e = e || window.event;
-                if (e.target !== elmnt) return; // 確保只有點擊自身時才拖曳
+                if (e.target !== elmnt) return; 
                 if (e.cancelable) e.preventDefault(); 
                 if (e.type === 'touchstart') {
                     pos3 = e.touches[0].clientX;
