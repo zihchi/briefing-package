@@ -326,23 +326,49 @@ function getTaiwanDateString(offsetDays = 0) {
 function renderFIDS() {
     fidsUI.loading.classList.add('hidden');
     
-    const targetArray = fidsState.mode === 'D' ? fidsFlightData.departures : fidsFlightData.arrivals;
-    
+    // 👈 新增：動態調整表頭以適應混合顯示模式
+    if (fidsState.searchQuery) {
+        fidsUI.thBelt.innerText = 'Status / Belt';
+        fidsUI.thDesk.innerText = '航廈 / 櫃檯 Desk';
+        fidsUI.modeBtns.forEach(b => b.classList.remove('active')); // 移除單一模式的視覺焦點
+    } else {
+        fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
+        fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
+        // 恢復模式按鈕的 active 狀態
+        fidsUI.modeBtns.forEach(b => {
+            if (b.dataset.mode === fidsState.mode) b.classList.add('active');
+        });
+    }
+
     let targetDateStr = '';
     if (fidsState.date === 'yesterday') targetDateStr = getTaiwanDateString(-1);
     else if (fidsState.date === 'today') targetDateStr = getTaiwanDateString(0);
     else if (fidsState.date === 'tomorrow') targetDateStr = getTaiwanDateString(1);
 
-    if (!Array.isArray(targetArray)) {
+    // 👈 修改：全域攔截時，同時合併離場與到場航班陣列
+    let targetArray = [];
+    if (fidsState.searchQuery) {
+        // 分別注入 _type 標籤後合併，讓系統知道誰是誰
+        const deps = fidsFlightData.departures.map(f => ({...f, _type: 'D'}));
+        const arrs = fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
+        targetArray = [...deps, ...arrs];
+    } else {
+        targetArray = fidsState.mode === 'D' 
+            ? fidsFlightData.departures.map(f => ({...f, _type: 'D'})) 
+            : fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
+    }
+
+    if (!Array.isArray(targetArray) || targetArray.length === 0) {
         fidsUI.list.innerHTML = '';
         fidsUI.empty.classList.remove('hidden');
         return;
     }
 
     const processedData = targetArray.map(f => {
-        let rawTime = fidsState.mode === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
+        // 👈 修改：改用 f._type 判斷，確保混合陣列中的每一筆資料都能正確解析時間與屬性
+        let rawTime = f._type === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
         if (!rawTime) {
-            rawTime = fidsState.mode === 'D' ? f.EstimatedDepartureTime : f.EstimatedArrivalTime;
+            rawTime = f._type === 'D' ? f.EstimatedDepartureTime : f.EstimatedArrivalTime;
         }
         
         let flightDateStr = f.FlightDate || "";
@@ -372,7 +398,7 @@ function renderFIDS() {
         // 確保不脫離允許的航空公司白名單 (JX, CI, BR)
         if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
 
-        // 👈 新增：搜尋優先邏輯 (全域攔截)
+        // 搜尋優先邏輯 (全域攔截)
         if (fidsState.searchQuery) {
             // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的日期/時間檢查
             return f.FlightNumber.includes(fidsState.searchQuery);
@@ -435,20 +461,28 @@ function renderFIDS() {
 
     const blocksHTML = filteredData.map(f => {
         const flightNo = f.AirlineID + f.FlightNumber;
-        const iataCode = fidsState.mode === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
+        // 👈 修改：顯示與排版邏輯改依據個別航班的 _type 進行渲染
+        const iataCode = f._type === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
         const timeStr = f._rawTime ? f._rawTime.substring(11, 16) : '—';
         const terminal = f.Terminal ? `T${f.Terminal}` : '—';
         const gate = f.Gate || '—';
         const desk = f.CheckCounter || '—';
         const belt = f.BaggageClaim || '—';
         
-        let statusRemark = fidsState.mode === 'D' ? (f.DepartureRemark || '') : (f.ArrivalRemark || '');
-        const beltValue = fidsState.mode === 'D' ? (statusRemark || '—') : belt;
+        let statusRemark = f._type === 'D' ? (f.DepartureRemark || '') : (f.ArrivalRemark || '');
+        const beltValue = f._type === 'D' ? (statusRemark || '—') : belt;
 
         let airlineColorClass = 'text-slate-800';
         if (f.AirlineID === 'JX') airlineColorClass = 'text-[#A67C00]';
         else if (f.AirlineID === 'CI') airlineColorClass = 'text-[#C0392B]';
         else if (f.AirlineID === 'BR') airlineColorClass = 'text-[#0F7A4D]';
+
+        // 👈 新增：若是全域搜尋狀態，在航點旁標示該航班是離場或到場，避免混淆
+        const typeBadge = fidsState.searchQuery 
+            ? (f._type === 'D' 
+                ? `<span class="ml-2 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 shadow-sm font-black tracking-widest uppercase">Dep</span>` 
+                : `<span class="ml-2 text-[0.6rem] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 shadow-sm font-black tracking-widest uppercase">Arr</span>`)
+            : '';
 
         return `
             <div class="fids-list-row flex items-center px-6 py-3 border-b border-slate-100">
@@ -457,6 +491,7 @@ function renderFIDS() {
                 </div>
                 <div class="w-[12%] flex items-center pr-2">
                     <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
+                    ${typeBadge}
                 </div>
                 <div class="w-[8%] flex justify-center items-center">
                     <span class="font-black text-red-600 text-[1.25rem]">${gate}</span>
@@ -469,9 +504,9 @@ function renderFIDS() {
                 </div>
                 <div class="w-[22%] flex justify-end items-center">
                     <span class="font-medium text-slate-500 text-[1rem]">
-                        ${terminal} ${fidsState.mode === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
+                        ${terminal} ${f._type === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
                     </span>
-                    ${statusRemark && fidsState.mode === 'A' ? `<span class="fids-status-tag hidden sm:inline-block">${statusRemark}</span>` : ''}
+                    ${statusRemark && f._type === 'A' ? `<span class="fids-status-tag hidden sm:inline-block">${statusRemark}</span>` : ''}
                 </div>
             </div>
         `;
