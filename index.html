@@ -441,14 +441,29 @@
 <script src="app.js?v=2.0"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('./service-worker.js').then(function(registration) {
-        console.log('ServiceWorker 註冊成功，範圍為: ', registration.scope);
-      }, function(err) {
-        console.log('ServiceWorker 註冊失敗: ', err);
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+      console.log('✅ ServiceWorker 註冊成功');
+
+      // 📡 監聽是否有新的 Service Worker 正在背景下載安裝
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        
+        newWorker.addEventListener('statechange', () => {
+          // 當新版本已經安裝完畢，並且接管了 (activated)
+          if (newWorker.state === 'activated') {
+            console.log('🔄 系統偵測到新版本，執行強制戰術重新整理！');
+            // 可選：您可以在這裡跳出一個彈窗說「有新版本，即將重新載入」
+            window.location.reload(); // 強制刷新畫面，載入最新 UI
+          }
+        });
       });
+
+    }).catch((err) => {
+      console.error('ServiceWorker 註冊失敗:', err);
     });
-  }
+  });
+}
 </script>
 </body>
 </html>
