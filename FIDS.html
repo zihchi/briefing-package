@@ -1,5 +1,5 @@
 <style>
-   /* 針對嵌入首頁後的控制面板微調 */
+   /* 針對嵌入首頁後的控制面板微調 */
     .fids-control-panel {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -68,6 +68,10 @@
                 <h1 class="text-lg md:text-xl font-black tracking-tight flex items-center gap-2 m-0 p-0">
                     <span>✈️</span> 桃園機場即時航班
                 </h1>
+                
+                <!-- 🔍 新增：航班號搜尋框 -->
+                <input type="text" id="fids-search-input" placeholder="🔍 搜尋航班號 (例: 863)" class="border-2 border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:outline-none transition-all w-full sm:w-48 flex-1 sm:flex-none">
+
                 <!-- 立即更新按鈕：樣式已完全交給 CSS -->
                 <button id="fids-btn-refresh" class="fids-btn-refresh shrink-0">
                     <span id="fids-icon-refresh">🔄</span> 立即更新
@@ -167,10 +171,11 @@ const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38D
 
 let fidsFlightData = { departures: [], arrivals: [] };
 let fidsState = {
-    mode: 'D',
-    date: 'today',
-    airline: 'JX',    
-    time: 'NOW2'      
+    mode: 'D',
+    date: 'today',
+    airline: 'JX',    
+    time: 'NOW2',
+    searchQuery: '' // 👈 新增：用於儲存航班搜尋關鍵字
 };
 const fidsAllowedAirlines = ['JX', 'CI', 'BR'];
 
@@ -197,8 +202,31 @@ function initFIDS() {
         timeRadios: document.querySelectorAll('input[name="fids-time"]'),
         thTime: document.getElementById('fids-th-time'),
         thBelt: document.getElementById('fids-th-belt'),
-        thDesk: document.getElementById('fids-th-desk')
+        thDesk: document.getElementById('fids-th-desk'),
+        searchInput: document.getElementById('fids-search-input') // 👈 新增：綁定搜尋框
     };
+
+    // 👈 新增：航班搜尋框監聽器
+    fidsUI.searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        fidsState.searchQuery = val;
+
+        if (val !== '') {
+            // 自動切換後台狀態為全域搜尋 (ALL)
+            fidsState.airline = 'ALL';
+            fidsState.date = 'all';
+            fidsState.time = 'ALL';
+
+            // 同步更新前台 UI 視覺，讓過濾器顯示在 ALL
+            document.getElementById('fids-filter-all').checked = true;
+            document.getElementById('fids-time-all').checked = true;
+            
+            fidsUI.dateBtns.forEach(b => b.classList.remove('active'));
+            document.getElementById('fids-btn-alldate').classList.add('active');
+        }
+        
+        renderFIDS(); // 重新渲染畫面
+    });
 
     // 重新綁定事件
     fidsUI.modeBtns.forEach(btn => {
@@ -341,7 +369,16 @@ function renderFIDS() {
     });
 
     const filteredData = processedData.filter(f => {
+        // 確保不脫離允許的航空公司白名單 (JX, CI, BR)
         if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
+
+        // 👈 新增：搜尋優先邏輯 (全域攔截)
+        if (fidsState.searchQuery) {
+            // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的日期/時間檢查
+            return f.FlightNumber.includes(fidsState.searchQuery);
+        }
+
+        // --- 以下為原本的過濾邏輯 ---
         if (fidsState.airline !== 'ALL' && f.AirlineID !== fidsState.airline) return false;
 
         let passDate = true;
