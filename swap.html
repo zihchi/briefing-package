@@ -494,9 +494,21 @@
 
         function exportPDF() {
             const element = document.getElementById('export-wrapper');
+            
+            // --- 新增自動命名邏輯 ---
+            // 1. 取得填寫的日期並移除 '-' (例如 2026-04-19 變成 20260419)
+            const rawDate = document.getElementById('in-header-date').value;
+            const dateStr = rawDate ? rawDate.replace(/-/g, '') : '';
+            
+            // 2. 取得 Crew A 姓名 (若未填寫則給予預設防呆名稱)
+            const crewAName = document.getElementById('in-a-name').value.trim() || '未具名';
+            
+            // 3. 組合出最終的完美檔名
+            const dynamicFileName = `${dateStr}${crewAName}換班單.pdf`;
+            
             const opt = {
                 margin: 0,
-                filename: '任務換班單.pdf',
+                filename: dynamicFileName,
                 image: { type: 'jpeg', quality: 1 },
                 html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
