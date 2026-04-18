@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+  <link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Briefing">
+  
   <meta charset="UTF-8">
   <title>簡報箱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -432,5 +437,16 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js?v=2.0"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./service-worker.js').then(function(registration) {
+        console.log('ServiceWorker 註冊成功，範圍為: ', registration.scope);
+      }, function(err) {
+        console.log('ServiceWorker 註冊失敗: ', err);
+      });
+    });
+  }
+</script>  
 </body>
 </html>
