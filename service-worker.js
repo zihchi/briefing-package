@@ -35,3 +35,29 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// 1. 安裝階段：強制跳過等待時間
+self.addEventListener('install', (event) => {
+  console.log('⚙️ 新版 Service Worker 安裝中...');
+  self.skipWaiting(); // 核心指令：不要等了，直接插隊！
+});
+
+// 2. 啟動階段：接管畫面並清除舊版快取
+self.addEventListener('activate', (event) => {
+  console.log('🚀 新版 Service Worker 準備接管');
+  event.waitUntil(clients.claim()); // 核心指令：立刻奪取所有開啟中網頁的控制權
+
+  // 清除名字不是最新版號的舊快取
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('🗑️ 刪除舊快取:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
