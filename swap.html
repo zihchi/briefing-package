@@ -131,18 +131,23 @@
             display: none; 
             overflow: hidden;
         }
-        #pdf-canvas {
+        
+        /* 將原本的 Canvas 改為 img 確保 html2canvas 匯出不破圖 */
+        #pdf-bg-img {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: 1;
+            object-fit: contain;
+            pointer-events: none; /* 避免滑鼠拖曳到背景圖 */
         }
+        
         .text-overlay {
             position: absolute;
             color: #000000; 
-            font-size: 16px; /* 預設固定為 16px，可由拉桿即時修改 */
+            font-size: 16px; /* 鎖定為 16px */
             font-weight: bold;
             z-index: 2;
             white-space: pre-wrap;
@@ -157,6 +162,21 @@
             border-color: rgba(52, 152, 219, 0.8);
             background-color: rgba(52, 152, 219, 0.1);
         }
+        
+        .tweak-area {
+            background: #fdf2e9;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e67e22;
+            grid-column: span 2;
+            text-align: center;
+            color: #d35400;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -169,20 +189,14 @@
         </div>
 
         <div class="header-title">
-            第二步：輸入換班資訊與設定
-            <!-- 字體大小調整拉桿回歸 -->
-            <div style="font-size: 14px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 10px;">
-                <label style="margin: 0;">字體大小 (Font Size):</label>
-                <input type="range" id="font-size-ctrl" min="12" max="36" value="16" step="1" oninput="updateFontSize()">
-                <span id="font-size-display">16px</span>
-            </div>
+            第二步：輸入換班資訊
         </div>
         
         <div class="controls-grid">
             <div class="form-group" style="grid-column: span 2;">
                 <label>填寫日期 (Date)</label>
                 <!-- 日期選擇器 -->
-                <input type="date" id="in-header-date" onchange="syncText()" style="width: 200px;">
+                <input type="date" id="in-header-date" oninput="syncText()" style="width: 200px;">
             </div>
             
             <div class="form-group">
@@ -200,19 +214,19 @@
                 
                 <label style="margin-top: 10px;">Crew A - 換班前勤務</label>
                 <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-1" onchange="syncDutyDate(1)">
+                    <input type="date" id="in-a-duty-date-1" oninput="syncDutyDate(1)">
                     <input type="text" id="in-a-duty-text-1" placeholder="勤務 1" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-2" onchange="syncDutyDate(2)">
+                    <input type="date" id="in-a-duty-date-2" oninput="syncDutyDate(2)">
                     <input type="text" id="in-a-duty-text-2" placeholder="勤務 2" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-3" onchange="syncDutyDate(3)">
+                    <input type="date" id="in-a-duty-date-3" oninput="syncDutyDate(3)">
                     <input type="text" id="in-a-duty-text-3" placeholder="勤務 3" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-4" onchange="syncDutyDate(4)">
+                    <input type="date" id="in-a-duty-date-4" oninput="syncDutyDate(4)">
                     <input type="text" id="in-a-duty-text-4" placeholder="勤務 4" oninput="syncText()">
                 </div>
             </div>
@@ -232,30 +246,36 @@
                 
                 <label style="margin-top: 10px;">Crew B - 換班前勤務</label>
                 <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-1" onchange="syncText()">
+                    <input type="date" id="in-b-duty-date-1" oninput="syncText()">
                     <input type="text" id="in-b-duty-text-1" placeholder="勤務 1" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-2" onchange="syncText()">
+                    <input type="date" id="in-b-duty-date-2" oninput="syncText()">
                     <input type="text" id="in-b-duty-text-2" placeholder="勤務 2" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-3" onchange="syncText()">
+                    <input type="date" id="in-b-duty-date-3" oninput="syncText()">
                     <input type="text" id="in-b-duty-text-3" placeholder="勤務 3" oninput="syncText()">
                 </div>
                 <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-4" onchange="syncText()">
+                    <input type="date" id="in-b-duty-date-4" oninput="syncText()">
                     <input type="text" id="in-b-duty-text-4" placeholder="勤務 4" oninput="syncText()">
                 </div>
+            </div>
+
+            <div class="tweak-area">
+                <span>👉 第三步：文字已套用完美座標與字體！游標移至文字上方仍可「按住拖曳」微調。</span>
+                <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (可供未來修改預設值使用)</button>
             </div>
 
             <button id="download-btn" class="main-btn" onclick="exportPDF()" disabled>請稍候，PDF 載入中...</button>
         </div>
     </div>
 
-    <!-- 合成區塊 (底圖 Canvas + 上層黑字) -->
+    <!-- 合成區塊 (底圖 Image + 上層黑字) -->
     <div id="export-wrapper">
-        <canvas id="pdf-canvas"></canvas>
+        <!-- 修正重點：改用實體 img 標籤取代 canvas，防止匯出時裁切破圖 -->
+        <img id="pdf-bg-img" alt="PDF Background" draggable="false">
         
         <!-- 獨立的三個日期疊加層 -->
         <div id="out-date-y" class="text-overlay"></div>
@@ -279,8 +299,6 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const wrapper = document.getElementById('export-wrapper');
-        const canvas = document.getElementById('pdf-canvas');
-        const ctx = canvas.getContext('2d');
         const downloadBtn = document.getElementById('download-btn');
         const statusArea = document.getElementById('status-area');
         const statusMsg = document.getElementById('status-msg');
@@ -289,7 +307,6 @@
         // 系統啟動時，自動帶入當日日期至所有日期欄位
         function setupDynamicDefaults() {
             const today = new Date();
-            // 轉換為 YYYY-MM-DD 給 input type="date" 使用
             const localDateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
 
             document.getElementById('in-header-date').value = localDateStr;
@@ -302,7 +319,7 @@
 
         setupDynamicDefaults();
 
-        const rawFileName = 'SwapDutyForm.pdf';
+        const rawFileName = 'SwapDutyForm.pdf'; // 若檔名不同請自行修改
         const pdfUrl = encodeURI('./' + rawFileName);
 
         fetch(pdfUrl)
@@ -315,7 +332,7 @@
             .catch(error => enableManualUpload());
 
         function enableManualUpload() {
-            statusMsg.innerHTML = '<span style="color: #c0392b;">⚠️ 自動載入失敗。<br>請點擊下方按鈕手動上傳 <b>' + rawFileName + '</b></span>';
+            statusMsg.innerHTML = '<span style="color: #c0392b;">⚠️ 自動載入失敗。<br>請點擊下方按鈕手動上傳您的原始 PDF 底圖</span>';
             uploadInput.style.display = 'block';
             downloadBtn.innerText = '請先上傳 PDF 後，再點此下載合成檔案';
             
@@ -332,34 +349,43 @@
             });
         }
 
+        // 修正重點：改為「離線渲染 (Off-screen Rendering)」並轉為圖片
         function renderPDF(pdf) {
             pdf.getPage(1).then(page => {
-                const scale = 3; 
+                const scale = 3; // 保持 3 倍高畫質渲染
                 const viewport = page.getViewport({scale: scale});
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+                
+                // 建立一個隱藏的 Canvas 來畫 PDF
+                const offScreenCanvas = document.createElement('canvas');
+                const ctx = offScreenCanvas.getContext('2d');
+                offScreenCanvas.height = viewport.height;
+                offScreenCanvas.width = viewport.width;
+
+                // 畫上白色背景避免透明度變成黑色
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, offScreenCanvas.width, offScreenCanvas.height);
 
                 page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
-                    wrapper.style.display = 'block';
-                    statusMsg.innerHTML = '<span style="color: #27ae60;">✅ PDF 底圖載入成功！請開始填寫下方資訊。</span>';
-                    uploadInput.style.display = 'none'; 
-                    downloadBtn.disabled = false;
-                    downloadBtn.innerText = '一鍵下載完美合成版 PDF';
-                    downloadBtn.style.backgroundColor = '#e74c3c';
+                    // 將 Canvas 轉換為高畫質 JPG 圖片 URL
+                    const imgUrl = offScreenCanvas.toDataURL('image/jpeg', 0.98);
+                    const bgImg = document.getElementById('pdf-bg-img');
                     
-                    initDragPositions();
-                    syncText();
-                    updateFontSize(); // 初始化字體大小
+                    // 等待圖片載入完成後顯示介面
+                    bgImg.onload = function() {
+                        wrapper.style.display = 'block';
+                        statusMsg.innerHTML = '<span style="color: #27ae60;">✅ PDF 底圖載入成功！請開始填寫下方資訊。</span>';
+                        uploadInput.style.display = 'none'; 
+                        downloadBtn.disabled = false;
+                        downloadBtn.innerText = '一鍵下載完美合成版 PDF';
+                        downloadBtn.style.backgroundColor = '#e74c3c';
+                        
+                        initDragPositions();
+                        syncText();
+                    };
+                    
+                    // 將轉換好的圖片設定給底圖元素
+                    bgImg.src = imgUrl;
                 });
-            });
-        }
-
-        // 動態調整所有疊加文字的大小
-        function updateFontSize() {
-            const size = document.getElementById('font-size-ctrl').value;
-            document.getElementById('font-size-display').innerText = size + 'px';
-            document.querySelectorAll('.text-overlay').forEach(el => {
-                el.style.fontSize = size + 'px';
             });
         }
 
@@ -375,7 +401,6 @@
             const f = document.getElementById(fleetId).value;
             const i = document.getElementById(idId).value;
             const n = document.getElementById(nameId).value;
-            // 若員編與姓名皆為空，則不顯示文字，避免畫面上出現預設的 "A330//"
             if (!i.trim() && !n.trim()) return '';
             return `${f}/${i}/${n}`;
         }
@@ -384,16 +409,13 @@
         function formatDuty(dateId, textId) {
             const d = document.getElementById(dateId).value;
             const t = document.getElementById(textId).value;
-            // 若勤務未填寫，則不顯示，避免畫面上憑空出現孤單的日期
             if (!t.trim()) return '';
-            // 將原先 YYYY-MM-DD 的格式轉換為 YYYY/MM/DD 以便閱讀
             const formattedDate = d ? d.replace(/-/g, '/') + ' ' : '';
             return formattedDate + t;
         }
 
         // 同步文字：負責將分開輸入的資料組裝後放上 PDF
         function syncText() {
-            // 處理頂部審核日期
             const headerDate = document.getElementById('in-header-date').value;
             if(headerDate) {
                 const parts = headerDate.split('-');
@@ -406,11 +428,9 @@
                 document.getElementById('out-date-d').innerText = '';
             }
             
-            // 處理 Crew Info
             document.getElementById('out-a-info').innerText = formatInfo('in-a-fleet', 'in-a-id', 'in-a-name');
             document.getElementById('out-b-info').innerText = formatInfo('in-b-fleet', 'in-b-id', 'in-b-name');
             
-            // 處理 Duties
             for(let i=1; i<=4; i++) {
                 document.getElementById('out-a-duty-'+i).innerText = formatDuty('in-a-duty-date-'+i, 'in-a-duty-text-'+i);
                 document.getElementById('out-b-duty-'+i).innerText = formatDuty('in-b-duty-date-'+i, 'in-b-duty-text-'+i);
@@ -495,22 +515,17 @@
         function exportPDF() {
             const element = document.getElementById('export-wrapper');
             
-            // --- 新增自動命名邏輯 ---
-            // 1. 取得填寫的日期並移除 '-' (例如 2026-04-19 變成 20260419)
             const rawDate = document.getElementById('in-header-date').value;
             const dateStr = rawDate ? rawDate.replace(/-/g, '') : '';
-            
-            // 2. 取得 Crew A 姓名 (若未填寫則給予預設防呆名稱)
             const crewAName = document.getElementById('in-a-name').value.trim() || '未具名';
-            
-            // 3. 組合出最終的完美檔名
             const dynamicFileName = `${dateStr}${crewAName}換班單.pdf`;
             
+            // 修正重點：加入 scrollY: 0, scrollX: 0 防呆，避免因網頁捲動導致 PDF 截取偏移
             const opt = {
                 margin: 0,
                 filename: dynamicFileName,
                 image: { type: 'jpeg', quality: 1 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
             };
             html2pdf().set(opt).from(element).save();
