@@ -21,9 +21,8 @@
     .section h2 div { display: flex; align-items: center; gap: 0.3em; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .btn { display: inline-block; padding: 0.8em 1.6em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-    .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; background: #f1f5f9 url('loading.gif') no-repeat center; }
-
-    
+    .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; background-color: #f1f5f9; }
+  
     /* 天氣2格圖排列 */
     .img-grid-2col { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
     .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 100%; height: auto; }
@@ -347,7 +346,7 @@
     <h2>🌧️ Windy 即時雷達圖 
       <button onclick="refreshIframe('windyRadar')">重新整理</button>
     </h2>
-    <iframe id="windyRadar"loading="lazy"src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
+    <iframe id="windyRadar"loading="lazy" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
       
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
   </div>
@@ -401,7 +400,7 @@
     <h2>✈️ Windy 晴空亂流圖 (FL390) 
       <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
     </h2>
-    <iframe id="windyTurbFL390" loading="lazy"src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
+    <iframe id="windyTurbFL390" loading="lazy" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
   </div>
 
@@ -464,9 +463,9 @@ document.addEventListener("visibilitychange", () => {
     // 計算在背景停留的時間 (毫秒)
     const timeInBackground = currentTime - lastHiddenTime;
 
-    // 設定門檻：如果退到背景超過 1 分鐘 (60000 毫秒)，喚醒時就自動重新整理
+    // 設定門檻：如果退到背景超過 5 分鐘 (300000 毫秒)，喚醒時就自動重新整理
     // 你可以依需求調整這個數值，如果是想「絕對每次」重開都整理，可以把 if 條件拿掉直接執行 reload
-    if (lastHiddenTime > 0 && timeInBackground > 60000) {
+    if (lastHiddenTime > 0 && timeInBackground > 300000) {
       window.location.reload();
     }
   }
