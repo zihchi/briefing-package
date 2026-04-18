@@ -93,6 +93,28 @@
         .duty-row input[type="date"] { width: 140px; flex-shrink: 0; cursor: pointer; }
         .duty-row input[type="text"] { flex-grow: 1; }
 
+        /* 簽名區塊排版 */
+        .signature-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+        }
+        .signature-pad-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        canvas.sig-pad {
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            background: #f9f9f9;
+            cursor: crosshair;
+            touch-action: none; /* 觸控繪圖時防止頁面捲動 */
+            width: 100%;
+            height: 120px;
+        }
+
         .btn-small {
             background-color: #34495e;
             color: white;
@@ -104,6 +126,8 @@
             margin-top: 5px;
         }
         .btn-small:hover { background-color: #2c3e50; }
+        .btn-clear { background-color: #e74c3c; margin-top: 0; }
+        .btn-clear:hover { background-color: #c0392b; }
 
         button.main-btn {
             background-color: #e67e22;
@@ -132,7 +156,6 @@
             overflow: hidden;
         }
         
-        /* 將原本的 Canvas 改為 img 確保 html2canvas 匯出不破圖 */
         #pdf-bg-img {
             position: absolute;
             top: 0;
@@ -141,13 +164,13 @@
             height: 100%;
             z-index: 1;
             object-fit: contain;
-            pointer-events: none; /* 避免滑鼠拖曳到背景圖 */
+            pointer-events: none; 
         }
         
         .text-overlay {
             position: absolute;
             color: #000000; 
-            font-size: 16px; /* 鎖定為 16px */
+            font-size: 16px; 
             font-weight: bold;
             z-index: 2;
             white-space: pre-wrap;
@@ -161,6 +184,21 @@
         .text-overlay:hover, .text-overlay:active {
             border-color: rgba(52, 152, 219, 0.8);
             background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        /* 疊加的簽名圖片樣式 */
+        .sig-overlay {
+            position: absolute;
+            z-index: 2;
+            cursor: move;
+            border: 2px dashed transparent;
+            border-radius: 4px;
+            transition: background-color 0.2s, border-color 0.2s;
+            height: 80px; /* 控制放在表單上的簽名顯示高度 */
+        }
+        .sig-overlay:hover, .sig-overlay:active {
+            border-color: rgba(46, 204, 113, 0.8);
+            background-color: rgba(46, 204, 113, 0.1);
         }
         
         .tweak-area {
@@ -177,6 +215,11 @@
             flex-direction: column;
             gap: 10px;
         }
+
+        /* 響應式調整：在小螢幕時簽名區塊改為上下排列 */
+        @media (max-width: 768px) {
+            .signature-container { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -189,19 +232,17 @@
         </div>
 
         <div class="header-title">
-            第二步：輸入換班資訊
+            第二步：輸入換班資訊與簽名
         </div>
         
         <div class="controls-grid">
             <div class="form-group" style="grid-column: span 2;">
                 <label>填寫日期 (Date)</label>
-                <!-- 日期選擇器 -->
                 <input type="date" id="in-header-date" oninput="syncText()" style="width: 200px;">
             </div>
             
             <div class="form-group">
                 <label>Crew A</label>
-                <!-- Crew A 機隊/員編/姓名 分開輸入 -->
                 <div class="flex-row">
                     <select id="in-a-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
@@ -233,7 +274,6 @@
 
             <div class="form-group">
                 <label>Crew B</label>
-                <!-- Crew B 機隊/員編/姓名 分開輸入 -->
                 <div class="flex-row">
                     <select id="in-b-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
@@ -263,8 +303,25 @@
                 </div>
             </div>
 
+            <!-- 新增手寫簽名區塊 -->
+            <div class="form-group" style="grid-column: span 2; border-top: 1px solid #ecf0f1; padding-top: 15px;">
+                <label style="font-size: 16px;">✍️ 組員手寫簽名 (Crew Signatures)</label>
+                <div class="signature-container">
+                    <div class="signature-pad-wrapper">
+                        <label style="font-weight: normal; color: #7f8c8d;">Crew A 簽名區</label>
+                        <canvas id="pad-a" class="sig-pad" width="400" height="120"></canvas>
+                        <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-a', 'out-sig-a')">清除 Crew A 簽名重寫</button>
+                    </div>
+                    <div class="signature-pad-wrapper">
+                        <label style="font-weight: normal; color: #7f8c8d;">Crew B 簽名區</label>
+                        <canvas id="pad-b" class="sig-pad" width="400" height="120"></canvas>
+                        <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-b', 'out-sig-b')">清除 Crew B 簽名重寫</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="tweak-area">
-                <span>👉 第三步：文字已套用完美座標與字體！游標移至文字上方仍可「按住拖曳」微調。</span>
+                <span>👉 第三步：文字與簽名已套用完美座標！游標移至上方仍可「按住拖曳」微調。</span>
                 <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (可供未來修改預設值使用)</button>
             </div>
 
@@ -272,12 +329,10 @@
         </div>
     </div>
 
-    <!-- 合成區塊 (底圖 Image + 上層黑字) -->
+    <!-- 合成區塊 (底圖 Image + 上層黑字與簽名) -->
     <div id="export-wrapper">
-        <!-- 修正重點：改用實體 img 標籤取代 canvas，防止匯出時裁切破圖 -->
         <img id="pdf-bg-img" alt="PDF Background" draggable="false">
         
-        <!-- 獨立的三個日期疊加層 -->
         <div id="out-date-y" class="text-overlay"></div>
         <div id="out-date-m" class="text-overlay"></div>
         <div id="out-date-d" class="text-overlay"></div>
@@ -293,6 +348,10 @@
         <div id="out-b-duty-2" class="text-overlay"></div>
         <div id="out-b-duty-3" class="text-overlay"></div>
         <div id="out-b-duty-4" class="text-overlay"></div>
+
+        <!-- 簽名圖片疊加層 (預設隱藏，有畫圖才會顯示) -->
+        <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
+        <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
     </div>
 
     <script>
@@ -304,7 +363,6 @@
         const statusMsg = document.getElementById('status-msg');
         const uploadInput = document.getElementById('pdf-upload');
 
-        // 系統啟動時，自動帶入當日日期至所有日期欄位
         function setupDynamicDefaults() {
             const today = new Date();
             const localDateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -319,7 +377,7 @@
 
         setupDynamicDefaults();
 
-        const rawFileName = 'SwapDutyForm.pdf'; // 若檔名不同請自行修改
+        const rawFileName = 'SwapDutyForm.pdf'; 
         const pdfUrl = encodeURI('./' + rawFileName);
 
         fetch(pdfUrl)
@@ -349,28 +407,23 @@
             });
         }
 
-        // 修正重點：改為「離線渲染 (Off-screen Rendering)」並轉為圖片
         function renderPDF(pdf) {
             pdf.getPage(1).then(page => {
-                const scale = 3; // 保持 3 倍高畫質渲染
+                const scale = 3; 
                 const viewport = page.getViewport({scale: scale});
                 
-                // 建立一個隱藏的 Canvas 來畫 PDF
                 const offScreenCanvas = document.createElement('canvas');
                 const ctx = offScreenCanvas.getContext('2d');
                 offScreenCanvas.height = viewport.height;
                 offScreenCanvas.width = viewport.width;
 
-                // 畫上白色背景避免透明度變成黑色
                 ctx.fillStyle = "#ffffff";
                 ctx.fillRect(0, 0, offScreenCanvas.width, offScreenCanvas.height);
 
                 page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
-                    // 將 Canvas 轉換為高畫質 JPG 圖片 URL
                     const imgUrl = offScreenCanvas.toDataURL('image/jpeg', 0.98);
                     const bgImg = document.getElementById('pdf-bg-img');
                     
-                    // 等待圖片載入完成後顯示介面
                     bgImg.onload = function() {
                         wrapper.style.display = 'block';
                         statusMsg.innerHTML = '<span style="color: #27ae60;">✅ PDF 底圖載入成功！請開始填寫下方資訊。</span>';
@@ -381,22 +434,20 @@
                         
                         initDragPositions();
                         syncText();
+                        initSignaturePads(); // 啟動簽名板功能
                     };
                     
-                    // 將轉換好的圖片設定給底圖元素
                     bgImg.src = imgUrl;
                 });
             });
         }
 
-        // 當 Crew A 選擇日期時，自動同步 Crew B 對應的勤務日期
         function syncDutyDate(index) {
             const dateVal = document.getElementById('in-a-duty-date-' + index).value;
             document.getElementById('in-b-duty-date-' + index).value = dateVal;
             syncText();
         }
 
-        // 輔助函數：格式化人員資訊 (機隊/員編/姓名)
         function formatInfo(fleetId, idId, nameId) {
             const f = document.getElementById(fleetId).value;
             const i = document.getElementById(idId).value;
@@ -405,7 +456,6 @@
             return `${f}/${i}/${n}`;
         }
 
-        // 輔助函數：格式化勤務內容 (YYYY/MM/DD 勤務)
         function formatDuty(dateId, textId) {
             const d = document.getElementById(dateId).value;
             const t = document.getElementById(textId).value;
@@ -414,7 +464,6 @@
             return formattedDate + t;
         }
 
-        // 同步文字：負責將分開輸入的資料組裝後放上 PDF
         function syncText() {
             const headerDate = document.getElementById('in-header-date').value;
             if(headerDate) {
@@ -437,7 +486,98 @@
             }
         }
 
-        // 載入使用者指定的絕對座標
+        // --- 手寫簽名核心邏輯 ---
+        function initSignaturePads() {
+            setupSignaturePad('pad-a', 'out-sig-a');
+            setupSignaturePad('pad-b', 'out-sig-b');
+        }
+
+        function setupSignaturePad(canvasId, overlayId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            // 取得真實繪圖座標 (校正 CSS 縮放)
+            function getPointerPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+
+                if (e.type.includes('touch')) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function startDrawing(e) {
+                isDrawing = true;
+                const pos = getPointerPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                draw(e);
+            }
+
+            function stopDrawing() {
+                if (!isDrawing) return;
+                isDrawing = false;
+                ctx.beginPath();
+                syncSignatureToOverlay(canvas, overlayId);
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                e.preventDefault(); // 防止手機滑動頁面
+                const pos = getPointerPos(e);
+                
+                // 簽名筆觸設定
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#000000';
+
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            }
+
+            // 滑鼠事件
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // 觸控事件
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function syncSignatureToOverlay(canvas, overlayId) {
+            const overlay = document.getElementById(overlayId);
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            // 檢查是否為空畫布 (簡化判斷，實務上如果點過就有紀錄)
+            overlay.src = dataUrl;
+            overlay.style.display = 'block';
+        }
+
+        function clearSignature(canvasId, overlayId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const overlay = document.getElementById(overlayId);
+            overlay.src = '';
+            overlay.style.display = 'none';
+        }
+
         function initDragPositions() {
             const overlays = [
                 { id: 'out-date-y', top: '70px', left: '933px' },
@@ -454,7 +594,11 @@
                 { id: 'out-b-duty-1', top: '306px', left: '516px' },
                 { id: 'out-b-duty-2', top: '336px', left: '516px' },
                 { id: 'out-b-duty-3', top: '366px', left: '516px' },
-                { id: 'out-b-duty-4', top: '396px', left: '516px' }
+                { id: 'out-b-duty-4', top: '396px', left: '516px' },
+
+                // 簽名圖片的預設預估座標 (位於組員簽名列)
+                { id: 'out-sig-a', top: '430px', left: '350px' },
+                { id: 'out-sig-b', top: '430px', left: '650px' }
             ];
 
             overlays.forEach(item => {
@@ -475,6 +619,7 @@
 
             function dragMouseDown(e) {
                 e = e || window.event;
+                if (e.target !== elmnt) return; // 確保只有點擊自身時才拖曳
                 if (e.cancelable) e.preventDefault(); 
                 if (e.type === 'touchstart') {
                     pos3 = e.touches[0].clientX;
@@ -512,6 +657,14 @@
             }
         }
 
+        function getCoordinates() {
+            let report = "🎯 請將以下完美座標複製給開發者：\n\n";
+            document.querySelectorAll('.text-overlay, .sig-overlay').forEach(el => {
+                report += `[${el.id}] -> top: '${el.style.top}', left: '${el.style.left}'\n`;
+            });
+            alert(report);
+        }
+
         function exportPDF() {
             const element = document.getElementById('export-wrapper');
             
@@ -520,7 +673,6 @@
             const crewAName = document.getElementById('in-a-name').value.trim() || '未具名';
             const dynamicFileName = `${dateStr}${crewAName}換班單.pdf`;
             
-            // 修正重點：加入 scrollY: 0, scrollX: 0 防呆，避免因網頁捲動導致 PDF 截取偏移
             const opt = {
                 margin: 0,
                 filename: dynamicFileName,
