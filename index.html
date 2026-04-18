@@ -449,34 +449,7 @@
     });
   }
 
-  // 1. 處理 PWA 從背景喚醒的狀況 (Page Visibility API)
-let lastHiddenTime = 0;
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
-    // 記錄退到背景的時間戳記
-    lastHiddenTime = Date.now();
-  } else if (document.visibilityState === "visible") {
-    // 取得回到畫面的時間
-    const currentTime = Date.now();
-    // 計算在背景停留的時間 (毫秒)
-    const timeInBackground = currentTime - lastHiddenTime;
-
-    // 設定門檻：如果退到背景超過 5 分鐘 (300000 毫秒)，喚醒時就自動重新整理
-    // 你可以依需求調整這個數值，如果是想「絕對每次」重開都整理，可以把 if 條件拿掉直接執行 reload
-    if (lastHiddenTime > 0 && timeInBackground > 300000) {
-      window.location.reload();
-    }
-  }
-});
-
-// 2. 處理 iOS Safari 的返回快取 (bfcache) 導致的凍結問題
-window.addEventListener("pageshow", (event) => {
-  // 如果頁面是從瀏覽器快取中恢復的，強制重新載入
-  if (event.persisted) {
-    window.location.reload();
-  }
-});
 </script>  
 </body>
 </html>
