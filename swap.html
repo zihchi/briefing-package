@@ -27,6 +27,7 @@
             width: 100%;
             max-width: 1100px;
             box-sizing: border-box;
+            overflow-x: hidden; /* 雙重防線：禁止面板發生水平溢出 */
         }
         .header-title {
             font-size: 20px;
@@ -70,16 +71,23 @@
             grid-template-columns: 1fr;
             gap: 15px;
             margin-bottom: 20px;
+            width: 100%;
         }
         @media (min-width: 800px) {
-            .controls-grid { grid-template-columns: 1fr 1fr; }
+            .controls-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } /* 破框修復核心：限制 Grid Track 最大不可超過 1fr */
         }
         
         .full-width { grid-column: 1 / -1; }
-        .form-group { display: flex; flex-direction: column; }
+        
+        /* 破框修復核心：設定 min-width: 0 避免內部元素撐破 Grid */
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+            min-width: 0; 
+        }
+        
         label { font-size: 15px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
         
-        /* 針對 iOS 優化：字體必須 16px 以上才不會自動放大畫面，並加寬點擊範圍 */
         input[type="text"], input[type="date"], select {
             padding: 12px;
             border: 1px solid #bdc3c7;
@@ -88,20 +96,23 @@
             font-family: inherit;
             background-color: #fcfcfc;
             box-sizing: border-box;
+            width: 100%;
         }
         select { cursor: pointer; appearance: auto; }
         
-        /* 響應式拆分輸入框：手機垂直排列，桌面水平排列 */
+        /* 響應式拆分輸入框 */
         .crew-info-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
             margin-bottom: 12px;
+            width: 100%;
         }
         @media (min-width: 600px) {
             .crew-info-group { flex-direction: row; }
-            .crew-info-group select { width: 120px; flex-shrink: 0; }
-            .crew-info-group input { flex-grow: 1; }
+            .crew-info-group select { width: 100px; flex-shrink: 0; } /* 微調寬度保留空間 */
+            /* 破框修復核心：加入 min-width: 0 確保 Flex 子元素能隨父層收縮 */
+            .crew-info-group input { flex-grow: 1; min-width: 0; } 
         }
         
         .duty-row {
@@ -112,11 +123,14 @@
             background: #f4f6f7;
             padding: 10px;
             border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
         @media (min-width: 600px) {
             .duty-row { flex-direction: row; background: transparent; padding: 0; }
-            .duty-row input[type="date"] { width: 150px; flex-shrink: 0; }
-            .duty-row input[type="text"] { flex-grow: 1; }
+            .duty-row input[type="date"] { width: 140px; flex-shrink: 0; }
+            /* 破框修復核心：加入 min-width: 0 */
+            .duty-row input[type="text"] { flex-grow: 1; min-width: 0; } 
         }
 
         .date-inputs {
@@ -142,6 +156,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-width: 0; /* 防止簽名畫布撐破 */
         }
         canvas.sig-pad {
             border: 2px solid #bdc3c7;
@@ -151,12 +166,13 @@
             touch-action: none;
             width: 100%;
             height: 140px;
+            box-sizing: border-box;
         }
 
         .btn-small {
             background-color: #34495e;
             color: white;
-            padding: 12px 15px; /* iOS 友善點擊高度 */
+            padding: 12px 15px; 
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -170,7 +186,7 @@
         button.main-btn {
             background-color: #e67e22;
             color: white;
-            padding: 18px; /* 加大高度 */
+            padding: 18px; 
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -184,12 +200,12 @@
         button.main-btn:active { transform: translateY(0); }
         button.main-btn:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        /* 針對行動裝置的預覽容器：可水平滑動，確保 1122x793 不被壓縮變形 */
+        /* 預覽容器 */
         .preview-container {
             width: 100%;
             max-width: 100vw;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch; /* iOS 滑順滾動支援 */
+            -webkit-overflow-scrolling: touch; 
             border: 2px solid #ecf0f1;
             border-radius: 8px;
             background: #e4e5e6;
@@ -245,7 +261,7 @@
             white-space: pre-wrap;
             text-align: left;
             cursor: move; 
-            padding: 6px; /* 加大觸控判定區 */
+            padding: 6px; 
             border: 2px dashed transparent;
             border-radius: 4px;
             transition: background-color 0.2s, border-color 0.2s;
