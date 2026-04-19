@@ -2,16 +2,17 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>飛航員任務換班單 - 完美疊加版</title>
+    <!-- 針對 iOS 優化：加入 maximum-scale=1.0, user-scalable=0 鎖定縮放，防止誤觸放大 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>飛航員任務換班單 - iOS 優化疊加版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
-            font-family: "Microsoft JhengHei", "PingFang TC", Arial, sans-serif;
+            font-family: "-apple-system", "BlinkMacSystemFont", "Microsoft JhengHei", "PingFang TC", sans-serif;
             background-color: #2c3e50;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,12 +20,13 @@
         }
         .panel {
             background: #ffffff;
-            padding: 20px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
             margin-bottom: 20px;
             width: 100%;
             max-width: 1100px;
+            box-sizing: border-box;
         }
         .header-title {
             font-size: 20px;
@@ -36,13 +38,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .upload-area {
             background: #e8f8f5;
             border: 2px dashed #1abc9c;
             padding: 15px;
             text-align: center;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 20px;
             min-height: 50px;
             display: flex;
@@ -53,100 +57,163 @@
         .upload-area input[type="file"] {
             font-size: 16px;
             margin-top: 15px;
-            padding: 10px;
             background: #fff;
             border: 1px solid #ccc;
             border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
         }
+        
+        /* 響應式網格設計：手機單欄，平板/桌面雙欄 */
         .controls-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 15px;
             margin-bottom: 20px;
         }
+        @media (min-width: 800px) {
+            .controls-grid { grid-template-columns: 1fr 1fr; }
+        }
+        
+        .full-width { grid-column: 1 / -1; }
         .form-group { display: flex; flex-direction: column; }
-        label { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
+        label { font-size: 15px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
         
+        /* 針對 iOS 優化：字體必須 16px 以上才不會自動放大畫面，並加寬點擊範圍 */
         input[type="text"], input[type="date"], select {
-            padding: 8px;
+            padding: 12px;
             border: 1px solid #bdc3c7;
-            border-radius: 4px;
-            font-size: 15px;
+            border-radius: 6px;
+            font-size: 16px; 
             font-family: inherit;
+            background-color: #fcfcfc;
+            box-sizing: border-box;
         }
-        select { cursor: pointer; }
+        select { cursor: pointer; appearance: auto; }
         
-        /* 拆分輸入框專用排版 */
-        .flex-row {
+        /* 響應式拆分輸入框：手機垂直排列，桌面水平排列 */
+        .crew-info-group {
             display: flex;
+            flex-direction: column;
             gap: 8px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
+            margin-bottom: 12px;
         }
-        .flex-row select { width: 100px; flex-shrink: 0; }
-        .flex-row input { flex-grow: 1; min-width: 120px; }
+        @media (min-width: 600px) {
+            .crew-info-group { flex-direction: row; }
+            .crew-info-group select { width: 120px; flex-shrink: 0; }
+            .crew-info-group input { flex-grow: 1; }
+        }
         
         .duty-row {
             display: flex;
+            flex-direction: column;
             gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            background: #f4f6f7;
+            padding: 10px;
+            border-radius: 8px;
         }
-        .duty-row input[type="date"] { width: 140px; flex-shrink: 0; cursor: pointer; }
-        .duty-row input[type="text"] { flex-grow: 1; }
+        @media (min-width: 600px) {
+            .duty-row { flex-direction: row; background: transparent; padding: 0; }
+            .duty-row input[type="date"] { width: 150px; flex-shrink: 0; }
+            .duty-row input[type="text"] { flex-grow: 1; }
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .date-inputs input { width: 100%; text-align: center; }
 
         /* 簽名區塊排版 */
         .signature-container {
             display: flex;
+            flex-direction: column;
             gap: 20px;
             width: 100%;
         }
+        @media (min-width: 768px) {
+            .signature-container { flex-direction: row; }
+        }
+        
         .signature-pad-wrapper {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 8px;
         }
         canvas.sig-pad {
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-            background: #f9f9f9;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            background: #fdfdfd;
             cursor: crosshair;
-            touch-action: none; /* 觸控繪圖時防止頁面捲動 */
+            touch-action: none;
             width: 100%;
-            height: 120px;
+            height: 140px;
         }
 
         .btn-small {
             background-color: #34495e;
             color: white;
-            padding: 8px 15px;
+            padding: 12px 15px; /* iOS 友善點擊高度 */
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             margin-top: 5px;
         }
         .btn-small:hover { background-color: #2c3e50; }
-        .btn-clear { background-color: #e74c3c; margin-top: 0; }
+        .btn-clear { background-color: #e74c3c; margin-top: 0; font-weight: bold; }
         .btn-clear:hover { background-color: #c0392b; }
 
         button.main-btn {
             background-color: #e67e22;
             color: white;
-            padding: 15px;
+            padding: 18px; /* 加大高度 */
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             width: 100%;
             transition: 0.3s;
-            grid-column: span 2;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        button.main-btn:hover { background-color: #d35400; }
-        button.main-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        button.main-btn:hover { background-color: #d35400; transform: translateY(-2px); }
+        button.main-btn:active { transform: translateY(0); }
+        button.main-btn:disabled { background-color: #95a5a6; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        /* PDF 疊加預覽區 */
+        /* 針對行動裝置的預覽容器：可水平滑動，確保 1122x793 不被壓縮變形 */
+        .preview-container {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* iOS 滑順滾動支援 */
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            background: #e4e5e6;
+            margin-top: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        .scroll-hint {
+            text-align: center;
+            color: #e67e22;
+            font-weight: bold;
+            font-size: 15px;
+            margin: 10px 0;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+        @media (max-width: 1150px) {
+            .scroll-hint { display: block; }
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
         #export-wrapper {
             position: relative;
             width: 1122px; 
@@ -155,6 +222,7 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.6);
             display: none; 
             overflow: hidden;
+            margin: 0 auto;
         }
         
         #pdf-bg-img {
@@ -177,17 +245,16 @@
             white-space: pre-wrap;
             text-align: left;
             cursor: move; 
-            padding: 2px 5px;
+            padding: 6px; /* 加大觸控判定區 */
             border: 2px dashed transparent;
             border-radius: 4px;
             transition: background-color 0.2s, border-color 0.2s;
         }
         .text-overlay:hover, .text-overlay:active {
             border-color: rgba(52, 152, 219, 0.8);
-            background-color: rgba(52, 152, 219, 0.1);
+            background-color: rgba(52, 152, 219, 0.15);
         }
 
-        /* 疊加的簽名圖片樣式 */
         .sig-overlay {
             position: absolute;
             z-index: 2;
@@ -195,30 +262,26 @@
             border: 2px dashed transparent;
             border-radius: 4px;
             transition: background-color 0.2s, border-color 0.2s;
-            height: 80px; /* 預設高度，後續由拉桿覆蓋 */
+            height: 80px; 
+            padding: 4px;
         }
         .sig-overlay:hover, .sig-overlay:active {
             border-color: rgba(46, 204, 113, 0.8);
-            background-color: rgba(46, 204, 113, 0.1);
+            background-color: rgba(46, 204, 113, 0.15);
         }
         
         .tweak-area {
             background: #fdf2e9;
             padding: 15px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid #e67e22;
-            grid-column: span 2;
             text-align: center;
             color: #d35400;
             font-weight: bold;
             font-size: 16px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .signature-container { flex-direction: column; }
+            gap: 12px;
         }
     </style>
 </head>
@@ -233,9 +296,8 @@
 
         <div class="header-title">
             第二步：輸入換班資訊與設定
-            <!-- 字體大小調整區塊 -->
-            <div style="font-size: 14px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 5px;">
+            <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
                     <label style="margin: 0;">字體大小:</label>
                     <input type="range" id="font-size-ctrl" min="12" max="36" value="16" step="1" oninput="updateFontSize()">
                     <span id="font-size-display">16px</span>
@@ -244,14 +306,14 @@
         </div>
         
         <div class="controls-grid">
-            <div class="form-group" style="grid-column: span 2;">
+            <div class="form-group full-width">
                 <label>填寫日期 (Date)</label>
-                <input type="date" id="in-header-date" oninput="syncText()" style="width: 200px;">
+                <input type="date" id="in-header-date" oninput="syncText()" style="width: 100%; max-width: 250px;">
             </div>
             
             <div class="form-group">
                 <label>Crew A</label>
-                <div class="flex-row">
+                <div class="crew-info-group">
                     <select id="in-a-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
                         <option value="A321">A321</option>
@@ -261,7 +323,7 @@
                     <input type="text" id="in-a-name" placeholder="姓名" oninput="syncText()">
                 </div>
                 
-                <label style="margin-top: 10px;">Crew A - 換班前勤務</label>
+                <label style="margin-top: 15px;">Crew A - 換班前勤務</label>
                 <div class="duty-row">
                     <input type="date" id="in-a-duty-date-1" oninput="syncDutyDate(1)">
                     <input type="text" id="in-a-duty-text-1" placeholder="勤務 1" oninput="syncText()">
@@ -282,7 +344,7 @@
 
             <div class="form-group">
                 <label>Crew B</label>
-                <div class="flex-row">
+                <div class="crew-info-group">
                     <select id="in-b-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
                         <option value="A321">A321</option>
@@ -292,7 +354,7 @@
                     <input type="text" id="in-b-name" placeholder="姓名" oninput="syncText()">
                 </div>
                 
-                <label style="margin-top: 10px;">Crew B - 換班前勤務</label>
+                <label style="margin-top: 15px;">Crew B - 換班前勤務</label>
                 <div class="duty-row">
                     <input type="date" id="in-b-duty-date-1" oninput="syncText()">
                     <input type="text" id="in-b-duty-text-1" placeholder="勤務 1" oninput="syncText()">
@@ -311,11 +373,10 @@
                 </div>
             </div>
 
-            <div class="form-group" style="grid-column: span 2; border-top: 1px solid #ecf0f1; padding-top: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-                    <label style="font-size: 16px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
-                    <!-- 簽名大小調整拉桿移至此處 -->
-                    <div style="font-size: 14px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 5px;">
+            <div class="form-group full-width" style="border-top: 1px solid #ecf0f1; padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <label style="font-size: 18px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
+                    <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 8px;">
                         <label style="margin: 0;">簽名大小:</label>
                         <input type="range" id="sig-size-ctrl" min="40" max="150" value="80" step="1" oninput="updateSigSize()">
                         <span id="sig-size-display">80px</span>
@@ -325,48 +386,53 @@
                 <div class="signature-container">
                     <div class="signature-pad-wrapper">
                         <label style="font-weight: normal; color: #7f8c8d;">Crew A 簽名區</label>
-                        <canvas id="pad-a" class="sig-pad" width="400" height="120"></canvas>
+                        <canvas id="pad-a" class="sig-pad" width="400" height="140"></canvas>
                         <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-a', 'out-sig-a')">清除 Crew A 簽名重寫</button>
                     </div>
                     <div class="signature-pad-wrapper">
                         <label style="font-weight: normal; color: #7f8c8d;">Crew B 簽名區</label>
-                        <canvas id="pad-b" class="sig-pad" width="400" height="120"></canvas>
+                        <canvas id="pad-b" class="sig-pad" width="400" height="140"></canvas>
                         <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-b', 'out-sig-b')">清除 Crew B 簽名重寫</button>
                     </div>
                 </div>
             </div>
 
-            <div class="tweak-area">
-                <span>👉 第三步：文字與簽名已套用完美座標！游標移至上方仍可「按住拖曳」微調。</span>
-                <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (可供未來修改預設值使用)</button>
+            <div class="tweak-area full-width">
+                <span>👉 第三步：文字與簽名已套用完美座標！請在下方預覽區「左右滑動」並「按住文字拖曳」微調。</span>
+                <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (開發者專用)</button>
             </div>
 
-            <button id="download-btn" class="main-btn" onclick="exportPDF()" disabled>請稍候，PDF 載入中...</button>
+            <button id="download-btn" class="main-btn full-width" onclick="exportPDF()" disabled>請稍候，PDF 載入中...</button>
         </div>
-    </div>
+        
+        <!-- 新增的手勢提示 -->
+        <div class="scroll-hint">👈 請左右滑動查看完整 A4 表單 👉</div>
+        
+        <!-- 具有水平滾動特性的預覽容器 -->
+        <div class="preview-container">
+            <div id="export-wrapper">
+                <img id="pdf-bg-img" alt="PDF Background" draggable="false">
+                
+                <div id="out-date-y" class="text-overlay"></div>
+                <div id="out-date-m" class="text-overlay"></div>
+                <div id="out-date-d" class="text-overlay"></div>
+                
+                <div id="out-a-info" class="text-overlay"></div>
+                <div id="out-a-duty-1" class="text-overlay"></div>
+                <div id="out-a-duty-2" class="text-overlay"></div>
+                <div id="out-a-duty-3" class="text-overlay"></div>
+                <div id="out-a-duty-4" class="text-overlay"></div>
+                
+                <div id="out-b-info" class="text-overlay"></div>
+                <div id="out-b-duty-1" class="text-overlay"></div>
+                <div id="out-b-duty-2" class="text-overlay"></div>
+                <div id="out-b-duty-3" class="text-overlay"></div>
+                <div id="out-b-duty-4" class="text-overlay"></div>
 
-    <!-- 合成區塊 -->
-    <div id="export-wrapper">
-        <img id="pdf-bg-img" alt="PDF Background" draggable="false">
-        
-        <div id="out-date-y" class="text-overlay"></div>
-        <div id="out-date-m" class="text-overlay"></div>
-        <div id="out-date-d" class="text-overlay"></div>
-        
-        <div id="out-a-info" class="text-overlay"></div>
-        <div id="out-a-duty-1" class="text-overlay"></div>
-        <div id="out-a-duty-2" class="text-overlay"></div>
-        <div id="out-a-duty-3" class="text-overlay"></div>
-        <div id="out-a-duty-4" class="text-overlay"></div>
-        
-        <div id="out-b-info" class="text-overlay"></div>
-        <div id="out-b-duty-1" class="text-overlay"></div>
-        <div id="out-b-duty-2" class="text-overlay"></div>
-        <div id="out-b-duty-3" class="text-overlay"></div>
-        <div id="out-b-duty-4" class="text-overlay"></div>
-
-        <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
-        <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
+                <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
+                <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
+            </div>
+        </div>
     </div>
 
     <script>
@@ -582,6 +648,7 @@
             canvas.addEventListener('mouseup', stopDrawing);
             canvas.addEventListener('mouseout', stopDrawing);
 
+            // 加入 { passive: false } 確保能成功攔截螢幕滾動
             canvas.addEventListener('touchstart', startDrawing, { passive: false });
             canvas.addEventListener('touchmove', draw, { passive: false });
             canvas.addEventListener('touchend', stopDrawing);
@@ -604,7 +671,6 @@
             overlay.style.display = 'none';
         }
 
-        // 套用最新的完美座標
         function initDragPositions() {
             const overlays = [
                 { id: 'out-date-y', top: '70px', left: '933px' },
@@ -646,6 +712,7 @@
             function dragMouseDown(e) {
                 e = e || window.event;
                 if (e.target !== elmnt) return; 
+                // e.preventDefault() 會阻止容器滑動，這是拖曳物件時必要的
                 if (e.cancelable) e.preventDefault(); 
                 if (e.type === 'touchstart') {
                     pos3 = e.touches[0].clientX;
