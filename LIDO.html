@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人專屬 - Lido 航班精準擷取系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen font-sans flex items-center justify-center p-2 md:p-4">
+
+    <div id="toast" class="fixed top-5 right-5 transform transition-transform translate-x-full opacity-0 bg-blue-600 text-white px-6 py-3 rounded shadow-lg z-50">訊息提示</div>
+
+    <!-- 階段一：網頁鎖定畫面 -->
+    <div id="lock-screen" class="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center transition-opacity duration-500">
+        <svg class="w-16 h-16 mx-auto mb-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        <h2 class="text-2xl font-bold mb-6 tracking-wider">系統已鎖定</h2>
+        <input type="password" id="page-password" placeholder="請輸入網頁密碼" class="w-full px-4 py-3 mb-4 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center tracking-[0.5em] transition-all">
+        <button id="unlock-btn" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">解鎖系統</button>
+    </div>
+
+    <!-- 階段二：Lido 憑證登入畫面 -->
+    <div id="lido-login-screen" class="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center transition-opacity duration-500 hidden">
+        <svg class="w-16 h-16 mx-auto mb-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2 class="text-2xl font-bold mb-6 tracking-wider">Lido 伺服器驗證</h2>
+        <p class="text-sm text-slate-400 mb-6">請輸入 Lido 帳密，系統將於背景保持連線狀態。</p>
+        <input type="text" id="lido-user" class="w-full px-4 py-3 mb-4 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center transition-all" placeholder="Username">
+        <input type="password" id="lido-pass" class="w-full px-4 py-3 mb-6 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center transition-all" placeholder="Password">
+        <button id="lido-connect-btn" class="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-900/50">建立背景連線</button>
+    </div>
+
+    <!-- 階段三：主程式戰情室 -->
+    <div id="main-app" class="w-full max-w-6xl glass-panel p-6 md:p-8 rounded-2xl shadow-2xl transition-opacity duration-500 hidden flex flex-col md:h-[90vh]">
+        <div class="flex items-center justify-between mb-6 border-b border-slate-700 pb-4 shrink-0">
+            <h1 class="text-2xl font-bold flex items-center text-blue-400 tracking-wide">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Lido 勤務戰情室
+            </h1>
+            <button id="lock-again-btn" class="text-sm text-slate-400 hover:text-white transition-colors flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                清除憑證並鎖定
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 flex-grow overflow-hidden">
+            <!-- 左側：目標鎖定區 -->
+            <div class="md:col-span-4 border-b md:border-b-0 md:border-r border-slate-700 pb-6 md:pb-0 md:pr-8 flex flex-col shrink-0">
+                <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 shadow-inner">
+                    <label class="block text-sm font-bold text-slate-300 mb-3 tracking-wide">目標航班鎖定</label>
+                    <div class="flex shadow-sm rounded-lg overflow-hidden border border-slate-600 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+                        <span class="inline-flex items-center px-4 text-sm text-slate-400 bg-slate-800 font-bold tracking-widest border-r border-slate-700">SJX</span>
+                        <input type="text" id="target-flight" class="w-full px-4 py-3 bg-slate-900 focus:outline-none text-emerald-400 font-bold text-xl tracking-widest" placeholder="例如: 805" autocomplete="off">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3 leading-relaxed">
+                        Lido 憑證已安全掛載。請直接輸入數字進行連續狙擊，無須重複登入。
+                    </p>
+                </div>
+                
+                <button id="fetch-data-btn" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center mt-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                    <span>發動精準擷取</span>
+                    <svg id="loading-spinner" class="animate-spin ml-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </div>
+
+            <!-- 右側：專業數據展示區 -->
+            <div class="md:col-span-8 flex flex-col h-[60vh] md:h-full overflow-hidden space-y-6">
+                
+                <!-- 區塊一：專業視覺化儀表板 -->
+                <div class="flex-grow flex flex-col min-h-0 bg-slate-950/50 rounded-xl border border-slate-700/50 shadow-inner overflow-hidden relative group">
+                    <div class="bg-slate-800/80 px-5 py-3 border-b border-slate-700 flex justify-between items-center z-10 sticky top-0 backdrop-blur-sm">
+                        <span class="font-bold text-slate-300 text-sm tracking-widest flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            勤務專屬結構化數據
+                        </span>
+                        <button id="copy-btn-main" class="flex items-center text-xs font-bold text-emerald-400 hover:text-white bg-emerald-900/30 hover:bg-emerald-600 px-3 py-1.5 rounded transition-colors hidden border border-emerald-700/50">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            複製純文字 (Word)
+                        </button>
+                    </div>
+                    
+                    <div id="visual-dashboard" class="p-5 overflow-y-auto w-full h-full font-mono text-sm space-y-6">
+                        <div class="flex h-full items-center justify-center text-slate-600 text-base tracking-widest">等待目標輸入...</div>
+                    </div>
+                    
+                    <textarea id="hidden-raw-text" class="hidden"></textarea>
+                </div>
+
+                <!-- 區塊二：ATC Flight Plan -->
+                <div class="h-32 md:h-40 shrink-0 flex flex-col bg-slate-950/50 rounded-xl border border-slate-700/50 shadow-inner overflow-hidden relative">
+                    <div class="bg-slate-800/80 px-4 py-2.5 border-b border-slate-700 flex justify-between items-center z-10 sticky top-0 backdrop-blur-sm">
+                        <span class="font-bold text-slate-400 text-xs tracking-widest">ATC Flight Plan (FPL)</span>
+                        <button id="copy-btn-atc" class="flex items-center text-xs font-bold text-blue-400 hover:text-white bg-blue-900/30 hover:bg-blue-600 px-2.5 py-1 rounded transition-colors hidden border border-blue-700/50">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            複製 FPL
+                        </button>
+                    </div>
+                    <textarea id="atc-display" readonly class="w-full h-full p-4 bg-transparent text-blue-300/80 font-mono text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將顯示於此..."></textarea>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const getSecKey = () => [49, 48, 52, 55, 56, 56].map(c => String.fromCharCode(c)).join('');
+        // ★ 請務必貼上您重新部署後的 GAS 網址 ★
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMbB36SdcqP56CaHlfbRuAE28ozPldpSmw85wC1e3WVPFtQRLCCH48_5LnSmoBBlxjZw/exec'; 
+
+        const airportMap = {
+            'RCTP':'TPE', 'RCKH':'KHH', 'RCSS':'TSA', 'RMQ':'RMQ',
+            'VMMC':'MFM', 'VHHH':'HKG',
+            'RJAA':'NRT', 'RJTT':'HND', 'RJBB':'KIX', 'RJGG':'NGO', 'RJFF':'FUK', 'ROAH':'OKA', 'RJSS':'SDJ', 'RJCC':'CTS', 'RJCH':'HKD', 'RJFU':'NGS', 'RJOA':'HIJ', 'RJSN':'KIJ', 'RJFK':'KOJ',
+            'KSFO':'SFO', 'KLAX':'LAX', 'KSEA':'SEA', 'KOAK':'OAK', 'KSMF':'SMF', 'KONT':'ONT', 'KPDX':'PDX', 'PANC':'ANC', 'PMDY':'MDY', 'PHNL':'HNL',
+            'RPLL':'MNL', 'RPVM':'CEB', 'RPLC':'CRK',
+            'VVNB':'HAN', 'VVTS':'SGN', 'VVDN':'DAD', 'VVCR':'CXR', 'VVPQ':'PQC',
+            'VTBS':'BKK', 'VTBD':'DMK', 'VTSG':'HKT', 'VTCC':'CNX',
+            'WMKK':'KUL', 'WMKP':'PEN', 'WSSS':'SIN',
+            'WIII':'CGK', 'WADD':'DPS'
+        };
+        const getAirportStr = (icao) => icao && airportMap[icao] ? `${icao}/${airportMap[icao]}` : icao;
+
+        let savedLidoUser = '';
+        let savedLidoPass = '';
+
+        const lockScreen = document.getElementById('lock-screen');
+        const lidoLoginScreen = document.getElementById('lido-login-screen');
+        const mainApp = document.getElementById('main-app');
+        const pagePwdInput = document.getElementById('page-password');
+        const toast = document.getElementById('toast');
+
+        function showToast(msg, isError = false) {
+            toast.textContent = msg;
+            toast.className = `fixed top-5 right-5 transform transition-transform duration-300 shadow-lg z-50 px-6 py-3 rounded text-white ${isError ? 'bg-red-600' : 'bg-blue-600'}`;
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
+        }
+
+        function attemptUnlock() {
+            if (pagePwdInput.value === getSecKey()) {
+                lockScreen.classList.add('hidden');
+                lidoLoginScreen.classList.remove('hidden');
+                pagePwdInput.value = '';
+            } else {
+                showToast('登入授權碼無效', true);
+                pagePwdInput.value = '';
+            }
+        }
+        document.getElementById('unlock-btn').addEventListener('click', attemptUnlock);
+        pagePwdInput.addEventListener('keypress', e => { if (e.key === 'Enter') attemptUnlock(); });
+
+        document.getElementById('lido-connect-btn').addEventListener('click', () => {
+            const user = document.getElementById('lido-user').value.trim();
+            const pass = document.getElementById('lido-pass').value.trim();
+            if (!user || !pass) return showToast('請完整輸入帳戶憑證', true);
+            
+            savedLidoUser = user;
+            savedLidoPass = pass;
+            lidoLoginScreen.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            document.getElementById('target-flight').focus();
+            showToast('連線模組就緒，可開始連續查詢');
+        });
+
+        document.getElementById('lock-again-btn').addEventListener('click', () => {
+            savedLidoUser = '';
+            savedLidoPass = '';
+            document.getElementById('lido-user').value = '';
+            document.getElementById('lido-pass').value = '';
+            mainApp.classList.add('hidden');
+            lockScreen.classList.remove('hidden');
+            document.getElementById('visual-dashboard').innerHTML = '<div class="flex h-full items-center justify-center text-slate-600 font-mono text-base tracking-widest">系統已休眠...</div>';
+            document.getElementById('hidden-raw-text').value = '';
+            document.getElementById('atc-display').value = '';
+            document.getElementById('copy-btn-main').classList.add('hidden');
+            document.getElementById('copy-btn-atc').classList.add('hidden');
+            showToast('已斷開連線，憑證清除完畢');
+        });
+
+        function formatAviationTime(ms) {
+            if (!ms) return 'N/A';
+            const d = new Date(ms);
+            const hh = ('0' + d.getUTCHours()).slice(-2);
+            const mm = ('0' + d.getUTCMinutes()).slice(-2);
+            return `${hh}${mm}Z`;
+        }
+
+        function getMetaValue(docs, targetKey) {
+            if (!docs || !Array.isArray(docs)) return null;
+            for (let doc of docs) {
+                if (doc.metadata && Array.isArray(doc.metadata)) {
+                    let foundItem = doc.metadata.find(m => m.key && m.key.toLowerCase() === targetKey.toLowerCase());
+                    if (foundItem) return foundItem.value;
+                }
+            }
+            return null;
+        }
+
+        function renderRow(label, value, isHighlight = false) {
+            const valColor = isHighlight ? 'text-emerald-400 font-bold' : 'text-slate-200';
+            return `<div class="flex justify-between border-b border-slate-700/50 pb-1.5 pt-1.5 hover:bg-slate-800/30 px-1 rounded transition-colors">
+                        <span class="text-slate-400">${label}:</span> 
+                        <span class="${valColor} text-right">${value}</span>
+                    </div>`;
+        }
+
+        const fetchBtn = document.getElementById('fetch-data-btn');
+        fetchBtn.addEventListener('click', async () => {
+            let targetRaw = document.getElementById('target-flight').value.trim();
+            targetRaw = targetRaw.replace(/^SJX/i, ''); 
+            const target = 'SJX' + targetRaw;
+
+            if (!savedLidoUser || !savedLidoPass || !targetRaw) return showToast('請輸入有效的航班編號', true);
+
+            fetchBtn.disabled = true;
+            document.getElementById('loading-spinner').classList.remove('hidden');
+            document.getElementById('visual-dashboard').innerHTML = '<div class="flex h-full items-center justify-center text-emerald-600/50 font-mono text-base tracking-widest animate-pulse">正在穿透伺服器防線...</div>';
+            document.getElementById('atc-display').value = '資料攔截中...';
+            document.getElementById('copy-btn-main').classList.add('hidden');
+            document.getElementById('copy-btn-atc').classList.add('hidden');
+
+            try {
+                const response = await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
+                });
+
+                const responseData = await response.json();
+
+                if (responseData.status === 'success') {
+                    const f = responseData.data;
+                    const ofpData = f.ofpDetails || {};
+                    const docs = ofpData.categories ? ofpData.categories : (ofpData.briefingPackages ? ofpData.briefingPackages[0].categories : []);
+                    const leg = ofpData.briefingPackages && ofpData.briefingPackages[0] && ofpData.briefingPackages[0].leg ? ofpData.briefingPackages[0].leg[0] : {};
+                    const rawTexts = f.rawTexts || {};
+
+                    let atcText = '未尋獲 ATC 報文';
+                    if (rawTexts['ATS']) {
+                        const fplMatch = rawTexts['ATS'].match(/\(FPL-[\s\S]*?\)/);
+                        if (fplMatch) atcText = fplMatch[0];
+                    }
+                    document.getElementById('atc-display').value = atcText;
+                    if (atcText !== '未尋獲 ATC 報文') document.getElementById('copy-btn-atc').classList.remove('hidden');
+
+                    const flightNo = (leg.commercialAirlineICAO || '') + (leg.flightNumber || '');
+                    const reg = leg.aircraftDetails?.aircraftRegistration || 'N/A';
+                    const dep = leg.departureAirportICAO || 'N/A';
+                    const dest = leg.destinationAirportICAO || 'N/A';
+                    const flightRoute = leg.flightRoute || 'N/A';
+                    
+                    let ofpDocs = [];
+                    docs.forEach(c => { if (c.type === "OFP" && c.documents) ofpDocs = ofpDocs.concat(c.documents); });
+                    const ofpNoRaw = getMetaValue(ofpDocs, 'ofpNumber') || leg.ofpNumber || '0';
+                    const ofpNo = `OFP ${String(ofpNoRaw.split('/')[0]).padStart(2, '0')}`;
+
+                    const routeParts = flightRoute.split(/\s+/);
+                    const depRwy = routeParts.length > 0 ? routeParts[0] : 'N/A';
+                    const destRwy = routeParts.length > 1 ? routeParts[routeParts.length - 1] : 'N/A';
+
+                    let destAltnSet = new Set();
+                    let enrouteSet = new Set();
+                    let suitableSet = new Set();
+
+                    const addAirport = (set, icao, iata) => {
+                        if (icao && icao.length === 4) {
+                            set.add(icao);
+                            if (iata && iata.length === 3) airportMap[icao] = iata;
+                        }
+                    };
+
+                    if (rawTexts['IWFR']) {
+                        const iwfr = rawTexts['IWFR'];
+                        
+                        const extractAirports = (headerStr, set) => {
+                            const regex = new RegExp(headerStr + "[^A-Z]*([\\s\\S]*?)(?=\\n[A-Z0-9\\s()]+:|$)", "i");
+                            const match = iwfr.match(regex);
+                            if (match) {
+                                match[1].split('\n').forEach(l => {
+                                    // 嚴格過濾：必須緊貼行首且為 4 個大寫英文字母，完美閃避縮排的 METAR/TAF 氣象代碼
+                                    if (l.match(/^[A-Z]{4}/)) { 
+                                        const m = l.match(/^([A-Z]{4})(?:\/([A-Z]{3}))?\b/);
+                                        if (m) addAirport(set, m[1], m[2]);
+                                    }
+                                });
+                            }
+                        };
+
+                        extractAirports('DESTINATION ALTERNATE[S]?', destAltnSet);
+                        extractAirports('ENROUTE AIRPORT\\(S\\)', enrouteSet);
+                        extractAirports('SUITABLE ENROUTE AIRPORT\\(S\\)', suitableSet);
+                    }
+
+                    if (destAltnSet.size === 0 && atcText !== '未尋獲 ATC 報文') {
+                        const destAltnMatch = atcText.match(/-[A-Z]{4}\d{4}\s+([A-Z]{4})(?:\s+([A-Z]{4}))?/);
+                        if (destAltnMatch) {
+                            if (destAltnMatch[1]) addAirport(destAltnSet, destAltnMatch[1]);
+                            if (destAltnMatch[2]) addAirport(destAltnSet, destAltnMatch[2]);
+                        }
+                    }
+                    if (enrouteSet.size === 0 && suitableSet.size === 0 && atcText !== '未尋獲 ATC 報文') {
+                        const raltMatch = atcText.match(/RALT\/([\s\S]+?)(?=\s+[A-Z]{3,4}\/|\))/);
+                        if (raltMatch) {
+                            raltMatch[1].trim().split(/\s+/).forEach(code => {
+                                if (/^[A-Z]{4}$/.test(code) && code !== dep && code !== dest) addAirport(enrouteSet, code);
+                            });
+                        }
+                    }
+
+                    if (destAltnSet.size === 0 && rawTexts['OFP']) {
+                        const altnSection = rawTexts['OFP'].match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
+                        if (altnSection) {
+                            [...altnSection[0].matchAll(/^([A-Z]{4})\b/gm)].forEach(m => {
+                                if (m[1] !== 'TIME' && m[1] !== dep && m[1] !== dest) addAirport(destAltnSet, m[1]);
+                            });
+                        }
+                    }
+                    if (enrouteSet.size === 0 && suitableSet.size === 0 && rawTexts['OFP']) {
+                        const enrteSection = rawTexts['OFP'].match(/(?:ENRTE ALTNS|EDTO ALTERNATES|SUITABLE ENROUTE)[^\n]*\n([\s\S]+?)(?=CRITICAL FUEL|RAMP FUEL|WIND SUMMARY|EDTO|PAGE \d|LIMIT)/i);
+                        if (enrteSection) {
+                            [...enrteSection[1].matchAll(/^\s*([A-Z]{4})\b/gm)].forEach(m => {
+                                if (m[1] !== 'TIME' && m[1] !== 'PAGE' && m[1] !== dep && m[1] !== dest) {
+                                    addAirport(suitableSet, m[1]); 
+                                }
+                            });
+                        }
+                    }
+
+                    let destAltnAirports = Array.from(destAltnSet);
+                    let enrouteAirports = Array.from(enrouteSet);
+                    const isEdto = rawTexts['OFP'] && /EDTO|ETOPS/.test(rawTexts['OFP']);
+
+                    let alt1Rwy = 'N/A', alt2Rwy = 'N/A';
+                    if (destAltnAirports.length > 0) {
+                        const alt1Icao = destAltnAirports[0];
+                        alt1Rwy = alt1Icao;
+                        if (rawTexts['OFP']) {
+                            const rwyMatch = rawTexts['OFP'].match(new RegExp(`\\b${alt1Icao}/([0-9]{2}[LRC]?)\\b`));
+                            if (rwyMatch) alt1Rwy = `${alt1Icao}/${rwyMatch[1]}`;
+                        }
+                    }
+                    if (destAltnAirports.length > 1) {
+                        const alt2Icao = destAltnAirports[1];
+                        alt2Rwy = alt2Icao;
+                        if (rawTexts['OFP']) {
+                            const rwyMatch = rawTexts['OFP'].match(new RegExp(`\\b${alt2Icao}/([0-9]{2}[LRC]?)\\b`));
+                            if (rwyMatch) alt2Rwy = `${alt2Icao}/${rwyMatch[1]}`;
+                        }
+                    }
+
+                    const stdStr = formatAviationTime(leg.scheduledDepartureTime);
+                    const staStr = formatAviationTime(leg.scheduledTimeOfArrival);
+                    const etdStr = formatAviationTime(leg.estimatedDepartureTime);
+                    const tripMins = leg.fuel?.totalTripTimeMinutes || 0;
+                    const eteStr = tripMins ? `${('0' + Math.floor(tripMins/60)).slice(-2)}.${('0' + (tripMins%60)).slice(-2)}` : 'N/A';
+
+                    const zfw = leg.weight?.plannedZfw || 0;
+                    const tkofFuel = leg.fuel?.takeOffFuel || 0;
+                    const tripFuel = leg.fuel?.tripFuel || 0;
+                    const tow = zfw > 0 ? ((zfw + tkofFuel) / 1000).toFixed(1) : 'N/A';
+                    const ldw = zfw > 0 ? ((zfw + tkofFuel - tripFuel) / 1000).toFixed(1) : 'N/A';
+
+                    let efbVer = 'N/A';
+                    if (rawTexts['CREWINFO']) {
+                        const efbMatches = [...rawTexts['CREWINFO'].matchAll(/EFB VER\.?\s*SJX-IOS-(R\d{3,4})/ig)];
+                        if (efbMatches.length > 0) {
+                            efbVer = efbMatches[efbMatches.length - 1][1]; 
+                        } else {
+                            const fallbackMatches = [...rawTexts['CREWINFO'].matchAll(/EFB VER[.\sA-Z0-9-]*?(R\d{3,4})/ig)];
+                            if (fallbackMatches.length > 0) efbVer = fallbackMatches[fallbackMatches.length - 1][1]; 
+                        }
+                    }
+
+                    let cruiseAltStr = 'N/A', wc = 'N/A', mxsh = 'N/A';
+                    let totalFuel = 'N/A', divFuelCalc = 'N/A', spareFuelCalc = 'N/A';
+                    let f_addWxx = 0, f_addOpn = 0, f_addAtc = 0, f_addDev = 0, f_cont = 0, f_crit = 0, f_tank = 0, f_extra = 0;
+
+                    if (rawTexts['OFP']) {
+                        const ofpText = rawTexts['OFP'];
+                        const ofpLines = ofpText.split('\n');
+                        
+                        const wcMatch = ofpText.match(/W\/C\s+([A-Z0-9]+)/);
+                        if (wcMatch) wc = wcMatch[1];
+                        
+                        const mxshMatch = ofpText.match(/MXSH\s+([A-Z0-9\/]+)/);
+                        if (mxshMatch) {
+                            mxsh = mxshMatch[1];
+                            const mxshParts = mxsh.split('/');
+                            if (mxshParts.length > 1) {
+                                const wptName = mxshParts[1].trim();
+                                const wptRegex = new RegExp(`\\b${wptName}\\b[\\s\\S]{0,300}?\\.{2,}\\s*(\\d{4})`);
+                                const atgoMatch = ofpText.match(wptRegex);
+                                if (atgoMatch) {
+                                    mxsh += ` ATGO ${atgoMatch[1]}`;
+                                } else {
+                                    const fallbackRegex = new RegExp(`\\b${wptName}\\b[\\s\\S]{0,300}?\\n\\s*0\\d{3}\\b`);
+                                    const fbMatch = ofpText.match(fallbackRegex);
+                                    if (fbMatch) mxsh += ` ATGO ${fbMatch[1].trim()}`;
+                                }
+                            }
+                        }
+
+                        let tocAlt = 'N/A', nextWptTempStr = '';
+                        let tocIndex = ofpLines.findIndex(l => /\bT_?O_?C\b/.test(l));
+                        if (tocIndex !== -1) {
+                            const altMatch = ofpLines[tocIndex].match(/\b([2-4]\d{2})\b/);
+                            if (altMatch) tocAlt = 'FL' + altMatch[1];
+
+                            const textAfterTOC = ofpText.substring(ofpText.indexOf(ofpLines[tocIndex]));
+                            const tempMatches = [...textAfterTOC.matchAll(/\b([MP]\d{2})(?:\/\d{2})?\b/g)];
+                            if (tempMatches.length > 1) {
+                                let tempRaw = tempMatches[1][1]; 
+                                nextWptTempStr = tempRaw.startsWith('M') ? `-${tempRaw.substring(1)}` : `+${tempRaw.substring(1)}`;
+                            }
+                        }
+                        cruiseAltStr = (tocAlt !== 'N/A' && nextWptTempStr) ? `${tocAlt}/${nextWptTempStr}` : tocAlt;
+
+                        const getFuel = (regex) => {
+                            const m = ofpText.match(regex);
+                            return m ? parseInt(m[1], 10) : 0;
+                        };
+                        const f_total = getFuel(/TOTAL\s+(\d+)/);
+                        if (f_total > 0) totalFuel = f_total;
+                        
+                        const f_altn = getFuel(/ALTN(?:\s+[A-Z0-9]{3,4})?\s+(\d+)/);
+                        const f_frf = getFuel(/FINAL RES\s+(\d+)/);
+                        divFuelCalc = `${f_altn} + ${f_frf} = ${f_altn + f_frf}`;
+                        
+                        f_addWxx = getFuel(/ADD WXX\s+(\d+)/);
+                        f_addOpn = getFuel(/ADD OPN\s+(\d+)/);
+                        f_addAtc = getFuel(/ADD ATC\s+(\d+)/);
+                        f_addDev = getFuel(/ADD DEV\s+(\d+)/);
+                        f_cont = getFuel(/CONT\s+(\d+)/);
+                        f_crit = getFuel(/CRIT FUEL\s+(\d+)/);
+                        f_tank = getFuel(/TANKERING\s+(\d+)/);
+                        f_extra = getFuel(/EXTRA\s+(\d+)/);
+                        
+                        const f_spare = f_addWxx + f_addOpn + f_addAtc + f_addDev + f_cont + f_crit + f_tank + f_extra;
+                        spareFuelCalc = f_spare.toString();
+                    }
+
+                    let raimOutage = 'RAIM not satisfied', raimSatellites = 'N/A';
+                    if (rawTexts['RAIM']) {
+                        if (rawTexts['RAIM'].includes('THERE ARE NO RAIM OUTAGES FOR THE PLANNED APPROACHES')) {
+                            raimOutage = 'THERE ARE NO RAIM OUTAGES FOR THE PLANNED APPROACHES';
+                        }
+                        const satMatch = rawTexts['RAIM'].match(/MINIMUM NUMBER OF HEALTHY SATELLITES.*?(\d+)/i);
+                        if (satMatch) raimSatellites = satMatch[1];
+                    }
+
+                    let rawBlock = `基本資訊：\n`;
+                    rawBlock += `Flight number: ${flightNo}\n`;
+                    rawBlock += `機號: ${reg}\n`;
+                    rawBlock += `出發地/目的地: ${dep}/${dest}\n`;
+                    rawBlock += `STD: ${stdStr}\n`;
+                    rawBlock += `STA: ${staStr}\n`;
+                    rawBlock += `ETD: ${etdStr}\n`;
+                    rawBlock += `ETE: ${eteStr}\n`;
+                    rawBlock += `巡航高度: ${cruiseAltStr}\n`;
+                    rawBlock += `起飛跑道: ${depRwy}\n`;
+                    rawBlock += `落地跑道: ${destRwy}\n`;
+                    rawBlock += `------------------------------------------------------\n`;
+                    
+                    rawBlock += `航路資訊：\n`;
+                    rawBlock += `OFP 號碼: ${ofpNo}\n`;
+                    rawBlock += `EFB 版本: ${efbVer}\n`;
+                    rawBlock += `Route: ${flightRoute}\n`;
+                    rawBlock += `W/C: ${wc}\n`;
+                    rawBlock += `MXSH: ${mxsh}\n`;
+                    rawBlock += `------------------------------------------------------\n`;
+                    
+                    rawBlock += `性能資訊：\n`;
+                    rawBlock += `TOW: ${tow}\n`;
+                    rawBlock += `LDW: ${ldw}\n`;
+                    rawBlock += `Total Fuel: ${totalFuel}\n`;
+                    const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
+                    rawBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}\n`;
+                    rawBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
+                    rawBlock += `ADD WXX: ${f_addWxx}\n`;
+                    rawBlock += `ADD OPN: ${f_addOpn}\n`;
+                    rawBlock += `ADD ATC: ${f_addAtc}\n`;
+                    rawBlock += `ADD DEV: ${f_addDev}\n`;
+                    rawBlock += `CONT: ${f_cont}\n`;
+                    rawBlock += `CRIT FUEL: ${f_crit}\n`;
+                    rawBlock += `TANKERING: ${f_tank}\n`;
+                    rawBlock += `EXTRA: ${f_extra}\n`;
+                    rawBlock += `------------------------------------------------------\n`;
+
+                    let airportBlock = `機場資訊：\n`;
+                    airportBlock += `DEPARTURE AIRPORT:\n${getAirportStr(dep)}\n`;
+                    airportBlock += `DESTINATION AIRPORT:\n${getAirportStr(dest)}\n`;
+                    if (destAltnSet.size > 0) {
+                        airportBlock += `DESTINATION ALTERNATE:\n`;
+                        destAltnSet.forEach(a => airportBlock += `${getAirportStr(a)}\n`);
+                    }
+                    if (enrouteSet.size > 0) {
+                        airportBlock += `ENROUTE AIRPORT(S):\n`;
+                        enrouteSet.forEach(a => airportBlock += `${getAirportStr(a)}\n`);
+                    }
+                    if (suitableSet.size > 0) {
+                        airportBlock += `SUITABLE ENROUTE AIRPORT(S):\n`;
+                        suitableSet.forEach(a => airportBlock += `${getAirportStr(a)}\n`);
+                    }
+                    rawBlock += airportBlock;
+                    rawBlock += `------------------------------------------------------\n`;
+                    
+                    rawBlock += `其他資訊：\n`;
+                    rawBlock += `RAIM Outages: ${raimOutage}\n`;
+                    rawBlock += `RAIM Healthy Satellites: ${raimSatellites}\n`;
+
+                    document.getElementById('hidden-raw-text').value = rawBlock;
+
+                    let enrouteVisualHtml = '';
+                    if (enrouteSet.size > 0 || suitableSet.size > 0) {
+                        enrouteVisualHtml = `<div class="md:col-span-2 border-t border-slate-700/30 pt-3 mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">`;
+                        if (enrouteSet.size > 0) {
+                            enrouteVisualHtml += `
+                            <div>
+                                <span class="text-slate-400 block text-xs mb-1">ENROUTE AIRPORT(S)</span>
+                                <div class="space-y-1">
+                                    ${Array.from(enrouteSet).map(a => `<span class="text-slate-200 block font-bold tracking-widest">${getAirportStr(a)}</span>`).join('')}
+                                </div>
+                            </div>`;
+                        }
+                        if (suitableSet.size > 0) {
+                            enrouteVisualHtml += `
+                            <div>
+                                <span class="text-slate-400 block text-xs mb-1">SUITABLE ENROUTE AIRPORT(S)</span>
+                                <div class="space-y-1">
+                                    ${Array.from(suitableSet).map(a => `<span class="text-slate-200 block font-bold tracking-widest">${getAirportStr(a)}</span>`).join('')}
+                                </div>
+                            </div>`;
+                        }
+                        enrouteVisualHtml += `</div>`;
+                    }
+
+                    const visualHtml = `
+                        <!-- 基本資訊區塊 -->
+                        <div class="bg-slate-800/40 rounded-xl border border-slate-700/60 overflow-hidden mb-6">
+                            <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-700/60 flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
+                                <h3 class="text-blue-400 font-bold tracking-widest text-xs">基本資訊</h3>
+                            </div>
+                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                ${renderRow('Flight number', flightNo, true)}
+                                ${renderRow('機號', reg)}
+                                ${renderRow('出發地/目的地', `${dep}/${dest}`)}
+                                ${renderRow('STD', stdStr)}
+                                ${renderRow('STA', staStr)}
+                                ${renderRow('ETD', etdStr)}
+                                ${renderRow('ETE', eteStr, true)}
+                                ${renderRow('巡航高度', cruiseAltStr)}
+                                ${renderRow('起飛跑道', depRwy)}
+                                ${renderRow('落地跑道', destRwy)}
+                            </div>
+                        </div>
+
+                        <!-- 航路資訊區塊 -->
+                        <div class="bg-slate-800/40 rounded-xl border border-slate-700/60 overflow-hidden mb-6">
+                            <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-700/60 flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
+                                <h3 class="text-purple-400 font-bold tracking-widest text-xs">航路資訊</h3>
+                            </div>
+                            <div class="p-4 flex flex-col gap-y-1">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 w-full">
+                                    ${renderRow('OFP 號碼', ofpNo)}
+                                    ${renderRow('EFB 版本', efbVer)}
+                                    ${renderRow('W/C', wc, true)}
+                                    ${renderRow('MXSH', mxsh, true)}
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-slate-700/50">
+                                    <span class="text-slate-400 block mb-1">Route:</span>
+                                    <span class="text-slate-300 block leading-relaxed tracking-wide bg-slate-900/50 p-3 rounded border border-slate-700/50">${flightRoute}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 性能資訊區塊 -->
+                        <div class="bg-slate-800/40 rounded-xl border border-slate-700/60 overflow-hidden mb-6">
+                            <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-700/60 flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-amber-500 mr-2"></div>
+                                <h3 class="text-amber-400 font-bold tracking-widest text-xs">性能與油量資訊</h3>
+                            </div>
+                            <div class="p-4 grid grid-cols-1 gap-y-1">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 w-full border-b border-slate-700/30 pb-3 mb-2">
+                                    ${renderRow('TOW', tow, true)}
+                                    ${renderRow('LDW', ldw, true)}
+                                </div>
+                                ${renderRow('Total Fuel', totalFuel)}
+                                ${renderRow(`Division Fuel (${altnLabel}+FRF)`, divFuelCalc)}
+                                ${renderRow('SPARE Fuel', spareFuelCalc, true)}
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 w-full border-t border-slate-700/30 pt-2 mt-2">
+                                    ${renderRow('ADD WXX', f_addWxx)}
+                                    ${renderRow('ADD OPN', f_addOpn)}
+                                    ${renderRow('ADD ATC', f_addAtc)}
+                                    ${renderRow('ADD DEV', f_addDev)}
+                                    ${renderRow('CONT', f_cont)}
+                                    ${renderRow('CRIT FUEL', f_crit)}
+                                    ${renderRow('TANKERING', f_tank)}
+                                    ${renderRow('EXTRA', f_extra)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 機場情報區塊 -->
+                        <div class="bg-slate-800/40 rounded-xl border border-slate-700/60 overflow-hidden mb-6">
+                            <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-700/60 flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-cyan-500 mr-2"></div>
+                                <h3 class="text-cyan-400 font-bold tracking-widest text-xs">機場資訊 (Airport Information)</h3>
+                            </div>
+                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                <div>
+                                    <span class="text-slate-400 block text-xs mb-1">DEPARTURE AIRPORT</span>
+                                    <span class="text-slate-200 font-bold tracking-widest">${getAirportStr(dep)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block text-xs mb-1">DESTINATION AIRPORT</span>
+                                    <span class="text-slate-200 font-bold tracking-widest">${getAirportStr(dest)}</span>
+                                </div>
+                                ${destAltnAirports.length > 0 ? `
+                                <div class="md:col-span-2">
+                                    <span class="text-slate-400 block text-xs mb-1">DESTINATION ALTERNATE</span>
+                                    <div class="flex flex-wrap gap-x-6 gap-y-1">
+                                        ${destAltnAirports.map(a => `<span class="text-slate-200 block font-bold tracking-widest">${getAirportStr(a)}</span>`).join('')}
+                                    </div>
+                                </div>` : ''}
+                                ${enrouteVisualHtml}
+                            </div>
+                        </div>
+
+                        <!-- 其他資訊區塊 -->
+                        <div class="bg-slate-800/40 rounded-xl border border-slate-700/60 overflow-hidden">
+                            <div class="bg-slate-800/80 px-4 py-2 border-b border-slate-700/60 flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-rose-500 mr-2"></div>
+                                <h3 class="text-rose-400 font-bold tracking-widest text-xs">衛星與導航監測 (RAIM)</h3>
+                            </div>
+                            <div class="p-4 flex flex-col gap-y-1">
+                                ${renderRow('RAIM Outages', raimOutage)}
+                                ${renderRow('RAIM Healthy Satellites', raimSatellites)}
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('visual-dashboard').innerHTML = visualHtml;
+                    document.getElementById('copy-btn-main').classList.remove('hidden');
+                    showToast('機密情報截獲，儀表板已更新！');
+                } else {
+                    document.getElementById('visual-dashboard').innerHTML = `<div class="text-red-400 flex flex-col items-center justify-center h-full"><svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>發生錯誤：<br/>${responseData.message}</div>`;
+                    showToast('擷取失敗', true);
+                }
+            } catch (error) {
+                document.getElementById('visual-dashboard').innerHTML = `<div class="text-red-400 flex flex-col items-center justify-center h-full">連線中斷：<br/>${error.message}</div>`;
+                showToast('系統異常', true);
+            } finally {
+                fetchBtn.disabled = false;
+                document.getElementById('loading-spinner').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('copy-btn-main').addEventListener('click', () => {
+            const hiddenRaw = document.getElementById('hidden-raw-text');
+            hiddenRaw.classList.remove('hidden'); 
+            hiddenRaw.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            hiddenRaw.classList.add('hidden'); 
+            showToast('已複製勤務專屬純文字至剪貼簿');
+        });
+
+        document.getElementById('copy-btn-atc').addEventListener('click', () => {
+            const display = document.getElementById('atc-display');
+            display.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            showToast('已複製 ATC 報文');
+        });
+    </script>
+</body>
+</html>
