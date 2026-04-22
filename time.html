@@ -1,30 +1,90 @@
+ <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>時間計算器</title>
+<style>
+  /* 基礎佈局與樣式 */
+  body { font-family: system-ui, -apple-system, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
+  .time-calc-section { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+  h2 { display: flex; justify-content: space-between; align-items: center; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+  .app-header-btn { background: none; border: none; cursor: pointer; color: #666; transition: color 0.2s; }
+  .app-header-btn:hover { color: #3c79ff; }
+  
+  /* 頁籤樣式 */
+  .time-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+  .time-tab-btn { flex: 1; padding: 10px; border: none; background: #eee; border-radius: 8px; cursor: pointer; font-weight: bold; color: #555; }
+  .time-tab-btn.active { background: #3c79ff; color: #fff; }
+  .time-tab-content { display: none; }
+  .time-tab-content.active { display: block; }
+  
+  /* 卡片與內容區塊 */
+  .app-card { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+  .app-label { font-size: 0.9em; font-weight: bold; color: #555; }
+  .app-time-input { display: flex; align-items: center; gap: 5px; }
+  
+  /* 🌟 優化：針對 iOS 絲滑輸入框的專屬樣式 🌟 */
+  .app-time-input input[inputmode="numeric"] { 
+    width: 50px; 
+    padding: 8px; 
+    border: 1px solid #ccc; 
+    border-radius: 6px; 
+    text-align: center; 
+    font-size: 1.1em; 
+    font-family: monospace; /* 等寬字體讓數字視覺更穩定 */
+    transition: border-color 0.2s;
+  }
+  .app-time-input input[inputmode="numeric"]:focus {
+    border-color: #3c79ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(60,121,255,0.2);
+  }
+  #addDays { width: 60px !important; } /* 天數可以寬一點 */
+  
+  .app-date-input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1em; }
+  
+  /* 切換開關 */
+  .app-toggle { position: relative; display: flex; background: #eee; border-radius: 20px; overflow: hidden; padding: 2px; }
+  .app-toggle-btn { flex: 1; border: none; background: transparent; padding: 8px; z-index: 2; position: relative; cursor: pointer; font-weight: bold; color: #666; transition: color 0.3s;}
+  .app-toggle-btn.active { color: #fff; }
+  .app-toggle-pill { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); background: #3c79ff; border-radius: 18px; z-index: 1; transition: transform 0.3s ease; }
+  
+  /* 按鈕與結果顯示 */
+  button[onclick^="calc"] { background: #3c79ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+  button[onclick^="calc"]:hover { background: #2a5ddc; }
+  .app-time-display { font-size: 1.5em; font-weight: bold; color: #3c79ff; }
+</style>
+</head>
+<body>
+
   <div class="section time-calc-section" id="timeCalcBox">
     <h2>
       <div>⏱️ 時間計算器</div>
-      <button id="resetTimeCalcBtn" class="app-header-btn" title="重設所有數值">
+      <button id="resetTimeCalcBtn" class="app-header-btn" title="重設所有數值" onclick="resetAll()">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
       </button>
     </h2>
     
     <div class="app-wrapper">
       
-      <!-- 分頁按鈕 -->
       <div class="time-tabs">
         <button class="time-tab-btn active" data-tab="tab-simple" onclick="switchTimeTab('tab-simple')">純時間加減</button>
         <button class="time-tab-btn" data-tab="tab-diff" onclick="switchTimeTab('tab-diff')">時間差計算</button>
         <button class="time-tab-btn" data-tab="tab-addsub" onclick="switchTimeTab('tab-addsub')">時間推算</button>
       </div>
 
-      <!-- 功能一：單純時間加減 -->
+      <!-- 功能一：純時間加減 -->
       <div id="tab-simple" class="time-tab-content active">
         <div class="app-card" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
           
           <div style="flex: 1; text-align: center;">
             <div class="app-label" style="margin-bottom: 8px;">TIME 1</div>
             <div class="app-time-input" style="justify-content: center;">
-              <input type="number" id="simpleH1" min="0" placeholder="0">
+              <!-- 🌟 換成 iOS 友善輸入框 🌟 -->
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleH1" class="auto-next" data-next="simpleM1" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">時</span>
-              <input type="number" id="simpleM1" min="0" placeholder="0">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM1" class="auto-next" data-next="simpleH2" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">分</span>
             </div>
           </div>
@@ -41,9 +101,10 @@
           <div style="flex: 1; text-align: center;">
             <div class="app-label" style="margin-bottom: 8px;">TIME 2</div>
             <div class="app-time-input" style="justify-content: center;">
-              <input type="number" id="simpleH2" min="0" placeholder="0">
+              <!-- 🌟 換成 iOS 友善輸入框 🌟 -->
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleH2" class="auto-next" data-next="simpleM2" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">時</span>
-              <input type="number" id="simpleM2" min="0" placeholder="0">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM2" class="auto-next" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">分</span>
             </div>
           </div>
@@ -59,15 +120,16 @@
 
       <!-- 功能二：計算時間差 -->
       <div id="tab-diff" class="time-tab-content">
-        <div class="app-grid" style="margin-bottom: 1.5em;">
+        <div class="app-grid" style="display: flex; gap: 15px; margin-bottom: 1.5em; flex-wrap: wrap;">
           <div class="app-card" style="flex: 1; margin-bottom: 0;">
             <div class="app-label" style="margin-bottom: 10px;">🛫 起始時間</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <input type="date" id="diffStartDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
               <div class="app-time-input" style="justify-content: center;">
-                <select id="diffStartHour"></select>
+                <!-- 🌟 廢除 Select，改用絲滑輸入 🌟 -->
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="diffStartHour" class="auto-next" data-next="diffStartMin" placeholder="00" onfocus="this.select()">
                 <span>:</span>
-                <select id="diffStartMin"></select>
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="diffStartMin" class="auto-next" data-next="diffEndHour" placeholder="00" onfocus="this.select()">
               </div>
             </div>
           </div>
@@ -77,9 +139,10 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <input type="date" id="diffEndDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
               <div class="app-time-input" style="justify-content: center;">
-                <select id="diffEndHour"></select>
+                <!-- 🌟 廢除 Select，改用絲滑輸入 🌟 -->
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="diffEndHour" class="auto-next" data-next="diffEndMin" placeholder="00" onfocus="this.select()">
                 <span>:</span>
-                <select id="diffEndMin"></select>
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="diffEndMin" class="auto-next" placeholder="00" onfocus="this.select()">
               </div>
             </div>
           </div>
@@ -100,9 +163,10 @@
             <div class="app-label" style="min-width: 80px; margin: 0;">📍 基準</div>
             <input type="date" id="baseDate" class="app-date-input">
             <div class="app-time-input">
-              <select id="baseHour"></select>
+              <!-- 🌟 廢除 Select，改用絲滑輸入 🌟 -->
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="baseHour" class="auto-next" data-next="baseMin" placeholder="00" onfocus="this.select()">
               <span>:</span>
-              <select id="baseMin"></select>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="baseMin" class="auto-next" data-next="addDays" placeholder="00" onfocus="this.select()">
             </div>
           </div>
 
@@ -117,11 +181,12 @@
             <input type="hidden" id="operationType" value="add">
 
             <div class="app-time-input">
-              <input type="number" id="addDays" min="0" placeholder="0">
+              <!-- 🌟 換成 iOS 友善輸入框 🌟 -->
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="addDays" class="auto-next" data-next="addHours" placeholder="0" onfocus="this.select()">
               <span style="color:#555;">天</span>
-              <input type="number" id="addHours" min="0" placeholder="0">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="addHours" class="auto-next" data-next="addMins" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">時</span>
-              <input type="number" id="addMins" min="0" placeholder="0">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="addMins" class="auto-next" placeholder="00" onfocus="this.select()">
               <span style="color:#555;">分</span>
             </div>
           </div>
@@ -137,3 +202,185 @@
 
     </div>
   </div>
+
+  <script>
+    // --- 系統初始化 ---
+    document.addEventListener("DOMContentLoaded", () => {
+      setTodayDates();
+      initAutoNextLogic(); // 啟動絲滑輸入邏輯
+    });
+
+    function setTodayDates() {
+      const today = new Date().toISOString().split('T')[0];
+      ['diffStartDate', 'diffEndDate', 'baseDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.value = today;
+      });
+    }
+
+    // 🌟 核心靈魂：自動跳格與補零邏輯 🌟
+    function initAutoNextLogic() {
+      const autoNextInputs = document.querySelectorAll('.auto-next');
+      
+      autoNextInputs.forEach(input => {
+        // 監聽輸入事件
+        input.addEventListener('input', function() {
+          // 強制剔除非數字字元 (防呆)
+          this.value = this.value.replace(/[^0-9]/g, '');
+          
+          // 若長度達到最大值 (如兩位數)，自動跳轉下一個欄位
+          if (this.value.length >= this.maxLength) {
+            const nextTargetId = this.getAttribute('data-next');
+            if (nextTargetId) {
+              const nextElement = document.getElementById(nextTargetId);
+              if (nextElement) nextElement.focus();
+            } else {
+              this.blur(); // 沒下一個欄位就自動收起鍵盤
+            }
+          }
+        });
+
+        // 離開焦點時自動補零 (例如輸入 8 會變 08，確保格式美觀，但天數不強制補零)
+        input.addEventListener('blur', function() {
+          if (this.value.length === 1 && this.id !== 'addDays') {
+            this.value = '0' + this.value;
+          }
+        });
+      });
+    }
+
+    // --- 標籤切換邏輯 ---
+    function switchTimeTab(tabId) {
+      document.querySelectorAll('.time-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.time-tab-content').forEach(content => content.classList.remove('active'));
+      
+      document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // --- 切換開關邏輯 ---
+    function setSimpleOp(op) {
+      document.getElementById('simpleOp').value = op;
+      document.getElementById('btnOpAdd').classList.toggle('active', op === 'add');
+      document.getElementById('btnOpSub').classList.toggle('active', op === 'sub');
+      document.getElementById('simpleOpPill').style.transform = op === 'add' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
+    function setBaseOp(op) {
+      document.getElementById('operationType').value = op;
+      document.getElementById('btnBaseAdd').classList.toggle('active', op === 'add');
+      document.getElementById('btnBaseSub').classList.toggle('active', op === 'sub');
+      document.getElementById('baseOpPill').style.transform = op === 'add' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
+    // --- 功能一：純時間加減 ---
+    function calculateSimple() {
+      const h1 = parseInt(document.getElementById('simpleH1').value) || 0;
+      const m1 = parseInt(document.getElementById('simpleM1').value) || 0;
+      const h2 = parseInt(document.getElementById('simpleH2').value) || 0;
+      const m2 = parseInt(document.getElementById('simpleM2').value) || 0;
+      const op = document.getElementById('simpleOp').value;
+
+      const totalMins1 = (h1 * 60) + m1;
+      const totalMins2 = (h2 * 60) + m2;
+      
+      let resultMins = op === 'add' ? totalMins1 + totalMins2 : totalMins1 - totalMins2;
+      const isNegative = resultMins < 0;
+      resultMins = Math.abs(resultMins);
+
+      const resH = Math.floor(resultMins / 60);
+      const resM = resultMins % 60;
+
+      const sign = isNegative ? "- " : "";
+      document.getElementById('simpleResultText').innerText = `${sign}${resH} 小時 ${resM} 分鐘`;
+      document.getElementById('simpleResultDetail').innerText = `總計: ${isNegative ? '-' : ''}${resultMins} 分鐘`;
+      document.getElementById('simpleResultBox').style.display = 'block';
+    }
+
+    // --- 功能二：計算時間差 ---
+    function calculateTimeDiff() {
+      const d1 = document.getElementById('diffStartDate').value;
+      // 使用 padStart 確保即便使用者直接點計算，字串也能符合 ISO 格式
+      const h1 = String(document.getElementById('diffStartHour').value || '00').padStart(2, '0');
+      const m1 = String(document.getElementById('diffStartMin').value || '00').padStart(2, '0');
+      
+      const d2 = document.getElementById('diffEndDate').value;
+      const h2 = String(document.getElementById('diffEndHour').value || '00').padStart(2, '0');
+      const m2 = String(document.getElementById('diffEndMin').value || '00').padStart(2, '0');
+
+      if (!d1 || !d2) {
+        alert("請選擇完整的日期！");
+        return;
+      }
+
+      const date1 = new Date(`${d1}T${h1}:${m1}:00`);
+      const date2 = new Date(`${d2}T${h2}:${m2}:00`);
+      
+      let diffMs = date2 - date1;
+      const isPast = diffMs < 0;
+      diffMs = Math.abs(diffMs);
+
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+      const mins = Math.floor((diffMs / 1000 / 60) % 60);
+
+      const prefix = isPast ? "相差 (起點大於終點): " : "相差: ";
+      let timeString = [];
+      if (days > 0) timeString.push(`${days} 天`);
+      if (hours > 0) timeString.push(`${hours} 小時`);
+      if (mins > 0 || timeString.length === 0) timeString.push(`${mins} 分鐘`);
+
+      document.getElementById('diffResultText').innerText = prefix + timeString.join(' ');
+      
+      const totalHours = (diffMs / (1000 * 60 * 60)).toFixed(1);
+      document.getElementById('diffResultDetail').innerText = `約合 ${totalHours} 小時`;
+      document.getElementById('diffResultBox').style.display = 'block';
+    }
+
+    // --- 功能三：時間推算 ---
+    function calculateAddSub() {
+      const bDate = document.getElementById('baseDate').value;
+      const bHour = String(document.getElementById('baseHour').value || '00').padStart(2, '0');
+      const bMin = String(document.getElementById('baseMin').value || '00').padStart(2, '0');
+      
+      const addD = parseInt(document.getElementById('addDays').value) || 0;
+      const addH = parseInt(document.getElementById('addHours').value) || 0;
+      const addM = parseInt(document.getElementById('addMins').value) || 0;
+      const op = document.getElementById('operationType').value;
+
+      if (!bDate) {
+        alert("請選擇基準日期！");
+        return;
+      }
+
+      const base = new Date(`${bDate}T${bHour}:${bMin}:00`);
+      const totalMsToAdd = (addD * 24 * 60 * 60 * 1000) + (addH * 60 * 60 * 1000) + (addM * 60 * 1000);
+
+      const newDate = new Date(op === 'add' ? base.getTime() + totalMsToAdd : base.getTime() - totalMsToAdd);
+      
+      const yyyy = newDate.getFullYear();
+      const mm = String(newDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(newDate.getDate()).padStart(2, '0');
+      const hh = String(newDate.getHours()).padStart(2, '0');
+      const min = String(newDate.getMinutes()).padStart(2, '0');
+      
+      const daysOfWeek = ['日', '一', '二', '三', '四', '五', '六'];
+      const dow = daysOfWeek[newDate.getDay()];
+
+      document.getElementById('addsubResultText').innerText = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+      document.getElementById('addsubResultDetail').innerText = `(星期${dow})`;
+      document.getElementById('addsubResultBox').style.display = 'block';
+    }
+
+    // --- 重設所有功能 ---
+    function resetAll() {
+      // 由於換成了 text input，清空直接設為空字串，讓 placeholder 顯現
+      document.querySelectorAll('input[inputmode="numeric"]').forEach(input => input.value = '');
+      setTodayDates();
+      document.querySelectorAll('[id$="ResultBox"]').forEach(box => box.style.display = 'none');
+      setSimpleOp('add');
+      setBaseOp('add');
+    }
+  </script>
+</body>
+</html>
