@@ -74,7 +74,7 @@
     <div id="toast" class="fixed top-5 right-5 transform transition-transform translate-x-full opacity-0 bg-[#4a3627] text-white px-6 py-3 rounded-xl shadow-2xl z-[200] font-bold tracking-wide border border-[#8b5a2b]/30">訊息提示</div>
     <div id="offline-banner" class="fixed top-0 left-0 w-full hidden">⚠️ 目前處於離線模式。顯示資料為系統最後一次快取紀錄。</div>
 
-    <!-- 將鎖定與登入畫面包裝在一個獨立的置中容器內，避免干擾主程式的自然滾動排版 -->
+    <!-- 將鎖定與登入畫面包裝在獨立的置中容器內 -->
     <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-center p-4">
         <!-- 階段一：網頁鎖定畫面 -->
         <div id="lock-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500">
@@ -95,279 +95,267 @@
         </div>
     </div>
 
-    <!-- 階段三：主程式戰情室 (解除高度封印，採用自然滾動) -->
-    <div id="main-app" class="w-full max-w-[1600px] mx-auto p-4 md:p-6 transition-opacity duration-500 hidden flex flex-col">
-        <!-- 頂部 Header -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b border-stone-300 pb-4 shrink-0 gap-4">
-            <h1 class="text-xl md:text-2xl font-black flex items-center text-[#4a3627] tracking-wide">
-                <svg class="w-6 h-6 mr-3 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                Lido 自動勤務戰情室 Pro
-            </h1>
-            <div class="flex gap-4 items-center w-full sm:w-auto justify-between sm:justify-end">
-                <button onclick="clearData()" class="text-sm text-red-500 hover:text-red-700 font-bold transition-colors bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl active:scale-95 shadow-sm">🧹 歸零清理</button>
-                <button id="lock-again-btn" class="text-sm text-stone-500 hover:text-stone-800 font-bold transition-colors flex items-center bg-white border border-stone-200 hover:bg-stone-100 px-4 py-2 rounded-xl active:scale-95 shadow-sm">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    鎖定系統
-                </button>
+    <!-- 階段三：主程式戰情室 (還原 HTML 2 的純粹中心流動排版) -->
+    <div id="main-app" class="w-full mx-auto transition-opacity duration-500 hidden flex flex-col px-3 md:px-6">
+        
+        <!-- 頂部：控制與輸入區 -->
+        <div class="w-full max-w-[1194px] mx-auto mt-2 md:mt-4 lg:mt-6 p-4 md:p-6 bg-white rounded-3xl shadow-lg border border-stone-200 mb-6 relative">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-4">
+                <h1 class="text-xl md:text-2xl font-black text-[#4a3627] tracking-wide flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Lido 自動勤務戰情室 Pro
+                </h1>
+                <div class="flex gap-3 items-center w-full sm:w-auto">
+                    <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
+                    <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🔒 鎖定系統</button>
+                </div>
             </div>
-        </div>
 
-        <!-- 彈性雙欄排版：手機平板上下排列，大螢幕左右排列且左側固定 -->
-        <div class="flex flex-col xl:flex-row gap-6 items-start">
-            
-            <!-- 左側：控制與手動輸入區 -->
-            <div class="w-full xl:w-[340px] 2xl:w-[380px] shrink-0 flex flex-col gap-5 xl:sticky xl:top-6 z-40">
+            <!-- 控制面板群組：手機/平板堆疊，桌面並排 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 
-                <!-- 狙擊區 -->
-                <div class="bg-white p-5 md:p-6 rounded-2xl border border-stone-200 shadow-sm">
-                    <label class="block text-sm font-bold text-stone-600 mb-3 tracking-wide flex items-center gap-2">
-                        <span>🎯</span> 目標航班鎖定
-                    </label>
-                    <div class="flex shadow-inner rounded-xl overflow-hidden border border-stone-300 focus-within:border-[#8b5a2b] focus-within:ring-2 focus-within:ring-[#8b5a2b]/30 transition-all bg-stone-50">
-                        <span class="inline-flex items-center px-4 text-sm text-stone-500 bg-stone-100 font-bold tracking-widest border-r border-stone-200">SJX</span>
-                        <input type="text" id="target-flight" class="w-full px-4 py-3 bg-transparent focus:outline-none text-[#8b5a2b] font-black text-xl tracking-widest" placeholder="例如: 805" autocomplete="off">
+                <!-- 區塊 1: 狙擊與擷取 -->
+                <div class="flex flex-col gap-3 p-4 bg-stone-50 rounded-2xl border border-stone-200 shadow-inner">
+                    <label class="text-sm font-bold text-stone-600 tracking-wide flex items-center gap-1.5"><span>🎯</span> 目標航班鎖定</label>
+                    <div class="flex shadow-sm rounded-xl overflow-hidden border border-stone-300 focus-within:border-[#8b5a2b] focus-within:ring-2 focus-within:ring-[#8b5a2b]/30 bg-white transition-all">
+                        <span class="inline-flex items-center px-3 text-sm text-stone-500 font-bold border-r border-stone-200 bg-stone-100">SJX</span>
+                        <input type="text" id="target-flight" class="w-full px-3 py-2.5 bg-transparent focus:outline-none text-[#8b5a2b] font-black tracking-widest text-lg" placeholder="例如: 805" autocomplete="off">
                     </div>
-                    <button id="fetch-data-btn" class="w-full py-3.5 bg-gradient-to-r from-[#8b5a2b] to-[#b37a4c] hover:from-[#7a4e23] hover:to-[#a3693b] text-white font-bold tracking-widest rounded-xl shadow-md shadow-[#8b5a2b]/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center mt-5">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
-                        <span>發動精準擷取</span>
+                    <button id="fetch-data-btn" class="w-full py-3 bg-gradient-to-r from-[#8b5a2b] to-[#b37a4c] hover:from-[#7a4e23] hover:to-[#a3693b] text-white font-bold tracking-widest rounded-xl shadow-md transition-all active:scale-95 flex justify-center items-center mt-1">
+                        發動精準擷取
                         <svg id="loading-spinner" class="animate-spin ml-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </button>
                 </div>
 
-                <!-- ATC 報文保留區 -->
-                <div class="h-44 shrink-0 flex flex-col bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
-                    <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
-                        <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
-                        <button id="copy-btn-atc" class="flex items-center text-[10px] font-bold text-[#8b5a2b] hover:text-white bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] px-2.5 py-1 rounded transition-colors hidden border border-[#8b5a2b]/30">
-                            📋 複製 FPL
-                        </button>
+                <!-- 區塊 2: ATC 報文保留區 -->
+                <div class="flex flex-col h-44 lg:h-auto bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
+                    <div class="bg-stone-100 px-3 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
+                        <span class="font-bold text-stone-600 text-[11px] tracking-widest">ATC Flight Plan (FPL)</span>
+                        <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
                     </div>
-                    <textarea id="atc-display" readonly class="w-full h-full p-4 bg-stone-50 text-stone-700 font-mono text-[11px] focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
+                    <textarea id="atc-display" readonly class="w-full flex-grow p-3 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
                 </div>
 
-                <!-- 隱藏但提供功能的資料橋接區 -->
-                <div class="flex flex-col gap-4 bg-stone-100/50 p-4 rounded-2xl border border-stone-200/60">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-stone-600 bg-stone-200 px-3 py-1.5 rounded-lg w-max shadow-sm">📄 Part 1: 航路/油量 (系統自動填入)</label>
-                        <textarea id="rawInput" class="w-full h-20 p-3 bg-white border border-stone-200 shadow-inner rounded-xl text-stone-500 text-[10px] data-font focus:border-[#8b5a2b] focus:ring-1 focus:ring-[#8b5a2b] focus:outline-none resize-none transition-shadow" placeholder="擷取完成後會自動置入..." oninput="debouncedParseData()"></textarea>
+                <!-- 區塊 3: 手動補充區 (PAX/MEL/BAY) -->
+                <div class="flex flex-col h-44 lg:h-auto bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden">
+                    <div class="bg-orange-100/50 px-3 py-2 border-b border-orange-200/60 flex justify-between items-center">
+                        <span class="font-bold text-[#b35900] text-[11px] tracking-widest flex items-center gap-1">📦 手動補充 (PAX/MEL/BAY)</span>
                     </div>
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-[#b35900] bg-orange-100 px-3 py-1.5 rounded-lg w-max shadow-sm border border-orange-200/50">📦 Part 2: PAX/MEL/BAY (手動補充)</label>
-                        <textarea id="rawInput2" class="w-full h-20 p-3 bg-white border border-orange-200 shadow-inner rounded-xl text-stone-600 text-[10px] data-font focus:border-[#b35900] focus:ring-1 focus:ring-[#b35900] focus:outline-none resize-none transition-shadow" placeholder="可在此貼上地勤資訊..." oninput="debouncedParseData()"></textarea>
-                    </div>
+                    <textarea id="rawInput2" class="w-full flex-grow p-3 bg-transparent text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="若有額外地勤資訊，請貼於此處..." oninput="debouncedParseData()"></textarea>
                 </div>
             </div>
 
-            <!-- 右側：簡報畫布 (Pro Edition Dashboard) -->
-            <div class="w-full flex-1 flex flex-col gap-6">
+            <!-- 背景隱藏的自動解析區 (對接系統抓取資料) -->
+            <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
+        </div>
+
+        <!-- 真正的 Dashboard 內容區 -->
+        <div id="dashboard-content" class="w-full max-w-[1194px] mx-auto bg-[#f4ece4] flex flex-col gap-4 md:gap-6 pb-6">
+            
+            <!-- Dashboard 第一排：基本資訊與油量 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-5">
                 
-                <!-- 真正的 Dashboard 內容區，完全移除固定高度與額外的 overflow-y-auto -->
-                <div id="dashboard-content" class="w-full max-w-[1194px] mx-auto bg-[#f4ece4] flex flex-col gap-4 md:gap-6">
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-12 gap-4 md:gap-5">
-                        <!-- Left Column: Flight Information -->
-                        <div class="col-span-1 md:col-span-12 lg:col-span-5 flex flex-col gap-0 border border-[#8b5a2b] rounded-2xl overflow-hidden shadow-xl bg-white">
-                            <div class="bg-gradient-to-r from-[#4a3627] to-[#8b5a2b] p-4 flex flex-row justify-between items-center text-white relative overflow-hidden">
-                                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-                                <div class="relative z-10 text-left">
-                                    <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-300 font-bold tracking-widest uppercase mb-0.5 flex items-center gap-2">
-                                        Flight Number <span id="out-utc-date" class="bg-white/20 text-white px-1.5 py-0.5 rounded data-font shadow-sm tracking-wide">----</span>
-                                    </div>
-                                    <div class="text-3xl md:text-5xl lg:text-4xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-flight-no">----</div>
+                <!-- Left Column: Flight Information -->
+                <div class="col-span-1 lg:col-span-5 flex flex-col gap-0 border border-[#8b5a2b] rounded-2xl overflow-hidden shadow-xl bg-white">
+                    <div class="bg-gradient-to-r from-[#4a3627] to-[#8b5a2b] p-4 flex flex-row justify-between items-center text-white relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                        <div class="relative z-10 text-left">
+                            <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-300 font-bold tracking-widest uppercase mb-0.5 flex items-center gap-2">
+                                Flight Number <span id="out-utc-date" class="bg-white/20 text-white px-1.5 py-0.5 rounded data-font shadow-sm tracking-wide">----</span>
+                            </div>
+                            <div class="text-3xl md:text-5xl lg:text-4xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-flight-no">----</div>
+                        </div>
+                        <div class="hidden sm:block h-10 md:h-12 lg:h-10 w-px bg-white/20 relative z-10 mx-2"></div>
+                        <div class="relative z-10 text-right">
+                            <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-300 font-bold tracking-widest uppercase mb-0.5">Aircraft Reg</div>
+                            <div class="text-xl md:text-3xl lg:text-2xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-reg">----</div>
+                        </div>
+                    </div>
+                    <div class="p-3 md:p-5 lg:p-4 flex-grow flex flex-col gap-3 md:gap-4 lg:gap-3 bg-[#fbf9f6]">
+                        <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 lg:p-3 shadow-sm relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
+                            <div class="flex justify-between items-start mb-2 ml-2 md:ml-3 lg:ml-2">
+                                <div>
+                                    <div class="text-[10px] md:text-xs lg:text-[10px] font-bold text-stone-400 tracking-widest mb-1">DEPARTURE</div>
+                                    <div class="text-4xl md:text-6xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
                                 </div>
-                                <div class="hidden sm:block h-10 md:h-12 lg:h-10 w-px bg-white/20 relative z-10 mx-2"></div>
-                                <div class="relative z-10 text-right">
-                                    <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-300 font-bold tracking-widest uppercase mb-0.5">Aircraft Reg</div>
-                                    <div class="text-xl md:text-3xl lg:text-2xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-reg">----</div>
+                                <div class="text-right flex flex-col items-end gap-1">
+                                    <span class="text-[10px] md:text-xs lg:text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-dep-utc">UTC</span>
+                                    <span class="text-[11px] md:text-sm lg:text-[11px] text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-3xl lg:text-2xl data-font font-black ml-1.5" id="out-dep-bay">--</span></span>
                                 </div>
                             </div>
-                            <div class="p-3 md:p-5 lg:p-4 flex-grow flex flex-col gap-3 md:gap-4 lg:gap-3 bg-[#fbf9f6]">
-                                <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 lg:p-3 shadow-sm relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
-                                    <div class="flex justify-between items-start mb-2 ml-2 md:ml-3 lg:ml-2">
-                                        <div>
-                                            <div class="text-[10px] md:text-xs lg:text-[10px] font-bold text-stone-400 tracking-widest mb-1">DEPARTURE</div>
-                                            <div class="text-4xl md:text-6xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
-                                        </div>
-                                        <div class="text-right flex flex-col items-end gap-1">
-                                            <span class="text-[10px] md:text-xs lg:text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-dep-utc">UTC</span>
-                                            <span class="text-[11px] md:text-sm lg:text-[11px] text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-3xl lg:text-2xl data-font font-black ml-1.5" id="out-dep-bay">--</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-row gap-2 ml-2 md:ml-3 lg:ml-2 mt-3 md:mt-4 lg:mt-2">
-                                        <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-stone-500 mb-0.5">STD</span>
-                                            <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-stone-800 leading-none" id="out-std">--:--</span>
-                                        </div>
-                                        <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-[#b35900] mb-0.5">ETD</span>
-                                            <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-[#b35900] leading-none" id="out-etd">--:--</span>
-                                        </div>
-                                    </div>
-                                    <div id="dep-simple-wx" class="hidden mt-3 md:mt-4 lg:mt-2 bg-white rounded-xl p-2 md:p-3 lg:p-2 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3 lg:ml-2">
-                                        <div class="text-xl md:text-3xl lg:text-2xl leading-none" id="dep-wx-icon">☁️</div>
-                                        <div class="flex flex-col gap-0.5">
-                                            <span class="text-[10px] md:text-xs lg:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Departure WX</span>
-                                            <span class="text-[11px] md:text-sm lg:text-[12px] text-stone-700 font-medium" id="dep-wx-desc">Loading...</span>
-                                        </div>
-                                    </div>
+                            <div class="flex flex-row gap-2 ml-2 md:ml-3 lg:ml-2 mt-3 md:mt-4 lg:mt-2">
+                                <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
+                                    <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-stone-500 mb-0.5">STD</span>
+                                    <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-stone-800 leading-none" id="out-std">--:--</span>
                                 </div>
-                                <div class="flex justify-center -my-2 md:-my-3 lg:-my-2 relative z-10 text-[#8b5a2b] opacity-60">
-                                    <svg class="w-6 h-6 md:w-8 md:h-8 lg:w-6 lg:h-6 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
-                                </div>
-                                <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 lg:p-3 shadow-sm relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
-                                    <div class="flex justify-between items-start mb-2 ml-2 md:ml-3 lg:ml-2">
-                                        <div>
-                                            <div class="text-[10px] md:text-xs lg:text-[10px] font-bold text-stone-400 tracking-widest mb-1">ARRIVAL</div>
-                                            <div class="text-4xl md:text-6xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
-                                        </div>
-                                        <div class="text-right flex flex-col items-end gap-1">
-                                            <span class="text-[10px] md:text-xs lg:text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-arr-utc">UTC</span>
-                                            <span class="text-[11px] md:text-sm lg:text-[11px] text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-3xl lg:text-2xl data-font font-black ml-1.5" id="out-arr-bay">--</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex ml-2 md:ml-3 lg:ml-2 mt-3 md:mt-4 lg:mt-2">
-                                        <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
-                                            <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
-                                        </div>
-                                    </div>
-                                    <div id="arr-simple-wx" class="hidden mt-3 md:mt-4 lg:mt-2 bg-white rounded-xl p-2 md:p-3 lg:p-2 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3 lg:ml-2">
-                                        <div class="text-xl md:text-3xl lg:text-2xl leading-none" id="arr-wx-icon">☁️</div>
-                                        <div class="flex flex-col gap-0.5">
-                                            <span class="text-[10px] md:text-xs lg:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Arrival WX</span>
-                                            <span class="text-[11px] md:text-sm lg:text-[12px] text-stone-700 font-medium" id="arr-wx-desc">Loading...</span>
-                                        </div>
-                                    </div>
+                                <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
+                                    <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-[#b35900] mb-0.5">ETD</span>
+                                    <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-[#b35900] leading-none" id="out-etd">--:--</span>
                                 </div>
                             </div>
-
-                            <!-- Middle Column: Route -->
-                            <div class="col-span-1 md:col-span-6 lg:col-span-4 flex flex-col gap-4 md:gap-5">
-                                <div class="border border-[#e8dfd5] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-md bg-white">
-                                    <div class="bg-[#5c4033] text-[#f7f4f0] text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center">
-                                        <span>ATC Clearance Route</span>
-                                        <div class="flex gap-1.5 md:gap-2">
-                                            <span class="bg-[#3a2a1f] px-1.5 md:px-2 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">OFP:<span id="out-ofp" class="text-white font-bold ml-1">--</span></span>
-                                            <span class="bg-[#3a2a1f] px-1.5 md:px-2 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">EFB:<span id="out-efb" class="text-white font-bold ml-1">--</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="p-4 md:p-5 flex-grow flex flex-col justify-center">
-                                        <div class="data-font text-sm md:text-[15px] lg:text-base leading-relaxed text-[#3a2a1f] tracking-wide break-words" id="out-route">NO ROUTE DATA</div>
-                                    </div>
-                                    <div class="flex flex-row border-t border-stone-200 bg-[#fbf9f6] divide-x divide-stone-200">
-                                        <div class="flex-1 p-2 md:p-3 lg:p-2 xl:p-3 flex flex-col lg:flex-row justify-center lg:justify-between items-center bg-[#2c3e50] gap-1 lg:gap-0">
-                                            <span class="text-[9px] md:text-[10px] font-bold text-stone-400 uppercase tracking-widest text-center lg:text-left">Flight Time</span>
-                                            <span class="data-font font-black text-lg md:text-xl text-amber-400 tracking-wider whitespace-nowrap" id="out-ete">--:--</span>
-                                        </div>
-                                        <div class="flex-1 p-2 md:p-3 lg:p-2 xl:p-3 flex flex-col lg:flex-row justify-center lg:justify-between items-center bg-amber-50 gap-1 lg:gap-0">
-                                            <span class="text-[9px] md:text-[10px] font-bold text-[#8b5a2b] uppercase tracking-widest text-center lg:text-left">CRZ Alt/Temp</span>
-                                            <span class="data-font font-black text-lg md:text-xl text-[#b35900] whitespace-nowrap" id="out-cruise-alt-temp">---</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-3 md:gap-4">
-                                    <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex flex-col justify-center">
-                                        <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Wind Component</div>
-                                        <div class="data-font font-bold text-lg md:text-xl text-stone-800" id="out-wc">---</div>
-                                    </div>
-                                    <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex flex-col justify-center">
-                                        <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Max Shear</div>
-                                        <div class="data-font font-bold text-lg md:text-xl text-[#d97706]" id="out-mxsh">---</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-3 md:gap-4">
-                                    <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex justify-between items-center">
-                                        <span class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider">TOW</span>
-                                        <span class="data-font font-bold text-xl md:text-2xl text-[#4a3627]" id="out-tow">--.-</span>
-                                    </div>
-                                    <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex justify-between items-center">
-                                        <span class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider">LDW</span>
-                                        <span class="data-font font-bold text-xl md:text-2xl text-[#4a3627]" id="out-ldw">--.-</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Right Column: Fuel Distribution -->
-                            <div class="col-span-1 md:col-span-6 lg:col-span-3 flex flex-col gap-4 md:gap-5">
-                                <div class="border border-[#d4c3b3] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-md bg-white">
-                                    <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 md:py-2.5">Fuel Distribution</div>
-                                    <div class="p-3 md:p-4 bg-[#fdfaf6] flex flex-col gap-2 md:gap-3 flex-grow">
-                                        <div class="flex justify-between lg:block items-end lg:items-stretch">
-                                            <div class="text-xs md:text-sm text-[#8b5a2b] font-bold mb-1">Total Fuel</div>
-                                            <div class="data-font font-black text-2xl md:text-3xl text-[#6e4620] lg:text-right" id="out-total-fuel">----</div>
-                                        </div>
-                                        <div class="w-full h-px bg-[#e8dfd5] my-1 lg:my-0"></div>
-                                        <div class="flex justify-between lg:flex-col gap-2 lg:gap-0">
-                                            <div class="flex-1 lg:w-full">
-                                                <div class="text-[10px] md:text-xs text-[#8c6b5d] mb-0.5 lg:mb-1 font-bold leading-tight" id="label-div-fuel">Division Fuel</div>
-                                                <div class="data-font font-bold text-lg md:text-xl text-[#5c4033] lg:text-right" id="out-div-fuel">----</div>
-                                            </div>
-                                            <div class="hidden lg:block w-full h-px bg-[#e8dfd5] my-2"></div>
-                                            <div class="flex-1 lg:w-full text-right lg:text-left">
-                                                <div class="text-[10px] md:text-xs text-[#8c6b5d] mb-0.5 lg:mb-1 font-bold lg:text-left text-right">Spare Fuel</div>
-                                                <div class="data-font font-bold text-lg md:text-xl text-[#4b6b3e] lg:text-right" id="out-spare-fuel">----</div>
-                                            </div>
-                                        </div>
-                                        <div class="pl-2 md:pl-3 border-l-2 border-[#d4c3b3] flex flex-col gap-1.5 md:gap-2 lg:gap-1 mt-2 flex-grow justify-center">
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD WXX</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-wxx">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD OPN</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-opn">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD ATC</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-atc">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD DEV</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-dev">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">CONT</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-cont">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-crit-fuel">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">TANKERING</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-tankering">--</span></div>
-                                            <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">EXTRA</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-extra">--</span></div>
-                                        </div>
-                                    </div>
+                            <div id="dep-simple-wx" class="hidden mt-3 md:mt-4 lg:mt-2 bg-white rounded-xl p-2 md:p-3 lg:p-2 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3 lg:ml-2">
+                                <div class="text-xl md:text-3xl lg:text-2xl leading-none" id="dep-wx-icon">☁️</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[10px] md:text-xs lg:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Departure WX</span>
+                                    <span class="text-[11px] md:text-sm lg:text-[12px] text-stone-700 font-medium" id="dep-wx-desc">Loading...</span>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Bottom Row: Payload & Ground Remarks -->
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 mt-2">
-                            <div class="col-span-1 md:col-span-6 flex flex-col gap-4">
-                                <div class="border border-[#e8dfd5] rounded-xl overflow-hidden flex flex-col shadow-sm bg-white h-full justify-center">
-                                    <div class="bg-[#7a5c43] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2">Payload & Cabin</div>
-                                    <div class="p-3 md:p-4 grid grid-cols-2 lg:flex lg:justify-between items-center gap-3 md:gap-4">
-                                        <div class="text-center flex-1">
-                                            <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-0.5">TOTAL PAX</div>
-                                            <div class="data-font font-black text-2xl md:text-3xl text-[#b35900]" id="out-pax">---</div>
-                                        </div>
-                                        <div class="hidden lg:block w-px h-10 bg-stone-200"></div>
-                                        <div class="flex flex-col justify-center gap-2 lg:gap-1.5 text-center lg:text-left flex-1">
-                                            <div>
-                                                <div class="text-[9px] md:text-[10px] text-stone-400 font-bold tracking-wider leading-none">CARGO(KG)</div>
-                                                <div class="data-font font-bold text-[15px] text-stone-700 leading-none mt-1" id="out-cargo">----</div>
-                                            </div>
-                                            <div>
-                                                <div class="text-[9px] md:text-[10px] text-stone-400 font-bold tracking-wider leading-none">FCST PLD</div>
-                                                <div class="data-font font-bold text-[15px] text-stone-700 leading-none mt-1" id="out-fcst">----</div>
-                                            </div>
-                                        </div>
-                                        <div class="hidden lg:block w-px h-10 bg-stone-200"></div>
-                                        <div class="text-center col-span-2 lg:col-span-1 flex-1 bg-blue-50/50 lg:bg-transparent rounded-lg py-2 lg:py-0">
-                                            <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-0.5">WATER</div>
-                                            <div class="data-font font-black text-2xl md:text-3xl text-blue-600" id="out-water">--%</div>
-                                        </div>
-                                    </div>
+                        <div class="flex justify-center -my-2 md:-my-3 lg:-my-2 relative z-10 text-[#8b5a2b] opacity-60">
+                            <svg class="w-6 h-6 md:w-8 md:h-8 lg:w-6 lg:h-6 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                        </div>
+                        <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 lg:p-3 shadow-sm relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
+                            <div class="flex justify-between items-start mb-2 ml-2 md:ml-3 lg:ml-2">
+                                <div>
+                                    <div class="text-[10px] md:text-xs lg:text-[10px] font-bold text-stone-400 tracking-widest mb-1">ARRIVAL</div>
+                                    <div class="text-4xl md:text-6xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
+                                </div>
+                                <div class="text-right flex flex-col items-end gap-1">
+                                    <span class="text-[10px] md:text-xs lg:text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-arr-utc">UTC</span>
+                                    <span class="text-[11px] md:text-sm lg:text-[11px] text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-3xl lg:text-2xl data-font font-black ml-1.5" id="out-arr-bay">--</span></span>
                                 </div>
                             </div>
-                            <div class="col-span-1 md:col-span-6 border border-[#e8dfd5] rounded-xl overflow-hidden flex flex-col shadow-md bg-white">
-                                <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 flex justify-between items-center">
-                                    <span>MEL / Dispatch Remarks</span>
+                            <div class="flex ml-2 md:ml-3 lg:ml-2 mt-3 md:mt-4 lg:mt-2">
+                                <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 md:py-2 lg:py-1.5 flex flex-col justify-center">
+                                    <span class="text-[9px] md:text-[11px] lg:text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
+                                    <span class="data-font font-black text-xl md:text-3xl lg:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
                                 </div>
-                                <div class="p-3 md:p-4 bg-white flex flex-col flex-grow text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px] md:max-h-[170px]" id="out-mel-container">
-                                    <div class="text-emerald-600 font-bold text-2xl md:text-3xl tracking-widest text-center my-auto py-4">NIL</div>
+                            </div>
+                            <div id="arr-simple-wx" class="hidden mt-3 md:mt-4 lg:mt-2 bg-white rounded-xl p-2 md:p-3 lg:p-2 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3 lg:ml-2">
+                                <div class="text-xl md:text-3xl lg:text-2xl leading-none" id="arr-wx-icon">☁️</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="text-[10px] md:text-xs lg:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Arrival WX</span>
+                                    <span class="text-[11px] md:text-sm lg:text-[12px] text-stone-700 font-medium" id="arr-wx-desc">Loading...</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- SECTION: AVIATION WEATHER -->
+                    <!-- Middle Column: Route -->
+                    <div class="col-span-1 lg:col-span-4 flex flex-col gap-4 md:gap-5">
+                        <div class="border border-[#e8dfd5] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-md bg-white">
+                            <div class="bg-[#5c4033] text-[#f7f4f0] text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 md:py-2.5 flex justify-between items-center">
+                                <span>ATC Clearance Route</span>
+                                <div class="flex gap-1.5 md:gap-2">
+                                    <span class="bg-[#3a2a1f] px-1.5 md:px-2 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">OFP:<span id="out-ofp" class="text-white font-bold ml-1">--</span></span>
+                                    <span class="bg-[#3a2a1f] px-1.5 md:px-2 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">EFB:<span id="out-efb" class="text-white font-bold ml-1">--</span></span>
+                                </div>
+                            </div>
+                            <div class="p-4 md:p-5 flex-grow flex flex-col justify-center">
+                                <div class="data-font text-sm md:text-[15px] lg:text-base leading-relaxed text-[#3a2a1f] tracking-wide break-words" id="out-route">NO ROUTE DATA</div>
+                            </div>
+                            <div class="flex flex-row border-t border-stone-200 bg-[#fbf9f6] divide-x divide-stone-200">
+                                <div class="flex-1 p-2 md:p-3 lg:p-2 xl:p-3 flex flex-col lg:flex-row justify-center lg:justify-between items-center bg-[#2c3e50] gap-1 lg:gap-0">
+                                    <span class="text-[9px] md:text-[10px] font-bold text-stone-400 uppercase tracking-widest text-center lg:text-left">Flight Time</span>
+                                    <span class="data-font font-black text-lg md:text-xl text-amber-400 tracking-wider whitespace-nowrap" id="out-ete">--:--</span>
+                                </div>
+                                <div class="flex-1 p-2 md:p-3 lg:p-2 xl:p-3 flex flex-col lg:flex-row justify-center lg:justify-between items-center bg-amber-50 gap-1 lg:gap-0">
+                                    <span class="text-[9px] md:text-[10px] font-bold text-[#8b5a2b] uppercase tracking-widest text-center lg:text-left">CRZ Alt/Temp</span>
+                                    <span class="data-font font-black text-lg md:text-xl text-[#b35900] whitespace-nowrap" id="out-cruise-alt-temp">---</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex flex-col justify-center">
+                                <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Wind Component</div>
+                                <div class="data-font font-bold text-lg md:text-xl text-stone-800" id="out-wc">---</div>
+                            </div>
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex flex-col justify-center">
+                                <div class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Max Shear</div>
+                                <div class="data-font font-bold text-lg md:text-xl text-[#d97706]" id="out-mxsh">---</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex justify-between items-center">
+                                <span class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider">TOW</span>
+                                <span class="data-font font-bold text-xl md:text-2xl text-[#4a3627]" id="out-tow">--.-</span>
+                            </div>
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 md:p-4 bg-white shadow-sm flex justify-between items-center">
+                                <span class="text-[10px] md:text-xs lg:text-[10px] text-stone-500 font-bold uppercase tracking-wider">LDW</span>
+                                <span class="data-font font-bold text-xl md:text-2xl text-[#4a3627]" id="out-ldw">--.-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Fuel Distribution -->
+                    <div class="col-span-1 lg:col-span-3 flex flex-col gap-4 md:gap-5">
+                        <div class="border border-[#d4c3b3] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-md bg-white">
+                            <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 md:py-2.5">Fuel Distribution</div>
+                            <div class="p-3 md:p-4 bg-[#fdfaf6] flex flex-col gap-2 md:gap-3 flex-grow">
+                                <div class="flex justify-between lg:block items-end lg:items-stretch">
+                                    <div class="text-xs md:text-sm text-[#8b5a2b] font-bold mb-1">Total Fuel</div>
+                                    <div class="data-font font-black text-2xl md:text-3xl text-[#6e4620] lg:text-right" id="out-total-fuel">----</div>
+                                </div>
+                                <div class="w-full h-px bg-[#e8dfd5] my-1 lg:my-0"></div>
+                                <div class="flex justify-between lg:flex-col gap-2 lg:gap-0">
+                                    <div class="flex-1 lg:w-full">
+                                        <div class="text-[10px] md:text-xs text-[#8c6b5d] mb-0.5 lg:mb-1 font-bold leading-tight" id="label-div-fuel">Division Fuel</div>
+                                        <div class="data-font font-bold text-lg md:text-xl text-[#5c4033] lg:text-right" id="out-div-fuel">----</div>
+                                    </div>
+                                    <div class="hidden lg:block w-full h-px bg-[#e8dfd5] my-2"></div>
+                                    <div class="flex-1 lg:w-full text-right lg:text-left">
+                                        <div class="text-[10px] md:text-xs text-[#8c6b5d] mb-0.5 lg:mb-1 font-bold lg:text-left text-right">Spare Fuel</div>
+                                        <div class="data-font font-bold text-lg md:text-xl text-[#4b6b3e] lg:text-right" id="out-spare-fuel">----</div>
+                                    </div>
+                                </div>
+                                <div class="pl-2 md:pl-3 border-l-2 border-[#d4c3b3] flex flex-col gap-1.5 md:gap-2 lg:gap-1 mt-2 flex-grow justify-center">
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD WXX</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-wxx">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD OPN</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-opn">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD ATC</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-atc">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">ADD DEV</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-add-dev">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">CONT</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-cont">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-crit-fuel">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">TANKERING</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-tankering">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] lg:text-[9px] text-stone-500 font-bold tracking-wider">EXTRA</span><span class="data-font text-[13px] lg:text-xs font-bold text-stone-700" id="out-extra">--</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard 第二排：Payload & Ground Remarks -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-5 mt-2">
+                        <div class="col-span-1 lg:col-span-6 flex flex-col gap-4">
+                            <div class="border border-[#e8dfd5] rounded-xl overflow-hidden flex flex-col shadow-sm bg-white h-full justify-center">
+                                <div class="bg-[#7a5c43] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2">Payload & Cabin</div>
+                                <div class="p-3 md:p-4 grid grid-cols-2 lg:flex lg:justify-between items-center gap-3 md:gap-4">
+                                    <div class="text-center flex-1">
+                                        <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-0.5">TOTAL PAX</div>
+                                        <div class="data-font font-black text-2xl md:text-3xl text-[#b35900]" id="out-pax">---</div>
+                                    </div>
+                                    <div class="hidden lg:block w-px h-10 bg-stone-200"></div>
+                                    <div class="flex flex-col justify-center gap-2 lg:gap-1.5 text-center lg:text-left flex-1">
+                                        <div>
+                                            <div class="text-[9px] md:text-[10px] text-stone-400 font-bold tracking-wider leading-none">CARGO(KG)</div>
+                                            <div class="data-font font-bold text-[15px] text-stone-700 leading-none mt-1" id="out-cargo">----</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[9px] md:text-[10px] text-stone-400 font-bold tracking-wider leading-none">FCST PLD</div>
+                                            <div class="data-font font-bold text-[15px] text-stone-700 leading-none mt-1" id="out-fcst">----</div>
+                                        </div>
+                                    </div>
+                                    <div class="hidden lg:block w-px h-10 bg-stone-200"></div>
+                                    <div class="text-center col-span-2 lg:col-span-1 flex-1 bg-blue-50/50 lg:bg-transparent rounded-lg py-2 lg:py-0">
+                                        <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-0.5">WATER</div>
+                                        <div class="data-font font-black text-2xl md:text-3xl text-blue-600" id="out-water">--%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-1 lg:col-span-6 border border-[#e8dfd5] rounded-xl overflow-hidden flex flex-col shadow-md bg-white">
+                            <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 flex justify-between items-center">
+                                <span>MEL / Dispatch Remarks</span>
+                            </div>
+                            <div class="p-3 md:p-4 bg-white flex flex-col flex-grow text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px] md:max-h-[170px]" id="out-mel-container">
+                                <div class="text-emerald-600 font-bold text-2xl md:text-3xl tracking-widest text-center my-auto py-4">NIL</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard 第三排：AVIATION WEATHER -->
                     <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white mt-4 md:mt-2">
                         <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
                             <div>
@@ -400,9 +388,9 @@
                         </div>
                     </div>
 
-                    <!-- SECTION: VERTICAL PROFILE & EDTO -->
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 mt-4 md:mt-2">
-                        <div class="col-span-1 md:col-span-12 lg:col-span-8 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                    <!-- Dashboard 第四排：VERTICAL PROFILE & EDTO -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-5 mt-4 md:mt-2">
+                        <div class="col-span-1 lg:col-span-8 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                             <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 flex justify-between items-center" data-html2canvas-ignore>
                                 <span class="flex items-center gap-1.5">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
@@ -434,7 +422,7 @@
                         </div>
 
                         <!-- EDTO Coordinates -->
-                        <div class="col-span-1 md:col-span-12 lg:col-span-4 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="col-span-1 lg:col-span-4 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                             <div class="bg-[#2c3e50] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2 flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 EDTO / ETOPS Coordinates
@@ -449,7 +437,7 @@
                 </div>
 
                 <!-- 匯出截圖按鈕 (與右側 Dashboard 同寬並置底) -->
-                <div class="w-full mt-4 flex justify-center pb-6">
+                <div class="w-full max-w-[1194px] mx-auto mt-2 mb-8 flex justify-center px-4">
                     <button id="capture-btn" onclick="copyDashboardToClipboard()" class="w-full md:w-auto bg-[#4a3627] hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-10 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-lg md:text-xl tracking-wide border-2 border-[#8b5a2b]/80">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         匯出派飛單截圖 (複製至剪貼簿)
@@ -680,7 +668,33 @@
                     }
 
                     let destAltnAirports = Array.from(destAltnSet);
-                    let alt1Rwy = destAltnAirports.length > 0 ? destAltnAirports[0] : 'N/A';
+                    let alt1Rwy = 'N/A', alt2Rwy = 'N/A', alt3Rwy = 'N/A';
+
+                    // 重新接回備降機場抓取神經
+                    if (destAltnAirports.length > 0) {
+                        const alt1Icao = destAltnAirports[0];
+                        alt1Rwy = alt1Icao;
+                        if (rawTexts['OFP']) {
+                            const rwyMatch = rawTexts['OFP'].match(new RegExp(`\\b${alt1Icao}/([0-9]{2}[LRC]?)\\b`));
+                            if (rwyMatch) alt1Rwy = `${alt1Icao}/${rwyMatch[1]}`;
+                        }
+                    }
+                    if (destAltnAirports.length > 1) {
+                        const alt2Icao = destAltnAirports[1];
+                        alt2Rwy = alt2Icao;
+                        if (rawTexts['OFP']) {
+                            const rwyMatch = rawTexts['OFP'].match(new RegExp(`\\b${alt2Icao}/([0-9]{2}[LRC]?)\\b`));
+                            if (rwyMatch) alt2Rwy = `${alt2Icao}/${rwyMatch[1]}`;
+                        }
+                    }
+                    if (destAltnAirports.length > 2) {
+                        const alt3Icao = destAltnAirports[2];
+                        alt3Rwy = alt3Icao;
+                        if (rawTexts['OFP']) {
+                            const rwyMatch = rawTexts['OFP'].match(new RegExp(`\\b${alt3Icao}/([0-9]{2}[LRC]?)\\b`));
+                            if (rwyMatch) alt3Rwy = `${alt3Icao}/${rwyMatch[1]}`;
+                        }
+                    }
 
                     const flightDateStr = formatAviationDate(leg.scheduledDepartureTime); 
                     const stdStr = formatAviationTime(leg.scheduledDepartureTime);
@@ -766,7 +780,11 @@
                     const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
 
                     // 組裝 Part 1 RawBlock
-                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n第一備降機場/跑道: ${alt1Rwy}\n------------------------------------------------------\n`;
+                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
+                    rawBlock += `第一備降機場/跑道: ${alt1Rwy}\n`;
+                    if (alt2Rwy !== 'N/A') rawBlock += `第二備降機場/跑道: ${alt2Rwy}\n`;
+                    if (alt3Rwy !== 'N/A') rawBlock += `第三備降機場/跑道: ${alt3Rwy}\n`;
+                    rawBlock += `------------------------------------------------------\n`;
                     rawBlock += `航路資訊：\nOFP 號碼: ${ofpNo}\nEFB 版本: ${efbVer}\nRoute: ${flightRoute}\nW/C: ${wc}\nMXSH: ${mxsh}\nEDTO 座標:\n${edtoRawStr}\n------------------------------------------------------\n`;
                     rawBlock += `性能資訊：\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${totalFuel}\nDivision Fuel (${altnLabel}+FRF): ${divFuelCalc}\nSPARE Fuel: ${spareFuelCalc}\nADD WXX: ${f_addWxx}\nADD OPN: ${f_addOpn}\nADD ATC: ${f_addAtc}\nADD DEV: ${f_addDev}\nCONT: ${f_cont}\nCRIT FUEL: ${f_crit}\nTANKERING: ${f_tank}\nEXTRA: ${f_extra}\n------------------------------------------------------\n`;
                     
@@ -814,7 +832,7 @@
             document.getElementById('rawInput').value = '';
             document.getElementById('rawInput2').value = '';
             document.getElementById('atc-display').value = '';
-            document.getElementById('copy-btn-atc').classList.add('hidden');
+            document.getElementById('target-flight').value = '';
             
             localStorage.removeItem('dispatch_rawInput_1');
             localStorage.removeItem('dispatch_rawInput_2');
