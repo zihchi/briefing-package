@@ -1,5 +1,5 @@
 // 每次發布新版本，請務必修改這裡的版號 (例如 v1 -> v2)
-const CACHE_NAME = 'briefing-v4'; 
+const CACHE_NAME = 'briefing-v5'; 
 const urlsToCache = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const urlsToCache = [
   './altimetry.html',
   './curfew.html',
   './fuel.html',
+  './LIDOPRO.html',
   './notam.html',
   './time.html'
 ];
