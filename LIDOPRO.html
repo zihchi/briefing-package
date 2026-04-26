@@ -126,17 +126,6 @@
                     </button>
                 </div>
 
-                <!-- 區塊 2: ATC 報文保留區 -->
-                <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
-                    <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
-                        <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
-                        <div class="flex items-center gap-2">
-                            <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
-                            <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
-                        </div>
-                    </div>
-                    <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
-                </div>
 
                 <!-- 區塊 3: 手動補充區 (PAX/MEL/BAY) -->
                 <div class="flex flex-col h-40 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden">
@@ -461,6 +450,18 @@
                                 </div>
                             </div>
 
+                            <!-- 區塊 2: ATC 報文保留區 -->
+                            <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
+                              <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
+                              <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
+                              <div class="flex items-center gap-2">
+                             <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
+                             <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
+                            </div>
+                            </div>
+                            <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
+                            </div>
+                            
                             <!-- WNI Image Area -->
                             <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                                 <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
