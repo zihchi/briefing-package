@@ -194,9 +194,24 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex justify-center -my-2 relative z-10 text-[#8b5a2b] opacity-60">
-                                    <svg class="w-6 h-6 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                                
+                                <!-- 兩卡片中間的飛機與核心資訊區 -->
+                                <div class="flex justify-center -my-3 relative z-10">
+                                    <div class="bg-white border border-[#e8dfd5] px-4 py-1.5 rounded-full shadow-sm flex items-center gap-4">
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">FLIGHT TIME</span>
+                                            <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-ete-center">--:--</span>
+                                        </div>
+                                        <div class="text-[#8b5a2b] opacity-70">
+                                            <svg class="w-5 h-5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                                        </div>
+                                        <div class="flex flex-col items-start">
+                                            <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">CRZ ALT/TMP</span>
+                                            <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-cruise-center">---</span>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <!-- Arrival Card -->
                                 <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
                                     <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
@@ -326,7 +341,10 @@
                             <div class="p-4 grid grid-cols-2 md:flex md:justify-between items-center gap-4">
                                 <div class="text-center flex-1">
                                     <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">TOTAL PAX</div>
-                                    <div class="data-font font-black text-3xl text-[#b35900]" id="out-pax">---</div>
+                                    <div class="flex items-baseline justify-center gap-1.5">
+                                        <div class="data-font font-black text-3xl text-[#b35900]" id="out-pax">---</div>
+                                        <div class="data-font font-bold text-xs text-stone-400" id="out-pax-raw"></div>
+                                    </div>
                                 </div>
                                 <div class="hidden md:block w-px h-12 bg-stone-200"></div>
                                 <div class="flex flex-col justify-center gap-2 text-center md:text-left flex-1">
@@ -352,7 +370,7 @@
                             <!-- MEL Text Block -->
                             <div class="border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
                                 <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
-                                    <span>MEL / Dispatch Remarks</span>
+                                    <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
                                     <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20">🔗 eLB 系統</a>
                                 </div>
                                 <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px]" id="out-mel-container">
@@ -817,13 +835,17 @@
                             }
                         }
 
-                        let tocAlt = 'N/A';
+                        let tocAlt = 'N/A', tocTemp = '';
                         const tocIndex = ofpText.split('\n').findIndex(l => /\bT_?O_?C\b/.test(l));
                         if (tocIndex !== -1) {
-                            const altMatch = ofpText.split('\n')[tocIndex].match(/\b([2-4]\d{2})\b/);
+                            const tocLine = ofpText.split('\n')[tocIndex];
+                            const altMatch = tocLine.match(/\b([2-4]\d{2})\b/);
                             if (altMatch) tocAlt = 'FL' + altMatch[1];
+                            
+                            const tempMatch = tocLine.match(/(?:\s|^)([MP-]\d{2})(?:\s|$)/i);
+                            if (tempMatch) tocTemp = '/' + tempMatch[1].toUpperCase().replace('-', 'M');
                         }
-                        cruiseAltStr = tocAlt;
+                        cruiseAltStr = tocAlt + tocTemp;
 
                         const getFuel = (regex) => { const m = ofpText.match(regex); return m ? parseInt(m[1], 10) : 0; };
                         const f_total = getFuel(/TOTAL\s+(\d+)/);
@@ -1245,6 +1267,19 @@
                 }
             });
 
+            // Handle Airplane Section updates
+            const eteVal = extractData(rawText, 'ETE');
+            const cruVal = extractData(rawText, '巡航高度');
+            const elEteCenter = document.getElementById('out-ete-center');
+            if(elEteCenter) elEteCenter.textContent = (eteVal !== 'N/A' && eteVal !== '') ? eteVal : '--:--';
+            const elCruCenter = document.getElementById('out-cruise-center');
+            if(elCruCenter) elCruCenter.textContent = (cruVal !== 'N/A' && cruVal !== '') ? cruVal : '---';
+
+            // Handle MEL Header Registration update
+            let regVal = extractData(rawText, '機號');
+            const melHeaderReg = document.getElementById('mel-header-reg');
+            if(melHeaderReg) melHeaderReg.textContent = (regVal !== 'N/A' && regVal !== '') ? regVal : '----';
+
             const turbliLink = document.getElementById('turbli-link');
             const tDate = formatTurbliDate(currentDateUTC), tFlight = formatTurbliFlight(valFlight);
             if (currentDepICAO !== '----' && currentArrICAO !== '----' && tDate && tFlight && tFlight !== '----') {
@@ -1272,8 +1307,18 @@
             const routeEl = document.getElementById('out-route');
             if (routeEl.textContent !== '----' && routeEl.textContent !== 'NO ROUTE DATA') routeEl.textContent = routeEl.textContent.toUpperCase();
 
+            // Handle PAX calculation and raw details
             const paxMatch = rawText2.match(/PAX\s*:\s*(\d+)\/(\d+)/i);
-            document.getElementById('out-pax').textContent = paxMatch ? parseInt(paxMatch[1], 10) + parseInt(paxMatch[2], 10) : '---';
+            if (paxMatch) {
+                const p1 = parseInt(paxMatch[1], 10);
+                const p2 = parseInt(paxMatch[2], 10);
+                document.getElementById('out-pax').textContent = p1 + p2;
+                document.getElementById('out-pax-raw').textContent = `(${p1}/${p2})`;
+            } else {
+                document.getElementById('out-pax').textContent = '---';
+                document.getElementById('out-pax-raw').textContent = '';
+            }
+
             const cargoMatch = rawText2.match(/CARGO\s*:\s*(.+)/i);
             document.getElementById('out-cargo').textContent = cargoMatch ? cargoMatch[1].trim() : '----';
             const fcstMatch = rawText2.match(/FCST PLD\s*:\s*(.+)/i);
