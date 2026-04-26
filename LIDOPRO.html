@@ -836,14 +836,26 @@
                         }
 
                         let tocAlt = 'N/A', tocTemp = '';
-                        const tocIndex = ofpText.split('\n').findIndex(l => /\bT_?O_?C\b/.test(l));
+                        const ofpLines = ofpText.split('\n');
+                        const tocIndex = ofpLines.findIndex(l => /\bT_?O_?C\b/.test(l));
                         if (tocIndex !== -1) {
-                            const tocLine = ofpText.split('\n')[tocIndex];
+                            const tocLine = ofpLines[tocIndex];
                             const altMatch = tocLine.match(/\b([2-4]\d{2})\b/);
                             if (altMatch) tocAlt = 'FL' + altMatch[1];
                             
-                            const tempMatch = tocLine.match(/(?:\s|^)([MP-]\d{2})(?:\s|$)/i);
-                            if (tempMatch) tocTemp = '/' + tempMatch[1].toUpperCase().replace('-', 'M');
+                            // 往下掃描最多 5 行，抓取 TOC 下一個航點的溫度
+                            for (let i = tocIndex + 1; i <= Math.min(tocIndex + 5, ofpLines.length - 1); i++) {
+                                const nextLine = ofpLines[i];
+                                // 增強型溫度擷取正則：可以抓到獨立的 -46、M46 或連在風速後的 /M46
+                                const tempMatch = nextLine.match(/(?:\/|\s)([MP+-]\d{2})(?=\s|$)/i);
+                                if (tempMatch) {
+                                    let tVal = tempMatch[1].toUpperCase();
+                                    // 將 M 替換成 -，將 P 替換成 + 確保符合 /-46 的格式
+                                    tVal = tVal.replace('M', '-').replace('P', '+');
+                                    tocTemp = '/' + tVal;
+                                    break; // 找到第一個溫度就跳出迴圈
+                                }
+                            }
                         }
                         cruiseAltStr = tocAlt + tocTemp;
 
