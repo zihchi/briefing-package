@@ -1,5 +1,5 @@
-// 每次發布新版本，請務必修改這裡的版號 (例如 v1 -> v2)
-const CACHE_NAME = 'briefing-v5'; 
+// 每次發布新版本或新增檔案時，請務必推進此版號 (v5 -> v6)
+const CACHE_NAME = 'briefing-v6'; 
 const urlsToCache = [
   './',
   './index.html',
@@ -12,12 +12,15 @@ const urlsToCache = [
   './fuel.html',
   './LIDOPRO.html',
   './notam.html',
-  './time.html'
+  './time.html',
+  './manifest.json',    // 新增：確保 PWA 核心設定能離線讀取
+  './icon-192.png',     // 新增：確保離線時圖示正常顯示
+  './icon-512.png'
 ];
 
-// 1. 安裝階段：快取檔案 + 強制插隊跳過等待 (合併為一個 install 事件)
+// 1. 安裝階段：快取檔案 + 強制插隊跳過等待
 self.addEventListener('install', event => {
-  console.log('⚙️ 新版 Service Worker 安裝中...');
+  console.log('⚙️ 新版 Service Worker (v6) 安裝中...');
   
   // 核心指令 1：不要等了，直接插隊！
   self.skipWaiting(); 
@@ -54,19 +57,28 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 3. 攔截請求：【改為 Network First 網路優先策略】
+// 3. 攔截請求：【Network First 網路優先策略 + 強化離線配對】
 self.addEventListener('fetch', event => {
   event.respondWith(
     // 步驟 A: 優先嘗試從伺服器抓取最新的檔案
     fetch(event.request)
       .then(response => {
-        // (可選進階處理) 如果抓到了新檔案，可以順便更新快取，但目前保持簡單即可
+        // 動態快取：連線成功時，順手將最新檔案寫入快取，確保臨時新增的檔案也能離線存取
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
         return response; 
       })
       .catch(() => {
-        // 步驟 B: 如果飛機上沒網路 (fetch 失敗)，才退而求其次從快取拿資料
+        // 步驟 B: 如果飛機上沒網路 (fetch 失敗)，退而求其次從快取拿資料
         console.log('📡 處於離線狀態，載入快取檔案:', event.request.url);
-        return caches.match(event.request);
+        
+        // 關鍵修正：加入 { ignoreSearch: true } 
+        // 確保帶有參數的請求 (如 app.js?v=2.0) 依然能精準配對到快取中的原始檔案
+        return caches.match(event.request, { ignoreSearch: true });
       })
   );
 });
