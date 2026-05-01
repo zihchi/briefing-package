@@ -36,6 +36,7 @@
             <i data-lucide="plane-takeoff" class="w-8 h-8 text-sky-600"></i>
             <div>
                 <h1 class="text-2xl font-bold tracking-wide text-slate-800">ICAO FPL Decoder</h1>             
+            </div>
         </div>
     </header>
 
@@ -106,13 +107,30 @@
                 </div>
             </div>
 
-            <!-- Item 18 (Other Information) -->
+            <!-- Item 18 (Other Information & PBN) -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center gap-2">
                     <i data-lucide="info" class="w-5 h-5 text-emerald-500"></i>
-                    <h2 class="text-sm font-extrabold text-slate-700 uppercase tracking-widest">其他資訊 (Other Information - 18)</h2>
+                    <h2 class="text-sm font-extrabold text-slate-700 uppercase tracking-widest">其他資訊與導航性能 (Item 18 & PBN)</h2>
                 </div>
+                
+                <!-- PBN Grid Section -->
+                <div class="p-5 border-b border-slate-100 bg-slate-50/30">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
+                        性能基礎導航 (PBN - Performance Based Navigation)
+                    </h3>
+                    <ul id="pbn-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 text-xs">
+                        <!-- JS Will Populate This -->
+                    </ul>
+                </div>
+
+                <!-- Other Info Section -->
                 <div class="p-5">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i data-lucide="list-plus" class="w-4 h-4 text-emerald-400"></i>
+                        附加裝備與代碼 (Other Information)
+                    </h3>
                     <div id="item18-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                         <!-- JS Will Populate This -->
                     </div>
@@ -187,39 +205,35 @@
             'G1': 'ADS-C (ATN)'
         };
 
+        // Complete PBN dictionary mapped strictly to FAA/ICAO Standards
         const dictPBN = {
             'A1': 'RNAV 10 (RNP 10)',
-            'B1': 'RNAV 5 全許可感測器', 'B2': 'RNAV 5 (GNSS)', 'B3': 'RNAV 5 (DME/DME)', 'B4': 'RNAV 5 (VOR/DME)', 'B5': 'RNAV 5 (INS/IRS)', 'B6': 'RNAV 5 (LORANC)',
-            'C1': 'RNAV 2 全許可感測器', 'C2': 'RNAV 2 (GNSS)', 'C3': 'RNAV 2 (DME/DME)', 'C4': 'RNAV 2 (DME/DME/IRU)',
-            'D1': 'RNAV 1 全許可感測器', 'D2': 'RNAV 1 (GNSS)', 'D3': 'RNAV 1 (DME/DME)', 'D4': 'RNAV 1 (DME/DME/IRU)',
+            'B1': 'RNAV 5 全許可感測器 (All Permitted)', 'B2': 'RNAV 5 (GNSS)', 'B3': 'RNAV 5 (DME/DME)', 'B4': 'RNAV 5 (VOR/DME)', 'B5': 'RNAV 5 (INS/IRS)', 'B6': 'RNAV 5 (LORANC)',
+            'C1': 'RNAV 2 全許可感測器 (All Permitted)', 'C2': 'RNAV 2 (GNSS)', 'C3': 'RNAV 2 (DME/DME)', 'C4': 'RNAV 2 (DME/DME/IRU)',
+            'D1': 'RNAV 1 全許可感測器 (All Permitted)', 'D2': 'RNAV 1 (GNSS)', 'D3': 'RNAV 1 (DME/DME)', 'D4': 'RNAV 1 (DME/DME/IRU)',
             'L1': 'RNP 4',
-            'O1': 'Basic RNP 1 全許可', 'O2': 'Basic RNP 1 (GNSS)', 'O3': 'Basic RNP 1 (DME/DME)', 'O4': 'Basic RNP 1 (DME/DME/IRU)',
+            'O1': 'Basic RNP 1 全許可 (All Permitted)', 'O2': 'Basic RNP 1 (GNSS)', 'O3': 'Basic RNP 1 (DME/DME)', 'O4': 'Basic RNP 1 (DME/DME/IRU)',
             'S1': 'RNP APCH', 'S2': 'RNP APCH 附帶 BARO-VNAV',
             'T1': 'RNP AR APCH 含 RF', 'T2': 'RNP AR APCH 不含 RF'
         };
 
         const dictItem18Keys = {
-            'PBN': '性能基礎導航 (PBN)',
             'NAV': '其他導航設備 (NAV)',
             'DAT': '資料通訊應用 (DAT)',
             'SUR': '其他監視設備 (SUR)',
             'CODE': '航空器地址碼 (CODE)'
         };
 
-        function decodePBN(pbnString) {
-            const tokens = pbnString.match(/.{1,2}/g) || [];
-            return tokens.map(t => dictPBN[t] ? `<span class="inline-block bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-bold mr-1.5 mb-1.5 border border-emerald-300 shadow-sm">${t}: ${dictPBN[t]}</span>` : t).join(' ');
-        }
-
-        // Render functions for Light Annunciator Panel
-        function renderPanel10(dict, containerId, activeTokens, theme) {
+        // Render generic Indicator Panel (used for 10a, 10b, and PBN)
+        function renderIndicatorPanel(dict, containerId, activeTokens, theme) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
             
             // Light Theme setup for active vs inactive states
             const themes = {
                 sky: { activeBg: 'bg-sky-50', activeBorder: 'border-sky-300', activeText: 'text-sky-900', activeBadge: 'bg-sky-600 text-white shadow-sm' },
-                indigo: { activeBg: 'bg-indigo-50', activeBorder: 'border-indigo-300', activeText: 'text-indigo-900', activeBadge: 'bg-indigo-600 text-white shadow-sm' }
+                indigo: { activeBg: 'bg-indigo-50', activeBorder: 'border-indigo-300', activeText: 'text-indigo-900', activeBadge: 'bg-indigo-600 text-white shadow-sm' },
+                emerald: { activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-300', activeText: 'text-emerald-900', activeBadge: 'bg-emerald-600 text-white shadow-sm' }
             };
             const t = themes[theme];
 
@@ -253,6 +267,7 @@
             const container = document.getElementById('item18-grid');
             container.innerHTML = '';
             
+            // Only render NAV, DAT, SUR, CODE in the generic block
             Object.keys(dictItem18Keys).forEach(key => {
                 const isActive = activeData.hasOwnProperty(key);
                 const value = isActive ? activeData[key] : 'Standby / 無資料';
@@ -260,7 +275,7 @@
                 
                 const div = document.createElement('div');
                 
-                // Light Mode Styling for Item 18
+                // Light Mode Styling for Item 18 generic inputs
                 const baseClass = "rounded-lg p-3 transition-all duration-300 border flex flex-col ";
                 const stateClass = isActive
                     ? "bg-emerald-50 border-emerald-300 shadow-sm opacity-100"
@@ -268,17 +283,12 @@
                 
                 div.className = baseClass + stateClass;
                 
-                let valHtml = value;
-                if (isActive && key === 'PBN') {
-                    valHtml = `<div class="mt-2.5 flex flex-wrap">${decodePBN(value)}</div>`;
-                }
-
                 div.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="${isActive ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'} font-mono text-xs font-bold px-2 py-0.5 rounded transition-all duration-300">${key}</span>
                         <span class="${isActive ? 'text-emerald-700' : 'text-slate-500'} text-[11px] font-extrabold tracking-wider">${keyDesc}</span>
                     </div>
-                    <div class="${isActive ? 'text-slate-800 font-mono font-medium text-sm' : 'text-slate-500 font-mono text-xs italic'} mt-1 break-words">${valHtml}</div>
+                    <div class="${isActive ? 'text-slate-800 font-mono font-medium text-sm' : 'text-slate-500 font-mono text-xs italic'} mt-1 break-words">${value}</div>
                 `;
                 container.appendChild(div);
             });
@@ -323,25 +333,33 @@
             let item18Match;
             let active18Data = {};
             let foundAny18 = false;
+            
+            const allowedItem18Keys = ['PBN', 'NAV', 'DAT', 'SUR', 'CODE'];
 
             while ((item18Match = item18Pattern.exec(cleaned)) !== null) {
                 const key = item18Match[1];
-                if (dictItem18Keys.hasOwnProperty(key)) {
+                if (allowedItem18Keys.includes(key)) {
                     foundAny18 = true;
                     active18Data[key] = item18Match[2].trim();
                 }
             }
 
             if (!foundAny18 && item10Match) {
-                showError("未偵測到指定的 Item 18 標籤 (PBN, NAV, DAT, CODE)。");
+                showError("未偵測到指定的 Item 18 標籤 (PBN, NAV, DAT, SUR, CODE)。");
             }
 
             renderAll(active10a, active10b, active18Data);
         }
 
         function renderAll(t10a, t10b, d18) {
-            renderPanel10(dict10a, 'item10a-grid', t10a, 'sky');
-            renderPanel10(dict10b, 'item10b-grid', t10b, 'indigo');
+            renderIndicatorPanel(dict10a, 'item10a-grid', t10a, 'sky');
+            renderIndicatorPanel(dict10b, 'item10b-grid', t10b, 'indigo');
+            
+            // Extract and render PBN separately
+            const activePBN = (d18['PBN'] || '').match(/.{1,2}/g) || [];
+            renderIndicatorPanel(dictPBN, 'pbn-grid', activePBN, 'emerald');
+
+            // Render remaining Item 18 info
             renderPanel18(d18);
         }
 
@@ -357,9 +375,6 @@
         // Initial Load
         window.onload = () => {
             renderAll([], [], {});
-            setTimeout(() => {
-                document.getElementById('decodeBtn').click();
-            }, 200);
         };
     </script>
 </body>
