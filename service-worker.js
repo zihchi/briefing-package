@@ -84,3 +84,15 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// ==========================================
+// 4. 跨執行緒通訊：回報目前版號給前端 UI
+// ==========================================
+self.addEventListener('message', (event) => {
+  if (event.data === 'GET_VERSION') {
+    event.source.postMessage({ 
+      type: 'VERSION_REPORT', 
+      version: CACHE_NAME 
+    });
+  }
+});
