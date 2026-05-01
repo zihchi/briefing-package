@@ -436,6 +436,11 @@
       </div>
   </div>
 
+  <!-- 👇 這是全新加入的區塊：動態版本號指示器 -->
+  <div id="sys-version" style="text-align: right; padding: 5px 20px 20px 0; font-size: 11px; color: #cbd5e1; font-family: 'Courier New', Courier, monospace; letter-spacing: 1px; user-select: none; pointer-events: none;">
+    Verifying System...
+  </div>
+  <!-- 👆 全新區塊結束 -->
   
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -463,6 +468,28 @@
     }).catch((err) => {
       console.error('ServiceWorker 註冊失敗:', err);
     });
+    // ---------------- 以下為這次新增的區塊 ----------------
+
+    // 📡 1. 主動向 Service Worker 請求目前的版號
+    navigator.serviceWorker.ready.then(registration => {
+      if (registration.active) {
+        registration.active.postMessage('GET_VERSION');
+      }
+    });
+
+    // 📡 2. 接收 Service Worker 傳回的版號，並更新到畫面上
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'VERSION_REPORT') {
+        const versionEl = document.getElementById('sys-version');
+        if (versionEl) {
+          // 如果傳回的是 "briefing-v7"，這行會把它修剪成 "v7"，並顯示出來
+          const displayVer = event.data.version.replace('briefing-', '');
+          versionEl.innerText = `SYS Build ${displayVer}`;
+        }
+      }
+    });
+
+    // ---------------- 新增區塊結束 ----------------
   });
 }
 </script>
