@@ -231,13 +231,7 @@
                                             <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
                                         </div>
                                     </div>
-                                    <!-- 備降機場專區 -->
-                                    <div class="mt-3 md:mt-4 ml-2 md:ml-3">
-                                        <span class="text-[9px] md:text-[10px] font-bold text-stone-500 mb-1.5 block tracking-widest uppercase">ALTERNATE AIRPORTS</span>
-                                        <div class="data-font font-bold text-stone-800 flex flex-wrap gap-2" id="out-altn-container">
-                                            <span class="text-stone-400 text-xs">NIL</span>
-                                        </div>
-                                    </div>
+                                    <!-- 備降機場區塊已依需求移除 -->
                                     <div id="arr-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
                                         <div class="text-xl md:text-2xl leading-none" id="arr-wx-icon">☁️</div>
                                         <div class="flex flex-col gap-0.5">
@@ -681,6 +675,11 @@
 
             if (!savedLidoUser || !savedLidoPass || !targetRaw) return showToast('請輸入有效的航班編號', true);
 
+            // 擷取前先歸零（保留目標航班號碼）
+            const currentTargetVal = document.getElementById('target-flight').value;
+            clearData(true); // 使用 silent 模式，避免蓋掉下一個 Toast
+            document.getElementById('target-flight').value = currentTargetVal;
+
             fetchBtn.disabled = true;
             document.getElementById('loading-spinner').classList.remove('hidden');
             document.getElementById('atc-display').value = '資料攔截中...';
@@ -826,12 +825,18 @@
                         const mxshMatch = ofpText.match(/MXSH\s+([A-Z0-9\/]+)/);
                         if (mxshMatch) {
                             mxsh = mxshMatch[1];
-                            const mxshParts = mxsh.split('/');
-                            if (mxshParts.length > 1) {
-                                const wptName = mxshParts[1].trim();
-                                const wptRegex = new RegExp(`\\b${wptName}\\b[\\s\\S]{0,300}?\\.{2,}\\s*(\\d{4})`);
+                            // 智能提取航點名稱 (例如 05/TASOT 或純 TASOT)，只要連續3個以上英文字母就當作航點
+                            const wptMatch = mxsh.match(/[A-Z]{3,}/);
+                            if (wptMatch) {
+                                const wptName = wptMatch[0];
+                                // 動態鎖定 MAX SHEAR 的航點，往下掃描最多300字元，抓取經緯度座標前的4碼時間
+                                const wptRegex = new RegExp(`\\b${wptName}\\b[\\s\\S]{1,300}?\\b(\\d{4})\\s+[NS]\\d{2}`);
                                 const atgoMatch = ofpText.match(wptRegex);
-                                if (atgoMatch) mxsh += ` ATGO ${atgoMatch[1]}`;
+                                // 將時間格式化為 XXhYYm 並接在 waypoint 後面
+                                if (atgoMatch) {
+                                    const timeRaw = atgoMatch[1];
+                                    mxsh += `/${timeRaw.substring(0,2)}h${timeRaw.substring(2,4)}m`;
+                                }
                             }
                         }
 
@@ -940,7 +945,7 @@
         // ==========================================
         // Pro Dashboard 邏輯 (解析、氣象、呈現)
         // ==========================================
-        function clearData() {
+        function clearData(silent = false) {
             document.getElementById('rawInput').value = '';
             document.getElementById('rawInput2').value = '';
             document.getElementById('atc-display').value = '';
@@ -962,7 +967,7 @@
             document.getElementById('dep-simple-wx').classList.add('hidden');
             document.getElementById('arr-simple-wx').classList.add('hidden');
 
-            showToastMessage('🧹 所有航班資料與快取已清除完畢！');
+            if (!silent) showToastMessage('🧹 所有航班資料與快取已清除完畢！');
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -1360,20 +1365,16 @@
             }
             document.getElementById('out-dep-bay').textContent = depBay; document.getElementById('out-arr-bay').textContent = arrBay;
 
-            // 備降機場提取寫入 UI (ALTN 1, 2, 3)
+            // 備降機場提取 (純供抓天氣使用，畫面區塊已移除)
             const alt1 = extractData(rawText, '第一備降機場/跑道');
             const alt2 = extractData(rawText, '第二備降機場/跑道');
             const alt3 = extractData(rawText, '第三備降機場/跑道');
-            let altHtml = '';
             [alt1, alt2, alt3].forEach(alt => {
                 if (alt !== 'N/A' && alt !== '----' && alt !== '') {
-                    altHtml += `<span class="bg-stone-100 px-2 py-1 text-[11px] rounded border border-stone-200 shadow-sm">${alt}</span>`;
                     const icao = alt.split('/')[0].trim();
                     if (icao.length === 4 && !currentIcaosToFetch.includes(icao)) currentIcaosToFetch.push(icao);
                 }
             });
-            const altnContainer = document.getElementById('out-altn-container');
-            if (altnContainer) altnContainer.innerHTML = altHtml === '' ? '<span class="text-stone-400 text-xs">NIL</span>' : altHtml;
 
             const melMatch = rawText2.match(/MEL:\s*([^]+?)(?=\(\d+\)|BAY:|$)/i);
             const melContainer = document.getElementById('out-mel-container');
