@@ -84,6 +84,32 @@
             flex-direction: column; 
             min-width: 0; 
         }
+
+        /* 👑 新增：Crew A 與 Crew B 的獨立底色視覺設計 */
+        .crew-a-card {
+            background-color: #f0fbf6; /* 柔和的薄荷綠底色 */
+            border: 2px solid #2ecc71;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.1);
+        }
+        .crew-b-card {
+            background-color: #fef9f4; /* 柔和的暖橘色底色 */
+            border: 2px solid #f39c12;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(243, 156, 18, 0.1);
+        }
+        .crew-card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed rgba(0,0,0,0.1);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         
         label { font-size: 15px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
         
@@ -118,7 +144,7 @@
             flex-direction: column;
             gap: 8px;
             margin-bottom: 12px;
-            background: #f4f6f7;
+            background: rgba(255, 255, 255, 0.6); /* 微調透明度以適應新底色 */
             padding: 10px;
             border-radius: 8px;
             width: 100%;
@@ -155,6 +181,8 @@
             gap: 8px;
             min-width: 0; 
         }
+        
+        /* 👑 升級：大幅增加簽名板高度 */
         canvas.sig-pad {
             border: 2px solid #bdc3c7;
             border-radius: 8px;
@@ -162,8 +190,9 @@
             cursor: crosshair;
             touch-action: none;
             width: 100%;
-            height: 140px;
+            height: 250px; /* 從 140px 擴展至 250px，增加手指繪圖腹地 */
             box-sizing: border-box;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
         }
 
         .btn-small {
@@ -324,13 +353,14 @@
         </div>
         
         <div class="controls-grid">
-            <div class="form-group full-width">
+            <div class="form-group full-width" style="padding: 0 10px;">
                 <label>填寫日期 (Date)</label>
                 <input type="date" id="in-header-date" oninput="syncText()" style="width: 100%; max-width: 250px;">
             </div>
             
-            <div class="form-group">
-                <label>Crew A</label>
+            <!-- 👑 升級：Crew A 專屬區塊與底色 -->
+            <div class="form-group crew-a-card">
+                <div class="crew-card-title" style="color: #27ae60;">✈️ Crew A (換班人)</div>
                 <div class="crew-info-group">
                     <select id="in-a-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
@@ -361,8 +391,9 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Crew B</label>
+            <!-- 👑 升級：Crew B 專屬區塊與底色 -->
+            <div class="form-group crew-b-card">
+                <div class="crew-card-title" style="color: #d35400;">🤝 Crew B (被換班人)</div>
                 <div class="crew-info-group">
                     <select id="in-b-fleet" onchange="syncText()">
                         <option value="A330" selected>A330</option>
@@ -396,7 +427,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <label style="font-size: 18px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
                     <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 8px;">
-                        <label style="margin: 0;">簽名大小:</label>
+                        <label style="margin: 0;">合成簽名大小:</label>
                         <input type="range" id="sig-size-ctrl" min="40" max="150" value="70" step="1" oninput="updateSigSize()">
                         <span id="sig-size-display">70px</span>
                     </div>
@@ -404,13 +435,15 @@
                 
                 <div class="signature-container">
                     <div class="signature-pad-wrapper">
-                        <label style="font-weight: normal; color: #7f8c8d;">Crew A 簽名區</label>
-                        <canvas id="pad-a" class="sig-pad" width="400" height="140"></canvas>
+                        <!-- 👑 升級：增加簽名板內部高解析度 -->
+                        <label style="font-weight: bold; color: #27ae60;">Crew A 簽名區</label>
+                        <canvas id="pad-a" class="sig-pad" width="600" height="250"></canvas>
                         <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-a', 'out-sig-a')">清除 Crew A 簽名重寫</button>
                     </div>
                     <div class="signature-pad-wrapper">
-                        <label style="font-weight: normal; color: #7f8c8d;">Crew B 簽名區</label>
-                        <canvas id="pad-b" class="sig-pad" width="400" height="140"></canvas>
+                        <!-- 👑 升級：增加簽名板內部高解析度 -->
+                        <label style="font-weight: bold; color: #d35400;">Crew B 簽名區</label>
+                        <canvas id="pad-b" class="sig-pad" width="600" height="250"></canvas>
                         <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-b', 'out-sig-b')">清除 Crew B 簽名重寫</button>
                     </div>
                 </div>
@@ -590,7 +623,6 @@
             const size = document.getElementById('font-size-ctrl').value;
             document.getElementById('font-size-display').innerText = size + 'px';
             document.querySelectorAll('.text-overlay').forEach(el => {
-                // 排除日期欄位，使其維持預設的 14px
                 if (['out-date-y', 'out-date-m', 'out-date-d'].includes(el.id)) return;
                 el.style.fontSize = size + 'px';
             });
@@ -651,7 +683,7 @@
                 e.preventDefault(); 
                 const pos = getPointerPos(e);
                 
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 4; /* 調整畫筆粗細以配合加大版面 */
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = '#000000';
