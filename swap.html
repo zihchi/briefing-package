@@ -334,18 +334,23 @@
 </head>
 <body>
 
-    <div class="panel">
-        <!-- 建議：使用 Flexbox 讓返回按鈕與標題水平並排，並置中對齊 -->
-        <div class="flex items-center mb-4">
-        <!-- 返回首頁按鈕 -->
+  <div class="panel">
+    
+    <!-- 頂部區塊：只有返回按鈕與標題在這裡面水平排列 -->
+    <div class="flex items-center mb-4">
         <a href="index.html" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors shadow-sm mr-3" title="返回簡報箱">
             <i data-lucide="arrow-left" class="w-6 h-6"></i>
         </a>
         <div class="header-title">第一步：載入原版換班單 PDF</div>
-        <div class="upload-area" id="status-area">
-            <label id="status-msg">系統正在嘗試自動從 GitHub 載入 PDF 底圖...</label>
-            <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
-        </div>
+    </div> <!-- 🔴 關鍵修正：這裡必須加上 </div> 關閉頂部區塊 -->
+
+    <!-- 下方區塊：上傳區域獨立出來 -->
+    <div class="upload-area" id="status-area">
+        <label id="status-msg">系統正在嘗試自動從 GitHub 載入 PDF 底圖...</label>
+        <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
+    </div>
+
+</div> <!-- 🔴 別忘了最外層的 panel 也要關閉 -->
 
         <div class="header-title">
             第二步：輸入換班資訊與設定
