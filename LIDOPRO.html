@@ -564,7 +564,7 @@
 
                 <!-- 匯出與截圖按鈕區域 (置底，並排或堆疊) -->
                 <div class="w-full max-w-[1194px] mx-auto flex flex-col md:flex-row justify-center items-center gap-4 pb-8 mt-6 no-print">
-                    <!-- 原本的匯出圖片按鈕 (已將畫質升級至3倍 Retina 等級) -->
+                    <!-- 原本的匯出圖片按鈕 (已將畫質穩定在 2 倍 Retina 等級) -->
                     <button id="capture-btn" onclick="copyDashboardToClipboard()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         匯出圖片 (剪貼簿)
@@ -1128,26 +1128,40 @@
         }
 
         // ==========================================
-        // 匯出截圖功能 (畫質升級 3 倍)
+        // 匯出截圖功能 (修正偏移與倍率)
         // ==========================================
         async function copyDashboardToClipboard() {
             const dashboard = document.getElementById('dashboard-content');
             const btn = document.getElementById('capture-btn');
             const originalText = btn.innerHTML;
             try {
-                btn.innerHTML = '⏳ 正在生成 4K 高畫質截圖...';
-                // 將 scale 提升為 3，獲得頂級畫質
-                const canvasConfig = { scale: 3, useCORS: true, backgroundColor: '#f4ece4', logging: false, imageSmoothingEnabled: true };
+                btn.innerHTML = '⏳ 正在生成高畫質截圖...';
+                
+                // 修正截圖偏移：暫時置頂
+                const scrollPos = window.scrollY;
+                window.scrollTo(0, 0);
+
+                // 將 scale 設為 2 (Retina 等級)，兼顧畫質與 iOS 記憶體極限
+                const canvasConfig = { 
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#f4ece4', 
+                    logging: false, 
+                    windowWidth: document.documentElement.offsetWidth,
+                    windowHeight: document.documentElement.offsetHeight
+                };
                 
                 if (navigator.clipboard && window.ClipboardItem) {
                     const blobPromise = html2canvas(dashboard, canvasConfig)
                                         .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
+                    
+                    window.scrollTo(0, scrollPos); // 恢復捲動
                     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
-                    showToastMessage('✅ 4K 高清截圖已複製！可直接貼上至備忘錄');
+                    showToastMessage('✅ 高清截圖已複製！可直接貼上至備忘錄');
                     btn.innerHTML = originalText;
                 } else { throw new Error('API not supported'); }
             } catch (err) {
-                const canvasConfig = { scale: 3, useCORS: true, backgroundColor: '#f4ece4', logging: false, imageSmoothingEnabled: true };
+                const canvasConfig = { scale: 2, useCORS: true, backgroundColor: '#f4ece4', logging: false };
                 html2canvas(dashboard, canvasConfig).then(canvas => {
                     showFallbackImageModal(canvas.toDataURL('image/png'));
                     btn.innerHTML = originalText;
@@ -1156,7 +1170,7 @@
         }
 
         // ==========================================
-        // 匯出單頁無縫 PDF (透過 jsPDF + html2canvas)
+        // 匯出單頁無縫 PDF (防裁切、防記憶體爆掉修正版)
         // ==========================================
         async function exportSinglePagePDF() {
             const dashboard = document.getElementById('dashboard-content');
@@ -1165,32 +1179,50 @@
             const flightNo = document.getElementById('out-flight-no').innerText || 'Briefing';
             
             try {
-                btn.innerHTML = '⏳ 正在建立單頁 PDF...';
-                showToastMessage('正在掃描儀表板以生成 PDF...');
+                btn.innerHTML = '⏳ 正在建立無縫單頁 PDF...';
+                showToastMessage('正在掃描儀表板，請稍候...');
+
+                // 1. 修正擷取偏移：紀錄原本的捲動位置，並將畫面捲動至最頂端
+                const scrollPos = window.scrollY;
+                window.scrollTo(0, 0);
                 
-                // 先用 html2canvas 產生高畫質圖片
-                const canvas = await html2canvas(dashboard, { scale: 3, useCORS: true, backgroundColor: '#f4ece4', logging: false });
-                const imgData = canvas.toDataURL('image/jpeg', 0.95); // 使用 JPEG 稍微減少 PDF 體積但保持高畫質
+                // 2. 先用 html2canvas 產生高畫質圖片 (scale: 2 是最保險且清晰的倍率)
+                const canvas = await html2canvas(dashboard, { 
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#f4ece4', 
+                    logging: false,
+                    windowWidth: document.documentElement.offsetWidth,
+                    windowHeight: document.documentElement.offsetHeight
+                });
                 
-                // 以 canvas 的長寬來建立對應尺寸的單頁 PDF
-                const pdfWidth = canvas.width;
-                const pdfHeight = canvas.height;
+                // 恢復捲動位置
+                window.scrollTo(0, scrollPos);
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95); 
+                
+                // 3. 計算「邏輯尺寸 (CSS 像素)」而非「Canvas 實體像素」
+                // 這樣 PDF 的物理尺寸才會正常，且依然包覆著 2 倍的高畫質圖片 (Retina 效果)
+                const logicalWidth = dashboard.offsetWidth;
+                const logicalHeight = dashboard.offsetHeight;
+
                 const { jsPDF } = window.jspdf;
                 
-                // p = portrait (直式), px = 像素為單位, 將頁面大小設定為完全貼合圖片
+                // p = portrait (直式), px = 像素為單位
                 const pdf = new jsPDF({
                     orientation: 'p', 
                     unit: 'px',
-                    format: [pdfWidth, pdfHeight]
+                    format: [logicalWidth, logicalHeight]
                 });
                 
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                // 將圖片塞入邏輯尺寸的 PDF 畫布中
+                pdf.addImage(imgData, 'JPEG', 0, 0, logicalWidth, logicalHeight);
                 pdf.save(`${flightNo}_Dispatch_Briefing.pdf`);
                 
                 showToastMessage('✅ 單頁無縫 PDF 已成功下載！');
             } catch (err) {
                 console.error(err);
-                showToastMessage('❌ PDF 匯出失敗，請稍後再試。');
+                showToastMessage('❌ PDF 匯出失敗 (可能為裝置記憶體限制)，請稍後再試。');
             } finally {
                 btn.innerHTML = originalText;
             }
