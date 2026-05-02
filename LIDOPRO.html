@@ -419,9 +419,6 @@
             <button onclick="document.getElementById('mel-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
             <button onclick="pasteFromClipboard('mel')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
         </div>
-        
-        <!-- 輸入框尺寸加大以符合 Profile 樣式 -->
-        <input type="text" id="mel-paste-input" placeholder="👉 長按貼上圖片" class="border border-stone-300 rounded-lg px-4 py-2 w-48 text-center text-sm text-stone-600 focus:outline-none focus:border-[#8b5a2b] bg-white shadow-inner" oninput="this.value=''">
     </div>
     
     <!-- 圖片最大高度從 300px 調整為 600px -->
@@ -486,10 +483,9 @@
                                     <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                                         <div class="flex gap-4 mb-4 w-full max-w-[320px]">
-                                            <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
-                                            <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
-                                        </div>
-                                        <input type="text" id="profile-paste-input" placeholder="👉 長按貼上圖片" class="border border-stone-300 rounded-lg px-4 py-2 w-48 text-center text-sm text-stone-600 focus:outline-none focus:border-[#8b5a2b] bg-white shadow-inner" oninput="this.value=''">
+                                            <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                            <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                        </div>                                      
                                     </div>
                                     <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
                                     <input type="file" id="profile-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
@@ -527,8 +523,6 @@
             <button onclick="document.getElementById('wni-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
             <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
         </div>
-        
-        <input type="text" id="wni-paste-input" placeholder="👉 長按貼上圖片" class="border border-stone-300 rounded-lg px-4 py-2 w-48 text-center text-sm text-stone-600 focus:outline-none focus:border-blue-500 bg-white shadow-inner" oninput="this.value=''">
     </div>
     
     <img id="wni-image" src="" alt="WNI Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
@@ -578,7 +572,7 @@
         const airportMap = {
             'RCTP':'TPE', 'RCKH':'KHH', 'RCSS':'TSA', 'RMQ':'RMQ',
             'VMMC':'MFM', 'VHHH':'HKG',
-            'RJAA':'NRT', 'RJTT':'HND', 'RJBB':'KIX', 'RJGG':'NGO', 'RJFF':'FUK', 'ROAH':'OKA', 'RJSS':'SDJ', 'RJCC':'CTS', 'RJCH':'HKD', 'RJFU':'NGS', 'RJOA':'HIJ', 'RJSN':'KIJ', 'RJFK':'KOJ',
+            'RJAA':'NRT', 'RJTT':'HND', 'RJBB':'KIX', 'RJGG':'NGO', 'RJFT':'KMJ','RJFF':'FUK', 'ROAH':'OKA', 'RJSS':'SDJ', 'RJCC':'CTS', 'RJCH':'HKD', 'RJFU':'NGS', 'RJOA':'HIJ', 'RJSN':'KIJ', 'RJFK':'KOJ',
             'KSFO':'SFO', 'KLAX':'LAX', 'KSEA':'SEA', 'KOAK':'OAK', 'KSMF':'SMF', 'KONT':'ONT', 'KPDX':'PDX', 'PANC':'ANC', 'PMDY':'MDY', 'PHNL':'HNL',
             'RPLL':'MNL', 'RPVM':'CEB', 'RPLC':'CRK',
             'VVNB':'HAN', 'VVTS':'SGN', 'VVDN':'DAD', 'VVCR':'CXR', 'VVPQ':'PQC',
@@ -1039,57 +1033,52 @@
             }
         }
 
-        window.addEventListener('paste', function(e) {
-            if ((e.target.tagName === 'TEXTAREA' && !e.target.placeholder.includes('長按貼上')) || 
-                (e.target.tagName === 'INPUT' && !e.target.placeholder.includes('長按貼上'))) { return; }
+       window.addEventListener('paste', function(e) {
+    // 如果焦點在一般的輸入框或文字區域，則不攔截（讓使用者能正常貼上文字）
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return; }
 
-            let prefix = 'profile'; 
-            if (e.target.id && e.target.id.includes('-paste-input')) {
-                prefix = e.target.id.split('-')[0];
-            }
+    // 全域貼上快捷鍵預設將圖片放至 profile
+    let prefix = 'profile'; 
 
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let index in items) {
-                const item = items[index];
-                if (item.kind === 'file' && item.type.includes('image/')) {
-                    const blob = item.getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const dataUrl = event.target.result;
-                        showImage(dataUrl, prefix);
-                        localStorage.setItem(`dispatch_${prefix}_image`, dataUrl);
-                    };
-                    reader.readAsDataURL(blob);
-                    e.preventDefault();
-                }
-            }
-            if (e.target.tagName === 'INPUT' && e.target.placeholder.includes('長按貼上')) {
-                setTimeout(() => e.target.value = '', 10);
-            }
-        });
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let index in items) {
+        const item = items[index];
+        if (item.kind === 'file' && item.type.includes('image/')) {
+            const blob = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const dataUrl = event.target.result;
+                showImage(dataUrl, prefix);
+                localStorage.setItem(`dispatch_${prefix}_image`, dataUrl);
+            };
+            reader.readAsDataURL(blob);
+            e.preventDefault();
+        }
+    }
+});
 
         async function pasteFromClipboard(prefix) {
-            try {
-                if (!navigator.clipboard || !navigator.clipboard.read) return showToastMessage('此瀏覽器不支援一鍵貼上，請使用下方「長按輸入框」');
-                const clipboardItems = await navigator.clipboard.read();
-                for (const clipboardItem of clipboardItems) {
-                    const imageTypes = clipboardItem.types.filter(type => type.startsWith('image/'));
-                    if (imageTypes.length > 0) {
-                        const blob = await clipboardItem.getType(imageTypes[0]);
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            showImage(e.target.result, prefix);
-                            localStorage.setItem(`dispatch_${prefix}_image`, e.target.result);
-                        };
-                        reader.readAsDataURL(blob);
-                        return;
-                    }
-                }
-                showToastMessage('剪貼簿中未偵測到圖片！請先截圖或複製。');
-            } catch (err) {
-                showToastMessage('無法讀取剪貼簿，請嘗試下方「長按輸入框貼上」');
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.read) return showToastMessage('此瀏覽器不支援一鍵貼上功能。');
+        const clipboardItems = await navigator.clipboard.read();
+        for (const clipboardItem of clipboardItems) {
+            const imageTypes = clipboardItem.types.filter(type => type.startsWith('image/'));
+            if (imageTypes.length > 0) {
+                const blob = await clipboardItem.getType(imageTypes[0]);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    showImage(e.target.result, prefix);
+                    localStorage.setItem(`dispatch_${prefix}_image`, e.target.result);
+                };
+                reader.readAsDataURL(blob);
+                return;
             }
         }
+        showToastMessage('剪貼簿中未偵測到圖片！請先截圖或複製。');
+    } catch (err) {
+        showToastMessage('無法讀取剪貼簿，請確認瀏覽器權限或重新複製圖片。');
+    }
+}
 
         function handleImageUpload(event, prefix) {
             const file = event.target.files[0];
