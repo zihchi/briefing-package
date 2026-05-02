@@ -75,7 +75,16 @@
     <div id="offline-banner" class="fixed top-0 left-0 w-full hidden">⚠️ 目前處於離線模式。顯示資料為系統最後一次快取紀錄。</div>
 
     <!-- 登入與鎖定畫面 -->
-    <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-center p-4">
+    <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-center p-4 relative">
+        
+        <!-- 新增：浮動於左上角的全局返回按鈕 (Glassmorphism 風格) -->
+        <a href="index.html" class="absolute top-6 left-6 md:top-8 md:left-8 p-2.5 bg-white/40 hover:bg-white/80 backdrop-blur-md text-stone-700 rounded-xl transition-all shadow-sm border border-white/60 flex items-center justify-center hover:scale-105 active:scale-95 z-50" title="返回上一頁">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+
+        <!-- 第一層：網頁密碼鎖 -->
         <div id="lock-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
             <h2 class="text-2xl font-bold mb-6 tracking-wider text-stone-700">系統已鎖定</h2>
@@ -83,6 +92,7 @@
             <button id="unlock-btn" class="w-full px-4 py-3 bg-[#4a3627] hover:bg-[#5c4033] text-white font-bold rounded-xl transition-colors shadow-md active:scale-95">解鎖系統</button>
         </div>
 
+        <!-- 第二層：Lido 伺服器驗證 -->
         <div id="lido-login-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500 hidden">
             <svg class="w-16 h-16 mx-auto mb-4 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <h2 class="text-2xl font-bold mb-4 tracking-wider text-stone-700">伺服器驗證</h2>
