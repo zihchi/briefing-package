@@ -97,16 +97,31 @@
     <div id="main-app" class="w-full max-w-[1600px] mx-auto transition-opacity duration-500 hidden flex flex-col p-3 md:p-6">
         
         <!-- 頂部 Header -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-stone-300 pb-4 gap-4">
-            <h1 class="text-xl md:text-2xl font-black text-[#4a3627] tracking-wide flex items-center">
-                <svg class="w-6 h-6 mr-2 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                Briefing
-            </h1>
-            <div class="flex gap-3 items-center w-full sm:w-auto">
-                <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
-                <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 鎖定系統</button>
-            </div>
-        </div>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-stone-300 pb-4 gap-4">
+    
+    <!-- 左側群組：返回按鈕 + 標題 -->
+    <div class="flex items-center gap-3">
+        <!-- 新增的返回按鈕 -->
+        <a href="index.html" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl transition-colors shadow-sm border border-stone-200" title="返回上一頁">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+        
+        <!-- 原本的標題 -->
+        <h1 class="text-xl md:text-2xl font-black text-[#4a3627] tracking-wide flex items-center">
+            <svg class="w-6 h-6 mr-2 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Briefing
+        </h1>
+    </div>
+
+    <!-- 右側群組：操作按鈕 -->
+    <div class="flex gap-3 items-center w-full sm:w-auto">
+        <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
+        <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 鎖定系統</button>
+    </div>
+    
+</div>
          
 
         <!-- 彈性雙欄排版 (左側控制台 / 右側簡報區) -->
