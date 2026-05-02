@@ -1,5 +1,5 @@
-// 每次發布新版本或新增檔案時，請務必推進此版號 (v6 -> v7)
-const CACHE_NAME = 'briefing-v10'; 
+// 每次發布新版本或新增檔案時，請務必推進此版號
+const CACHE_NAME = 'briefing-v11'; 
 const urlsToCache = [
   './',
   './index.html',
