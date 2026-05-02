@@ -1,5 +1,5 @@
 // 每次發布新版本或新增檔案時，請務必推進此版號 (v6 -> v7)
-const CACHE_NAME = 'briefing-v9'; 
+const CACHE_NAME = 'briefing-v10'; 
 const urlsToCache = [
   './',
   './index.html',
@@ -11,12 +11,14 @@ const urlsToCache = [
   './curfew.html',
   './fuel.html',
   './LIDOPRO.html',
+  './swap.html',
   './notam.html',
   './time.html',
   './fpl_decoder.html',     // 新增：ICAO FPL Decoder 檔案 (若您的檔名不同，請務必在此修改)
   './manifest.json',    // 確保 PWA 核心設定能離線讀取
   './icon-192.png',     // 確保離線時圖示正常顯示
-  './icon-512.png'
+  './icon-512.png',
+  './SwapDutyForm.pdf'
 ];
 
 // 1. 安裝階段：快取檔案 + 強制插隊跳過等待
