@@ -4,20 +4,96 @@
     <meta charset="UTF-8">
     <!-- 針對 iOS 優化：加入 maximum-scale=1.0, user-scalable=0 鎖定縮放，防止誤觸放大 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>飛航員任務換班單 - iOS 優化疊加版</title>
+    <title>飛航員任務換班單</title>
+    
+    <!-- 引入外部套件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         body {
             font-family: "-apple-system", "BlinkMacSystemFont", "Microsoft JhengHei", "PingFang TC", sans-serif;
             background-color: #2c3e50;
             margin: 0;
-            padding: 10px;
+            padding: 0; /* 移除 padding 以便讓 header 貼齊螢幕邊緣 */
             display: flex;
             flex-direction: column;
             align-items: center;
             color: #333;
         }
+
+        /* 👑 新增：導覽列 Header 專屬樣式 (完美重現 Tailwind 視覺效果) */
+        .top-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            padding: 20px 16px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 10;
+        }
+        @media (min-width: 768px) {
+            .top-header { padding: 20px 32px; }
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .back-btn {
+            display: inline-flex;
+            padding: 8px;
+            background-color: #f1f5f9;
+            color: #475569;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            margin-right: 8px;
+        }
+        .back-btn:hover {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+        .header-icon {
+            color: #0284c7;
+        }
+        .header-icon svg {
+            width: 32px;
+            height: 32px;
+        }
+        .header-text h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.025em;
+            color: #1e293b;
+        }
+        .header-text p {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            color: #64748b;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* 內容容器保護區 */
+        .main-container {
+            padding: 20px 10px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
         .panel {
             background: #ffffff;
             padding: 20px;
@@ -144,7 +220,7 @@
             flex-direction: column;
             gap: 8px;
             margin-bottom: 12px;
-            background: rgba(255, 255, 255, 0.6); /* 微調透明度以適應新底色 */
+            background: rgba(255, 255, 255, 0.6);
             padding: 10px;
             border-radius: 8px;
             width: 100%;
@@ -190,7 +266,7 @@
             cursor: crosshair;
             touch-action: none;
             width: 100%;
-            height: 250px; /* 從 140px 擴展至 250px，增加手指繪圖腹地 */
+            height: 250px; 
             box-sizing: border-box;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
         }
@@ -281,7 +357,7 @@
         .text-overlay {
             position: absolute;
             color: #000000; 
-            font-size: 14px; /* 預設改為 14px */
+            font-size: 14px; 
             font-weight: bold;
             z-index: 2;
             white-space: pre-wrap;
@@ -309,7 +385,7 @@
             border: 2px dashed transparent;
             border-radius: 4px;
             transition: background-color 0.2s, border-color 0.2s;
-            height: 70px; /* 預設改為 70px */
+            height: 70px; 
             padding: 4px;
         }
         .sig-overlay:hover, .sig-overlay:active {
@@ -334,171 +410,178 @@
 </head>
 <body>
 
-<div class="panel">
-    
-    <!-- 保持原本的結構，只在 header-title 內加上 flex 來讓按鈕跟文字並排 -->
-    <div class="header-title flex items-center">
-        <!-- 改用 SVG 圖示，確保不需要 JS 也能完美顯示 -->
-        <a href="index.html" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors shadow-sm mr-3 inline-flex items-center justify-center" title="返回簡報箱">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-        </a>
-        <span>第一步：載入原版換班單 PDF</span>
-    </div>
-
-    <div class="upload-area" id="status-area">
-        <label id="status-msg">系統正在嘗試自動從 GitHub 載入 PDF 底圖...</label>
-        <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
-    </div>
-
-</div>
-
-        <div class="header-title">
-            第二步：輸入換班資訊與設定
-            <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="margin: 0;">字體大小:</label>
-                    <input type="range" id="font-size-ctrl" min="10" max="36" value="14" step="1" oninput="updateFontSize()">
-                    <span id="font-size-display">14px</span>
-                </div>
+    <!-- 👇 新增的 Header 區塊 -->
+    <header class="top-header">
+        <div class="header-content">
+            <a href="index.html" class="back-btn" title="返回簡報箱">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <div class="header-icon">
+                <i data-lucide="plane-takeoff"></i>
+            </div>
+            <div class="header-text">
+                <h1>飛航任務換班系統</h1>
+                <p>iOS Optimized Edition</p>
             </div>
         </div>
-        
-        <div class="controls-grid">
-            <div class="form-group full-width" style="padding: 0 10px;">
-                <label>填寫日期 (Date)</label>
-                <input type="date" id="in-header-date" oninput="syncText()" style="width: 100%; max-width: 250px;">
+    </header>
+    <!-- 👆 新增結束 -->
+
+    <!-- 主要內容區塊 -->
+    <main class="main-container">
+        <div class="panel">
+            <div class="header-title">第一步：載入原版換班單 PDF</div>
+            <div class="upload-area" id="status-area">
+                <label id="status-msg">系統正在嘗試自動從 GitHub 載入 PDF 底圖...</label>
+                <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
+            </div>
+
+            <div class="header-title">
+                第二步：輸入換班資訊與設定
+                <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="margin: 0;">字體大小:</label>
+                        <input type="range" id="font-size-ctrl" min="10" max="36" value="14" step="1" oninput="updateFontSize()">
+                        <span id="font-size-display">14px</span>
+                    </div>
+                </div>
             </div>
             
-            <!-- 👑 升級：Crew A 專屬區塊與底色 -->
-            <div class="form-group crew-a-card">
-                <div class="crew-card-title" style="color: #27ae60;">✈️ Crew A (換班人)</div>
-                <div class="crew-info-group">
-                    <select id="in-a-fleet" onchange="syncText()">
-                        <option value="A330" selected>A330</option>
-                        <option value="A321">A321</option>
-                        <option value="A350">A350</option>
-                    </select>
-                    <!-- Crew A 加入預設值 -->
-                    <input type="text" id="in-a-id" placeholder="員編" value="2313068" oninput="syncText()">
-                    <input type="text" id="in-a-name" placeholder="姓名" value="洪子錡" oninput="syncText()">
+            <div class="controls-grid">
+                <div class="form-group full-width" style="padding: 0 10px;">
+                    <label>填寫日期 (Date)</label>
+                    <input type="date" id="in-header-date" oninput="syncText()" style="width: 100%; max-width: 250px;">
                 </div>
                 
-                <label style="margin-top: 15px;">Crew A - 換班前勤務</label>
-                <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-1" oninput="syncDutyDate(1)">
-                    <input type="text" id="in-a-duty-text-1" placeholder="勤務 1" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-2" oninput="syncDutyDate(2)">
-                    <input type="text" id="in-a-duty-text-2" placeholder="勤務 2" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-3" oninput="syncDutyDate(3)">
-                    <input type="text" id="in-a-duty-text-3" placeholder="勤務 3" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-a-duty-date-4" oninput="syncDutyDate(4)">
-                    <input type="text" id="in-a-duty-text-4" placeholder="勤務 4" oninput="syncText()">
-                </div>
-            </div>
-
-            <!-- 👑 升級：Crew B 專屬區塊與底色 -->
-            <div class="form-group crew-b-card">
-                <div class="crew-card-title" style="color: #d35400;">🤝 Crew B (被換班人)</div>
-                <div class="crew-info-group">
-                    <select id="in-b-fleet" onchange="syncText()">
-                        <option value="A330" selected>A330</option>
-                        <option value="A321">A321</option>
-                        <option value="A350">A350</option>
-                    </select>
-                    <input type="text" id="in-b-id" placeholder="員編" oninput="syncText()">
-                    <input type="text" id="in-b-name" placeholder="姓名" oninput="syncText()">
-                </div>
-                
-                <label style="margin-top: 15px;">Crew B - 換班前勤務</label>
-                <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-1" oninput="syncText()">
-                    <input type="text" id="in-b-duty-text-1" placeholder="勤務 1" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-2" oninput="syncText()">
-                    <input type="text" id="in-b-duty-text-2" placeholder="勤務 2" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-3" oninput="syncText()">
-                    <input type="text" id="in-b-duty-text-3" placeholder="勤務 3" oninput="syncText()">
-                </div>
-                <div class="duty-row">
-                    <input type="date" id="in-b-duty-date-4" oninput="syncText()">
-                    <input type="text" id="in-b-duty-text-4" placeholder="勤務 4" oninput="syncText()">
-                </div>
-            </div>
-
-            <div class="form-group full-width" style="border-top: 1px solid #ecf0f1; padding-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <label style="font-size: 18px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
-                    <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 8px;">
-                        <label style="margin: 0;">合成簽名大小:</label>
-                        <input type="range" id="sig-size-ctrl" min="40" max="150" value="70" step="1" oninput="updateSigSize()">
-                        <span id="sig-size-display">70px</span>
+                <!-- 👑 升級：Crew A 專屬區塊與底色 -->
+                <div class="form-group crew-a-card">
+                    <div class="crew-card-title" style="color: #27ae60;">✈️ Crew A (換班人)</div>
+                    <div class="crew-info-group">
+                        <select id="in-a-fleet" onchange="syncText()">
+                            <option value="A330" selected>A330</option>
+                            <option value="A321">A321</option>
+                            <option value="A350">A350</option>
+                        </select>
+                        <input type="text" id="in-a-id" placeholder="員編" value="2313068" oninput="syncText()">
+                        <input type="text" id="in-a-name" placeholder="姓名" value="洪子錡" oninput="syncText()">
+                    </div>
+                    
+                    <label style="margin-top: 15px;">Crew A - 換班前勤務</label>
+                    <div class="duty-row">
+                        <input type="date" id="in-a-duty-date-1" oninput="syncDutyDate(1)">
+                        <input type="text" id="in-a-duty-text-1" placeholder="勤務 1" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-a-duty-date-2" oninput="syncDutyDate(2)">
+                        <input type="text" id="in-a-duty-text-2" placeholder="勤務 2" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-a-duty-date-3" oninput="syncDutyDate(3)">
+                        <input type="text" id="in-a-duty-text-3" placeholder="勤務 3" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-a-duty-date-4" oninput="syncDutyDate(4)">
+                        <input type="text" id="in-a-duty-text-4" placeholder="勤務 4" oninput="syncText()">
                     </div>
                 </div>
-                
-                <div class="signature-container">
-                    <div class="signature-pad-wrapper">
-                        <!-- 👑 升級：增加簽名板內部高解析度 -->
-                        <label style="font-weight: bold; color: #27ae60;">Crew A 簽名區</label>
-                        <canvas id="pad-a" class="sig-pad" width="600" height="250"></canvas>
-                        <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-a', 'out-sig-a')">清除 Crew A 簽名重寫</button>
+
+                <!-- 👑 升級：Crew B 專屬區塊與底色 -->
+                <div class="form-group crew-b-card">
+                    <div class="crew-card-title" style="color: #d35400;">🤝 Crew B (被換班人)</div>
+                    <div class="crew-info-group">
+                        <select id="in-b-fleet" onchange="syncText()">
+                            <option value="A330" selected>A330</option>
+                            <option value="A321">A321</option>
+                            <option value="A350">A350</option>
+                        </select>
+                        <input type="text" id="in-b-id" placeholder="員編" oninput="syncText()">
+                        <input type="text" id="in-b-name" placeholder="姓名" oninput="syncText()">
                     </div>
-                    <div class="signature-pad-wrapper">
-                        <!-- 👑 升級：增加簽名板內部高解析度 -->
-                        <label style="font-weight: bold; color: #d35400;">Crew B 簽名區</label>
-                        <canvas id="pad-b" class="sig-pad" width="600" height="250"></canvas>
-                        <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-b', 'out-sig-b')">清除 Crew B 簽名重寫</button>
+                    
+                    <label style="margin-top: 15px;">Crew B - 換班前勤務</label>
+                    <div class="duty-row">
+                        <input type="date" id="in-b-duty-date-1" oninput="syncText()">
+                        <input type="text" id="in-b-duty-text-1" placeholder="勤務 1" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-b-duty-date-2" oninput="syncText()">
+                        <input type="text" id="in-b-duty-text-2" placeholder="勤務 2" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-b-duty-date-3" oninput="syncText()">
+                        <input type="text" id="in-b-duty-text-3" placeholder="勤務 3" oninput="syncText()">
+                    </div>
+                    <div class="duty-row">
+                        <input type="date" id="in-b-duty-date-4" oninput="syncText()">
+                        <input type="text" id="in-b-duty-text-4" placeholder="勤務 4" oninput="syncText()">
                     </div>
                 </div>
-            </div>
 
-            <div class="tweak-area full-width">
-                <span>👉 第三步：文字與簽名已套用完美座標！請在下方預覽區「左右滑動」並「按住文字拖曳」微調。</span>
-                <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (開發者專用)</button>
-            </div>
+                <div class="form-group full-width" style="border-top: 1px solid #ecf0f1; padding-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <label style="font-size: 18px; margin-bottom: 0;">✍️ 組員手寫簽名 (Crew Signatures)</label>
+                        <div style="font-size: 15px; font-weight: normal; color: #333; display: flex; align-items: center; gap: 8px;">
+                            <label style="margin: 0;">合成簽名大小:</label>
+                            <input type="range" id="sig-size-ctrl" min="40" max="150" value="70" step="1" oninput="updateSigSize()">
+                            <span id="sig-size-display">70px</span>
+                        </div>
+                    </div>
+                    
+                    <div class="signature-container">
+                        <div class="signature-pad-wrapper">
+                            <label style="font-weight: bold; color: #27ae60;">Crew A 簽名區</label>
+                            <canvas id="pad-a" class="sig-pad" width="600" height="250"></canvas>
+                            <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-a', 'out-sig-a')">清除 Crew A 簽名重寫</button>
+                        </div>
+                        <div class="signature-pad-wrapper">
+                            <label style="font-weight: bold; color: #d35400;">Crew B 簽名區</label>
+                            <canvas id="pad-b" class="sig-pad" width="600" height="250"></canvas>
+                            <button type="button" class="btn-small btn-clear" onclick="clearSignature('pad-b', 'out-sig-b')">清除 Crew B 簽名重寫</button>
+                        </div>
+                    </div>
+                </div>
 
-            <button id="download-btn" class="main-btn full-width" onclick="exportPDF()" disabled>請稍候，PDF 載入中...</button>
+                <div class="tweak-area full-width">
+                    <span>👉 第三步：文字與簽名已套用完美座標！請在下方預覽區「左右滑動」並「按住文字拖曳」微調。</span>
+                    <button type="button" class="btn-small" onclick="getCoordinates()">📍 擷取目前座標 (開發者專用)</button>
+                </div>
+
+                <button id="download-btn" class="main-btn full-width" onclick="exportPDF()" disabled>請稍候，PDF 載入中...</button>
+            </div>
+            
+            <div class="scroll-hint">👈 請左右滑動查看完整 A4 表單 👉</div>
+            
+            <div class="preview-container">
+                <div id="export-wrapper">
+                    <img id="pdf-bg-img" alt="PDF Background" draggable="false">
+                    
+                    <div id="out-date-y" class="text-overlay"></div>
+                    <div id="out-date-m" class="text-overlay"></div>
+                    <div id="out-date-d" class="text-overlay"></div>
+                    
+                    <div id="out-a-info" class="text-overlay"></div>
+                    <div id="out-a-duty-1" class="text-overlay"></div>
+                    <div id="out-a-duty-2" class="text-overlay"></div>
+                    <div id="out-a-duty-3" class="text-overlay"></div>
+                    <div id="out-a-duty-4" class="text-overlay"></div>
+                    
+                    <div id="out-b-info" class="text-overlay"></div>
+                    <div id="out-b-duty-1" class="text-overlay"></div>
+                    <div id="out-b-duty-2" class="text-overlay"></div>
+                    <div id="out-b-duty-3" class="text-overlay"></div>
+                    <div id="out-b-duty-4" class="text-overlay"></div>
+
+                    <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
+                    <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
+                </div>
+            </div>
         </div>
-        
-        <div class="scroll-hint">👈 請左右滑動查看完整 A4 表單 👉</div>
-        
-        <div class="preview-container">
-            <div id="export-wrapper">
-                <img id="pdf-bg-img" alt="PDF Background" draggable="false">
-                
-                <div id="out-date-y" class="text-overlay"></div>
-                <div id="out-date-m" class="text-overlay"></div>
-                <div id="out-date-d" class="text-overlay"></div>
-                
-                <div id="out-a-info" class="text-overlay"></div>
-                <div id="out-a-duty-1" class="text-overlay"></div>
-                <div id="out-a-duty-2" class="text-overlay"></div>
-                <div id="out-a-duty-3" class="text-overlay"></div>
-                <div id="out-a-duty-4" class="text-overlay"></div>
-                
-                <div id="out-b-info" class="text-overlay"></div>
-                <div id="out-b-duty-1" class="text-overlay"></div>
-                <div id="out-b-duty-2" class="text-overlay"></div>
-                <div id="out-b-duty-3" class="text-overlay"></div>
-                <div id="out-b-duty-4" class="text-overlay"></div>
-
-                <img id="out-sig-a" class="sig-overlay" draggable="false" style="display: none;">
-                <img id="out-sig-b" class="sig-overlay" draggable="false" style="display: none;">
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script>
+        // 初始化 Lucide Icons
+        lucide.createIcons();
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const wrapper = document.getElementById('export-wrapper');
@@ -696,7 +779,7 @@
                 e.preventDefault(); 
                 const pos = getPointerPos(e);
                 
-                ctx.lineWidth = 4; /* 調整畫筆粗細以配合加大版面 */
+                ctx.lineWidth = 4;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = '#000000';
