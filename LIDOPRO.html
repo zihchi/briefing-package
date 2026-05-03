@@ -6,6 +6,8 @@
     <title>個人專屬 - 航班擷取與簡報系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- 引入 jsPDF 用於產製無限長無縫 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
@@ -68,64 +70,51 @@
         }
 
         /* ==========================================
-           列印模式優化 (針對 iOS 原生高畫質 PDF)
+           無縫截圖/列印專用準備模式 (Capture Mode)
            ========================================== */
+        body.capture-mode {
+            overflow: visible !important;
+            height: auto !important;
+            background-color: #f4ece4 !important;
+        }
+
+        /* 強制將戰情板擴展到固定寬度，避免行動版尺寸導致排版被壓縮 */
+        .capture-mode #dashboard-content {
+            width: 1200px !important;
+            max-width: none !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 40px !important;
+            border-radius: 0 !important;
+        }
+
+        /* 關鍵修正：將所有捲軸區塊展開到最大高度 */
+        .capture-mode .mel-scroll,
+        .capture-mode #out-mel-container,
+        .capture-mode textarea {
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+
+        .capture-mode .no-print {
+            display: none !important;
+        }
+
         @media print {
-            body { 
-                background-color: white !important; 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important;
-            }
             .no-print { display: none !important; }
-            
-            #dashboard-content {
-                box-shadow: none !important;
-                border: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-                background-color: #f4ece4 !important; /* 保留儀表板的底色質感 */
-            }
-
-            #main-app {
-                display: block !important;
-                padding: 0 !important;
-            }
-
-            /* 1. 解決長篇文字被截斷的問題：強制展開所有卷軸區塊 */
-            .mel-scroll, #out-mel-container, textarea {
-                max-height: none !important;
-                overflow: visible !important;
-                height: auto !important;
-            }
-
-            /* 2. 避免卡片在換頁時被從中切斷 (避免上下文斷層) */
-            .border, .glass-panel, .shadow-sm, .rounded-2xl {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-
-            /* 3. 確保圖表區塊不會跨頁 */
-            #weather-blocks-container > div, .grid > div {
-                break-inside: avoid !important;
-            }
-
-            @page { 
-                margin: 1cm 0.5cm; /* 確保上下左右有足夠的安全邊距 */
-                size: A4 portrait; /* 預設輸出 A4 直式 */
-            }
         }
     </style>
 </head>
 <body class="text-stone-800 min-h-screen pt-safe pb-safe antialiased relative">
 
-    <!-- 訊息提示 (加入 no-print 防止列印時被截取) -->
+    <!-- 訊息提示 -->
     <div id="toast" class="fixed top-5 right-5 transform transition-transform translate-x-full opacity-0 bg-[#4a3627] text-white px-6 py-3 rounded-xl shadow-2xl z-[500] font-bold tracking-wide border border-[#8b5a2b]/30 no-print">訊息提示</div>
     <div id="offline-banner" class="fixed top-0 left-0 w-full hidden no-print">⚠️ 目前處於離線模式。顯示資料為系統最後一次快取紀錄。</div>
 
     <!-- 登入與鎖定畫面 -->
     <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-center p-4 relative no-print">
-        
         <!-- 返回按鈕 -->
         <a href="index.html" class="absolute top-6 left-6 md:top-8 md:left-8 p-2.5 bg-white/40 hover:bg-white/80 backdrop-blur-md text-stone-700 rounded-xl transition-all shadow-sm border border-white/60 flex items-center justify-center hover:scale-105 active:scale-95 z-50" title="返回上一頁">
             <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +146,6 @@
         
         <!-- 頂部 Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-stone-300 pb-4 gap-4 no-print">
-            
             <div class="flex items-center gap-3">
                 <a href="index.html" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl transition-colors shadow-sm border border-stone-200" title="返回上一頁">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,15 +157,12 @@
                     Briefing
                 </h1>
             </div>
-
             <div class="flex gap-3 items-center w-full sm:w-auto">
                 <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 鎖定系統</button>
             </div>
-            
         </div>
          
-
         <!-- 彈性雙欄排版 (左側控制台 / 右側簡報區) -->
         <div class="flex flex-col xl:flex-row gap-6 items-start">
             
@@ -196,7 +181,6 @@
                     </button>
                 </div>
 
-
                 <!-- 區塊 3: 手動補充區 (PAX/MEL/BAY) -->
                 <div class="flex flex-col h-40 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden">
                     <div class="bg-orange-100/50 px-4 py-2 border-b border-orange-200/60 flex justify-between items-center">
@@ -204,14 +188,13 @@
                     </div>
                     <textarea id="rawInput2" class="w-full flex-grow p-4 bg-transparent text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="若有額外地勤資訊，請貼於此處..." oninput="debouncedParseData()"></textarea>
                 </div>
-
                 <!-- 隱藏的資料橋接區 -->
                 <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
             </div>
 
             <!-- 【右側簡報畫布】 (Pro Edition Dashboard) -->
             <div class="w-full flex-1 flex flex-col gap-6 min-w-0">
-                <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200">
+                <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
                     
                     <!-- ROW 1: Flight Info, Route, Fuel -->
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-5">
@@ -301,7 +284,6 @@
                                             <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
                                         </div>
                                     </div>
-                                    <!-- 備降機場區塊已依需求移除 -->
                                     <div id="arr-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
                                         <div class="text-xl md:text-2xl leading-none" id="arr-wx-icon">☁️</div>
                                         <div class="flex flex-col gap-0.5">
@@ -588,15 +570,15 @@
 
                 <!-- 匯出與截圖按鈕區域 (置底，並排或堆疊) -->
                 <div class="w-full max-w-[1194px] mx-auto flex flex-col md:flex-row justify-center items-center gap-4 pb-8 mt-6 no-print">
-                    <!-- 原本的匯出圖片按鈕 -->
-                    <button id="capture-btn" onclick="copyDashboardToClipboard()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
+                    <!-- 圖片匯出/分享按鈕 -->
+                    <button id="capture-btn" onclick="shareDashboardImage()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        匯出圖片 (剪貼簿)
+                        匯出圖片並分享 (iOS 原生)
                     </button>
-                    <!-- 新增的匯出高畫質 PDF 按鈕 -->
-                    <button id="pdf-btn" onclick="exportVectorPDF()" class="flex-1 w-full md:max-w-md bg-red-800/95 backdrop-blur hover:bg-red-900 text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-red-700/80">
+                    <!-- 新增的匯出高畫質無縫 PDF 按鈕 -->
+                    <button id="pdf-btn" onclick="exportContinuousPDF()" class="flex-1 w-full md:max-w-md bg-red-800/95 backdrop-blur hover:bg-red-900 text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-red-700/80">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                        匯出高畫質 PDF
+                        匯出無縫長條 PDF (供標示)
                     </button>
                 </div>
             </div>
@@ -1079,51 +1061,51 @@
         }
 
        window.addEventListener('paste', function(e) {
-    // 如果焦點在一般的輸入框或文字區域，則不攔截（讓使用者能正常貼上文字）
-    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return; }
+            // 如果焦點在一般的輸入框或文字區域，則不攔截（讓使用者能正常貼上文字）
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return; }
 
-    // 全域貼上快捷鍵預設將圖片放至 profile
-    let prefix = 'profile'; 
+            // 全域貼上快捷鍵預設將圖片放至 profile
+            let prefix = 'profile'; 
 
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for (let index in items) {
-        const item = items[index];
-        if (item.kind === 'file' && item.type.includes('image/')) {
-            const blob = item.getAsFile();
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const dataUrl = event.target.result;
-                showImage(dataUrl, prefix);
-                localStorage.setItem(`dispatch_${prefix}_image`, dataUrl);
-            };
-            reader.readAsDataURL(blob);
-            e.preventDefault();
-        }
-    }
-});
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.includes('image/')) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const dataUrl = event.target.result;
+                        showImage(dataUrl, prefix);
+                        localStorage.setItem(`dispatch_${prefix}_image`, dataUrl);
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                }
+            }
+        });
 
         async function pasteFromClipboard(prefix) {
-    try {
-        if (!navigator.clipboard || !navigator.clipboard.read) return showToastMessage('此瀏覽器不支援一鍵貼上功能。');
-        const clipboardItems = await navigator.clipboard.read();
-        for (const clipboardItem of clipboardItems) {
-            const imageTypes = clipboardItem.types.filter(type => type.startsWith('image/'));
-            if (imageTypes.length > 0) {
-                const blob = await clipboardItem.getType(imageTypes[0]);
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    showImage(e.target.result, prefix);
-                    localStorage.setItem(`dispatch_${prefix}_image`, e.target.result);
-                };
-                reader.readAsDataURL(blob);
-                return;
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.read) return showToastMessage('此瀏覽器不支援一鍵貼上功能。');
+                const clipboardItems = await navigator.clipboard.read();
+                for (const clipboardItem of clipboardItems) {
+                    const imageTypes = clipboardItem.types.filter(type => type.startsWith('image/'));
+                    if (imageTypes.length > 0) {
+                        const blob = await clipboardItem.getType(imageTypes[0]);
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            showImage(e.target.result, prefix);
+                            localStorage.setItem(`dispatch_${prefix}_image`, e.target.result);
+                        };
+                        reader.readAsDataURL(blob);
+                        return;
+                    }
+                }
+                showToastMessage('剪貼簿中未偵測到圖片！請先截圖或複製。');
+            } catch (err) {
+                showToastMessage('無法讀取剪貼簿，請確認瀏覽器權限或重新複製圖片。');
             }
         }
-        showToastMessage('剪貼簿中未偵測到圖片！請先截圖或複製。');
-    } catch (err) {
-        showToastMessage('無法讀取剪貼簿，請確認瀏覽器權限或重新複製圖片。');
-    }
-}
 
         function handleImageUpload(event, prefix) {
             const file = event.target.files[0];
@@ -1151,36 +1133,135 @@
             document.getElementById(`${prefix}-placeholder`).classList.remove('hidden');
         }
 
-        async function copyDashboardToClipboard() {
+        // ==========================================
+        // 核心突破點：Capture Mode 準備函式
+        // ==========================================
+        function prepareForCapture() {
+            document.body.classList.add('capture-mode');
+            // 強制展開所有 textarea 使其高度真實反映內部文字
+            document.querySelectorAll('textarea').forEach(ta => {
+                ta.dataset.origHeight = ta.style.height;
+                ta.style.height = 'auto'; // Reset
+                ta.style.height = ta.scrollHeight + 'px';
+            });
+        }
+
+        function cleanupAfterCapture() {
+            document.body.classList.remove('capture-mode');
+            document.querySelectorAll('textarea').forEach(ta => {
+                if(ta.dataset.origHeight) ta.style.height = ta.dataset.origHeight;
+            });
+        }
+
+        async function getCanvasFromDashboard() {
             const dashboard = document.getElementById('dashboard-content');
-            const btn = document.getElementById('capture-btn');
-            const originalText = btn.innerHTML;
+            prepareForCapture();
+            // 延遲等待瀏覽器重新渲染排版 (極為重要)
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             try {
-                btn.innerHTML = '⏳ 正在擷取高畫質畫面...';
-                if (navigator.clipboard && window.ClipboardItem) {
-                    const blobPromise = html2canvas(dashboard, { scale: 2, useCORS: true, backgroundColor: '#f4ece4' })
-                                        .then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
-                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
-                    showToastMessage('✅ 截圖已複製！可直接貼上至備忘錄');
-                    btn.innerHTML = originalText;
-                } else { throw new Error('API not supported'); }
-            } catch (err) {
-                html2canvas(dashboard, { scale: 2, useCORS: true, backgroundColor: '#f4ece4' }).then(canvas => {
-                    showFallbackImageModal(canvas.toDataURL('image/png'));
-                    btn.innerHTML = originalText;
+                const canvas = await html2canvas(dashboard, {
+                    scale: 2, // 確保高畫質
+                    useCORS: true,
+                    backgroundColor: '#f4ece4',
+                    windowWidth: dashboard.scrollWidth,
+                    windowHeight: dashboard.scrollHeight,
+                    scrollY: -window.scrollY // 修正捲軸位移造成的頂部截斷
                 });
+                return canvas;
+            } finally {
+                cleanupAfterCapture();
             }
         }
 
         // ==========================================
-        // 匯出 高畫質 PDF (原生支援)
+        // 原生分享與無縫 PDF 匯出
         // ==========================================
-        function exportVectorPDF() {
-            showToastMessage('正在準備高畫質 PDF，請在系統選單中選擇「儲存/列印」！');
-            // 給一點時間讓 Toast 隱藏 (Toast 有加 no-print，但延遲觸發讓使用者看見提示更友善)
-            setTimeout(() => {
-                window.print();
-            }, 800);
+        async function shareDashboardImage() {
+            const btn = document.getElementById('capture-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ 正在產製高畫質圖片...';
+            
+            try {
+                const canvas = await getCanvasFromDashboard();
+                
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.png`, { type: 'image/png' });
+                    
+                    // 優先使用 iOS 原生分享 (Navigator Share)
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'Flight Briefing',
+                                text: '這是您的飛航簡報圖片，可直接儲存或標示。'
+                            });
+                            showToastMessage('✅ 分享選單已開啟！請選擇儲存或標示。');
+                        } catch (err) {
+                            console.log('Share API cancelled or failed:', err);
+                        }
+                    } else if (navigator.clipboard && window.ClipboardItem) {
+                        // 若不支援 Share，退回剪貼簿
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                        showToastMessage('✅ 截圖已複製！可直接貼上至備忘錄。');
+                    } else {
+                        showFallbackImageModal(canvas.toDataURL('image/png'));
+                    }
+                }, 'image/png');
+            } catch (err) {
+                console.error(err);
+                showToastMessage('❌ 圖片產製失敗。');
+            } finally {
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function exportContinuousPDF() {
+            const btn = document.getElementById('pdf-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ 正在編織無縫 PDF...';
+
+            try {
+                const canvas = await getCanvasFromDashboard();
+                const { jsPDF } = window.jspdf;
+                
+                // 將 Canvas 依照 A4 寬度(210mm)等比例計算出連續長度
+                const pdfWidth = 210; 
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                // 動態宣告 PDF 尺寸為我們算出來的長度！
+                const pdf = new jsPDF({
+                    orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
+                    unit: 'mm',
+                    format: [pdfWidth, pdfHeight]
+                });
+
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                const pdfBlob = pdf.output('blob');
+                const file = new File([pdfBlob], `Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.pdf`, { type: 'application/pdf' });
+
+                // iOS 專武：透過分享選單傳遞檔案，即可直接存入「檔案」App
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Flight Briefing PDF',
+                        });
+                        showToastMessage('✅ 請在選單中點選「儲存到檔案」，即可開始標示！');
+                    } catch (err) {
+                        console.log('Share API cancelled or failed:', err);
+                    }
+                } else {
+                    // 若不支援 Share (如電腦版瀏覽器)，則直接下載
+                    pdf.save(`Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.pdf`);
+                    showToastMessage('✅ 無縫 PDF 已下載！');
+                }
+            } catch (error) {
+                console.error(error);
+                showToastMessage('❌ 無縫 PDF 生成失敗');
+            } finally {
+                btn.innerHTML = originalText;
+            }
         }
 
         function showFallbackImageModal(dataUrl) {
