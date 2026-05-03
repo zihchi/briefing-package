@@ -482,102 +482,97 @@
                     </div>
                 </div>
 
-                <!-- ROW 5: VERTICAL PROFILE, WNI, & EDTO -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
+                <!-- ROW 5: VERTICAL PROFILE, WNI, ATC & EDTO -->
+                <div class="flex flex-col gap-4 md:gap-5 w-full">
                     
-                    <!-- Left Images Column (Profile, SigWX & WNI) -->
-                    <div class="md:col-span-8 flex flex-col gap-4 md:gap-5">
-                        
-                        <!-- Vertical Flight Profile -->
-                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                            <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                <span class="flex items-center gap-1.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-                                    Vertical Flight Profile
-                                </span>
-                                <button onclick="clearImage('profile')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                                <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                    <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                        <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                        <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                    </div>                                      
-                                </div>
-                                <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                                <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
-                            </div>
+                    <!-- Vertical Flight Profile -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                                Vertical Flight Profile
+                            </span>
+                            <button onclick="clearImage('profile')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
                         </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                            <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                    <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                </div>                                      
+                            </div>
+                            <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
+                            <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
+                        </div>
+                    </div>
 
-                        <!-- SigWX With Route -->
-                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                            <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                <span class="flex items-center gap-1.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    SigWX With Route
-                                </span>
-                                <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
-                                <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                    <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                        <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                        <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                    </div>                                      
-                                </div>
-                                <!-- SigWX 圖檔將動態插入至此 -->
-                                <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
-                            </div>
+                    <!-- SigWX With Route -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                SigWX With Route
+                            </span>
+                            <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
                         </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
+                            <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                    <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                </div>                                      
+                            </div>
+                            <!-- SigWX 圖檔將動態插入至此 -->
+                            <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
+                        </div>
+                    </div>
 
-                        <!-- 區塊 2: ATC 報文保留區 -->
-                        <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
-                            <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
-                                <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
-                                <div class="flex items-center gap-2 no-print">
-                                    <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
-                                    <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
-                                </div>
+                    <!-- ATC 報文保留區 -->
+                    <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
+                        <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
+                            <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
+                            <div class="flex items-center gap-2 no-print">
+                                <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
+                                <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
                             </div>
-                            <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
                         </div>
-                        
-                        <!-- WNI Image Area -->
-                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                            <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                <span class="flex items-center gap-1.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    WNI 氣象剖面資訊
-                                </span>
-                                <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                                <div id="wni-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                    
-                                    <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                        <button onclick="document.getElementById('wni-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
-                                        <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
-                                    </div>
-                                </div>
+                        <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
+                    </div>
+                    
+                    <!-- WNI Image Area -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
+                        <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                WNI 氣象剖面資訊
+                            </span>
+                            <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                            <div id="wni-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 
-                                <img id="wni-image" src="" alt="WNI Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                                <input type="file" id="wni-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'wni')" data-html2canvas-ignore>
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="document.getElementById('wni-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
+                                    <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
+                                </div>
                             </div>
+                            
+                            <img id="wni-image" src="" alt="WNI Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
+                            <input type="file" id="wni-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'wni')" data-html2canvas-ignore>
                         </div>
-
                     </div>
 
                     <!-- EDTO Coordinates -->
-                    <div class="md:col-span-4 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
                         <div class="bg-[#2c3e50] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             EDTO / ETOPS Coordinates
@@ -588,6 +583,7 @@
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -614,7 +610,7 @@
         // 變數與核心功能
         // ==========================================
         const getSecKey = () => [49, 48, 52, 55, 56, 56].map(c => String.fromCharCode(c)).join('');
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyOhjn6oEzY6boegGSDqCgsM-HugjRX7QjCupDuaZpDFLE7Fs2__lX4QcGNCCrrdk9oBA/exec'; 
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLGUt7oKbBMpcwGFkFiDWp1mMlrQiP1UND07XyWB4LTXYjq-WSkUf_zmzoAGwyLIfaTA/exec'; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
         
