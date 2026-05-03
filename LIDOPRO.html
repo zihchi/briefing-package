@@ -247,25 +247,29 @@
                                 </div>
                             </div>
                             
-                            <!-- 核心飛行時間與巡航高度 (放大顯眼版) -->
-                            <div class="flex flex-row bg-gradient-to-b from-[#3b4c59] to-[#2c3e50] rounded-xl shadow-md overflow-hidden relative z-10 border border-stone-300 mx-2 md:mx-3">
-                                <!-- 裝飾背景圖形 -->
-                                <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/10 z-0">
-                                    <svg class="w-16 h-16 md:w-20 md:h-20 rotate-90" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
-                                </div>
-                                
-                                <div class="flex-1 p-4 md:p-5 flex flex-col items-center justify-center relative z-10">
-                                    <span class="text-[10px] md:text-xs font-bold text-stone-300 uppercase tracking-widest mb-1.5 drop-shadow-md">Flight Time</span>
-                                    <span class="data-font font-black text-3xl md:text-5xl text-amber-400 leading-none tracking-wider drop-shadow-lg" id="out-ete-center">--:--</span>
-                                </div>
-                                
-                                <div class="w-px bg-white/20 my-4 z-10"></div>
-                                
-                                <div class="flex-1 p-4 md:p-5 flex flex-col items-center justify-center relative z-10">
-                                    <span class="text-[10px] md:text-xs font-bold text-stone-300 uppercase tracking-widest mb-1.5 drop-shadow-md">CRZ Alt / Temp</span>
-                                    <span class="data-font font-black text-3xl md:text-5xl text-sky-300 leading-none tracking-wider drop-shadow-lg" id="out-cruise-center">---</span>
-                                </div>
-                            </div>
+                          <!-- 核心飛行時間與巡航高度 (縮小緊湊版) -->
+<div class="flex flex-row bg-gradient-to-b from-[#3b4c59] to-[#2c3e50] rounded-xl shadow-md overflow-hidden relative z-10 border border-stone-300 mx-2 md:mx-3">
+    <!-- 裝飾背景圖形 (圖示等比例調小) -->
+    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/10 z-0">
+        <svg class="w-12 h-12 md:w-16 md:h-16 rotate-90" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+    </div>
+    
+    <!-- 左側面板 (留白從 p-4 縮減為 p-3) -->
+    <div class="flex-1 p-3 md:p-4 flex flex-col items-center justify-center relative z-10">
+        <span class="text-[9px] md:text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1 drop-shadow-md">Flight Time</span>
+        <!-- 數據字體從 3xl/5xl 調降為 2xl/4xl -->
+        <span class="data-font font-black text-2xl md:text-4xl text-amber-400 leading-none tracking-wider drop-shadow-lg" id="out-ete-center">--:--</span>
+    </div>
+    
+    <!-- 中央分隔線 (上下間距微調) -->
+    <div class="w-px bg-white/20 my-3 z-10"></div>
+    
+    <!-- 右側面板 (留白與字體同步調小) -->
+    <div class="flex-1 p-3 md:p-4 flex flex-col items-center justify-center relative z-10">
+        <span class="text-[9px] md:text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1 drop-shadow-md">CRZ Alt / Temp</span>
+        <span class="data-font font-black text-2xl md:text-4xl text-sky-300 leading-none tracking-wider drop-shadow-lg" id="out-cruise-center">---</span>
+    </div>
+</div>
 
                             <!-- Arrival Card -->
                             <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
