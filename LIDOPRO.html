@@ -193,374 +193,373 @@
             </div>
 
             <!-- 【右側簡報畫布】 (Pro Edition Dashboard) -->
-            <div class="w-full flex-1 flex flex-col gap-6 min-w-0">
-                <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
+            <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
+                
+                <!-- ROW 1: Flight Info & Route (並排顯示) -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
                     
-                    <!-- ROW 1: Flight Info, Route, Fuel -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-5">
-                        
-                        <!-- Flight Info -->
-                        <div class="md:col-span-2 xl:col-span-5 flex flex-col gap-0 border border-[#8b5a2b] rounded-2xl overflow-hidden shadow-sm bg-white">
-                            <div class="bg-gradient-to-r from-[#4a3627] to-[#8b5a2b] p-4 flex flex-row justify-between items-center text-white relative overflow-hidden">
-                                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-                                <div class="relative z-10 text-left">
-                                    <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5 flex items-center gap-2">
-                                        Flight Number <span id="out-utc-date" class="bg-white/20 text-white px-1.5 py-0.5 rounded data-font shadow-sm tracking-wide">----</span>
-                                    </div>
-                                    <div class="text-3xl md:text-5xl lg:text-4xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-flight-no">----</div>
+                    <!-- Flight Info (7/12) -->
+                    <div class="md:col-span-7 flex flex-col gap-0 border border-[#8b5a2b] rounded-2xl overflow-hidden shadow-sm bg-white">
+                        <div class="bg-gradient-to-r from-[#4a3627] to-[#8b5a2b] p-4 flex flex-row justify-between items-center text-white relative overflow-hidden">
+                            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                            <div class="relative z-10 text-left">
+                                <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5 flex items-center gap-2">
+                                    Flight Number <span id="out-utc-date" class="bg-white/20 text-white px-1.5 py-0.5 rounded data-font shadow-sm tracking-wide">----</span>
                                 </div>
-                                <div class="h-10 md:h-12 w-px bg-white/20 relative z-10 mx-2 hidden sm:block"></div>
-                                <div class="relative z-10 text-right">
-                                    <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5">Aircraft Reg</div>
-                                    <div class="text-xl md:text-3xl lg:text-2xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-reg">----</div>
-                                </div>
+                                <div class="text-3xl md:text-5xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-flight-no">----</div>
                             </div>
-                            <div class="p-3 md:p-4 flex-grow flex flex-col gap-3 bg-[#fbf9f6]">
-                                <!-- Departure Card -->
-                                <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
-                                    <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
-                                        <div>
-                                            <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">DEPARTURE</div>
-                                            <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
-                                        </div>
-                                        <div class="text-right flex flex-col items-end gap-1">
-                                            <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-dep-utc">UTC</span>
-                                            <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-dep-bay">--</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-row gap-2 ml-2 md:ml-3 mt-3">
-                                        <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STD</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-std">--:--</span>
-                                        </div>
-                                        <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] font-bold text-[#b35900] mb-0.5">ETD</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-[#b35900] leading-none" id="out-etd">--:--</span>
-                                        </div>
-                                    </div>
-                                    <div id="dep-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
-                                        <div class="text-xl md:text-2xl leading-none" id="dep-wx-icon">☁️</div>
-                                        <div class="flex flex-col gap-0.5">
-                                            <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Departure WX</span>
-                                            <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="dep-wx-desc">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- 兩卡片中間的飛機與核心資訊區 -->
-                                <div class="flex justify-center -my-3 relative z-10">
-                                    <div class="bg-white border border-[#e8dfd5] px-4 py-1.5 rounded-full shadow-sm flex items-center gap-4">
-                                        <div class="flex flex-col items-end">
-                                            <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">FLIGHT TIME</span>
-                                            <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-ete-center">--:--</span>
-                                        </div>
-                                        <div class="text-[#8b5a2b] opacity-70">
-                                            <svg class="w-5 h-5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
-                                        </div>
-                                        <div class="flex flex-col items-start">
-                                            <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">CRZ ALT/TMP</span>
-                                            <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-cruise-center">---</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Arrival Card -->
-                                <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
-                                    <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
-                                        <div>
-                                            <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">ARRIVAL</div>
-                                            <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
-                                        </div>
-                                        <div class="text-right flex flex-col items-end gap-1">
-                                            <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-arr-utc">UTC</span>
-                                            <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-arr-bay">--</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex ml-2 md:ml-3 mt-3">
-                                        <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                            <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STA</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
-                                        </div>
-                                    </div>
-                                    <div id="arr-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
-                                        <div class="text-xl md:text-2xl leading-none" id="arr-wx-icon">☁️</div>
-                                        <div class="flex flex-col gap-0.5">
-                                            <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Arrival WX</span>
-                                            <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="arr-wx-desc">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="h-10 md:h-12 w-px bg-white/20 relative z-10 mx-2 hidden sm:block"></div>
+                            <div class="relative z-10 text-right">
+                                <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5">Aircraft Reg</div>
+                                <div class="text-xl md:text-3xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-reg">----</div>
                             </div>
                         </div>
-
-                        <!-- Middle Column: Route & Wind -->
-                        <div class="md:col-span-1 xl:col-span-4 flex flex-col gap-4">
-                            <div class="border border-[#e8dfd5] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
-                                <div class="bg-[#5c4033] text-[#f7f4f0] text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2.5 flex justify-between items-center">
-                                    <span>ATC Clearance Route</span>
-                                    <div class="flex gap-1.5">
-                                        <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">OFP:<span id="out-ofp" class="text-white font-bold ml-1">--</span></span>
-                                        <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">EFB:<span id="out-efb" class="text-white font-bold ml-1">--</span></span>
+                        <div class="p-3 md:p-4 flex-grow flex flex-col gap-3 bg-[#fbf9f6]">
+                            <!-- Departure Card -->
+                            <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
+                                <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
+                                    <div>
+                                        <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">DEPARTURE</div>
+                                        <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
+                                    </div>
+                                    <div class="text-right flex flex-col items-end gap-1">
+                                        <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-dep-utc">UTC</span>
+                                        <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-dep-bay">--</span></span>
                                     </div>
                                 </div>
-                                <div class="p-4 md:p-5 flex-grow flex flex-col justify-center">
-                                    <div class="data-font text-sm md:text-[15px] leading-relaxed text-[#3a2a1f] tracking-wide break-words" id="out-route">NO ROUTE DATA</div>
-                                </div>
-                                <div class="flex flex-row border-t border-stone-200 bg-[#fbf9f6] divide-x divide-stone-200">
-                                    <div class="flex-1 p-2 md:p-3 flex flex-col items-center bg-[#2c3e50] gap-1">
-                                        <span class="text-[9px] md:text-[10px] font-bold text-stone-400 uppercase tracking-widest">Flight Time</span>
-                                        <span class="data-font font-black text-lg text-amber-400 tracking-wider" id="out-ete">--:--</span>
+                                <div class="flex flex-row gap-2 ml-2 md:ml-3 mt-3">
+                                    <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
+                                        <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STD</span>
+                                        <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-std">--:--</span>
                                     </div>
-                                    <div class="flex-1 p-2 md:p-3 flex flex-col items-center bg-amber-50 gap-1">
-                                        <span class="text-[9px] md:text-[10px] font-bold text-[#8b5a2b] uppercase tracking-widest">CRZ Alt/Temp</span>
-                                        <span class="data-font font-black text-lg text-[#b35900]" id="out-cruise-alt-temp">---</span>
+                                    <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
+                                        <span class="text-[9px] md:text-[11px] font-bold text-[#b35900] mb-0.5">ETD</span>
+                                        <span class="data-font font-black text-xl md:text-2xl text-[#b35900] leading-none" id="out-etd">--:--</span>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
-                                    <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Wind Component</div>
-                                    <div class="data-font font-bold text-lg text-stone-800" id="out-wc">---</div>
-                                </div>
-                                <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
-                                    <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Max Shear</div>
-                                    <div class="data-font font-bold text-base text-[#d97706]" id="out-mxsh">---</div>
+                                <div id="dep-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
+                                    <div class="text-xl md:text-2xl leading-none" id="dep-wx-icon">☁️</div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Departure WX</span>
+                                        <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="dep-wx-desc">Loading...</span>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
-                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">TOW</span>
-                                    <span class="data-font font-bold text-xl text-[#4a3627]" id="out-tow">--.-</span>
-                                </div>
-                                <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
-                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">LDW</span>
-                                    <span class="data-font font-bold text-xl text-[#4a3627]" id="out-ldw">--.-</span>
+                            <!-- 兩卡片中間的飛機與核心資訊區 -->
+                            <div class="flex justify-center -my-3 relative z-10">
+                                <div class="bg-white border border-[#e8dfd5] px-4 py-1.5 rounded-full shadow-sm flex items-center gap-4">
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">FLIGHT TIME</span>
+                                        <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-ete-center">--:--</span>
+                                    </div>
+                                    <div class="text-[#8b5a2b] opacity-70">
+                                        <svg class="w-5 h-5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                                    </div>
+                                    <div class="flex flex-col items-start">
+                                        <span class="text-[8px] md:text-[9px] font-bold text-stone-400 leading-none tracking-widest">CRZ ALT/TMP</span>
+                                        <span class="data-font font-black text-sm text-[#8b5a2b] leading-none mt-0.5" id="out-cruise-center">---</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Right Column: Fuel Distribution -->
-                        <div class="md:col-span-1 xl:col-span-3 flex flex-col gap-4">
-                            <div class="border border-[#d4c3b3] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
-                                <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 py-2.5">Fuel Distribution</div>
-                                <div class="p-3 bg-[#fdfaf6] flex flex-col gap-3 flex-grow">
-                                    <div class="flex justify-between xl:block items-end xl:items-stretch">
-                                        <div class="text-xs font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
-                                        <div class="data-font font-black text-2xl text-[#6e4620] xl:text-right" id="out-total-fuel">----</div>
+                            <!-- Arrival Card -->
+                            <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
+                                <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
+                                    <div>
+                                        <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">ARRIVAL</div>
+                                        <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
                                     </div>
-                                    <div class="w-full h-px bg-[#e8dfd5] my-1"></div>
-                                    <div class="flex justify-between xl:flex-col gap-2 xl:gap-0">
-                                        <div class="flex-1 xl:w-full">
-                                            <div class="text-[10px] text-[#8c6b5d] font-bold mb-1" id="label-div-fuel">Division Fuel</div>
-                                            <div class="data-font font-bold text-lg text-[#5c4033] xl:text-right" id="out-div-fuel">----</div>
-                                        </div>
-                                        <div class="hidden xl:block w-full h-px bg-[#e8dfd5] my-2"></div>
-                                        <div class="flex-1 xl:w-full text-right xl:text-left">
-                                            <div class="text-[10px] text-[#8c6b5d] font-bold mb-1 xl:text-left text-right">Spare Fuel</div>
-                                            <div class="data-font font-bold text-lg text-[#4b6b3e] xl:text-right" id="out-spare-fuel">----</div>
-                                        </div>
+                                    <div class="text-right flex flex-col items-end gap-1">
+                                        <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-arr-utc">UTC</span>
+                                        <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-arr-bay">--</span></span>
                                     </div>
-                                    <div class="pl-2 border-l-2 border-[#d4c3b3] flex flex-col gap-1.5 mt-2 flex-grow justify-center">
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-wxx">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-opn">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD ATC</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-atc">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD DEV</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-dev">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CONT</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-cont">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-crit-fuel">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">TANKERING</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-tankering">--</span></div>
-                                        <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">EXTRA</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-extra">--</span></div>
+                                </div>
+                                <div class="flex ml-2 md:ml-3 mt-3">
+                                    <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
+                                        <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STA</span>
+                                        <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
+                                    </div>
+                                </div>
+                                <div id="arr-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
+                                    <div class="text-xl md:text-2xl leading-none" id="arr-wx-icon">☁️</div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Arrival WX</span>
+                                        <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="arr-wx-desc">Loading...</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ROW 2: Payload & Ground Remarks -->
-                    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5">
-                        <!-- Payload -->
-                        <div class="xl:col-span-6 border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col justify-center">
-                            <div class="bg-[#7a5c43] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5">Payload & Cabin</div>
-                            <div class="p-4 grid grid-cols-2 md:flex md:justify-between items-center gap-4">
-                                <div class="text-center flex-1">
-                                    <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">TOTAL PAX</div>
-                                    <div class="flex items-baseline justify-center gap-1.5">
-                                        <div class="data-font font-black text-3xl text-[#b35900]" id="out-pax">---</div>
-                                        <div class="data-font font-bold text-xs text-stone-400" id="out-pax-raw"></div>
-                                    </div>
+                    <!-- Route & Wind (5/12) -->
+                    <div class="md:col-span-5 flex flex-col gap-4">
+                        <div class="border border-[#e8dfd5] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
+                            <div class="bg-[#5c4033] text-[#f7f4f0] text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2.5 flex justify-between items-center">
+                                <span>ATC Clearance Route</span>
+                                <div class="flex gap-1.5">
+                                    <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">OFP:<span id="out-ofp" class="text-white font-bold ml-1">--</span></span>
+                                    <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">EFB:<span id="out-efb" class="text-white font-bold ml-1">--</span></span>
                                 </div>
-                                <div class="hidden md:block w-px h-12 bg-stone-200"></div>
-                                <div class="flex flex-col justify-center gap-2 text-center md:text-left flex-1">
-                                    <div>
-                                        <div class="text-[10px] text-stone-400 font-bold tracking-wider leading-none">CARGO(KG)</div>
-                                        <div class="data-font font-bold text-base text-stone-700 mt-1" id="out-cargo">----</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-[10px] text-stone-400 font-bold tracking-wider leading-none">FCST PLD</div>
-                                        <div class="data-font font-bold text-base text-stone-700 mt-1" id="out-fcst">----</div>
-                                    </div>
+                            </div>
+                            <div class="p-4 md:p-5 flex-grow flex flex-col justify-center">
+                                <div class="data-font text-sm md:text-[15px] leading-relaxed text-[#3a2a1f] tracking-wide break-words" id="out-route">NO ROUTE DATA</div>
+                            </div>
+                            <div class="flex flex-row border-t border-stone-200 bg-[#fbf9f6] divide-x divide-stone-200">
+                                <div class="flex-1 p-2 md:p-3 flex flex-col items-center bg-[#2c3e50] gap-1">
+                                    <span class="text-[9px] md:text-[10px] font-bold text-stone-400 uppercase tracking-widest">Flight Time</span>
+                                    <span class="data-font font-black text-lg text-amber-400 tracking-wider" id="out-ete">--:--</span>
                                 </div>
-                                <div class="hidden md:block w-px h-12 bg-stone-200"></div>
-                                <div class="text-center col-span-2 md:col-span-1 flex-1 bg-blue-50/50 md:bg-transparent rounded-lg py-2 md:py-0">
-                                    <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">WATER</div>
-                                    <div class="data-font font-black text-3xl text-blue-600" id="out-water">--%</div>
+                                <div class="flex-1 p-2 md:p-3 flex flex-col items-center bg-amber-50 gap-1">
+                                    <span class="text-[9px] md:text-[10px] font-bold text-[#8b5a2b] uppercase tracking-widest">CRZ Alt/Temp</span>
+                                    <span class="data-font font-black text-lg text-[#b35900]" id="out-cruise-alt-temp">---</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- MEL & eLB Image Area -->
-                        <div class="xl:col-span-6 flex flex-col gap-4">
-                            <!-- MEL Text Block -->
-                            <div class="border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
-                                <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
-                                    <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
-                                    <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 eLB 系統</a>
-                                </div>
-                                <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px]" id="out-mel-container">
-                                    <div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
+                                <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Wind Component</div>
+                                <div class="data-font font-bold text-lg text-stone-800" id="out-wc">---</div>
+                            </div>
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
+                                <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Max Shear</div>
+                                <div class="data-font font-bold text-base text-[#d97706]" id="out-mxsh">---</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
+                                <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">TOW</span>
+                                <span class="data-font font-bold text-xl text-[#4a3627]" id="out-tow">--.-</span>
+                            </div>
+                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
+                                <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">LDW</span>
+                                <span class="data-font font-bold text-xl text-[#4a3627]" id="out-ldw">--.-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: Payload (窄直列) & Fuel (寬並排) -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
+                    
+                    <!-- Payload (4/12) -->
+                    <div class="md:col-span-4 border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-[#7a5c43] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 text-center">Payload & Cabin</div>
+                        <div class="p-4 flex flex-col gap-3 flex-grow justify-center">
+                            <div class="text-center">
+                                <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">TOTAL PAX</div>
+                                <div class="flex items-baseline justify-center gap-1.5">
+                                    <div class="data-font font-black text-4xl text-[#b35900]" id="out-pax">---</div>
+                                    <div class="data-font font-bold text-sm text-stone-400" id="out-pax-raw"></div>
                                 </div>
                             </div>
-
-                            <!-- MEL Image Block -->
-                            <div class="border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
-                                <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                    <span class="flex items-center gap-1.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        DEFECT / eLB 截圖區
-                                    </span>
-                                    <button onclick="clearImage('mel')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                                <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                                    <div id="mel-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                        <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                            <button onclick="document.getElementById('mel-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                            <button onclick="pasteFromClipboard('mel')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                        </div>
-                                    </div>
-                                    <img id="mel-image" src="" alt="MEL Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                                    <input type="file" id="mel-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'mel')" data-html2canvas-ignore>
-                                </div>
+                            <div class="w-full h-px bg-stone-200 my-1"></div>
+                            <div class="flex justify-between items-center w-full px-1">
+                                <div class="text-[10px] text-stone-400 font-bold tracking-wider">CARGO(KG)</div>
+                                <div class="data-font font-bold text-lg text-stone-700" id="out-cargo">----</div>
+                            </div>
+                            <div class="flex justify-between items-center w-full px-1">
+                                <div class="text-[10px] text-stone-400 font-bold tracking-wider">FCST PLD</div>
+                                <div class="data-font font-bold text-lg text-stone-700" id="out-fcst">----</div>
+                            </div>
+                            <div class="w-full h-px bg-stone-200 my-1"></div>
+                            <div class="text-center bg-blue-50/50 rounded-lg py-2.5">
+                                <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">WATER</div>
+                                <div class="data-font font-black text-2xl text-blue-600" id="out-water">--%</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ROW 3: AVIATION WEATHER -->
-                    <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white">
-                        <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
-                            <div>
-                                <h1 class="text-lg md:text-xl font-bold tracking-wider mb-0.5 flex items-center gap-2">
-                                    AVIATION WEATHER
-                                    <span id="wx-utc-date" class="text-[10px] md:text-xs bg-[#1f2b38] border border-[#4a6b8c] px-2 py-0.5 rounded shadow-inner font-bold data-font tracking-wide">----</span>
-                                </h1>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p class="text-[9px] md:text-[10px] text-stone-300 tracking-widest uppercase font-semibold">METAR & TAF Reports</p>
-                                    <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-200 text-[9px] md:text-[10px] px-2 py-0.5 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                        Turbli 亂流預測
-                                    </a>
+                    <!-- Fuel Distribution (8/12) -->
+                    <div class="md:col-span-8 flex flex-col gap-4">
+                        <div class="border border-[#d4c3b3] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
+                            <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 py-2.5">Fuel Distribution</div>
+                            <div class="p-3 bg-[#fdfaf6] flex flex-col gap-3 flex-grow">
+                                <div class="flex justify-between items-end">
+                                    <div class="text-xs font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
+                                    <div class="data-font font-black text-2xl text-[#6e4620]" id="out-total-fuel">----</div>
+                                </div>
+                                <div class="w-full h-px bg-[#e8dfd5] my-1"></div>
+                                <div class="flex flex-row justify-between gap-4">
+                                    <div class="flex-1">
+                                        <div class="text-[10px] text-[#8c6b5d] font-bold mb-1" id="label-div-fuel">Division Fuel</div>
+                                        <div class="data-font font-bold text-xl text-[#5c4033]" id="out-div-fuel">----</div>
+                                    </div>
+                                    <div class="w-px bg-[#e8dfd5] my-1"></div>
+                                    <div class="flex-1 text-right">
+                                        <div class="text-[10px] text-[#8c6b5d] font-bold mb-1">Spare Fuel</div>
+                                        <div class="data-font font-bold text-xl text-[#4b6b3e]" id="out-spare-fuel">----</div>
+                                    </div>
+                                </div>
+                                <div class="pl-2 border-l-2 border-[#d4c3b3] flex flex-col gap-1.5 mt-2 flex-grow justify-center">
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-wxx">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-opn">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD ATC</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-atc">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD DEV</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-dev">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CONT</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-cont">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-crit-fuel">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">TANKERING</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-tankering">--</span></div>
+                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">EXTRA</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-extra">--</span></div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <button onclick="refreshWeather()" class="bg-stone-700 hover:bg-stone-600 text-stone-200 p-2.5 rounded-lg transition-colors active:scale-95 shadow-sm no-print" title="Refresh METAR/TAF">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 3: MEL & eLB Image Area (完全復原為上下垂直堆疊) -->
+                <div class="flex flex-col gap-4 md:gap-5 w-full">
+                    
+                    <!-- MEL Text Block -->
+                    <div class="border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
+                            <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
+                            <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 eLB 系統</a>
+                        </div>
+                        <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px]" id="out-mel-container">
+                            <div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>
+                        </div>
+                    </div>
+
+                    <!-- MEL Image Block -->
+                    <div class="border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                DEFECT / eLB 截圖區
+                            </span>
+                            <button onclick="clearImage('mel')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[150px] relative">
+                            <div id="mel-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="document.getElementById('mel-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                    <button onclick="pasteFromClipboard('mel')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                </div>
+                            </div>
+                            <img id="mel-image" src="" alt="MEL Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
+                            <input type="file" id="mel-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'mel')" data-html2canvas-ignore>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 4: AVIATION WEATHER -->
+                <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white">
+                    <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
+                        <div>
+                            <h1 class="text-lg md:text-xl font-bold tracking-wider mb-0.5 flex items-center gap-2">
+                                AVIATION WEATHER
+                                <span id="wx-utc-date" class="text-[10px] md:text-xs bg-[#1f2b38] border border-[#4a6b8c] px-2 py-0.5 rounded shadow-inner font-bold data-font tracking-wide">----</span>
+                            </h1>
+                            <div class="flex items-center gap-2 mt-1">
+                                <p class="text-[9px] md:text-[10px] text-stone-300 tracking-widest uppercase font-semibold">METAR & TAF Reports</p>
+                                <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-200 text-[9px] md:text-[10px] px-2 py-0.5 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                    Turbli 亂流預測
+                                </a>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="refreshWeather()" class="bg-stone-700 hover:bg-stone-600 text-stone-200 p-2.5 rounded-lg transition-colors active:scale-95 shadow-sm no-print" title="Refresh METAR/TAF">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            </button>
+                            <div class="text-right flex flex-col items-end">
+                                <div class="text-[9px] md:text-[10px] text-stone-400 uppercase font-semibold mb-0.5">Sync Status</div>
+                                <div id="global-wx-sync" class="text-[10px] md:text-xs font-bold text-stone-300 bg-stone-800/50 px-2 py-1 rounded transition-colors">Standby</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="weather-blocks-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 md:p-5 bg-[#fbf9f6] min-h-[150px]">
+                        <div class="col-span-1 lg:col-span-2 flex items-center justify-center h-full text-sm text-stone-400 font-bold py-10 text-center">
+                            等待擷取機場資料，系統將自動解析氣象。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 5: VERTICAL PROFILE, WNI, & EDTO -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
+                    
+                    <!-- Left Images Column (Profile, SigWX & WNI) -->
+                    <div class="md:col-span-8 flex flex-col gap-4 md:gap-5">
+                        
+                        <!-- Vertical Flight Profile -->
+                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                            <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                                    Vertical Flight Profile
+                                </span>
+                                <button onclick="clearImage('profile')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
-                                <div class="text-right flex flex-col items-end">
-                                    <div class="text-[9px] md:text-[10px] text-stone-400 uppercase font-semibold mb-0.5">Sync Status</div>
-                                    <div id="global-wx-sync" class="text-[10px] md:text-xs font-bold text-stone-300 bg-stone-800/50 px-2 py-1 rounded transition-colors">Standby</div>
+                            </div>
+                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                                <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                    <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                        <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                        <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                    </div>                                      
                                 </div>
+                                <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
+                                <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
                             </div>
                         </div>
-                        <div id="weather-blocks-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 md:p-5 bg-[#fbf9f6] min-h-[150px]">
-                            <div class="col-span-1 lg:col-span-2 flex items-center justify-center h-full text-sm text-stone-400 font-bold py-10 text-center">
-                                等待擷取機場資料，系統將自動解析氣象。
+
+                        <!-- SigWX With Route -->
+                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                            <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    SigWX With Route
+                                </span>
+                                <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
+                                <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                        <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                        <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                    </div>                                      
+                                </div>
+                                <!-- SigWX 圖檔將動態插入至此 -->
+                                <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ROW 4: VERTICAL PROFILE, WNI, & EDTO -->
-                    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5">
-                        
-                        <!-- Left Images Column (Profile, SigWX & WNI) -->
-                        <div class="xl:col-span-8 flex flex-col gap-4 md:gap-5">
-                            
-                            <!-- Vertical Flight Profile -->
-                            <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                                <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                    <span class="flex items-center gap-1.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-                                        Vertical Flight Profile
-                                    </span>
-                                    <button onclick="clearImage('profile')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
+                        <!-- 區塊 2: ATC 報文保留區 -->
+                        <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
+                            <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
+                                <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
+                                <div class="flex items-center gap-2 no-print">
+                                    <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
+                                    <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
                                 </div>
-                                <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                                    <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                        <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                            <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                            <button onclick="pasteFromClipboard('profile')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                        </div>                                      
-                                    </div>
-                                    <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                                    <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
-                                </div>
-                            </div>
-
-                            <!-- SigWX With Route -->
-                            <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                                <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                    <span class="flex items-center gap-1.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        SigWX With Route
-                                    </span>
-                                    <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                                <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
-                                    <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                        <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                            <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                            <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                        </div>                                      
-                                    </div>
-                                    <!-- SigWX 圖檔將動態插入至此 -->
-                                    <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
-                                </div>
-                            </div>
-
-                            <!-- 區塊 2: ATC 報文保留區 -->
-                            <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative">
-                              <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
-                              <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
-                              <div class="flex items-center gap-2 no-print">
-                             <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
-                             <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
-                            </div>
                             </div>
                             <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
+                        </div>
+                        
+                        <!-- WNI Image Area -->
+                        <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                            <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    WNI 氣象剖面資訊
+                                </span>
+                                <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
                             </div>
-                            
-                            <!-- WNI Image Area -->
-                            <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                                <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                                    <span class="flex items-center gap-1.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        WNI 氣象剖面資訊
-                                    </span>
-                                    <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                               <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                            <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
                                 <div id="wni-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                     
@@ -573,41 +572,40 @@
                                 <img id="wni-image" src="" alt="WNI Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
                                 <input type="file" id="wni-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'wni')" data-html2canvas-ignore>
                             </div>
-                            </div>
-
                         </div>
 
-                        <!-- EDTO Coordinates -->
-                        <div class="xl:col-span-4 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                            <div class="bg-[#2c3e50] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                EDTO / ETOPS Coordinates
-                            </div>
-                            <div class="p-4 md:p-5 bg-white flex-grow flex flex-col justify-center min-h-[250px]">
-                                <div id="out-edto-container" class="w-full">
-                                    <div class="text-emerald-600 font-black text-xl md:text-2xl tracking-widest text-center my-auto py-10 bg-emerald-50/50 rounded-xl border-2 border-dashed border-emerald-200">Non-EDTO Flight</div>
-                                </div>
+                    </div>
+
+                    <!-- EDTO Coordinates -->
+                    <div class="md:col-span-4 border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-[#2c3e50] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            EDTO / ETOPS Coordinates
+                        </div>
+                        <div class="p-4 md:p-5 bg-white flex-grow flex flex-col justify-center min-h-[250px]">
+                            <div id="out-edto-container" class="w-full">
+                                <div class="text-emerald-600 font-black text-xl md:text-2xl tracking-widest text-center my-auto py-10 bg-emerald-50/50 rounded-xl border-2 border-dashed border-emerald-200">Non-EDTO Flight</div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- 匯出與截圖按鈕區域 (置底，並排或堆疊) -->
-                <div class="w-full max-w-[1194px] mx-auto flex flex-col md:flex-row justify-center items-center gap-4 pb-8 mt-6 no-print">
-                    <!-- 圖片匯出/分享按鈕 -->
-                    <button id="capture-btn" onclick="shareDashboardImage()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        匯出圖片並分享 (iOS 原生)
-                    </button>
-                    <!-- 新增的匯出高畫質無縫 PDF 按鈕 -->
-                    <button id="pdf-btn" onclick="exportContinuousPDF()" class="flex-1 w-full md:max-w-md bg-red-800/95 backdrop-blur hover:bg-red-900 text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-red-700/80">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                        匯出無縫長條 PDF (供標示)
-                    </button>
-                </div>
             </div>
 
+            <!-- 匯出與截圖按鈕區域 (置底，並排或堆疊) -->
+            <div class="w-full max-w-[1194px] mx-auto flex flex-col md:flex-row justify-center items-center gap-4 pb-8 mt-6 no-print">
+                <!-- 圖片匯出/分享按鈕 -->
+                <button id="capture-btn" onclick="shareDashboardImage()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    匯出圖片並分享 (iOS 原生)
+                </button>
+                <!-- 新增的匯出高畫質無縫 PDF 按鈕 -->
+                <button id="pdf-btn" onclick="exportContinuousPDF()" class="flex-1 w-full md:max-w-md bg-red-800/95 backdrop-blur hover:bg-red-900 text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-red-700/80">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    匯出無縫長條 PDF (供標示)
+                </button>
+            </div>
         </div>
+
     </div>
 
     <!-- 腳本整合 -->
@@ -616,7 +614,7 @@
         // 變數與核心功能
         // ==========================================
         const getSecKey = () => [49, 48, 52, 55, 56, 56].map(c => String.fromCharCode(c)).join('');
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby71j0IH9tMravBLWmbrUj2gE2qcGGm9qBD-CFUBsUsEFOR3ROl5WO9IH3d4KtFhOvGdA/exec'; 
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyOhjn6oEzY6boegGSDqCgsM-HugjRX7QjCupDuaZpDFLE7Fs2__lX4QcGNCCrrdk9oBA/exec'; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
         
@@ -1001,9 +999,9 @@
                         showImage(rawTexts['VERTPROF'], 'profile');
                     }
 
-                    // ★ SIGWX 陣列圖檔處理 (支援多張圖表)
+                    // ★ SIGWX 陣列圖檔處理 (支援多張圖表) - 已相容 UAD 分類！
                     Object.keys(rawTexts).forEach(key => {
-                        if (key.startsWith('SIGWX') && rawTexts[key].startsWith('data:image')) {
+                        if ((key.startsWith('SIGWX') || key.startsWith('UAD')) && rawTexts[key].startsWith('data:image')) {
                             showImage(rawTexts[key], 'sigwx');
                         }
                     });
