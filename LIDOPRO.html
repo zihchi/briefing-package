@@ -509,29 +509,44 @@
                         </div>
                     </div>
 
-                    <!-- SigWX With Route -->
-                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                        <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-                            <span class="flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                SigWX With Route
-                            </span>
-                            <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                        </div>
-                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
-                            <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                    <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                    <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                </div>                                      
-                            </div>
-                            <!-- SigWX 圖檔將動態插入至此 -->
-                            <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
-                        </div>
-                    </div>
+                 
+    <!-- SigWX With Route 修改區塊開始 -->
+    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col max-w-4xl mx-auto">
+        <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+            <span class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                SigWX With Route
+            </span>
+            <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+        </div>
+        
+        <!-- 
+            修改重點說明：
+            1. 加入 lg:flex-row 與 lg:flex-wrap：在 iPad 橫向以上的寬度時，允許內容水平排列並自動換行。
+            2. 加入 lg:[&>img]:max-w-[calc(50%-0.5rem)]：使用 Tailwind 任意選擇器，直接鎖定插入的 img 標籤。計算 50% 寬度並扣除 gap-4 (即 1rem 的一半)，確保兩張圖能完美並排。
+            3. 加入 [&>img]:object-contain 與 [&>img]:rounded-lg：確保圖片不變形且帶有圓角增添質感。
+        -->
+        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col lg:flex-row lg:flex-wrap items-center justify-center min-h-[200px] relative gap-4 [&>img]:max-w-full lg:[&>img]:max-w-[calc(50%-0.5rem)] [&>img]:object-contain [&>img]:rounded-lg" id="sigwx-container">
+            <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                    <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                    <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                </div>                                      
+            </div>
+            <!-- SigWX 圖檔將動態插入至此 -->
+            <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
+            
+            <!-- 模擬插入兩張圖片的狀況 (僅供預覽參考，實際使用時請由 JS 動態產生) -->
+            <!--
+            <img src="https://placehold.co/600x400/teal/white?text=SigWX+1" alt="Preview 1">
+            <img src="https://placehold.co/600x400/teal/white?text=SigWX+2" alt="Preview 2">
+            -->
+        </div>
+    </div>
+    <!-- SigWX With Route 修改區塊結束 -->
 
                     <!-- ATC 報文保留區 -->
                     <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
