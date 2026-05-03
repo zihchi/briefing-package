@@ -510,7 +510,7 @@
                     </div>
 
                  
-        <!-- SigWX With Route 修改區塊開始 -->
+    <!-- SigWX With Route 修改區塊開始 -->
     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col max-w-4xl mx-auto">
         <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
             <span class="flex items-center gap-1.5">
@@ -523,12 +523,11 @@
         </div>
         
         <!-- 
-            修改重點說明 (進階升級版)：
-            1. 將斷點從 lg 改為 md (大於 768px 即可)：涵蓋所有 iPad 的顯示狀態，避免寬度誤判。
-            2. 使用 md:[&>img]:flex-[0_0_calc(50%-0.5rem)]：這道指令會強制分配絕對的 50% 寬度 (並扣掉中間間距)，不讓圖片原本的大小影響排版。
-            3. 加入 [&>img]:w-full：確保在手機上 (小於 768px 時) 圖片會乖乖以 100% 寬度上下排列。
+            修改重點說明：
+            1. 保留 lg:flex-row 與 lg:flex-wrap，確保寬螢幕時可以水平排列。
+            2. 移除原先 HTML 中複雜的 [&>img] 選擇器，改由 JS 動態賦予精確的斷點類別 (lg:w-[calc(...)])，徹底解決排版衝突。
         -->
-        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col md:flex-row md:flex-wrap items-center justify-center min-h-[200px] relative gap-4 [&>img]:w-full md:[&>img]:flex-[0_0_calc(50%-0.5rem)] [&>img]:h-auto [&>img]:max-h-[70vh] [&>img]:object-contain [&>img]:rounded-xl [&>img]:shadow-sm" id="sigwx-container">
+        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col lg:flex-row lg:flex-wrap items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
             <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
@@ -571,7 +570,7 @@
                                 
                                 <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
                                     <button onclick="document.getElementById('wni-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
-                                    <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                    <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
                                 </div>
                             </div>
                             
@@ -1163,7 +1162,8 @@
                 const container = document.getElementById('sigwx-container');
                 const img = document.createElement('img');
                 img.src = dataUrl;
-                img.className = "w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200 sigwx-img-item";
+                // 加入 lg:w-[calc(50%-0.5rem)] 與 lg:max-h-[350px] 確保在 iPad Pro 11 橫向(1194px)時縮小且水平排列
+                img.className = "w-full lg:w-[calc(50%-0.5rem)] h-auto max-h-[600px] lg:max-h-[350px] object-contain rounded-lg shadow-sm border border-stone-200 sigwx-img-item transition-all duration-300";
                 container.insertBefore(img, document.getElementById('sigwx-upload'));
                 
                 if (!skipSave) {
