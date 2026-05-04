@@ -1,5 +1,5 @@
 // ==========================================
-// 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版
+// 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版 + 雙引擎解析架構
 // ==========================================
 
 // ------------------------------------------
@@ -269,7 +269,7 @@ function initFlightSelect() {
 }
 
 // ==========================================
-// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (終極三層裝甲極速版)
+// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板
 // ==========================================
 function getWeatherEmojis(text) {
   if (!text) return '';
@@ -444,16 +444,14 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
-    // 🚀 終極三層裝甲 API 擷取邏輯 (不夾帶任何敏感 Headers，確保通過防火牆)
     const fetchBulkWeatherFast = async (icaoList, type) => {
         const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
 
-        // 最純粹的 fetch 執行器，拔除所有容易引發 CORS 預檢的參數
         const executeFetch = async (targetUrl, timeoutMs) => {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                const res = await fetch(targetUrl, { signal: controller.signal }); // 拔除 cache: 'no-store'
+                const res = await fetch(targetUrl, { signal: controller.signal });
                 clearTimeout(id);
                 if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
                 return await res.json();
@@ -463,14 +461,12 @@ function initAviationMap() {
             }
         };
 
-        // 🛡️ 防線一：NOAA 直連 (時限 4.5 秒)
         try {
             const data = await executeFetch(cleanUrl, 4500);
             return Array.isArray(data) ? data : [];
         } catch (errorA) {
             console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
             
-            // 🛡️ 防線二：高速備援代理 CodeTabs (時限 5.5 秒)
             try {
                 const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
                 const dataA = await executeFetch(proxyA, 5500);
@@ -478,14 +474,13 @@ function initAviationMap() {
             } catch (errorB) {
                 console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
                 
-                // 🛡️ 防線三：終極防線 AllOrigins (時限 6 秒)
                 try {
                     const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
                     const dataB = await executeFetch(proxyB, 6000);
                     return Array.isArray(dataB) ? dataB : [];
                 } catch (errorC) {
                     console.error(`[全面失效] 無法為 ${type.toUpperCase()} 建立任何資料鏈路。`);
-                    throw new Error(`無法連接至氣象資料庫`); // 將錯誤往上拋，阻斷殘缺畫面顯示
+                    throw new Error(`無法連接至氣象資料庫`); 
                 }
             }
         }
@@ -612,18 +607,15 @@ function initAviationMap() {
         const icaoString = airports.map(a => a.icao).join(',');
 
         try {
-            // 🛡️ 同步發車：METAR 和 TAF 必須雙雙通過三層防線的考驗
             const [allMetars, allTafs] = await Promise.all([
                 fetchBulkWeatherFast(icaoString, 'metar'),
                 fetchBulkWeatherFast(icaoString, 'taf')
             ]);
 
-            // 雙重驗證：陣列為空代表沒抓到東西
             if (allMetars.length === 0 && allTafs.length === 0) {
                 throw new Error("無法連接天氣伺服器");
             }
 
-            // 寫入快取 (API 回傳欄位為 rawOb 與 rawTAF)
             allMetars.forEach(m => { 
                 if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
             });
@@ -708,7 +700,6 @@ function initAviationMap() {
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
-            // 這裡滿足「METAR / TAF 一起顯示」的堅持
             L.popup(popupOpts)
             .setLatLng(marker.getLatLng())
             .setContent(`
@@ -746,9 +737,9 @@ function initAviationMap() {
         });
     });
 
-    // 🚀 開網頁直接拉取資料
     bootSequence();
 }
+
 // ==========================================
 // ⛽ 油量計算機邏輯 
 // ==========================================
@@ -914,7 +905,7 @@ function updateTimeTable(data) {
 }
 
 // ==========================================
-// ⏳ Curfew Calculator 核心邏輯 (原生重構版)
+// ⏳ Curfew Calculator 核心邏輯
 // ==========================================
 function initCurfewCalculator() {
     let state = {
@@ -1082,7 +1073,7 @@ function initCurfewCalculator() {
 }
 
 // ==========================================
-// ❄️ ICAO 寒冷溫度修正 (Altimetry) 核心邏輯
+// ❄️ ICAO 寒冷溫度修正 (Altimetry)
 // ==========================================
 function calculateCorrection(temp, elevation, altitude) {
   if (temp === '' || elevation === '' || altitude === '') return '';
@@ -1345,7 +1336,7 @@ function resetAltimetryCalculator() {
 }
 
 // ==========================================
-// 📡 NOTAM Radar 核心邏輯 (強化升級版)
+// 📡 NOTAM Radar 核心邏輯 (極速雙引擎版)
 // ==========================================
 function initNotamRadar() {
     if (notamClockInterval) clearInterval(notamClockInterval);
@@ -1454,7 +1445,21 @@ function parseNotamHeader(text) {
     };
 }
 
+// 🌐 [雙引擎架構] 核心指揮官：負責調度主引擎與備援引擎
 function parseCoordinates(text) {
+    // 🟢 啟動主發動機：使用原有的強大邏輯
+    let results = parseCoordinatesLegacy(text);
+
+    // 🟠 啟動備援發動機：若主引擎未抓到座標，無縫切換特徵萃取邏輯
+    if (results.length === 0) {
+        console.log("⚠️ 標準解析未命中，啟動深度特徵萃取備援系統 (Dual-Engine Engaged)...");
+        results = parseCoordinatesAdvanced(text);
+    }
+    return results;
+}
+
+// 🛡️ 引擎一：您原版的經典邏輯 (處理 95% 標準情況)
+function parseCoordinatesLegacy(text) {
     const cleanText = text.replace(/[\t\r\n]+/g, " ");
     let results = [];
     
@@ -1475,6 +1480,72 @@ function parseCoordinates(text) {
             ]);
         }
     }
+    return results;
+}
+
+// 🚀 引擎二：終極優化版邏輯 (專治各種不服與奇葩格式)
+function parseCoordinatesAdvanced(text) {
+    // 暴力壓縮：掃除無用符號
+    let cleanText = text.toUpperCase().replace(/[°'"’”/\\,-]/g, " ");
+    // 處理方向顛倒的特例
+    cleanText = cleanText.replace(/\b([NSEW])\s*([\d\s.]+)\b/g, "$2$1");
+
+    const coordRegex = /(?:\b|^)([\d]{2}[\d\s.]+)([NSEW])\b/g;
+    let match;
+    let tokens = [];
+
+    while ((match = coordRegex.exec(cleanText)) !== null) {
+        let numStr = match[1].replace(/\s+/g, "");
+        let dir = match[2];
+        if (numStr.length < 4 && !numStr.includes('.')) continue;
+        tokens.push({ numStr, dir });
+    }
+
+    let results = [];
+    let currentLat = null;
+
+    tokens.forEach(token => {
+        const { numStr, dir } = token;
+        let dec = NaN;
+
+        if (numStr.includes('.') && numStr.indexOf('.') <= 3) {
+            dec = parseFloat(numStr);
+        } else {
+            let parts = numStr.split('.');
+            let main = parts[0];
+            let fraction = parts[1] ? "." + parts[1] : "";
+
+            let d = 0, m = 0, s = 0;
+
+            if (main.length === 4 || main.length === 5) {
+                m = parseFloat(main.slice(-2) + fraction);
+                d = parseFloat(main.slice(0, -2));
+            } else if (main.length >= 6) {
+                s = parseFloat(main.slice(-2) + fraction);
+                m = parseFloat(main.slice(-4, -2));
+                d = parseFloat(main.slice(0, -4));
+            }
+
+            if (!isNaN(d)) {
+                dec = d + (m / 60) + (s / 3600);
+            }
+        }
+
+        if (!isNaN(dec)) {
+            dec = dec * ((dir === 'S' || dir === 'W') ? -1 : 1);
+            const isLat = (dir === 'N' || dir === 'S');
+
+            if (isLat) {
+                if (dec >= -90 && dec <= 90) currentLat = dec;
+            } else if (!isLat && currentLat !== null) {
+                if (dec >= -180 && dec <= 180) {
+                    results.push([currentLat, dec]);
+                }
+                currentLat = null;
+            }
+        }
+    });
+
     return results;
 }
 
