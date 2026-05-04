@@ -1,88 +1,306 @@
-<div class="section fuel-box">
-  <style>
-    /* 為計算按鈕添加特定樣式 */
-    .fuel-box button {
-      background-color: white;
-      color: #1890ff; /* 參考圖片中的藍色 */
-      border: 2px solid #1890ff;
-      border-radius: 6px; /* 圓角效果 */
-      padding: 6px 16px;
-      font-size: 16px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s ease; /* 滑鼠懸停時的過渡動畫 */
-      outline: none;
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: "Segoe UI", sans-serif; background-color: #f9f7f3; }
+        /* 隱藏數字輸入框的上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .table-row-hover:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border-l-8 border-blue-500 p-6 md:p-8">
+    
+    <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+        <span class="text-3xl">⛽</span>
+        <h2 class="text-2xl font-bold text-gray-800">Fuel Distribution & Refuel Time</h2>
+    </div>
+
+    <!-- 📥 輸入區塊 (改為直觀的鍵盤輸入) -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="md:col-span-2">
+            <label for="currentFuelKg" class="block text-sm font-bold text-gray-600 mb-2">剩油 Fuel Remaining (kg)</label>
+            <div class="relative">
+                <input type="number" id="currentFuelKg" class="w-full pl-4 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-0 focus:border-blue-500 font-mono text-lg transition-colors outline-none" placeholder="e.g. 6000" />
+                <span class="absolute right-4 top-3.5 text-gray-400 font-bold">kg</span>
+            </div>
+        </div>
+        <div class="md:col-span-2">
+            <label for="targetFuelKg" class="block text-sm font-bold text-gray-600 mb-2">目標油量 Target Fuel (kg)</label>
+            <div class="relative">
+                <input type="number" id="targetFuelKg" class="w-full pl-4 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:ring-0 focus:border-blue-500 font-mono text-lg transition-colors outline-none" placeholder="e.g. 25000" />
+                <span class="absolute right-4 top-3.5 text-gray-400 font-bold">kg</span>
+            </div>
+        </div>
+        <div class="md:col-span-1 flex items-end">
+            <button onclick="onCalculateKg()" class="w-full h-[52px] bg-white text-blue-600 border-2 border-blue-600 font-bold rounded-xl hover:bg-blue-50 active:bg-blue-100 transition-all shadow-sm">
+                計算
+            </button>
+        </div>
+    </div>
+
+    <!-- ⚠️ 錯誤提示區 -->
+    <div id="message" class="hidden text-red-500 font-bold mb-4 bg-red-50 p-3 rounded-lg border border-red-200 text-center"></div>
+
+    <!-- 📊 結果戰術面板 -->
+    <div id="resultPanel" class="hidden opacity-0 transition-opacity duration-500">
+        
+        <!-- 💡 核心摘要卡片 (重點資訊先決) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex flex-col items-center justify-center shadow-inner">
+                <div class="text-blue-600 text-sm font-bold mb-1">總需加油量 Total Uplift</div>
+                <div class="text-4xl font-black text-blue-700 font-mono" id="lblTotalAdd">-- kg</div>
+            </div>
+            <div class="bg-green-50 p-5 rounded-2xl border border-green-100 flex flex-col items-center justify-center shadow-inner">
+                <div class="text-green-600 text-sm font-bold mb-1">總加油時間 Est. Time</div>
+                <div class="text-4xl font-black text-green-700 font-mono" id="lblTotalTime">-- min</div>
+            </div>
+        </div>
+
+        <!-- 📋 油箱細節綜合表 (防爆框處理) -->
+        <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+            <table class="w-full min-w-[600px] text-sm text-left">
+                <thead class="bg-gray-100 text-gray-600 uppercase font-bold">
+                    <tr>
+                        <th class="px-6 py-4 rounded-tl-xl">油箱 Tank</th>
+                        <th class="px-4 py-4 text-right">目前 Current (kg)</th>
+                        <th class="px-4 py-4 text-right">目標 Target (kg)</th>
+                        <th class="px-4 py-4 text-right text-blue-600">加油量 Add (kg)</th>
+                        <th class="px-6 py-4 text-right text-green-600 rounded-tr-xl">時間 Time (min)</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody" class="bg-white divide-y divide-gray-100 font-mono text-base">
+                    <!-- 動態生成內容 -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 附註 -->
+        <div class="mt-3 text-xs text-gray-400 text-right">
+            * 內/外/中油箱共用管線動態分配流速約 1,000 kg/min，Trim Tank 獨立流速約 100 kg/min。
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+// ==========================================
+// ⛽ 油量計算機核心邏輯 (KG 單位優化版)
+// ==========================================
+
+// 基礎數據已從噸 (t) 轉換為公斤 (kg)
+const fuelTableKg = [
+    { total: 9000,    inner: 9000,   outer: 0,     trim: 0,    center: 0 },
+    { total: 14730,   inner: 9000,   outer: 5730,  trim: 0,    center: 0 },
+    { total: 23900,   inner: 18170,  outer: 5730,  trim: 0,    center: 0 },
+    { total: 27500,   inner: 18170,  outer: 5730,  trim: 3600, center: 0 },
+    { total: 30000,   inner: 20670,  outer: 5730,  trim: 3600, center: 0 },
+    { total: 40000,   inner: 30390,  outer: 5730,  trim: 3880, center: 0 },
+    { total: 60000,   inner: 49830,  outer: 5730,  trim: 4440, center: 0 },
+    { total: 75000,   inner: 64400,  outer: 5730,  trim: 4870, center: 0 },
+    { total: 100000,  inner: 65500,  outer: 5730,  trim: 4880, center: 23890 },
+    { total: 109180,  inner: 65940,  outer: 5730,  trim: 4890, center: 32620 }
+];
+
+// 數字千分位格式化工具
+const fmt = (num) => new Intl.NumberFormat('en-US').format(Math.round(num));
+
+function interpolateFuelKg(total) {
+    const table = fuelTableKg;
+    const n = table.length;
+    if (n === 0) return null;
+    if (total < table[0].total || total > table[n - 1].total) return null;
+    
+    for (let i = 0; i < n; i++) {
+        if (Math.abs(total - table[i].total) < 1) {
+            return { ...table[i] };
+        }
+    }
+    for (let i = 1; i < n; i++) {
+        const prev = table[i - 1], curr = table[i];
+        if (total <= curr.total) {
+            const ratio = (total - prev.total) / (curr.total - prev.total);
+            const lerp = (a, b) => a + (b - a) * ratio;
+            return { 
+                total: total, 
+                inner: lerp(prev.inner, curr.inner), 
+                outer: lerp(prev.outer, curr.outer), 
+                trim: lerp(prev.trim, curr.trim), 
+                center: lerp(prev.center, curr.center) 
+            };
+        }
+    }
+    return { ...table[n - 1], total: total };
+}
+
+// 模擬 IOC 群組動態流速分配 (以 KG 為單位，總流速 1000 kg/min)
+function computeIOCRefuelKg(dInner, dOuter, dCenter) {
+    const remaining = { inner: Math.max(dInner, 0), outer: Math.max(dOuter, 0), center: Math.max(dCenter, 0) };
+    const original = { inner: remaining.inner, outer: remaining.outer, center: remaining.center };
+    const finishTime = { inner: 0, outer: 0, center: 0 };
+    let t = 0; 
+    const eps = 0.1; // kg 誤差值
+    const order = ["inner", "outer", "center"];
+    const groupRate = 1000.0; // IOC 共用管線流速 (kg/min)
+
+    while (true) {
+        const active = order.filter(key => remaining[key] > eps);
+        if (active.length === 0) break;
+        const k = active.length;
+        let dt = Infinity;
+        
+        for (const key of active) {
+            const timeToFinish = remaining[key] / (groupRate / k); 
+            if (timeToFinish < dt) dt = timeToFinish;
+        }
+        
+        t += dt;
+        for (const key of active) {
+            remaining[key] -= dt * (groupRate / k);
+            if (remaining[key] < eps) {
+                remaining[key] = 0;
+                if (finishTime[key] === 0 && original[key] > 0) finishTime[key] = t;
+            }
+        }
+    }
+    return { tInner: finishTime.inner, tOuter: finishTime.outer, tCenter: finishTime.center, groupTime: t };
+}
+
+function computeRefuelDetails(currentTotal, targetTotal, finalDist) {
+    let currentDist = interpolateFuelKg(currentTotal);
+    if (!currentDist) currentDist = { inner: currentTotal, outer: 0, trim: 0, center: 0 };
+
+    const dInner = Math.max(finalDist.inner - currentDist.inner, 0);
+    const dOuter = Math.max(finalDist.outer - currentDist.outer, 0);
+    const dTrim = Math.max(finalDist.trim - currentDist.trim, 0);
+    const dCenter = Math.max(finalDist.center - currentDist.center, 0);
+
+    const ioc = computeIOCRefuelKg(dInner, dOuter, dCenter);
+    const rateTrim = 100.0; // Trim Tank 獨立流速 100 kg/min
+    const tTrim = dTrim > 0 ? dTrim / rateTrim : 0;
+    
+    const totalDelta = dInner + dOuter + dTrim + dCenter;
+    const totalTime = Math.max(ioc.groupTime, tTrim);
+
+    return { 
+        curr: currentDist, target: finalDist, 
+        dInner, dOuter, dTrim, dCenter, 
+        tInner: ioc.tInner, tOuter: ioc.tOuter, tCenter: ioc.tCenter, tTrim, 
+        totalDelta, totalTime 
+    };
+}
+
+function onCalculateKg() {
+    const currentTotal = parseFloat(document.getElementById("currentFuelKg").value);
+    const targetTotal = parseFloat(document.getElementById("targetFuelKg").value);
+    const msgEl = document.getElementById("message");
+    const panelEl = document.getElementById("resultPanel");
+
+    // 驗證
+    if (isNaN(currentTotal) || isNaN(targetTotal)) {
+        showError("請輸入有效的油量數值 (kg)。");
+        return;
+    }
+    if (targetTotal <= currentTotal) {
+        showError("⚠️ 目標油量必須大於剩餘油量！");
+        return;
+    }
+    if (targetTotal > 109180) {
+        showError("⚠️ 數值超出 A350 最大油量負載限制 (109,180 kg)。");
+        return;
     }
 
-    /* 滑鼠懸停時的樣式 (顏色略微變深) */
-    .fuel-box button:hover {
-      color: #40a9ff;
-      border-color: #40a9ff;
+    const finalDist = interpolateFuelKg(targetTotal);
+    if (!finalDist) {
+        showError("數據插值失敗，請檢查數值範圍。");
+        return;
     }
 
-    /* 按鈕點擊時的樣式 */
-    .fuel-box button:active {
-      color: #096dd9;
-      border-color: #096dd9;
+    // 計算
+    msgEl.classList.add("hidden");
+    const res = computeRefuelDetails(currentTotal, targetTotal, finalDist);
+    
+    // 更新 UI
+    renderResults(res);
+    
+    // 顯示面板動畫
+    panelEl.classList.remove("hidden");
+    setTimeout(() => panelEl.classList.remove("opacity-0"), 10);
+}
+
+function showError(text) {
+    const msgEl = document.getElementById("message");
+    msgEl.textContent = text;
+    msgEl.classList.remove("hidden");
+    document.getElementById("resultPanel").classList.add("opacity-0");
+    setTimeout(() => document.getElementById("resultPanel").classList.add("hidden"), 300);
+}
+
+function renderResults(res) {
+    // 更新頂部摘要
+    document.getElementById("lblTotalAdd").innerHTML = `+${fmt(res.totalDelta)} <span class="text-xl">kg</span>`;
+    
+    const totalMin = Math.round(res.totalTime);
+    let timeStr = `${totalMin} min`;
+    if (totalMin >= 60) {
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        timeStr = `${h}h ${m}m`;
     }
-  </style>
+    document.getElementById("lblTotalTime").textContent = timeStr;
 
+    // 更新表格
+    const tbody = document.getElementById("resultBody");
+    const mkRow = (name, curr, targ, add, time) => {
+        const addColor = add > 0 ? "text-blue-600 font-bold" : "text-gray-300";
+        const timeColor = time > 0 ? "text-green-600 font-bold" : "text-gray-300";
+        const addStr = add > 0 ? `+${fmt(add)}` : "-";
+        const timeStr = time > 0 ? time.toFixed(1) : "-";
+        
+        return `
+        <tr class="table-row-hover transition-colors">
+            <td class="px-6 py-4 font-bold text-gray-700 font-sans">${name}</td>
+            <td class="px-4 py-4 text-right text-gray-500">${fmt(curr)}</td>
+            <td class="px-4 py-4 text-right text-gray-800 font-bold">${fmt(targ)}</td>
+            <td class="px-4 py-4 text-right ${addColor}">${addStr}</td>
+            <td class="px-6 py-4 text-right ${timeColor}">${timeStr}</td>
+        </tr>`;
+    };
 
-<div class="section fuel-box">
-    <h2>⛽ Fuel Distribution & Refuel Time Calculator</h2>
+    const sumCurr = res.curr.inner + res.curr.outer + res.curr.trim + res.curr.center;
+    const sumTarg = res.target.inner + res.target.outer + res.target.trim + res.target.center;
 
-  <div class="input-row">
-    <label for="currentFuel">剩油 Fuel Remaining：</label>
-    <input type="range" id="currentFuel" min="0" max="109.1" step="0.1" value="6.0" style="width: 400px;"
-           oninput="document.getElementById('currentFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
-    <span id="currentFuelVal">6.0 t</span>
-  </div>
-    <div class="input-row">
-    <label for="targetFuel">目標油量 Target Fuel：</label>
-    <input type="range" id="targetFuel" min="0" max="109.1" step="0.1" value="25.0" style="width: 400px;"
-           oninput="document.getElementById('targetFuelVal').innerText = Number(this.value).toFixed(1) + ' t'" />
-    <span id="targetFuelVal">25.0 t</span>
-    <button type="button" onclick="onCalculate()">計算</button>
-  </div>
+    tbody.innerHTML = 
+        mkRow('Inner Tank', res.curr.inner, res.target.inner, res.dInner, res.tInner) +
+        mkRow('Outer Tank', res.curr.outer, res.target.outer, res.dOuter, res.tOuter) +
+        mkRow('Trim Tank', res.curr.trim, res.target.trim, res.dTrim, res.tTrim) +
+        mkRow('Center Tank', res.curr.center, res.target.center, res.dCenter, res.tCenter) +
+        `<tr class="bg-gray-50 border-t-2 border-gray-200">
+            <td class="px-6 py-4 font-black text-gray-800 font-sans">TOTAL</td>
+            <td class="px-4 py-4 text-right text-gray-500 font-bold">${fmt(sumCurr)}</td>
+            <td class="px-4 py-4 text-right text-gray-800 font-black">${fmt(sumTarg)}</td>
+            <td class="px-4 py-4 text-right text-blue-700 font-black">+${fmt(res.totalDelta)}</td>
+            <td class="px-6 py-4 text-right text-green-700 font-black">${res.totalTime.toFixed(1)}</td>
+        </tr>`;
+}
 
-    <div id="message"></div>
+// 支援 Enter 鍵觸發計算
+document.getElementById('currentFuelKg').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') document.getElementById('targetFuelKg').focus();
+});
+document.getElementById('targetFuelKg').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') onCalculateKg();
+});
+</script>
 
-    <h3>一、油量分布比較 (目前剩油 vs 目標油量)</h3>
-    <table>
-      <thead>
-      <tr>
-        <th>項目 (Tank)</th>
-        <th>目前剩油 (t)</th>
-        <th>目標油量 (t)</th>
-        <th>需加油量 Δ (t)</th>
-      </tr>
-      </thead>
-      <tbody id="resultBody">
-      <tr><td>Inner Tank</td><td>-</td><td>-</td><td>-</td></tr>
-      <tr><td>Outer Tank</td><td>-</td><td>-</td><td>-</td></tr>
-      <tr><td>Trim Tank</td><td>-</td><td>-</td><td>-</td></tr>
-      <tr><td>Center Tank</td><td>-</td><td>-</td><td>-</td></tr>
-      <tr><th>Total (I+O+T+C)</th><th>-</th><th>-</th><th>-</th></tr>
-      </tbody>
-    </table>
-
-    <h3>二、加油量與加油時間</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>油箱</th>
-          <th>加油量 Δ (t)</th>
-          <th>加油流量 (t/min)</th>
-          <th>所需時間 (min)</th>
-        </tr>
-      </thead>
-      <tbody id="timeBody">
-        <tr><td>Inner Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-        <tr><td>Outer Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-        <tr><td>Trim Tank</td><td>-</td><td>0.10</td><td>-</td></tr>
-        <tr><td>Center Tank</td><td>-</td><td>動態分配 (共 1.0)</td><td>-</td></tr>
-        <tr><th>總加油量 (t)</th><th>-</th><th>等效流量 (t/min)</th><th>-</th></tr>
-        <tr><th>總加油時間</th><th colspan="3">-</th></tr>
-      </tbody>
-    </table>
-  </div>
+</body>
+</html>
