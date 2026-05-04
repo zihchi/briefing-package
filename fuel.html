@@ -21,7 +21,7 @@
     
     <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
         <span class="text-3xl">⛽</span>
-        <h2 class="text-2xl font-bold text-gray-800">Fuel Distribution & Refuel Time</h2>
+        <h2 class="text-2xl font-bold text-gray-800">Fuel Distribution & Refuel Time (⛔️僅適用油車剛加油時)</h2>
     </div>
 
     <!-- 📥 輸入區塊 (改為直觀的鍵盤輸入) -->
@@ -215,7 +215,7 @@ function onCalculateKg() {
         return;
     }
     if (targetTotal > 109180) {
-        showError("⚠️ 數值超出 A350 最大油量負載限制 (109,180 kg)。");
+        showError("⚠️ 數值超出 最大油量負載限制 (109,180 kg)。");
         return;
     }
 
