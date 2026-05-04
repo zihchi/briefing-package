@@ -8,7 +8,6 @@
 
 let notamMapInstance = null;
 let notamActiveLayers = [];
-let notamClockInterval = null;
 let curfewClockInterval = null;
 let aviationMapInstance = null; 
 
@@ -99,10 +98,6 @@ function cleanUpPanel() {
     if (typeof notamMapInstance !== 'undefined' && notamMapInstance !== null) {
         notamMapInstance.remove();
         notamMapInstance = null;
-    }
-    if (typeof notamClockInterval !== 'undefined' && notamClockInterval !== null) {
-        clearInterval(notamClockInterval);
-        notamClockInterval = null;
     }
     if (typeof curfewClockInterval !== 'undefined' && curfewClockInterval !== null) {
         clearInterval(curfewClockInterval);
@@ -1336,20 +1331,9 @@ function resetAltimetryCalculator() {
 }
 
 // ==========================================
-// 📡 NOTAM Radar 核心邏輯 (極速雙引擎版)
+// 📡 NOTAM Radar 核心邏輯 (極速雙引擎版 - 無副面板)
 // ==========================================
 function initNotamRadar() {
-    if (notamClockInterval) clearInterval(notamClockInterval);
-    notamClockInterval = setInterval(() => {
-        const clockEl = document.getElementById('clock');
-        if (clockEl) {
-            const now = new Date();
-            clockEl.innerText = `UTC: ${now.toISOString().replace('T', ' ').slice(0, 19)}`;
-        } else {
-            clearInterval(notamClockInterval);
-        }
-    }, 1000);
-
     if (notamMapInstance !== null) {
         notamMapInstance.remove();
         notamMapInstance = null;
@@ -1416,33 +1400,6 @@ function smartToDec(val) {
          return (dir === 'S' || dir === 'W') ? -dec : dec;
     }
     return NaN;
-}
-
-function parseNotamHeader(text) {
-    const idMatch = text.match(/([A-Z]\d{4}\/\d{2,4})/);
-    const timeMatchB = text.match(/B\)\s*(\d{10})/);
-    const timeMatchC = text.match(/C\)\s*(\d{10}|PERM|EST)/);
-    
-    const formatTime = (ts) => {
-        if (!ts || ts.length < 10) return ts;
-        const year = "20" + ts.slice(0, 2);
-        const month = ts.slice(2, 4);
-        const day = ts.slice(4, 6);
-        const hour = ts.slice(6, 8);
-        const min = ts.slice(8, 10);
-        const utcDate = new Date(`${year}-${month}-${day}T${hour}:${min}:00Z`);
-        const localDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
-        return {
-            utc: `${year}/${month}/${day} ${hour}:${min} UTC`,
-            local: `${localDate.getFullYear()}/${(localDate.getMonth()+1).toString().padStart(2,'0')}/${localDate.getDate().toString().padStart(2,'0')} ${localDate.getHours().toString().padStart(2,'0')}:${localDate.getMinutes().toString().padStart(2,'0')} (Local)`
-        };
-    };
-
-    return {
-        id: idMatch ? idMatch[1] : "未知名編號",
-        start: timeMatchB ? formatTime(timeMatchB[1]) : null,
-        end: timeMatchC ? formatTime(timeMatchC[1]) : null
-    };
 }
 
 // 🌐 [雙引擎架構] 核心指揮官：負責調度主引擎與備援引擎
@@ -1561,14 +1518,11 @@ function processNotamData() {
     notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
     notamActiveLayers = [];
 
-    const headerInfo = parseNotamHeader(input);
     const blocks = input.split(/(?=\d\.\s*FLT AREA|AREA\s+\d+|1\.THE AREA)/i);
-    let allCoords = [];
 
     blocks.forEach((block, index) => {
         const coords = parseCoordinates(block);
         if (coords.length === 0) return;
-        allCoords = allCoords.concat(coords);
 
         const cleanBlock = block.replace(/\s+/g, " ");
         
@@ -1607,45 +1561,9 @@ function processNotamData() {
         }
     });
 
-    updateNotamUI(allCoords, headerInfo, input);
     if (notamActiveLayers.length > 0) {
         const group = new L.featureGroup(notamActiveLayers);
         notamMapInstance.fitBounds(group.getBounds(), { padding: [40, 40] });
-    }
-}
-
-function updateNotamUI(coords, header, raw) {
-    const infoEl = document.getElementById('notamInfo');
-    const logEl = document.getElementById('logArea');
-    const contentEl = document.getElementById('infoContent');
-    const coordListEl = document.getElementById('coordList');
-    
-    if (infoEl) infoEl.classList.remove('hidden');
-    if (logEl) logEl.classList.remove('hidden');
-    
-    let translationHint = "";
-    if (raw.includes("ACROBATIC")) translationHint = "🚩 偵測到特技飛行活動 (Acrobatic Flight)";
-    if (raw.includes("GUNNERY")) translationHint = "⚠️ 偵測到實彈射擊訓練 (Gunnery Training)";
-
-    if (contentEl) {
-        contentEl.innerHTML = `
-            <table class="notam-table w-full">
-                <tr><th>NOTAM 編號</th><td>${header.id}</td></tr>
-                <tr><th>開始時間</th><td>${header.start ? `UTC: ${header.start.utc}<br>${header.start.local}` : '---'}</td></tr>
-                <tr><th>結束時間</th><td>${header.end ? (header.end.utc || header.end) : '---'}</td></tr>
-                <tr><th>座標點數</th><td>${coords.length} Points</td></tr>
-            </table>
-            <div class="text-[11px] text-blue-600 font-bold mt-2">${translationHint}</div>
-        `;
-    }
-    
-    if (coordListEl) {
-        coordListEl.innerHTML = coords.map((c, i) => `
-            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center shadow-sm">
-                <span class="block text-[9px] text-slate-400 font-bold">PT ${i+1}</span>
-                <span class="text-slate-700 font-mono">${c[0].toFixed(4)},${c[1].toFixed(4)}</span>
-            </div>
-        `).join('');
     }
 }
 
@@ -1657,10 +1575,5 @@ function clearNotamAll() {
     notamActiveLayers = [];
     
     const inputEl = document.getElementById('notamInput');
-    const infoEl = document.getElementById('notamInfo');
-    const logEl = document.getElementById('logArea');
-    
     if (inputEl) inputEl.value = "";
-    if (infoEl) infoEl.classList.add('hidden');
-    if (logEl) logEl.classList.add('hidden');
 }
