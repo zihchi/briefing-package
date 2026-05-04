@@ -1487,15 +1487,18 @@ function parseCoordinatesLegacy(text) {
 function parseCoordinatesAdvanced(text) {
     // 暴力壓縮：掃除無用符號
     let cleanText = text.toUpperCase().replace(/[°'"’”/\\,-]/g, " ");
+    
     // 處理方向顛倒的特例
-    cleanText = cleanText.replace(/\b([NSEW])\s*([\d\s.]+)\b/g, "$2$1");
+    // [修正] 將 \s 改為 [ \t]，避免跨行吞噬下一個段落的數字 (例如 "E \n 2.")
+    cleanText = cleanText.replace(/\b([NSEW])[ \t]*([\d][\d \t.]+)\b/g, "$2$1");
 
-    const coordRegex = /(?:\b|^)([\d]{2}[\d\s.]+)([NSEW])\b/g;
+    // [修正] 將 \s 改為 [ \t]，確保擷取不跨行
+    const coordRegex = /(?:\b|^)([\d]{2}[\d \t.]+)([NSEW])\b/g;
     let match;
     let tokens = [];
 
     while ((match = coordRegex.exec(cleanText)) !== null) {
-        let numStr = match[1].replace(/\s+/g, "");
+        let numStr = match[1].replace(/[ \t]+/g, ""); // 僅移除同行空格
         let dir = match[2];
         if (numStr.length < 4 && !numStr.includes('.')) continue;
         tokens.push({ numStr, dir });
