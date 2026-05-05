@@ -3,87 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JX FDP & Rest Calculator v6.0 - Premium UI</title>
+<title>JX FDP & Rest Calculator v6.1 - Bilingual & Robust UI</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    jx: { gold: '#bfa276', dark: '#9f8358', navy: '#0f172a', panel: '#ffffff', bg: '#f8fafc' },
-                    status: { ok: '#10b981', warn: '#f59e0b', danger: '#ef4444', info: '#3b82f6' }
-                },
-                fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'] }
-            }
-        }
-    }
-</script>
 <style>
-    body { background-color: theme('colors.jx.bg'); color: theme('colors.slate.700'); -webkit-font-smoothing: antialiased; }
+    /* Robust Base Styling - Removed reliance on dynamic Tailwind config for core stability */
+    :root {
+        --jx-navy: #0f172a;
+        --jx-gold: #bfa276;
+        --status-ok: #10b981;
+        --status-warn: #f59e0b;
+        --status-danger: #ef4444;
+        --bg-main: #f8fafc;
+    }
+    
+    body { background-color: var(--bg-main); color: #334155; -webkit-font-smoothing: antialiased; }
     
     /* Premium Panel Styling */
-    .panel-card { background: white; border: 1px solid theme('colors.slate.200'); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden; }
-    .panel-header { background: theme('colors.slate.50'); border-bottom: 1px solid theme('colors.slate.200'); padding: 12px 20px; font-weight: 700; color: theme('colors.slate.800'); display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85rem; }
-    .panel-header-primary { background: theme('colors.jx.navy'); color: white; border-bottom: 2px solid theme('colors.jx.gold'); }
-    .panel-header-secondary { background: theme('colors.slate.700'); color: white; border-bottom: 2px solid theme('colors.amber.400'); }
+    .panel-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden; }
+    .panel-header-primary { background-color: var(--jx-navy); color: #ffffff; border-bottom: 3px solid var(--jx-gold); padding: 12px 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; letter-spacing: 0.05em; }
+    .panel-header-secondary { background-color: #334155; color: #ffffff; border-bottom: 3px solid #fbbf24; padding: 12px 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; letter-spacing: 0.05em; }
     
     /* Segmented Control (Radio Buttons) */
-    .segmented-control { display: flex; background: theme('colors.slate.100'); padding: 4px; border-radius: 8px; gap: 4px; width: 100%; }
+    .segmented-control { display: flex; background-color: #f1f5f9; padding: 4px; border-radius: 8px; gap: 4px; width: 100%; }
     .segmented-control label { flex: 1; text-align: center; cursor: pointer; position: relative; }
     .segmented-control input { appearance: none; position: absolute; opacity: 0; }
-    .segmented-control span { display: block; padding: 8px 12px; font-size: 0.875rem; font-weight: 600; color: theme('colors.slate.500'); border-radius: 6px; transition: all 0.2s ease; white-space: nowrap; }
-    .segmented-control input:checked + span { background: white; color: theme('colors.jx.navy'); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .segmented-control span { display: block; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; color: #64748b; border-radius: 6px; transition: all 0.2s ease; white-space: nowrap; }
+    .segmented-control input:checked + span { background-color: #ffffff; color: var(--jx-navy); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     
-    /* Custom Input Styling (Native Date/Time) */
-    .time-input-group { display: flex; flex-direction: column; gap: 8px; background: theme('colors.slate.50'); padding: 12px; border-radius: 8px; border: 1px solid theme('colors.slate.200'); transition: border-color 0.2s; }
-    .time-input-group:focus-within { border-color: theme('colors.jx.gold'); background: white; }
+    /* Custom Input Styling */
+    .time-input-group { display: flex; flex-direction: column; gap: 8px; background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; transition: border-color 0.2s; }
+    .time-input-group:focus-within { border-color: var(--jx-gold); background-color: #ffffff; }
     
     input[type="date"], input[type="time"], select { 
-        background: white; border: 1px solid theme('colors.slate.300'); border-radius: 6px; padding: 8px 12px; font-size: 1rem; color: theme('colors.slate.800'); font-family: ui-monospace, monospace; outline: none; transition: all 0.2s; width: 100%; min-width: 0;
+        background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 1rem; color: #1e293b; font-family: ui-monospace, monospace; outline: none; transition: all 0.2s; width: 100%; min-width: 0;
     }
-    input[type="date"]:focus, input[type="time"]:focus, select:focus { border-color: theme('colors.jx.gold'); box-shadow: 0 0 0 2px rgba(191, 162, 118, 0.2); }
+    input[type="date"]:focus, input[type="time"]:focus, select:focus { border-color: var(--jx-gold); box-shadow: 0 0 0 2px rgba(191, 162, 118, 0.2); }
     
     /* Read-only Badge */
-    .tz-badge { font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-family: ui-monospace, monospace; display: inline-flex; align-items: center; gap: 6px; background: theme('colors.slate.200'); color: theme('colors.slate.600'); white-space: nowrap; }
-    .tz-badge.utc { background: theme('colors.slate.200'); color: theme('colors.slate.700'); }
-    .tz-badge.lcl { background: theme('colors.sky.100'); color: theme('colors.sky.700'); }
+    .tz-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-family: ui-monospace, monospace; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid transparent; }
+    .tz-badge.utc { background-color: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+    .tz-badge.lcl { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
 
     /* Checkbox Switches */
-    .toggle-chk { display: flex; align-items: center; cursor: pointer; gap: 12px; padding: 12px; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s; background: theme('colors.slate.50'); }
-    .toggle-chk:hover { background: theme('colors.slate.100'); border-color: theme('colors.slate.200'); }
-    .toggle-chk input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: theme('colors.jx.gold'); cursor: pointer; flex-shrink: 0; }
+    .toggle-chk { display: flex; align-items: flex-start; cursor: pointer; gap: 12px; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9; transition: all 0.2s; background-color: #f8fafc; }
+    .toggle-chk:hover { background-color: #f1f5f9; border-color: #e2e8f0; }
+    .toggle-chk input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--jx-gold); cursor: pointer; flex-shrink: 0; margin-top: 2px; }
     .toggle-content { flex: 1; }
-    .toggle-title { font-weight: 600; font-size: 0.875rem; color: theme('colors.slate.800'); display: block; }
-    .toggle-desc { font-size: 0.75rem; color: theme('colors.slate.500'); margin-top: 2px; display: block; }
+    .toggle-title { font-weight: 700; font-size: 0.85rem; color: #1e293b; display: block; }
+    .toggle-desc { font-size: 0.75rem; color: #64748b; margin-top: 2px; display: block; line-height: 1.3; }
 
     /* Results Dashboard */
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .dash-card { background: white; border-radius: 12px; padding: 16px; border: 1px solid theme('colors.slate.200'); border-left: 4px solid theme('colors.slate.300'); position: relative; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .dash-card.ok { border-left-color: theme('colors.status.ok'); }
-    .dash-card.violation { background-color: theme('colors.red.50'); border-color: theme('colors.red.200'); border-left-color: theme('colors.status.danger'); }
-    .dash-title { font-size: 0.75rem; font-weight: 700; color: theme('colors.slate.500'); text-transform: uppercase; margin-bottom: 8px; }
-    .dash-val { font-size: 1.75rem; font-weight: 800; font-family: ui-monospace, monospace; color: theme('colors.jx.navy'); line-height: 1; }
-    .dash-card.violation .dash-val { color: theme('colors.red.700'); }
-    .dash-sub { font-size: 0.75rem; font-weight: 600; color: theme('colors.slate.500'); margin-top: 8px; display: flex; justify-content: space-between; }
-    .dash-card.violation .dash-sub { color: theme('colors.red.600'); }
+    .dash-card { background-color: #ffffff; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; border-left: 4px solid #cbd5e1; position: relative; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .dash-card.ok { border-left-color: var(--status-ok); }
+    .dash-card.violation { background-color: #fef2f2; border-color: #fecaca; border-left-color: var(--status-danger); }
+    .dash-title { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px; line-height: 1.2; }
+    .dash-val { font-size: 1.75rem; font-weight: 800; font-family: ui-monospace, monospace; color: var(--jx-navy); line-height: 1; }
+    .dash-card.violation .dash-val { color: #b91c1c; }
+    .dash-sub { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 8px; display: flex; justify-content: space-between; }
+    .dash-card.violation .dash-sub { color: #dc2626; }
 
-    /* Timeline Canvas */
-    .timeline-container { position: relative; height: 120px; background: theme('colors.slate.50'); border-top: 2px solid theme('colors.slate.300'); margin-top: 20px; border-radius: 0 0 8px 8px; width: 100%; overflow: hidden; }
-    .block { position: absolute; height: 28px; line-height: 28px; text-align: center; color: white; font-size: 11px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    .bg-fdp { background: theme('colors.status.ok'); top: 12px; z-index: 5;}
-    .bg-mfdp { background: repeating-linear-gradient(45deg, #93c5fd, #93c5fd 8px, #60a5fa 8px, #60a5fa 16px); top: 45px; opacity: 0.8; }
-    .bg-dhd { background: repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 5px, #cbd5e1 5px, #cbd5e1 10px); color: theme('colors.slate.600'); top: 12px; opacity: 0.9; z-index: 4; border: 1px solid theme('colors.slate.300'); } 
-    .bg-ext { background: repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 8px, #a78bfa 8px, #a78bfa 16px); top: 45px; opacity: 0.9; z-index: 1; }
-    .bg-rest-req { background: repeating-linear-gradient(45deg, #fde68a, #fde68a 8px, #fbbf24 8px, #fbbf24 16px); color: theme('colors.amber.900'); top: 45px; opacity: 0.9; }
-    .bg-rest-act { background: theme('colors.slate.600'); top: 12px; z-index: 5;}
-    .bg-wocl { background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.15) 100%); border-left: 1px dashed theme('colors.purple.400'); border-right: 1px dashed theme('colors.purple.400'); top: 0; height: 100%; z-index: 1; pointer-events: none; }
-    .wocl-label { position: absolute; bottom: 4px; font-size: 9px; color: theme('colors.purple.600'); font-weight: bold; transform: translateX(4px); }
-    .violation { background: theme('colors.status.danger') !important; color: white !important; }
-    .tick { position: absolute; top: 0; height: 100%; border-left: 1px dashed theme('colors.slate.300'); pointer-events: none; z-index: 1; }
-    .tick-label { position: absolute; top: 78px; transform: translateX(-50%); font-size: 10px; background: rgba(255,255,255,0.95); padding: 2px 4px; border: 1px solid theme('colors.slate.200'); border-radius: 4px; color: theme('colors.slate.600'); text-align: center; z-index: 4; white-space: pre-line; line-height: 1.1; font-family: ui-monospace, monospace; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    /* Timeline Canvas - Hardcoded colors to fix vanishing bug */
+    .timeline-container { position: relative; height: 120px; background-color: #f8fafc; border-top: 2px solid #cbd5e1; margin-top: 20px; border-radius: 0 0 8px 8px; width: 100%; overflow: hidden; }
+    .block { position: absolute; height: 28px; line-height: 28px; text-align: center; color: #ffffff; font-size: 11px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    
+    .bg-fdp { background-color: #10b981; top: 12px; z-index: 5; } /* Emerald 500 */
+    .bg-mfdp { background: repeating-linear-gradient(45deg, #93c5fd, #93c5fd 8px, #3b82f6 8px, #3b82f6 16px); top: 45px; opacity: 0.8; }
+    .bg-dhd { background: repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 5px, #94a3b8 5px, #94a3b8 10px); color: #334155; top: 12px; opacity: 0.9; z-index: 4; border: 1px solid #cbd5e1; } 
+    .bg-ext { background: repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 8px, #8b5cf6 8px, #8b5cf6 16px); top: 45px; opacity: 0.9; z-index: 1; }
+    .bg-rest-req { background: repeating-linear-gradient(45deg, #fde68a, #fde68a 8px, #f59e0b 8px, #f59e0b 16px); color: #78350f; top: 45px; opacity: 0.9; }
+    .bg-rest-act { background-color: #475569; top: 12px; z-index: 5; } /* Slate 600 */
+    
+    .bg-wocl { background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.2) 100%); border-left: 1px dashed #a855f7; border-right: 1px dashed #a855f7; top: 0; height: 100%; z-index: 1; pointer-events: none; }
+    .wocl-label { position: absolute; bottom: 4px; font-size: 9px; color: #7e22ce; font-weight: bold; transform: translateX(4px); }
+    .violation { background-color: #ef4444 !important; color: #ffffff !important; }
+    .tick { position: absolute; top: 0; height: 100%; border-left: 1px dashed #94a3b8; pointer-events: none; z-index: 1; }
+    .tick-label { position: absolute; top: 78px; transform: translateX(-50%); font-size: 10px; background-color: rgba(255,255,255,0.95); padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; color: #475569; text-align: center; z-index: 4; white-space: pre-line; line-height: 1.1; font-family: ui-monospace, monospace; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
     .hide-initially { display: none; }
+    
+    /* Helper classes for dual-language layout */
+    .bilingual-label { display: block; line-height: 1.2; }
+    .bilingual-label .en { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+    .bilingual-label .zh { font-size: 0.8rem; font-weight: 700; color: #334155; margin-top: 2px; }
 </style>
 </head>
 <body class="p-4 md:p-6 lg:p-8">
@@ -91,20 +94,20 @@
 <div class="max-w-[1400px] mx-auto space-y-6">
     
     <!-- Premium Header -->
-    <header class="bg-jx-navy text-white rounded-xl p-5 md:p-6 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+    <header class="bg-[#0f172a] text-white rounded-xl p-5 md:p-6 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
         <div class="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
             <i class="fas fa-plane text-9xl"></i>
         </div>
         <div class="z-10 w-full md:w-auto">
             <h1 class="text-2xl font-bold flex items-center gap-3">
-                <i class="fas fa-clock text-jx-gold"></i> FDP & Rest Analyzer 
-                <span class="text-xs align-top bg-jx-gold text-jx-navy px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">Pro V6</span>
+                <i class="fas fa-clock text-[#bfa276]"></i> FDP & Rest Analyzer 
+                <span class="text-xs align-top bg-[#bfa276] text-[#0f172a] px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">Pro V6.1</span>
             </h1>
-            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">Logical Phased Workflow | Multi-Device Optimized</p>
+            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">Bilingual Edition 中英雙語版 | Hardened UI 穩定介面</p>
         </div>
     </header>
 
-    <!-- Main Layout: 1 Col on Mobile/Tablet Portrait, 12-Col Grid on Landscape Desktop/iPad -->
+    <!-- Main Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         
         <!-- LEFT COLUMN: Inputs (Phase 1 & Phase 2) -->
@@ -114,14 +117,20 @@
             <div class="panel-card bg-slate-50 border-slate-300">
                 <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="w-full sm:w-auto">
-                        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Global Input Mode</span>
-                        <div class="segmented-control !bg-slate-200">
-                            <label><input type="radio" name="inputMode" value="lcl" checked onchange="switchInputMode()"><span>LCL + TZ</span></label>
-                            <label><input type="radio" name="inputMode" value="utc" onchange="switchInputMode()"><span>UTC Only</span></label>
+                        <div class="bilingual-label mb-2">
+                            <span class="en">Global Input Mode</span>
+                            <span class="zh">全局輸入模式</span>
+                        </div>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="inputMode" value="lcl" checked onchange="switchInputMode()"><span>LCL + TZ (當地)</span></label>
+                            <label><input type="radio" name="inputMode" value="utc" onchange="switchInputMode()"><span>UTC Only (標準)</span></label>
                         </div>
                     </div>
                     <div class="w-full sm:w-auto">
-                        <span class="text-xs font-bold text-purple-600 uppercase block mb-1">Base WOCL TZ</span>
+                        <div class="bilingual-label mb-2 text-purple-700">
+                            <span class="en text-purple-600">Base WOCL TZ</span>
+                            <span class="zh">WOCL 基準時區</span>
+                        </div>
                         <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto !py-1.5 !px-2 !text-sm border-purple-300 bg-purple-50 text-purple-700 font-bold rounded"></select>
                     </div>
                 </div>
@@ -129,15 +138,19 @@
 
             <!-- PHASE 1: FDP CALCULATION -->
             <div class="panel-card">
-                <div class="panel-header panel-header-primary">
-                    <div class="flex items-center"><i class="fas fa-plane-departure mr-2 text-jx-gold"></i> Phase 1: FDP Calculation</div>
+                <div class="panel-header-primary">
+                    <i class="fas fa-plane-departure mr-2 text-[#bfa276]"></i> 
+                    Phase 1: FDP Calculation 第一階段：飛時計算
                 </div>
                 <div class="p-5 space-y-5">
                     
                     <!-- Dispatch & Crew -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Crew Setup</label>
+                            <div class="bilingual-label mb-2">
+                                <span class="en">Crew Setup</span>
+                                <span class="zh">派遣人數</span>
+                            </div>
                             <div class="segmented-control">
                                 <label><input type="radio" name="crew" value="2" checked onchange="updateUI(); safeCalculate()"><span>2</span></label>
                                 <label><input type="radio" name="crew" value="3" onchange="updateUI(); safeCalculate()"><span>3</span></label>
@@ -145,30 +158,38 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Total Block (Exp)</label>
+                            <div class="bilingual-label mb-2">
+                                <span class="en">Total Block (Exp)</span>
+                                <span class="zh">預計總飛時</span>
+                            </div>
                             <input type="time" id="flightTime" value="07:30" required onchange="safeCalculate()" class="font-bold text-center bg-slate-50">
                         </div>
                     </div>
 
                     <div id="class1Box" class="hide-initially">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Rest Facility</label>
+                        <div class="bilingual-label mb-2">
+                            <span class="en">Rest Facility</span>
+                            <span class="zh">休息設施</span>
+                        </div>
                         <div class="segmented-control">
                             <label><input type="radio" name="class1" value="yes" checked onchange="safeCalculate()"><span>Class 1 (Yes)</span></label>
                             <label><input type="radio" name="class1" value="no" onchange="safeCalculate()"><span>None/Other</span></label>
                         </div>
                     </div>
 
-                    <div class="space-y-3 pt-2 border-t border-slate-100">
-                        <label class="toggle-chk hide-initially" id="picDiscretionBox">
+                    <div class="space-y-3 pt-2 border-t border-slate-200">
+                        <label class="toggle-chk hide-initially border-[#e9d5ff] bg-[#faf5ff]" id="picDiscretionBox">
                             <input type="checkbox" id="picDiscretion" onchange="safeCalculate()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-purple-700">Commander's Discretion (+2h)</span>
+                                <span class="toggle-title text-purple-800">Commander's Discretion (+2h)</span>
+                                <span class="toggle-desc text-purple-600">機長裁量權延長</span>
                             </div>
                         </label>
-                        <label class="toggle-chk">
+                        <label class="toggle-chk border-[#fef3c7] bg-[#fffbeb]">
                             <input type="checkbox" id="timeDiff6h" onchange="safeCalculate()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-amber-600">Time Diff ≥ 6h & Stay > 48h</span>
+                                <span class="toggle-title text-amber-700">Time Diff ≥ 6h & Stay > 48h</span>
+                                <span class="toggle-desc text-amber-600">時差大於6小時且停留超過48小時</span>
                             </div>
                         </label>
                     </div>
@@ -176,9 +197,12 @@
                     <hr class="border-slate-200">
 
                     <!-- FDP Start/End -->
-                    <div class="time-input-group border-l-4 border-l-status-ok">
+                    <div class="time-input-group border-l-4 border-l-[#10b981]">
                         <div class="flex justify-between items-center">
-                            <label class="text-sm font-bold text-slate-800">FDP Start (Report)</label>
+                            <div class="bilingual-label">
+                                <span class="en text-slate-800">FDP Start (Report)</span>
+                                <span class="zh">報到時間</span>
+                            </div>
                             <span id="badge_report" class="tz-badge">--:--</span>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">
@@ -190,7 +214,10 @@
 
                     <div class="time-input-group border-l-4 border-l-slate-400">
                         <div class="flex justify-between items-center">
-                            <label class="text-sm font-bold text-slate-800">FDP End (Release)</label>
+                            <div class="bilingual-label">
+                                <span class="en text-slate-800">FDP End (Release)</span>
+                                <span class="zh">任務結束</span>
+                            </div>
                             <span id="badge_release" class="tz-badge">--:--</span>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">
@@ -204,27 +231,34 @@
 
                     <!-- In-Flight Rest -->
                     <div>
-                        <label class="toggle-chk mb-3 !bg-white border !border-emerald-200">
+                        <label class="toggle-chk mb-3 bg-white border border-[#a7f3d0]">
                             <input type="checkbox" id="hasRestAcc" onchange="toggleRestAcc()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-emerald-700">In-Flight Rest (Appropriate Accommodation)</span>
+                                <span class="toggle-title text-emerald-800">In-Flight Rest (Accommodation)</span>
+                                <span class="toggle-desc text-emerald-600">機上適當休息設施</span>
                             </div>
                         </label>
 
-                        <div id="restAccBox" class="hide-initially space-y-4 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                        <div id="restAccBox" class="hide-initially space-y-4 p-4 bg-[#ecfdf5] rounded-lg border border-[#a7f3d0]">
                             <div>
-                                <label class="block text-xs font-bold text-emerald-600 uppercase mb-2">Rest Duration</label>
-                                <input type="time" id="restDuration" value="03:00" onchange="safeCalculate()" class="!border-emerald-200">
+                                <div class="bilingual-label mb-2">
+                                    <span class="en text-emerald-700">Rest Duration</span>
+                                    <span class="zh text-emerald-600">休息時長</span>
+                                </div>
+                                <input type="time" id="restDuration" value="03:00" onchange="safeCalculate()" class="border-[#a7f3d0]">
                             </div>
                             <div id="restLogicOptions" class="hide-initially">
-                                <label class="block text-xs font-bold text-emerald-600 uppercase mb-2">Scenario</label>
-                                <select id="restScenario" onchange="safeCalculate()" class="!border-emerald-200">
-                                    <option value="not_start">First Sector NOT Start (Deduct FDP)</option>
-                                    <option value="start">First Sector Start (Max FDP Ext)</option>
+                                <div class="bilingual-label mb-2">
+                                    <span class="en text-emerald-700">Scenario</span>
+                                    <span class="zh text-emerald-600">適用情境</span>
+                                </div>
+                                <select id="restScenario" onchange="safeCalculate()" class="border-[#a7f3d0]">
+                                    <option value="not_start">First Sector NOT Start 第一航段未飛 (Deduct FDP)</option>
+                                    <option value="start">First Sector Start 擔任第一航段 (Max FDP Ext)</option>
                                 </select>
-                                <p id="restNote" class="text-xs text-emerald-600 font-bold mt-2"></p>
+                                <p id="restNote" class="text-xs text-emerald-700 font-bold mt-2"></p>
                             </div>
-                            <p id="restWarning" class="text-xs text-red-500 font-bold hide-initially"><i class="fas fa-exclamation-triangle"></i> Rest duration must be > 3 hours for extension.</p>
+                            <p id="restWarning" class="text-xs text-red-600 font-bold hide-initially"><i class="fas fa-exclamation-triangle"></i> Rest duration must be > 3 hours. 休息時長需大於3小時。</p>
                         </div>
                     </div>
 
@@ -233,46 +267,56 @@
 
             <!-- PHASE 2: REST MANAGEMENT -->
             <div class="panel-card">
-                <div class="panel-header panel-header-secondary">
-                    <div class="flex items-center"><i class="fas fa-bed mr-2 text-amber-400"></i> Phase 2: Rest Management</div>
+                <div class="panel-header-secondary">
+                    <i class="fas fa-bed mr-2 text-[#fbbf24]"></i> 
+                    Phase 2: Rest Management 第二階段：休時管理
                 </div>
                 <div class="p-5 space-y-5">
                     
-                    <!-- Location Selection Moved Here -->
+                    <!-- Location Selection -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Rest Location</label>
+                        <div class="bilingual-label mb-2">
+                            <span class="en">Rest Location</span>
+                            <span class="zh">休息地點</span>
+                        </div>
                         <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                            <button id="modeHomeBtn" class="flex-1 py-2 rounded-md text-sm font-bold bg-white text-jx-navy shadow transition-all" onclick="setLocation('home')">Home Base</button>
-                            <button id="modeOutBtn" class="flex-1 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all" onclick="setLocation('outstation')">Outstation</button>
+                            <button id="modeHomeBtn" class="flex-1 py-2 rounded-md text-sm font-bold bg-white text-[#0f172a] shadow transition-all" onclick="setLocation('home')">Home Base (基地)</button>
+                            <button id="modeOutBtn" class="flex-1 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all" onclick="setLocation('outstation')">Outstation (外站)</button>
                         </div>
                     </div>
 
                     <!-- Home Base Extras -->
                     <div id="uiHomeExtras" class="space-y-5 pt-2 border-t border-dashed border-slate-200">
-                        <label class="toggle-chk !bg-amber-50 border !border-amber-100">
+                        <label class="toggle-chk border-[#fde68a] bg-[#fffbeb]">
                             <input type="checkbox" id="followingDHD" onchange="toggleDHD(); safeCalculate()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-amber-700">Following DHD</span>
-                                <span class="toggle-desc text-amber-600/80">Duty ends later / Rest period shifts accordingly.</span>
+                                <span class="toggle-title text-amber-800">Following DHD</span>
+                                <span class="toggle-desc text-amber-700">包含後續搭機任務 (休時將遞延)</span>
                             </div>
                         </label>
 
-                        <div id="dhdInputBox" class="time-input-group border-l-4 border-l-amber-500 hide-initially bg-amber-50/30">
+                        <div id="dhdInputBox" class="time-input-group border-l-4 border-l-[#f59e0b] hide-initially bg-[#fef3c7]">
                             <div class="flex justify-between items-center">
-                                <label class="text-sm font-bold text-amber-800">DHD End Time (Rest Start)</label>
-                                <span id="badge_dhdEnd" class="tz-badge !bg-amber-100 !text-amber-800">--:--</span>
+                                <div class="bilingual-label">
+                                    <span class="en text-amber-900">DHD End Time (Rest Start)</span>
+                                    <span class="zh text-amber-800">搭機結束 / 休時開始</span>
+                                </div>
+                                <span id="badge_dhdEnd" class="tz-badge bg-[#fde68a] text-amber-900 border-[#fcd34d]">--:--</span>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="date" id="date_dhdEnd" onchange="processTimeChange('dhdEnd')">
-                                <input type="time" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')">
-                                <select id="tz_dhdEnd" class="tz-select hide-initially" onchange="processTimeChange('dhdEnd')"></select>
+                                <input type="date" id="date_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
+                                <input type="time" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
+                                <select id="tz_dhdEnd" class="tz-select hide-initially border-[#fcd34d]" onchange="processTimeChange('dhdEnd')"></select>
                             </div>
                         </div>
 
                         <div class="time-input-group border-l-4 border-l-slate-700">
                             <div class="flex justify-between items-center">
-                                <label class="text-sm font-bold text-slate-800">Next Duty Report (Rest End)</label>
-                                <span id="badge_nextReport" class="tz-badge !bg-slate-200">--:--</span>
+                                <div class="bilingual-label">
+                                    <span class="en text-slate-800">Next Duty Report (Rest End)</span>
+                                    <span class="zh">下次報到 / 休時結束</span>
+                                </div>
+                                <span id="badge_nextReport" class="tz-badge">--:--</span>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="date" id="date_nextReport" onchange="processTimeChange('nextReport')">
@@ -284,10 +328,13 @@
 
                     <!-- Outstation Extras -->
                     <div id="uiOutExtras" class="space-y-5 pt-2 border-t border-dashed border-slate-200 hide-initially">
-                        <div class="time-input-group border-l-4 border-l-blue-400">
+                        <div class="time-input-group border-l-4 border-l-[#3b82f6]">
                             <div class="flex justify-between items-center">
-                                <label class="text-sm font-bold text-slate-800">Hotel Check-in (Rest Start)</label>
-                                <span id="badge_hotelIn" class="tz-badge !bg-blue-100 !text-blue-800">--:--</span>
+                                <div class="bilingual-label">
+                                    <span class="en text-slate-800">Hotel Check-in (Rest Start)</span>
+                                    <span class="zh">飯店入住 / 休時開始</span>
+                                </div>
+                                <span id="badge_hotelIn" class="tz-badge bg-[#dbeafe] text-blue-800 border-[#bfdbfe]">--:--</span>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="date" id="date_hotelIn" onchange="processTimeChange('hotelIn')">
@@ -298,8 +345,11 @@
 
                         <div class="time-input-group border-l-4 border-l-slate-700">
                             <div class="flex justify-between items-center">
-                                <label class="text-sm font-bold text-slate-800">Hotel Check-out (Rest End)</label>
-                                <span id="badge_hotelOut" class="tz-badge !bg-slate-200">--:--</span>
+                                <div class="bilingual-label">
+                                    <span class="en text-slate-800">Hotel Check-out (Rest End)</span>
+                                    <span class="zh">飯店退房 / 休時結束</span>
+                                </div>
+                                <span id="badge_hotelOut" class="tz-badge">--:--</span>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="date" id="date_hotelOut" onchange="processTimeChange('hotelOut')">
@@ -317,12 +367,12 @@
         <!-- RIGHT COLUMN: Dashboard & Visualizations -->
         <div class="lg:col-span-7 space-y-6">
             
-            <!-- Live Results Dashboard (Sticks to top on desktop if scrolling) -->
+            <!-- Live Results Dashboard -->
             <div class="lg:sticky lg:top-6 space-y-6">
                 
                 <div class="dashboard-grid">
                     <div id="cardFDP" class="dash-card">
-                        <div class="dash-title">Actual FDP</div>
+                        <div class="dash-title">Actual FDP<br><span class="text-xs text-slate-500 font-bold">實際飛勤</span></div>
                         <div id="valFDP" class="dash-val">--:--</div>
                         <div class="dash-sub">
                             <span id="txtMaxFDP">Max: --:--</span>
@@ -330,47 +380,50 @@
                         </div>
                     </div>
                     <div id="cardFT" class="dash-card">
-                        <div class="dash-title">Flight Time</div>
+                        <div class="dash-title">Flight Time<br><span class="text-xs text-slate-500 font-bold">飛行時間</span></div>
                         <div id="valFT" class="dash-val">--:--</div>
                         <div class="dash-sub"><span id="txtMaxFT">Max: --:--</span></div>
                     </div>
                     <div id="cardRest" class="dash-card">
-                        <div class="dash-title">Actual Rest</div>
+                        <div class="dash-title">Actual Rest<br><span class="text-xs text-slate-500 font-bold">實際休時</span></div>
                         <div id="valRest" class="dash-val">--:--</div>
                         <div class="dash-sub">
                             <span id="txtMinRest">Req: --:--</span>
                         </div>
-                        <div id="exemptionInfo" class="hidden mt-2 pt-2 border-t border-slate-100 text-xs text-amber-600 font-bold">
-                            Exemptions Active (DHD Only / Sync Tz)
+                        <div id="exemptionInfo" class="hidden mt-2 pt-2 border-t border-slate-200 text-xs text-amber-600 font-bold">
+                            Exemptions Active (Home Base 48h)<br>豁免條款啟動中
                         </div>
                     </div>
                 </div>
 
                 <!-- WOCL Alert -->
-                <div id="woclAlert" class="hide-initially bg-purple-50 border border-purple-200 rounded-xl p-4 flex gap-4 items-start shadow-sm">
-                    <div class="bg-white p-2 rounded-full text-purple-600 shadow-sm"><i class="fas fa-moon text-xl"></i></div>
+                <div id="woclAlert" class="hide-initially bg-[#faf5ff] border border-[#e9d5ff] rounded-xl p-4 flex gap-4 items-start shadow-sm">
+                    <div class="bg-white p-2 rounded-full text-purple-600 shadow-sm border border-purple-100"><i class="fas fa-moon text-xl"></i></div>
                     <div>
                         <h4 class="font-bold text-purple-900 text-sm">WOCL Violation Warning (Local 02:00-05:00)</h4>
-                        <p class="text-xs text-purple-700 mt-1">2 consecutive nights: 34h continuous rest required.<br>3 consecutive nights: 54h continuous rest required.</p>
-                        <p class="text-xs text-purple-500 mt-1 italic">*Exempt if ≥14h rest provided between each duty.</p>
+                        <h5 class="font-bold text-purple-800 text-xs mb-1">觸及夜間飛勤警示區間</h5>
+                        <p class="text-xs text-purple-700">2 consecutive nights (連續兩日): 34h continuous rest required.<br>3 consecutive nights (連續三日): 54h continuous rest required.</p>
+                        <p class="text-xs text-purple-500 mt-1 italic">*Exempt if ≥14h rest provided. (若每次休時≥14h可豁免)</p>
                     </div>
                 </div>
 
                 <!-- Timelines -->
                 <div class="panel-card">
-                    <div class="panel-header"><i class="fas fa-chart-gantt mr-2 text-slate-400"></i> Duty & Rest Visualization (UTC)</div>
+                    <div class="bg-slate-100 border-b border-slate-200 padding p-4 font-bold text-slate-700 text-sm flex items-center">
+                        <i class="fas fa-chart-gantt mr-2 text-slate-400"></i> Duty & Rest Visualization 執勤與休時視覺化 (UTC)
+                    </div>
                     <div class="p-5">
-                        <div id="timelineFDP" class="timeline-container !mt-0 !border-t-0 bg-slate-50 border border-slate-200 rounded-t-lg"></div>
-                        <div id="timelineRest" class="timeline-container !mt-0 !border-t-0 bg-slate-100 border border-slate-200 border-t-0 rounded-b-lg rounded-t-none"></div>
+                        <div id="timelineFDP" class="timeline-container !mt-0 !border-t-0 bg-[#f8fafc] border border-slate-200 rounded-t-lg"></div>
+                        <div id="timelineRest" class="timeline-container !mt-0 !border-t-0 bg-[#f1f5f9] border border-slate-200 border-t-0 rounded-b-lg rounded-t-none"></div>
                         
                         <div class="flex flex-wrap justify-center gap-4 mt-6 text-xs font-semibold text-slate-500">
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-status-ok"></span>Actual FDP</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #93c5fd, #93c5fd 4px, #60a5fa 4px, #60a5fa 8px);"></span>Max FDP</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 4px, #a78bfa 4px, #a78bfa 8px);"></span>PIC Ext</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 4px, #cbd5e1 4px, #cbd5e1 8px);"></span>DHD</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-600"></span>Actual Rest</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #fde68a, #fde68a 4px, #fbbf24 4px, #fbbf24 8px);"></span>Req Rest</div>
-                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded opacity-30" style="background:var(--color-wocl);"></span>WOCL Zone</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-[#10b981]"></span>Actual FDP</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #93c5fd, #93c5fd 4px, #3b82f6 4px, #3b82f6 8px);"></span>Max FDP</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #ddd6fe, #ddd6fe 4px, #8b5cf6 4px, #8b5cf6 8px);"></span>PIC Ext</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 4px, #94a3b8 4px, #94a3b8 8px);"></span>DHD</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-[#475569]"></span>Actual Rest</div>
+                            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded" style="background:repeating-linear-gradient(45deg, #fde68a, #fde68a 4px, #f59e0b 4px, #f59e0b 8px);"></span>Req Rest</div>
+                            <div class="flex items-center gap-1.5 border border-purple-200"><span class="w-3 h-3 rounded opacity-30" style="background:var(--color-wocl);"></span>WOCL Zone</div>
                         </div>
                     </div>
                 </div>
@@ -381,39 +434,33 @@
 </div>
 
 <script>
-/* V6 Core Logic - Streamlined Time Management */
+/* V6.1 Core Logic */
 const pad = (n) => n.toString().padStart(2, '0');
 const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 
 let currentLocation = 'home'; 
 const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
-
-// Store the actual parsed UTC Date objects globally for the calculator
 const parsedTimesUTC = {};
 
 function initApp() {
-    // Populate Timezone Dropdowns
     const tzSelects = document.querySelectorAll('.tz-select, #baseTz');
     tzSelects.forEach(sel => {
         sel.innerHTML = "";
         for(let i=-12; i<=14; i++) {
             const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
             const opt = new Option(`UTC${sign}${i}`, i);
-            if(i === 8) opt.selected = true; // Default UTC+8 (TPE Base)
+            if(i === 8) opt.selected = true;
             sel.add(opt);
         }
     });
 
     setInitialDefaults();
-    switchInputMode(); // Initialize visibility based on default mode
+    switchInputMode();
     updateUI();
 }
 
 function setInitialDefaults() {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    
-    // Default mock data (UTC times)
     const baseMs = now.getTime();
     const times = {
         report: new Date(baseMs),
@@ -425,9 +472,7 @@ function setInitialDefaults() {
     };
 
     timeFields.forEach(f => {
-        // Set internal UTC store
         parsedTimesUTC[f] = times[f];
-        // Populate inputs assuming default LCL mode (UTC+8)
         const lcl = new Date(times[f].getTime() + 8*3600000);
         document.getElementById(`date_${f}`).value = lcl.toISOString().split('T')[0];
         document.getElementById(`time_${f}`).value = `${pad(lcl.getUTCHours())}:${pad(lcl.getUTCMinutes())}`;
@@ -445,7 +490,6 @@ function switchInputMode() {
         else el.classList.add('hide-initially');
     });
 
-    // Re-process inputs to update internal state and badges based on new mode assumption
     timeFields.forEach(f => processTimeChange(f));
 }
 
@@ -456,30 +500,24 @@ function processTimeChange(field) {
 
     const mode = document.querySelector('input[name="inputMode"]:checked').value;
     const badge = document.getElementById(`badge_${field}`);
-    
-    // Parse input as raw YYYY-MM-DDTHH:mm:00Z (Treating input literally as UTC for math ease)
     const rawMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
 
     if (mode === 'lcl') {
         const tzOffset = parseInt(document.getElementById(`tz_${field}`).value) || 8;
-        // User typed LCL. To get real UTC, subtract offset.
         const actualUTC = new Date(rawMs - (tzOffset * 3600000));
         parsedTimesUTC[field] = actualUTC;
         
-        // Update badge to show UTC
         badge.className = "tz-badge utc";
         badge.innerHTML = `<i class="fas fa-globe"></i> ${pad(actualUTC.getUTCDate())}d ${pad(actualUTC.getUTCHours())}${pad(actualUTC.getUTCMinutes())}z`;
     } else {
-        // User typed UTC. Internal state is exactly what they typed.
         const actualUTC = new Date(rawMs);
         parsedTimesUTC[field] = actualUTC;
 
-        // Try to guess a local time display using the baseTz for contextual help
         const baseOffset = parseInt(document.getElementById('baseTz').value) || 8;
         const projectedLcl = new Date(actualUTC.getTime() + (baseOffset * 3600000));
         
         badge.className = "tz-badge lcl";
-        badge.innerHTML = `<i class="fas fa-location-dot"></i> Base LCL: ${pad(projectedLcl.getUTCHours())}${pad(projectedLcl.getUTCMinutes())}`;
+        badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(projectedLcl.getUTCHours())}${pad(projectedLcl.getUTCMinutes())}`;
     }
 
     safeCalculate();
@@ -509,12 +547,12 @@ function setLocation(loc) {
     const uiOut = document.getElementById('uiOutExtras');
 
     if(loc === 'home') {
-        btnHome.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-jx-navy shadow transition-all";
+        btnHome.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-[#0f172a] shadow transition-all";
         btnOut.className = "flex-1 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all";
         uiHome.classList.remove('hide-initially');
         uiOut.classList.add('hide-initially');
     } else {
-        btnOut.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-jx-navy shadow transition-all";
+        btnOut.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white text-[#0f172a] shadow transition-all";
         btnHome.className = "flex-1 py-2 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all";
         uiOut.classList.remove('hide-initially');
         uiHome.classList.add('hide-initially');
@@ -548,7 +586,6 @@ function calculateCore() {
     const crew = document.querySelector('input[name="crew"]:checked').value;
     const hasClass1 = document.querySelector('input[name="class1"]:checked')?.value === 'yes';
     
-    // Parse flight time from HH:mm input
     const ftParts = document.getElementById('flightTime').value.split(':');
     const actFT = parseInt(ftParts[0])*60 + parseInt(ftParts[1]);
     const baseOffset = parseInt(document.getElementById('baseTz').value);
@@ -561,7 +598,6 @@ function calculateCore() {
     else if(crew === "3") { maxFDP = 18*60; maxFT = hasClass1 ? 16*60 : 12*60; }
     else { maxFDP = 24*60; maxFT = hasClass1 ? 18*60 : 12*60; }
 
-    // Accommodation Logic
     let extMin = 0, deductMin = 0;
     let isAccActive = document.getElementById('hasRestAcc').checked;
     
@@ -639,7 +675,6 @@ function calculateCore() {
         checkTime.setDate(checkTime.getDate() + 1);
     }
 
-    // UI Updates
     const updateCard = (id, act, lim, isMin) => {
         const elVal = document.getElementById('val'+id);
         const elLim = document.getElementById(isMin ? 'txtMin'+id : 'txtMax'+id);
@@ -650,7 +685,7 @@ function calculateCore() {
         let bad = false;
         
         if(id === 'Rest' && document.getElementById('timeDiff6h').checked && currentLocation === 'home') {
-            elLim.innerText = "Req: No FD 48h";
+            elLim.innerText = "Req: 48h (No FD)";
             bad = act < 48*60; 
             if(bad) elExcep.classList.remove('hidden'); else elExcep.classList.add('hidden');
         } else {
@@ -682,12 +717,10 @@ function calculateCore() {
     const wBox = document.getElementById('woclAlert');
     if(touchesWOCL) wBox.classList.remove('hide-initially'); else wBox.classList.add('hide-initially');
 
-    // Draw Visualizations
     drawTimelineEngine('timelineFDP', report, release, actFDP, maxFDP, hasDHD, dhdEnd, baseOffset, extPic, true);
     drawTimelineEngine('timelineRest', restStart, restEnd, actRest, minRest, false, null, 0, 0, false);
 }
 
-// Unified Canvas Engine
 function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, dhdEnd, offset, extPic, isFDP) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -724,7 +757,6 @@ function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, d
     };
 
     if(isFDP) {
-        // WOCL Background
         const offsetMs = offset * 3600000;
         let iterTime = new Date(cvsStartMs + offsetMs);
         iterTime.setUTCHours(0,0,0,0);
@@ -755,14 +787,14 @@ function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, d
         
         addTick(start, "RPT\n"+fT(start));
         addTick(end, "END\n"+fT(end));
-        if(hasDHD && dhdEnd) addTick(dhdEnd, "DHD End\n"+fT(dhdEnd));
+        if(hasDHD && dhdEnd) addTick(dhdEnd, "DHD\n"+fT(dhdEnd));
         const maxFDPTime = new Date(start.getTime() + limMins * 60000);
-        addTick(maxFDPTime, `<span class="text-blue-600">MAX</span>\n${fT(maxFDPTime)}`, true);
+        addTick(maxFDPTime, `<span style="color:#2563eb">MAX</span>\n${fT(maxFDPTime)}`, true);
     } else {
         addBlock(start, limMins, `Req ${fmt(limMins)}`, "bg-rest-req");
         addBlock(start, actMins, `Act Rest ${fmt(actMins)}`, "bg-rest-act" + (actMins < limMins ? " violation":""));
-        addTick(start, "RST START\n"+fT(start));
-        addTick(end, "NEXT DUTY\n"+fT(end));
+        addTick(start, "START\n"+fT(start));
+        addTick(end, "NEXT\n"+fT(end));
     }
 }
 
