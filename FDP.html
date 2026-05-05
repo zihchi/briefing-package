@@ -116,9 +116,9 @@
         <div class="z-10 w-full md:w-auto">
             <h1 class="text-2xl font-bold flex items-center gap-3">
                 <i class="fas fa-clock text-[#bfa276]"></i> FDP & Rest Analyzer 
-                <span class="text-xs align-top bg-[#bfa276] text-[#0f172a] px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">Pro V6.3</span>
+                <span class="text-xs align-top bg-[#bfa276] text-[#0f172a] px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">FOM 4.7.5</span>
             </h1>
-            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">Bilingual Edition | Strict Boundary Control 像素級對齊</p>
+            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">CAR 07-02A</p>
         </div>
     </header>
 
@@ -133,8 +133,8 @@
                 <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div class="w-full sm:w-auto flex-1">
                         <div class="bilingual-label mb-2">
-                            <span class="en">Global Input Mode</span>
-                            <span class="zh">全局輸入模式</span>
+                            <span class="en">Time Input Mode</span>
+                            <span class="zh">時間輸入模式</span>
                         </div>
                         <div class="segmented-control">
                             <label><input type="radio" name="inputMode" value="lcl" checked onchange="switchInputMode()"><span>LCL + TZ (當地)</span></label>
@@ -163,7 +163,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="w-full">
                             <div class="bilingual-label mb-2">
-                                <span class="en">Crew Setup</span>
+                                <span class="en">Crew Number</span>
                                 <span class="zh">派遣人數</span>
                             </div>
                             <div class="segmented-control">
@@ -174,8 +174,8 @@
                         </div>
                         <div class="w-full">
                             <div class="bilingual-label mb-2">
-                                <span class="en">Total Block (Exp)</span>
-                                <span class="zh">預計總飛時</span>
+                                <span class="en">Total Block Time</span>
+                                <span class="zh">總飛時</span>
                             </div>
                             <input type="time" id="flightTime" value="07:30" required onchange="safeCalculate()" class="font-bold text-center bg-slate-50 w-full">
                         </div>
@@ -216,7 +216,7 @@
                         <div class="flex justify-between items-start sm:items-center gap-2">
                             <div class="bilingual-label">
                                 <span class="en text-[#10b981]">FDP Start Time</span>
-                                <span class="zh">報到時間</span>
+                                <span class="zh">FDP開始</span>
                             </div>
                             <span id="badge_report" class="tz-badge">--:--</span>
                         </div>
@@ -272,8 +272,8 @@
                         <label class="toggle-chk mb-3 bg-white border border-[#3b82f6]">
                             <input type="checkbox" id="hasRestAcc" onchange="toggleRestAcc()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-[#1e40af] uppercase text-xs tracking-wide">REST IN APPROPRIATE ACCOMMODATION DURING DUTY</span>
-                                <span class="toggle-desc text-blue-600">機上適當休息設施</span>
+                                <span class="toggle-title text-[#1e40af] uppercase text-xs tracking-wide">REST IN APPROPRIATE ACCOMMODATION</span>
+                                <span class="toggle-desc text-blue-600">值勤期間於適當的場所休息</span>
                             </div>
                         </label>
 
@@ -342,7 +342,7 @@
                             <input type="checkbox" id="followingDHD" onchange="toggleDHD(); safeCalculate()">
                             <div class="toggle-content">
                                 <span class="toggle-title text-amber-800">Following DHD</span>
-                                <span class="toggle-desc text-amber-700">包含後續搭機任務 (休時將遞延)</span>
+                                <span class="toggle-desc text-amber-700">包含後續搭機任務 (休時開始時間將遞延)</span>
                             </div>
                         </label>
 
@@ -364,8 +364,8 @@
                         <div class="time-input-group border-l-4 border-l-slate-700">
                             <div class="flex justify-between items-start sm:items-center gap-2">
                                 <div class="bilingual-label">
-                                    <span class="en text-slate-800">Next Duty Report (Rest End)</span>
-                                    <span class="zh">下次報到 / 休時結束</span>
+                                    <span class="en text-slate-800">Next FDP Start (Rest End)</span>
+                                    <span class="zh">下次FDP開始 / 休時結束</span>
                                 </div>
                                 <span id="badge_nextReport" class="tz-badge">--:--</span>
                             </div>
