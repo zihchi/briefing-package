@@ -3,10 +3,10 @@
     <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
       📻 D-ATIS & 🌍 航空氣象
     </h2>
-    <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: atis.guru & NOAA / VATSIM Backup (Extreme Speed)</div>
+    <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: NOAA AWC / VATSIM Backup (Extreme Speed)</div>
   </div>
   
-  <button class="app-header-btn" onclick="typeof closePanel === 'function' ? closePanel() : console.log('Close Panel')" title="關閉面板">
+  <button class="app-header-btn" onclick="typeof closePanel === 'function' ? closePanel() : document.getElementById('content-display').innerHTML='';" title="關閉面板">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
   </button>
 </div>
@@ -35,7 +35,6 @@
           <option value="RJGG">RJGG 中部</option>
           <option value="RJSS">RJSS 仙台</option>
           <option value="ROAH">ROAH 沖繩</option>
-          
         </optgroup>
         <optgroup label="東南亞與其他">
           <option value="WSSS">WSSS 新加坡</option>
@@ -417,7 +416,7 @@
 
     let atisTotalMins = atisHr * 60 + atisMin;
     let currTotalMins = currHr * 60 + currMin;
-    if (currTotalMins < atisTotalMins && (atisHr === 23 && currHr === 0)) currTotalMins += 24 * 60;
+    if (currTotalMins < atisTotalMins && (atisHr >= 22 && currHr <= 2)) currTotalMins += 24 * 60;
     const diffMins = currTotalMins - atisTotalMins;
 
     if (diffMins < 0 || diffMins > 1440) return "<span class='age-badge' style='background:#f1f5f9; color:#94a3b8;'>(時效異常)</span>";
@@ -449,3 +448,147 @@
     fetchAtisData(icao);
     fetchWeatherData(icao);
   }
+
+  // ==========================================
+  // 4. 重建通訊資料鏈路 - 取回氣象資料
+  // ==========================================
+  async function fetchWeatherData(icao) {
+    try {
+        document.getElementById('metar-content').innerText = "載入中...";
+        document.getElementById('taf-content').innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px;">載入中...</div>`;
+        document.getElementById('wx-sync-status').innerText = "同步中...";
+        document.getElementById('wx-sync-status').style.backgroundColor = "#f39c12";
+        document.getElementById('wx-sync-status').style.color = "white";
+
+        const [metar, taf] = await Promise.all([
+            fetchAWCData('metar', icao).catch(() => null),
+            fetchAWCData('taf', icao).catch(() => null)
+        ]);
+
+        // METAR 解析與渲染
+        const metarEl = document.getElementById('metar-content');
+        if (metar) {
+            const current = parseWeatherElements(metar, 999, 99999);
+            const cat = getFlightCategory(current.vis, current.ceil);
+            metarEl.innerText = metar;
+            metarEl.className = `raw-text border-${cat}`;
+            
+            const emojis = getWeatherEmojis(metar);
+            const catLabel = cat.toUpperCase();
+            document.getElementById('metar-header').innerHTML = `METAR (即時天氣) <span class="badge bg-${cat}">${catLabel}</span> <span style="font-size: 15px; margin-left: 6px;">${emojis}</span>`;
+            document.getElementById('metar-age').innerText = calculateReportAge(metar);
+        } else {
+            metarEl.innerText = "無法取得 METAR 資料";
+            metarEl.className = "raw-text border-unk";
+            document.getElementById('metar-header').innerHTML = "METAR (即時天氣)";
+            document.getElementById('metar-age').innerText = "";
+        }
+
+        // TAF 解析與渲染
+        if (taf) {
+            document.getElementById('taf-content').innerHTML = formatColorTAF(taf);
+            document.getElementById('taf-age').innerText = calculateReportAge(taf);
+        } else {
+            document.getElementById('taf-content').innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; border-left: 4px solid #95a5a6;">無法取得 TAF 資料</div>`;
+            document.getElementById('taf-age').innerText = "";
+        }
+
+        document.getElementById('wx-sync-status').innerText = "✅ 同步成功";
+        document.getElementById('wx-sync-status').style.backgroundColor = "#2ecc71";
+        
+    } catch (error) {
+        document.getElementById('wx-sync-status').innerText = "❌ 同步失敗";
+        document.getElementById('wx-sync-status').style.backgroundColor = "#e74c3c";
+    }
+  }
+
+  function fetchAtisData(icao) {
+    const arrEl = document.getElementById('arr-atis');
+    const depEl = document.getElementById('dep-atis');
+    const arrAge = document.getElementById('arr-age');
+    const depAge = document.getElementById('dep-age');
+
+    arrEl.innerText = "等待建立 Datalink...";
+    depEl.innerText = "等待建立 Datalink...";
+    arrAge.innerHTML = "";
+    depAge.innerHTML = "";
+
+    const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
+    
+    fetch(`${gasUrl}?icao=${icao}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+            arrEl.innerText = `❌ ${data.error}`;
+            depEl.innerText = `❌ ${data.error}`;
+            document.getElementById('atis-status').innerText = `❌ 取得 ${icao} D-ATIS 失敗`;
+            document.getElementById('atis-status').style.color = "#ef4444";
+            return;
+        }
+        
+        arrEl.innerText = data.arrival || "目前無 Arrival ATIS 資料";
+        depEl.innerText = data.departure || "目前無 Departure ATIS 資料";
+        
+        arrAge.innerHTML = calculateAtisAge(data.arrival);
+        depAge.innerHTML = calculateAtisAge(data.departure);
+        
+        document.getElementById('atis-status').innerText = `✅ ${icao} D-ATIS 更新完成`;
+        document.getElementById('atis-status').style.color = "#10b981";
+      })
+      .catch(err => {
+        arrEl.innerText = "連線失敗，請稍後再試";
+        depEl.innerText = "連線失敗，請稍後再試";
+        document.getElementById('atis-status').innerText = "⚠️ D-ATIS 伺服器無回應";
+        document.getElementById('atis-status').style.color = "#f59e0b";
+      });
+  }
+
+  async function fetchHistoryMetar() {
+    const icao = document.getElementById("atis-icao-input").value.trim().toUpperCase() || "RCTP";
+    const container = document.getElementById('history-metar-container');
+    container.innerHTML = `<div style="text-align: center; color: #3b82f6; font-size: 0.9em; padding: 20px;">🔄 正在獲取 ${icao} 過去 24 小時歷史 METAR...</div>`;
+    
+    try {
+        const url = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 0.9em; padding: 20px;">❌ 找不到 ${icao} 的歷史紀錄</div>`;
+            return;
+        }
+
+        let html = `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+        data.forEach(item => {
+            const rawText = item.rawOb || item.raw;
+            const current = parseWeatherElements(rawText, 999, 99999);
+            const cat = getFlightCategory(current.vis, current.ceil);
+            const catLabel = cat.toUpperCase();
+            const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+            const color = catColors[cat];
+            const emojis = getWeatherEmojis(rawText);
+            const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
+            
+            const timeStr = item.obsTime ? new Date(item.obsTime).toISOString().replace('T', ' ').substring(0, 16) + 'Z' : '';
+
+            html += `
+                <div style="background-color: #f8fafc; border-left: 4px solid ${color}; padding: 10px; border-radius: 6px;">
+                    <div style="margin-bottom: 4px; font-size: 11px; color: #64748b; font-weight: bold;">
+                        <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${catLabel}</span>
+                        ${emojiHtml}
+                        <span style="font-family: 'Courier New', monospace;">${timeStr}</span>
+                    </div>
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #2c3e50;">
+                        ${rawText}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (err) {
+        container.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 0.9em; padding: 20px;">❌ 歷史資料讀取失敗</div>`;
+    }
+  }
+</script>
