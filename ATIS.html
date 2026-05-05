@@ -595,7 +595,14 @@
             const emojis = getWeatherEmojis(rawText);
             const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
             
-            const timeStr = item.obsTime ? new Date(item.obsTime).toISOString().replace('T', ' ').substring(0, 16) + 'Z' : '';
+            // 修正 Unix Timestamp 秒數轉毫秒數的問題
+            let dateObj;
+            if (typeof item.obsTime === 'number') {
+                dateObj = new Date(item.obsTime * 1000);
+            } else {
+                dateObj = new Date(item.obsTime);
+            }
+            const timeStr = item.obsTime ? dateObj.toISOString().replace('T', ' ').substring(0, 16) + 'Z' : '';
 
             html += `
                 <div style="background-color: #f8fafc; border-left: 4px solid ${color}; padding: 10px; border-radius: 6px;">
