@@ -982,14 +982,14 @@ function calculateCorrectedFPA(temp, elevation, nominalFPA) {
 function getRabText(type, rowId) {
   switch(type) {
     case 'NPA(2D)':
-      if (['iaf', 'if', 'faf', 'da'].includes(rowId)) return 'Required 必須修正';
+      if (['iaf', 'if', 'faf', 'da'].includes(rowId)) return 'Required';
       break;
     case 'APV-Baro(3D)':
-      if (['iaf', 'if'].includes(rowId)) return 'Not Recommended 不建議\n(see note)';
-      if (['faf', 'da'].includes(rowId)) return 'Not Required 不需要';
+      if (['iaf', 'if'].includes(rowId)) return 'Not Recommended \n(see note)';
+      if (['faf', 'da'].includes(rowId)) return 'Not Required';
       break;
     case 'PA (ILS)':
-      if (['iaf', 'if', 'faf'].includes(rowId)) return 'Required 必須修正\n(see note)';
+      if (['iaf', 'if', 'faf'].includes(rowId)) return 'Required \n(see note)';
       if (rowId === 'da') return 'Required';
       break;
   }
