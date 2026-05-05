@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JX FDP & Rest Calculator v6.1 - Bilingual & Robust UI</title>
+<title>JX FDP & Rest Calculator v6.2 - Precision UI</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,6 +31,12 @@
     .segmented-control span { display: block; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; color: #64748b; border-radius: 6px; transition: all 0.2s ease; white-space: nowrap; }
     .segmented-control input:checked + span { background-color: #ffffff; color: var(--jx-navy); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     
+    /* Custom Radio Pill Styling (For FDP Start/End reminders) */
+    .radio-pill-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; margin-bottom: 12px; }
+    .radio-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background-color: #f8fafc; border: 1px solid #e2e8f0; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #475569; transition: all 0.2s; letter-spacing: 0.05em; }
+    .radio-pill input[type="radio"] { accent-color: #3b82f6; cursor: pointer; width: 16px; height: 16px; margin:0; }
+    .radio-pill.active-pill { background-color: #fef3c7; border-color: #bfa276; color: #92400e; }
+
     /* Custom Input Styling */
     .time-input-group { display: flex; flex-direction: column; gap: 8px; background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; transition: border-color 0.2s; }
     .time-input-group:focus-within { border-color: var(--jx-gold); background-color: #ffffff; }
@@ -101,9 +107,9 @@
         <div class="z-10 w-full md:w-auto">
             <h1 class="text-2xl font-bold flex items-center gap-3">
                 <i class="fas fa-clock text-[#bfa276]"></i> FDP & Rest Analyzer 
-                <span class="text-xs align-top bg-[#bfa276] text-[#0f172a] px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">Pro V6.1</span>
+                <span class="text-xs align-top bg-[#bfa276] text-[#0f172a] px-2 py-1 rounded-full font-black ml-2 uppercase tracking-wider">Pro V6.2</span>
             </h1>
-            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">Bilingual Edition 中英雙語版 | Hardened UI 穩定介面</p>
+            <p class="text-slate-300 text-sm mt-1 font-medium tracking-wide">Bilingual Edition | Precision UI (Radio Pills & Dropdowns)</p>
         </div>
     </header>
 
@@ -196,31 +202,53 @@
 
                     <hr class="border-slate-200">
 
-                    <!-- FDP Start/End -->
+                    <!-- FDP Start -->
                     <div class="time-input-group border-l-4 border-l-[#10b981]">
                         <div class="flex justify-between items-center">
                             <div class="bilingual-label">
-                                <span class="en text-slate-800">FDP Start (Report)</span>
+                                <span class="en text-[#10b981]">FDP Start Time</span>
                                 <span class="zh">報到時間</span>
                             </div>
                             <span id="badge_report" class="tz-badge">--:--</span>
                         </div>
-                        <div class="flex flex-col sm:flex-row gap-2">
+                        <!-- UI Indicator for Start Type (No calc impact, just visual reminder) -->
+                        <div class="radio-pill-group">
+                            <label class="radio-pill active-pill">
+                                <input type="radio" name="fdpStartType" value="report" checked> REPORT
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="fdpStartType" value="dhd"> DHD
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="fdpStartType" value="another"> ANOTHER DUTY START
+                            </label>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-1">
                             <input type="date" id="date_report" required onchange="processTimeChange('report')">
                             <input type="time" id="time_report" required onchange="processTimeChange('report')">
                             <select id="tz_report" class="tz-select hide-initially" onchange="processTimeChange('report')"></select>
                         </div>
                     </div>
 
+                    <!-- FDP End -->
                     <div class="time-input-group border-l-4 border-l-slate-400">
                         <div class="flex justify-between items-center">
                             <div class="bilingual-label">
-                                <span class="en text-slate-800">FDP End (Release)</span>
+                                <span class="en text-[#10b981]">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(*DHD 不算 FDP)</span></span>
                                 <span class="zh">任務結束</span>
                             </div>
                             <span id="badge_release" class="tz-badge">--:--</span>
                         </div>
-                        <div class="flex flex-col sm:flex-row gap-2">
+                        <!-- UI Indicator for End Type (No calc impact) -->
+                        <div class="radio-pill-group">
+                            <label class="radio-pill active-pill">
+                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN + 30M
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="fdpEndType" value="another"> ANOTHER DUTY END
+                            </label>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-1">
                             <input type="date" id="date_release" required onchange="processTimeChange('release')">
                             <input type="time" id="time_release" required onchange="processTimeChange('release')">
                             <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
@@ -229,36 +257,49 @@
 
                     <hr class="border-slate-200">
 
-                    <!-- In-Flight Rest -->
+                    <!-- In-Flight Rest (Accommodation) -->
                     <div>
-                        <label class="toggle-chk mb-3 bg-white border border-[#a7f3d0]">
+                        <label class="toggle-chk mb-3 bg-white border border-[#3b82f6]">
                             <input type="checkbox" id="hasRestAcc" onchange="toggleRestAcc()">
                             <div class="toggle-content">
-                                <span class="toggle-title text-emerald-800">In-Flight Rest (Accommodation)</span>
-                                <span class="toggle-desc text-emerald-600">機上適當休息設施</span>
+                                <span class="toggle-title text-[#1e40af] uppercase text-xs tracking-wide">REST IN APPROPRIATE ACCOMMODATION DURING DUTY</span>
+                                <span class="toggle-desc text-blue-600">機上適當休息設施</span>
                             </div>
                         </label>
 
-                        <div id="restAccBox" class="hide-initially space-y-4 p-4 bg-[#ecfdf5] rounded-lg border border-[#a7f3d0]">
+                        <div id="restAccBox" class="hide-initially space-y-4 p-4 bg-[#f0fdf4] rounded-lg border border-[#a7f3d0]">
                             <div>
                                 <div class="bilingual-label mb-2">
-                                    <span class="en text-emerald-700">Rest Duration</span>
-                                    <span class="zh text-emerald-600">休息時長</span>
+                                    <span class="en text-emerald-800">Rest Duration <span class="text-[0.75rem] text-emerald-700 tracking-normal">(休息時長)</span></span>
                                 </div>
-                                <input type="time" id="restDuration" value="03:00" onchange="safeCalculate()" class="border-[#a7f3d0]">
+                                <div class="flex items-center gap-2">
+                                    <select id="restDurHour" onchange="safeCalculate()" class="!w-24 border-[#a7f3d0] font-bold text-slate-700"></select>
+                                    <span class="font-bold text-slate-800 text-sm">hr</span>
+                                    <select id="restDurMinute" onchange="safeCalculate()" class="!w-24 border-[#a7f3d0] font-bold text-slate-700"></select>
+                                    <span class="font-bold text-slate-800 text-sm">min</span>
+                                </div>
                             </div>
+                            
                             <div id="restLogicOptions" class="hide-initially">
                                 <div class="bilingual-label mb-2">
-                                    <span class="en text-emerald-700">Scenario</span>
-                                    <span class="zh text-emerald-600">適用情境</span>
+                                    <span class="en text-emerald-800">Scenario Type</span>
                                 </div>
-                                <select id="restScenario" onchange="safeCalculate()" class="border-[#a7f3d0]">
-                                    <option value="not_start">First Sector NOT Start 第一航段未飛 (Deduct FDP)</option>
-                                    <option value="start">First Sector Start 擔任第一航段 (Max FDP Ext)</option>
-                                </select>
-                                <p id="restNote" class="text-xs text-emerald-700 font-bold mt-2"></p>
+                                <div class="flex flex-wrap items-center gap-4 mt-1">
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-bold uppercase">
+                                        <input type="radio" name="restScenario" value="not_start" checked onchange="safeCalculate()" class="accent-emerald-500 w-4 h-4 cursor-pointer">
+                                        First Sector NOT Start
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-bold uppercase">
+                                        <input type="radio" name="restScenario" value="start" onchange="safeCalculate()" class="accent-emerald-500 w-4 h-4 cursor-pointer">
+                                        First Sector Start
+                                    </label>
+                                </div>
+                                <p id="restNote" class="text-xs text-emerald-700 font-bold mt-3"></p>
                             </div>
-                            <p id="restWarning" class="text-xs text-red-600 font-bold hide-initially"><i class="fas fa-exclamation-triangle"></i> Rest duration must be > 3 hours. 休息時長需大於3小時。</p>
+                            
+                            <p id="restWarning" class="text-xs text-[#dc2626] font-bold hide-initially mt-3 flex items-center gap-1">
+                                <span>🚫</span> 休息時長需 > 3小時 (180min) 才能適用延長規則。
+                            </p>
                         </div>
                     </div>
 
@@ -434,7 +475,7 @@
 </div>
 
 <script>
-/* V6.1 Core Logic */
+/* V6.2 Core Logic */
 const pad = (n) => n.toString().padStart(2, '0');
 const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 
@@ -443,6 +484,7 @@ const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hot
 const parsedTimesUTC = {};
 
 function initApp() {
+    // Dropdowns init
     const tzSelects = document.querySelectorAll('.tz-select, #baseTz');
     tzSelects.forEach(sel => {
         sel.innerHTML = "";
@@ -452,6 +494,26 @@ function initApp() {
             if(i === 8) opt.selected = true;
             sel.add(opt);
         }
+    });
+
+    // Init Rest Duration Dropdowns (hr: 0-24, min: 0-59)
+    const rHour = document.getElementById('restDurHour');
+    const rMin = document.getElementById('restDurMinute');
+    for(let i=0; i<=24; i++) rHour.add(new Option(i, i));
+    for(let i=0; i<60; i++) rMin.add(new Option(pad(i), i));
+    rHour.value = "3";
+    rMin.value = "0";
+
+    // Radio Pills logic
+    document.querySelectorAll('.radio-pill input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const groupName = e.target.name;
+            document.querySelectorAll(`input[name="${groupName}"]`).forEach(r => {
+                const pill = r.closest('.radio-pill');
+                if(r.checked) pill.classList.add('active-pill');
+                else pill.classList.remove('active-pill');
+            });
+        });
     });
 
     setInitialDefaults();
@@ -602,24 +664,26 @@ function calculateCore() {
     let isAccActive = document.getElementById('hasRestAcc').checked;
     
     if(isAccActive) {
-        const rDurParts = document.getElementById('restDuration').value.split(':');
-        const restDuration = parseInt(rDurParts[0])*60 + parseInt(rDurParts[1]);
+        // Read Rest Duration from Dropdowns
+        const rh = parseInt(document.getElementById('restDurHour').value) || 0;
+        const rm = parseInt(document.getElementById('restDurMinute').value) || 0;
+        const restDuration = rh * 60 + rm;
         
         if(restDuration > 180) {
             document.getElementById('restLogicOptions').classList.remove('hide-initially');
             document.getElementById('restWarning').classList.add('hide-initially');
-            const scenario = document.getElementById('restScenario').value;
+            const scenario = document.querySelector('input[name="restScenario"]:checked').value;
             if(scenario === 'not_start') {
                 deductMin = restDuration;
                 actFDP = Math.max(0, rawFDP - deductMin);
-                document.getElementById('restNote').innerText = `Deducting ${fmt(deductMin)} from Actual FDP`;
+                document.getElementById('restNote').innerText = `*Mode: Deducting ${fmt(deductMin)} from Actual FDP`;
             } else {
                 let added = Math.floor(restDuration * 0.5);
                 let tempMax = maxFDP + added;
                 if(tempMax > 1440) tempMax = 1440;
                 extMin = tempMax - maxFDP; 
                 maxFDP = tempMax;
-                document.getElementById('restNote').innerText = `Max FDP increased by ${fmt(extMin)}`;
+                document.getElementById('restNote').innerText = `*Mode: Max FDP increased by ${fmt(extMin)}`;
             }
         } else {
             document.getElementById('restLogicOptions').classList.add('hide-initially');
