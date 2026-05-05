@@ -121,6 +121,21 @@
   </div>
 </div>
 
+<!-- 過去 24 小時 METAR 區塊 (新增功能) -->
+<div class="app-card atis-sub-card" style="margin-top: 15px;">
+  <div class="app-section-title atis-title-bar" style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #8e44ad; font-size: 1.1em;">🕒 歷史氣象 (過去 24 小時 METAR)</span>
+        </div>
+        <button onclick="fetchHistoryMetar()" style="background-color: #8e44ad; color: white; border: none; padding: 6px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9em;">獲取歷史紀錄</button>
+    </div>
+  </div>
+  <div id="history-metar-container" class="custom-scrollbar" style="max-height: 350px; overflow-y: auto; padding-right: 8px;">
+    <div style="text-align: center; color: #94a3b8; font-size: 0.9em; padding: 20px;">點擊上方按鈕載入過去 24 小時紀錄</div>
+  </div>
+</div>
+
 <style>
   .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -172,6 +187,12 @@
   .border-ifr { border-left-color: #e74c3c !important; }
   .border-lifr { border-left-color: #9b59b6 !important; }
   .border-unk { border-left-color: #95a5a6 !important; }
+
+  /* 捲軸美化 */
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
   @media (max-width: 768px) {
       .atis-grid-container { grid-template-columns: 1fr; }
@@ -338,7 +359,6 @@
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    // 輔助函式：發送請求並驗證資料 (JSON 版)
     const fetchJSON = async (url) => {
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -347,7 +367,6 @@
         return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw);
     };
 
-    // 輔助函式：發送請求並驗證資料 (TEXT 版)
     const fetchText = async (url) => {
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -356,15 +375,13 @@
         return text.trim();
     };
 
-    // 賽車名單：把所有可能成功的路徑全部推上起跑線
     const racers = [
-        fetchJSON(cleanUrl), // NOAA JSON
-        fetchText(textUrl),  // NOAA Text
-        fetchJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`), // AllOrigins 代理
-        fetchText(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`) // CodeTabs 代理
+        fetchJSON(cleanUrl), 
+        fetchText(textUrl),  
+        fetchJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`), 
+        fetchText(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`) 
     ];
 
-    // 🚨 第四道無敵防線：只有抓 METAR 允許呼叫 VATSIM (VATSIM 沒有 TAF 預報)
     if (type === 'metar') {
         const fetchVatsim = async () => {
             const res = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { signal: controller.signal });
@@ -377,7 +394,6 @@
     }
 
     try {
-        // Promise.any 的魔法：五台賽車同時衝刺，誰先正確帶回資料就回傳誰！錯誤的會被自動淘汰。
         const result = await Promise.any(racers);
         clearTimeout(timeoutId);
         return result;
@@ -427,131 +443,9 @@
     statusEl.innerText = `🔄 擷取 ${icao} 資料中...`;
     statusEl.style.color = "#3b82f6";
     
+    // 清空歷史紀錄區域，避免混淆
+    document.getElementById("history-metar-container").innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 0.9em; padding: 20px;">點擊上方按鈕載入過去 24 小時紀錄</div>`;
+
     fetchAtisData(icao);
     fetchWeatherData(icao);
   }
-
-  // ATIS (透過 GAS) 不受沙盒影響，維持原樣
-  function fetchAtisData(icao) {
-    const arrEl = document.getElementById("arr-atis");
-    const depEl = document.getElementById("dep-atis");
-    const arrAgeEl = document.getElementById("arr-age");
-    const depAgeEl = document.getElementById("dep-age");
-    const statusEl = document.getElementById("atis-status");
-
-    arrEl.innerText = "連線中..."; depEl.innerText = "連線中...";
-    arrAgeEl.innerHTML = ""; depAgeEl.innerHTML = "";
-
-    const gasUrl = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec"; 
-    
-    fetch(`${gasUrl}?icao=${icao}`)
-      .then(res => { if (!res.ok) throw new Error("網路狀態異常"); return res.json(); })
-      .then(data => {
-        if (data.error) {
-          statusEl.innerText = `❌ ATIS 擷取失敗: ${data.error}`;
-          statusEl.style.color = "#ef4444";
-          arrEl.innerText = "無資料"; depEl.innerText = "無資料";
-          return;
-        }
-        
-        statusEl.innerText = `✅ ${icao} 資料擷取完畢`;
-        statusEl.style.color = "#10b981";
-        
-        arrEl.innerText = data.arrival || "無 Arrival 資料";
-        depEl.innerText = data.departure || "無 Departure 資料";
-
-        arrAgeEl.innerHTML = calculateAtisAge(arrEl.innerText);
-        depAgeEl.innerHTML = calculateAtisAge(depEl.innerText);
-      })
-      .catch(error => {
-        statusEl.innerText = `❌ 通訊失敗，請檢查網路連線`;
-        statusEl.style.color = "#ef4444";
-        arrEl.innerText = "連線失敗"; depEl.innerText = "連線失敗";
-      });
-  }
-
-  // ==========================================
-  // 4. 氣象資訊主控台 (支援部分降級，METAR 與 TAF 獨立容錯)
-  // ==========================================
-  async function fetchWeatherData(icao) {
-    const metarContent = document.getElementById("metar-content");
-    const metarHeader = document.getElementById("metar-header");
-    const metarAge = document.getElementById("metar-age");
-    
-    const tafContent = document.getElementById("taf-content");
-    const tafAge = document.getElementById("taf-age");
-    const syncStatus = document.getElementById("wx-sync-status");
-
-    // 畫面重置為等待狀態
-    metarContent.innerText = "連線中...";
-    metarContent.className = "raw-text border-unk";
-    metarHeader.innerHTML = "METAR (即時天氣)";
-    metarAge.innerText = "";
-    
-    tafContent.innerHTML = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50;">連線中...</div>`;
-    tafAge.innerText = "";
-
-    syncStatus.innerText = "🔄 建立極速資料鏈路中...";
-    syncStatus.style.color = "#3b82f6";
-
-    try {
-        // 使用 Promise.allSettled：讓 METAR 與 TAF 各自努力。
-        // 若 TAF 失敗 (因為 VATSIM 不支援 TAF)，METAR 依然能獨立顯示，這才是最高級別的飛安冗餘！
-        const [metarResult, tafResult] = await Promise.allSettled([
-            fetchAWCData('metar', icao),
-            fetchAWCData('taf', icao)
-        ]);
-
-        // 處理 METAR (即時天氣)
-        if (metarResult.status === 'fulfilled' && metarResult.value) {
-            const rawMetar = metarResult.value;
-            const parsed = parseWeatherElements(rawMetar, 999, 99999);
-            const cat = getFlightCategory(parsed.vis, parsed.ceil);
-            const emojis = getWeatherEmojis(rawMetar);
-
-            metarContent.innerText = rawMetar;
-            metarContent.className = `raw-text border-${cat}`;
-            metarHeader.innerHTML = `METAR (即時天氣) <span class="badge bg-${cat}">${cat.toUpperCase()}</span> ${emojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${emojis}</span>` : ''}`;
-            metarAge.innerText = calculateReportAge(rawMetar);
-        } else {
-            metarContent.innerText = "❌ 暫無有效 METAR 報文 (所有防線皆遭阻擋)";
-            metarContent.className = "raw-text border-unk";
-        }
-
-        // 處理 TAF (機場預報)
-        if (tafResult.status === 'fulfilled' && tafResult.value) {
-            const rawTaf = tafResult.value;
-            tafContent.innerHTML = formatColorTAF(rawTaf);
-            tafAge.innerText = calculateReportAge(rawTaf);
-        } else {
-            tafContent.innerHTML = `<div style="background-color: #fee2e2; padding: 12px; border-radius: 6px; text-align: left; border-left: 4px solid #ef4444; color: #b91c1c; font-weight: bold; font-size: 13.5px;">❌ 暫無有效 TAF 預報資料</div>`;
-        }
-
-        // 狀態燈號判定
-        if (metarResult.status === 'rejected' && tafResult.status === 'rejected') {
-            syncStatus.innerText = "❌ 全線斷聯";
-            syncStatus.style.color = "#ef4444";
-        } else if (metarResult.status === 'rejected' || tafResult.status === 'rejected') {
-            syncStatus.innerText = "⚠️ 部分資料遺失 (降級運作)";
-            syncStatus.style.color = "#f59e0b";
-        } else {
-            syncStatus.innerText = "✅ 氣象同步完成";
-            syncStatus.style.color = "#10b981";
-        }
-
-    } catch (error) {
-        syncStatus.innerText = "❌ 系統嚴重異常";
-        syncStatus.style.color = "#ef4444";
-    }
-  }
-  // ==========================================
-  // 5. 系統自動點火程序 (Auto-Ignition)
-  // ==========================================
-  // 當面板結構一載入完成，給予微小的 DOM 緩衝時間後，直接觸發查詢，拔除手動點擊的麻煩。
-  setTimeout(() => {
-    const inputEl = document.getElementById("atis-icao-input");
-    if (inputEl && inputEl.value) {
-        fetchAllData();
-    }
-  }, 100);
-</script>
