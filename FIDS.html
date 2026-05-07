@@ -110,7 +110,7 @@
             <!-- 時間過濾 (移除 !bg-white 以釋放預設顏色) -->
             <div class="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 mt-1 md:mt-2 scrollbar-hide snap-x">
                 <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
-                <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">±2hr 即時</label>
+                <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">±1hr 即時</label>
 
                 <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
                 <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
@@ -415,7 +415,7 @@ function renderFIDS() {
         let passTime = true;
         if (fidsState.time === 'NOW2') {
             const nowMs = Date.now();
-            const windowMs = 2.5 * 60 * 60 * 1000; 
+            const windowMs = 1 * 60 * 60 * 1000; 
             if (f._timeMs > 0) {
                 if (f._timeMs >= nowMs - windowMs && f._timeMs <= nowMs + windowMs) {
                     passDate = true;
