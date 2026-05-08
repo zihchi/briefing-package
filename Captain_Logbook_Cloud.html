@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pilot Logbook - Starlux Light Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS & JS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* 星宇航空風格行動版配色 (晨曦大地 x 香檳金) */
+        :root {
+            --jx-bg: #F4F0EB; 
+            --jx-card: #FFFFFF; 
+            --jx-gold: #C2A370; 
+            --jx-gold-dark: #9A7B4F; 
+            --jx-dark: #2C2C2E; 
+            --jx-gray: #8E8E93;
+            --jx-divider: #E5E5EA; 
+        }
+        body {
+            background-color: var(--jx-bg);
+            color: var(--jx-dark);
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Noto Sans TC', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+        
+        ::-webkit-scrollbar { display: none; }
+        
+        .ios-list {
+            background-color: var(--jx-card);
+            border-top: 1px solid var(--jx-divider);
+            border-bottom: 1px solid var(--jx-divider);
+        }
+        .ios-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--jx-divider);
+        }
+        .ios-list-item:last-child { border-bottom: none; }
+        
+        .ios-input {
+            text-align: right;
+            border: none;
+            background: transparent;
+            color: var(--jx-gold-dark);
+            font-size: 17px;
+            font-weight: 500;
+            outline: none;
+            width: 60%;
+        }
+        .ios-input::placeholder { color: #C7C7CC; font-weight: 400; }
+        
+        select.ios-input {
+            appearance: none;
+            padding-right: 20px;
+            color: var(--jx-gold-dark);
+            background: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239A7B4F%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right center;
+            background-size: 12px;
+        }
+
+        input[type="date"], input[type="time"] { color: var(--jx-gold-dark); }
+        .jx-checkbox { width: 24px; height: 24px; accent-color: var(--jx-gold-dark); }
+
+        .section-title {
+            padding: 16px 16px 8px;
+            font-size: 13px;
+            color: #6E6E73;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* 底部導航列 */
+        .tab-bar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--jx-divider);
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+        }
+        .tab-btn {
+            color: var(--jx-gray);
+            transition: color 0.2s;
+        }
+        .tab-btn.active { color: var(--jx-gold-dark); }
+
+        /* 卡片水平滑動 */
+        .horizontal-scroll {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 12px;
+            padding: 0 16px;
+        }
+        .horizontal-scroll::-webkit-scrollbar { display: none; }
+        .stat-card {
+            scroll-snap-align: center;
+            min-width: 80%;
+            background: var(--jx-card);
+            border: 1px solid var(--jx-divider);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        /* 統計圖示 */
+        .icon-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 地圖容器 */
+        #map-container {
+            height: calc(100vh - 140px);
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .leaflet-container {
+            background: #E8E4DF;
+            font-family: inherit;
+        }
+
+        /* 雲端同步提示 */
+        #sync-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--jx-dark);
+            color: var(--jx-gold);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        #sync-toast.show { opacity: 1; }
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(194,163,112,0.3);
+            border-top-color: var(--jx-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- 雲端同步狀態提示 -->
+    <div id="sync-toast">
+        <div class="spinner"></div>
+        <span id="sync-toast-text">Syncing with Google Cloud...</span>
+    </div>
+
+    <!-- ==================== VIEW 1: LOG ENTRY ==================== -->
+    <div id="view-entry" class="block">
+        <header class="bg-white pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <p id="dash-date" class="text-sm text-[var(--jx-gold-dark)] font-semibold uppercase tracking-wider">May 8, 2026</p>
+                    <h1 id="dash-flt" class="text-3xl font-bold tracking-wide mt-1">JX---</h1>
+                </div>
+                <div class="text-center">
+                    <div class="flex items-center gap-2 justify-center text-xl font-bold text-[var(--jx-dark)]">
+                        <span id="dash-dep">---</span>
+                        <svg class="w-5 h-5 text-[var(--jx-gold-dark)] transform rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        <span id="dash-arr">---</span>
+                    </div>
+                    <p id="dash-acft" class="text-xs text-[var(--jx-gray)] mt-1 tracking-widest font-medium">---</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)]" id="dash-block-time">00:00</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-md mx-auto">
+            <!-- General Info -->
+            <div class="section-title">General Info</div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Date (UTC)</span>
+                    <input type="date" id="inp-date" class="ios-input" onchange="updateEntryDash()">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Flight Number</span>
+                    <div class="flex items-center w-3/5 justify-end">
+                        <span class="text-[var(--jx-gold-dark)] font-bold text-[17px] mr-1">JX</span>
+                        <input type="number" id="inp-flt" class="ios-input !w-auto !text-left flex-1 max-w-[80px]" placeholder="840" oninput="handleFltInput()" onblur="saveRouteMemory()">
+                    </div>
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Departure</span>
+                    <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="RCTP" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Arrival</span>
+                    <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="RJFF" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
+                </div>
+            </div>
+
+            <!-- Aircraft -->
+            <div class="section-title mt-2">Aircraft</div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Model / Type</span>
+                    <select id="inp-acft-select" class="ios-input">
+                        <option value="A339" selected>A339</option>
+                        <option value="A359">A359</option>
+                        <option value="ATR72-600">ATR72-600</option>
+                    </select>
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Registration</span>
+                    <select id="inp-reg" class="ios-input" onchange="updateEntryDash()">
+                        <option value="" disabled selected>Select...</option>
+                        <option value="B-58301">B-58301</option>
+                        <option value="B-58302">B-58302</option>
+                        <option value="B-58303">B-58303</option>
+                        <option value="B-58304">B-58304</option>
+                        <option value="B-58305">B-58305</option>
+                        <option value="B-58306">B-58306</option>
+                        <option value="B-58307">B-58307</option>
+                        <option value="B-58308">B-58308</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- OOOI Time -->
+            <div class="section-title mt-2">Time (UTC)</div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Block Out</span>
+                    <input type="time" id="inp-out" class="ios-input" oninput="calculateTimes()">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Take Off</span>
+                    <input type="time" id="inp-off" class="ios-input" oninput="calculateTimes()">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Land On</span>
+                    <input type="time" id="inp-on" class="ios-input" oninput="calculateTimes()">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Block In</span>
+                    <input type="time" id="inp-in" class="ios-input" oninput="calculateTimes()">
+                </div>
+            </div>
+
+            <!-- Operations -->
+            <div class="section-title mt-2 flex justify-between items-end">
+                <span>Operations (PF)</span>
+                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">auto day/night via oooi</span>
+            </div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item flex-col items-start gap-2">
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[17px] font-medium">PF Takeoff Performed</span>
+                        <input type="checkbox" id="chk-to" class="jx-checkbox" onchange="evaluateOperations()">
+                    </div>
+                    <div id="to-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
+                </div>
+                <div class="ios-list-item flex-col items-start gap-2">
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[17px] font-medium">PF Landing Performed</span>
+                        <input type="checkbox" id="chk-ldg" class="jx-checkbox" onchange="evaluateOperations()">
+                    </div>
+                    <div id="ldg-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
+                </div>
+            </div>
+
+            <!-- Crew (Pilots) -->
+            <div class="section-title mt-2">Flight Crew</div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item bg-[#FDFBF7]">
+                    <div class="flex flex-col">
+                        <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
+                        <span class="text-[12px] text-[var(--jx-gray)] font-medium">Duty</span>
+                    </div>
+                    <select id="inp-duty" class="ios-input !text-[var(--jx-gold-dark)] font-bold bg-transparent">
+                        <option value="FO" selected>FO</option>
+                        <option value="PIC">PIC</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Custom Fields / Remarks -->
+            <div class="section-title mt-2">Remarks & Approach</div>
+            <div class="ios-list shadow-sm mb-4">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Passengers</span>
+                    <input type="number" id="inp-pax" class="ios-input" placeholder="153">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Approach</span>
+                    <div class="flex gap-2 items-center justify-end w-3/5">
+                        <select id="inp-app" class="ios-input !w-auto bg-transparent border-b border-gray-300 pb-1">
+                            <option value="ILS" selected>ILS</option>
+                            <option value="RNP">RNP</option>
+                            <option value="Visual">Visual</option>
+                            <option value="NPA">NPA</option>
+                        </select>
+                        <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-gray-300 pb-1" placeholder="01R">
+                    </div>
+                </div>
+                <div class="ios-list-item items-start">
+                    <span class="text-[17px] font-medium mt-2">Remarks</span>
+                    <textarea id="inp-remarks" class="ios-input h-16 pt-2 font-normal" placeholder="Tap to add notes..."></textarea>
+                </div>
+            </div>
+
+            <div class="p-4 pb-8">
+                <button onclick="saveLogbookEntry()" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
+                    Save to Cloud Logbook
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== VIEW 2: STATISTICS (DASHBOARD) ==================== -->
+    <div id="view-stats" class="hidden">
+        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
+            <div class="flex justify-between items-center">
+                <div class="relative">
+                    <select id="stats-time-filter" class="appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="renderStats()">
+                        <option value="career">Career</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="365d">Last 365 days</option>
+                    </select>
+                    <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <h1 class="text-lg font-bold text-[var(--jx-dark)]">Captain Logbook</h1>
+                <div class="w-[88px]"></div>
+            </div>
+        </header>
+
+        <main class="max-w-md mx-auto mt-2">
+            <div class="horizontal-scroll" id="stats-cards-container"></div>
+            <div class="mt-6 px-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)]">
+                    <canvas id="flightChart" height="150"></canvas>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-y-6 gap-x-2 mt-8 px-2">
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Flights</span>
+                    <span id="stat-tot-flt" class="font-bold text-xl">0</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#34C759]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Takeoffs</span>
+                    <span id="stat-tot-to" class="font-bold text-xl">0</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-8l-7 7-7-7"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Landings</span>
+                    <span id="stat-tot-ldg" class="font-bold text-xl">0</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#FF9500]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Total Time</span>
+                    <span id="stat-tot-time" class="font-bold text-xl">0:00</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#5856D6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Night Time</span>
+                    <span id="stat-tot-night" class="font-bold text-xl">0:00</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[#FF2D55]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Passengers</span>
+                    <span id="stat-tot-pax" class="font-bold text-xl">0</span>
+                </div>
+                <div class="icon-stat">
+                    <svg class="w-6 h-6 text-[var(--jx-gold-dark)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Airports</span>
+                    <span id="stat-tot-apt" class="font-bold text-xl">0</span>
+                </div>
+            </div>
+
+            <div class="mt-8 px-4 mb-8">
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Hours by Aircraft Type</div>
+                <div class="ios-list rounded-xl overflow-hidden" id="stat-list-acft"></div>
+
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
+                <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== VIEW 3: MAP (FOOTPRINTS) ==================== -->
+    <div id="view-map" class="hidden">
+        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
+            <h1 class="text-lg font-bold text-[var(--jx-dark)] text-center">Flight Footprints</h1>
+        </header>
+        <main class="max-w-md mx-auto p-4">
+            <div id="map-container"></div>
+            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown in your cloud database.</p>
+        </main>
+    </div>
+
+    <!-- ==================== BOTTOM TAB BAR ==================== -->
+    <nav class="tab-bar fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <button class="tab-btn active flex flex-col items-center w-20" onclick="switchTab('entry')">
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <span class="text-[10px] font-semibold">Entry</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center w-20" onclick="switchTab('stats')">
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span class="text-[10px] font-semibold">Dashboard</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center w-20" onclick="switchTab('map')">
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span class="text-[10px] font-semibold">Map</span>
+        </button>
+    </nav>
+
+    <script>
+        // ==========================================
+        // ✈️ 雲端 API 設定區 (請在此貼上您的 Google Apps Script URL)
+        // ==========================================
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw_JJPY_u8WP0SM4d2HMp4aY6QNuzHWP9CRlLQ2p7f3BNZUtnbidbsYUGBShmcuid3BLw/exec"; 
+
+        const NIGHT_START = 10 * 60; const NIGHT_END = 22 * 60;
+        let routeMemory = JSON.parse(localStorage.getItem('jxRouteMemory')) || {};
+        
+        // 資料暫存區 (從雲端拉取後存放於此)
+        let flightLogs = [];
+        let isDataLoaded = false;
+        
+        let flightChartInst = null;
+        let leafletMap = null;
+
+        const airportCoordsFallback = {
+            'RCTP': {lat: 25.0797, lon: 121.2342}, 'RCKH': {lat: 22.5771, lon: 120.3500},
+            'RCSS': {lat: 25.0697, lon: 121.5525}, 'VHHH': {lat: 22.3089, lon: 113.9146},
+            'RJAA': {lat: 35.7647, lon: 140.3863}, 'RJTT': {lat: 35.5522, lon: 139.7796},
+            'RJBB': {lat: 34.4273, lon: 135.2440}, 'ROAH': {lat: 26.1958, lon: 127.6458},
+            'RJFF': {lat: 33.5859, lon: 130.4507}, 'VTBS': {lat: 13.6811, lon: 100.7473},
+            'WSSS': {lat: 1.3644, lon: 103.9915},  'RJCC': {lat: 42.7752, lon: 141.6923},
+            'KLAX': {lat: 33.9416, lon: -118.4085},'KSEA': {lat: 47.4502, lon: -122.3088},
+            'RJSS': {lat: 38.1397, lon: 140.9169}
+        };
+
+        window.onload = () => {
+            document.getElementById('inp-date').valueAsDate = new Date();
+            initTimeFilterDropdown();
+            updateEntryDash();
+            // 初始化時主動向 Google Cloud 請求歷史資料
+            fetchLogsFromCloud();
+        };
+
+        // ==========================================
+        // ☁️ 雲端同步邏輯 (Cloud Sync)
+        // ==========================================
+        function showToast(message, isLoading = false) {
+            const toast = document.getElementById('sync-toast');
+            document.getElementById('sync-toast-text').textContent = message;
+            toast.querySelector('.spinner').style.display = isLoading ? 'block' : 'none';
+            toast.classList.add('show');
+            if(!isLoading) setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function fetchLogsFromCloud() {
+            if(GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                console.warn("GAS URL 尚未設定。");
+                return;
+            }
+            showToast("Fetching cloud database...", true);
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                
+                // 將雲端資料轉換回前端可用格式
+                flightLogs = data.map(row => ({
+                    date: row.date,
+                    flt: String(row.flt).replace('JX',''), // 確保乾淨的數字
+                    dep: row.dep, arr: row.arr,
+                    acft: row.acft, reg: row.reg,
+                    totalMins: parseInt(row.totalMins) || 0,
+                    nightMins: parseInt(row.nightMins) || 0,
+                    duty: row.duty,
+                    isToDay: String(row.isToDay).toLowerCase() === 'true',
+                    isLdgDay: String(row.isLdgDay).toLowerCase() === 'true',
+                    app: row.app, rwy: row.rwy, pax: parseInt(row.pax) || 0
+                }));
+                isDataLoaded = true;
+                document.getElementById('sync-toast').classList.remove('show');
+                
+                // 如果當前在 Dashboard 頁面，則立即更新
+                if(!document.getElementById('view-stats').classList.contains('hidden')) {
+                    renderStats();
+                }
+            } catch (err) {
+                console.error("雲端讀取失敗:", err);
+                showToast("Cloud fetch failed. Offline mode.");
+            }
+        }
+
+        // ==========================================
+        // 📱 UI 切換邏輯 (TAB)
+        // ==========================================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            document.getElementById('view-entry').classList.add('hidden');
+            document.getElementById('view-stats').classList.add('hidden');
+            document.getElementById('view-map').classList.add('hidden');
+
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+            if (tabId === 'stats') renderStats();
+            if (tabId === 'map') initOrUpdateMap();
+        }
+
+        // ==========================================
+        // 📝 Entry 畫面邏輯 
+        // ==========================================
+        function handleFltInput() {
+            const fltNum = document.getElementById('inp-flt').value.trim();
+            if (fltNum && routeMemory[fltNum]) {
+                document.getElementById('inp-dep').value = routeMemory[fltNum].dep;
+                document.getElementById('inp-arr').value = routeMemory[fltNum].arr;
+            }
+            updateEntryDash();
+        }
+
+        function saveRouteMemory() {
+            const fltNum = document.getElementById('inp-flt').value.trim();
+            const dep = document.getElementById('inp-dep').value.trim().toUpperCase();
+            const arr = document.getElementById('inp-arr').value.trim().toUpperCase();
+            if (fltNum && dep && arr) {
+                routeMemory[fltNum] = { dep: dep, arr: arr };
+                localStorage.setItem('jxRouteMemory', JSON.stringify(routeMemory));
+            }
+        }
+
+        function calcDuration(t1, t2) {
+            if(!t1 || !t2) return 0;
+            const [h1, m1] = t1.split(':').map(Number);
+            const [h2, m2] = t2.split(':').map(Number);
+            let min1 = h1 * 60 + m1; let min2 = h2 * 60 + m2;
+            if (min2 < min1) min2 += 24 * 60; 
+            return min2 - min1;
+        }
+        function minsToStr(mins) {
+            const h = Math.floor(mins / 60); const m = mins % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function calculateTimes() {
+            const outT = document.getElementById('inp-out').value;
+            const inT = document.getElementById('inp-in').value;
+            if (outT && inT) document.getElementById('dash-block-time').textContent = minsToStr(calcDuration(outT, inT));
+            evaluateOperations();
+        }
+
+        function evaluateOperations() {
+            const chkTo = document.getElementById('chk-to').checked;
+            const chkLdg = document.getElementById('chk-ldg').checked;
+            const offT = document.getElementById('inp-off').value;
+            const onT = document.getElementById('inp-on').value;
+            const resTo = document.getElementById('to-result');
+            const resLdg = document.getElementById('ldg-result');
+
+            if (chkTo) {
+                if (offT) {
+                    const h = parseInt(offT.split(':')[0]);
+                    const isDay = !(h >= 10 && h < 22);
+                    resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
+                    resTo.classList.remove('hidden');
+                } else resTo.classList.remove('hidden'), resTo.innerHTML = '⚠️ Input "Take Off" time.';
+            } else resTo.classList.add('hidden');
+
+            if (chkLdg) {
+                if (onT) {
+                    const h = parseInt(onT.split(':')[0]);
+                    const isDay = !(h >= 10 && h < 22);
+                    resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
+                    resLdg.classList.remove('hidden');
+                } else resLdg.classList.remove('hidden'), resLdg.innerHTML = '⚠️ Input "Land On" time.';
+            } else resLdg.classList.add('hidden');
+        }
+
+        function updateEntryDash() {
+            const rawDate = document.getElementById('inp-date').value;
+            if (rawDate) {
+                const d = new Date(rawDate);
+                document.getElementById('dash-date').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+            const fltNum = document.getElementById('inp-flt').value;
+            document.getElementById('dash-flt').textContent = fltNum ? `JX${fltNum}` : "JX---";
+            document.getElementById('dash-dep').textContent = document.getElementById('inp-dep').value.toUpperCase() || "---";
+            document.getElementById('dash-arr').textContent = document.getElementById('inp-arr').value.toUpperCase() || "---";
+            
+            const acft = document.getElementById('inp-acft-select').value;
+            const reg = document.getElementById('inp-reg').value;
+            document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft})`;
+        }
+
+        // 【更新】雲端寫入版 Save
+        function saveLogbookEntry() {
+            saveRouteMemory();
+            const btn = document.querySelector('#view-entry button');
+            const originalText = btn.innerText;
+            btn.innerText = "Transmitting to Cloud...";
+            btn.classList.add('opacity-80');
+            showToast("Writing to Google Sheets...", true);
+            
+            const outT = document.getElementById('inp-out').value;
+            const inT = document.getElementById('inp-in').value;
+            
+            const payloadData = {
+                date: document.getElementById('inp-date').value,
+                flt: "JX" + document.getElementById('inp-flt').value, // 寫入時加上前綴
+                dep: document.getElementById('inp-dep').value.toUpperCase(),
+                arr: document.getElementById('inp-arr').value.toUpperCase(),
+                acft: document.getElementById('inp-acft-select').value,
+                reg: document.getElementById('inp-reg').value,
+                out: outT,
+                off: document.getElementById('inp-off').value,
+                on: document.getElementById('inp-on').value,
+                in: inT,
+                totalMins: calcDuration(outT, inT),
+                nightMins: 0, 
+                duty: document.getElementById('inp-duty').value,
+                isToDay: document.getElementById('chk-to').checked,
+                isLdgDay: document.getElementById('chk-ldg').checked,
+                app: document.getElementById('inp-app').value,
+                rwy: document.getElementById('inp-rwy').value.toUpperCase(),
+                pax: parseInt(document.getElementById('inp-pax').value) || 0,
+                remarks: document.getElementById('inp-remarks').value
+            };
+
+            // 使用 URLSearchParams 以表單格式 POST (避開 GAS CORS 問題)
+            const urlParams = new URLSearchParams(payloadData);
+
+            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // 不要求讀取回傳結果，確保傳輸成功即可
+                    body: urlParams,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                }).then(() => {
+                    finalizeSave(btn, originalText, payloadData);
+                }).catch(err => {
+                    console.error("雲端傳輸失敗", err);
+                    showToast("Sync failed. Check network.");
+                    btn.innerText = originalText;
+                    btn.classList.remove('opacity-80');
+                });
+            } else {
+                // 如果尚未綁定雲端，依然模擬儲存
+                setTimeout(() => finalizeSave(btn, originalText, payloadData), 800);
+            }
+        }
+
+        function finalizeSave(btn, originalText, payloadData) {
+            // 也將新資料推入目前的暫存陣列，讓圖表能立刻看到
+            flightLogs.push(payloadData);
+            
+            showToast("Saved to Cloud successfully!");
+            btn.innerText = originalText;
+            btn.classList.remove('opacity-80');
+            
+            // 清空時間與狀態
+            document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
+            document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
+            document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
+            document.getElementById('dash-block-time').textContent = '00:00';
+            evaluateOperations();
+        }
+
+        // ==========================================
+        // 📊 STATS (Dashboard) 邏輯
+        // ==========================================
+        function initTimeFilterDropdown() {
+            const select = document.getElementById('stats-time-filter');
+            const now = new Date();
+            const thisMonthName = now.toLocaleString('en-US', { month: 'short' });
+            
+            let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthName = lastMonthDate.toLocaleString('en-US', { month: 'short' });
+            
+            const thisYear = now.getFullYear();
+            const lastYear = thisYear - 1;
+
+            select.innerHTML += `
+                <option value="thisM">This month (${thisMonthName})</option>
+                <option value="lastM">Last month (${lastMonthName})</option>
+                <option value="thisY">This year (${thisYear})</option>
+                <option value="lastY">Last year (${lastYear})</option>
+            `;
+        }
+
+        function filterLogsByTime(logs) {
+            const filterVal = document.getElementById('stats-time-filter').value;
+            const now = new Date();
+            return logs.filter(log => {
+                const logDate = new Date(log.date);
+                if(isNaN(logDate)) return false; // 避開無效資料
+                
+                const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
+                
+                switch(filterVal) {
+                    case '7d': return diffDays <= 7;
+                    case '30d': return diffDays <= 30;
+                    case '365d': return diffDays <= 365;
+                    case 'thisM': return logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear();
+                    case 'lastM': 
+                        let lm = now.getMonth() - 1; let ly = now.getFullYear();
+                        if(lm < 0) { lm = 11; ly--; }
+                        return logDate.getMonth() === lm && logDate.getFullYear() === ly;
+                    case 'thisY': return logDate.getFullYear() === now.getFullYear();
+                    case 'lastY': return logDate.getFullYear() === now.getFullYear() - 1;
+                    default: return true; // career
+                }
+            });
+        }
+
+        function renderStats() {
+            const filteredLogs = filterLogsByTime(flightLogs);
+
+            const cardsContainer = document.getElementById('stats-cards-container');
+            cardsContainer.innerHTML = '';
+            
+            // 取最近 3 筆符合資料做預覽
+            const recentLogs = [...filteredLogs].reverse().slice(0, 3);
+            
+            const createCardHTML = (title, items, type) => {
+                let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
+                if(items.length === 0) html += `<p class="text-xs text-[var(--jx-gray)]">No recent data.</p>`;
+                
+                items.forEach(log => {
+       
