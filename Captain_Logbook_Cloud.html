@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot Logbook - Starlux Light Edition</title>
-    <!-- Tailwind CSS -->
+    <title>Pilot Logbook - Starlux Numpad Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Leaflet CSS & JS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* 星宇航空風格行動版配色 (晨曦大地 x 香檳金) */
         :root {
             --jx-bg: #F4F0EB; 
             --jx-card: #FFFFFF; 
@@ -23,162 +19,47 @@
             --jx-gray: #8E8E93;
             --jx-divider: #E5E5EA; 
         }
-        body {
-            background-color: var(--jx-bg);
-            color: var(--jx-dark);
-            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Noto Sans TC', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-        }
-        
+        body { background-color: var(--jx-bg); color: var(--jx-dark); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
         ::-webkit-scrollbar { display: none; }
-        
-        .ios-list {
-            background-color: var(--jx-card);
-            border-top: 1px solid var(--jx-divider);
-            border-bottom: 1px solid var(--jx-divider);
-        }
-        .ios-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--jx-divider);
-        }
+        .ios-list { background-color: var(--jx-card); border-top: 1px solid var(--jx-divider); border-bottom: 1px solid var(--jx-divider); }
+        .ios-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--jx-divider); }
         .ios-list-item:last-child { border-bottom: none; }
-        
-        .ios-input {
-            text-align: right;
-            border: none;
-            background: transparent;
-            color: var(--jx-gold-dark);
-            font-size: 17px;
-            font-weight: 500;
-            outline: none;
-            width: 60%;
-        }
+        .ios-input { text-align: right; border: none; background: transparent; color: var(--jx-gold-dark); font-size: 17px; font-weight: 500; outline: none; width: 60%; }
         .ios-input::placeholder { color: #C7C7CC; font-weight: 400; }
-        
-        select.ios-input {
-            appearance: none;
-            padding-right: 20px;
-            color: var(--jx-gold-dark);
-            background: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239A7B4F%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right center;
-            background-size: 12px;
-        }
-
-        input[type="date"], input[type="time"] { color: var(--jx-gold-dark); }
+        select.ios-input { appearance: none; padding-right: 20px; background: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239A7B4F%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right center; background-size: 12px; }
+        input[type="date"] { color: var(--jx-gold-dark); }
         .jx-checkbox { width: 24px; height: 24px; accent-color: var(--jx-gold-dark); }
-
-        .section-title {
-            padding: 16px 16px 8px;
-            font-size: 13px;
-            color: #6E6E73;
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-
-        /* 底部導航列 */
-        .tab-bar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid var(--jx-divider);
-            padding-bottom: env(safe-area-inset-bottom, 16px);
-        }
-        .tab-btn {
-            color: var(--jx-gray);
-            transition: color 0.2s;
-        }
+        .section-title { padding: 16px 16px 8px; font-size: 13px; color: #6E6E73; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .tab-bar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--jx-divider); padding-bottom: env(safe-area-inset-bottom, 16px); }
+        .tab-btn { color: var(--jx-gray); transition: color 0.2s; }
         .tab-btn.active { color: var(--jx-gold-dark); }
-
-        /* 卡片水平滑動 */
-        .horizontal-scroll {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            gap: 12px;
-            padding: 0 16px;
-        }
+        .horizontal-scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 0 16px; }
         .horizontal-scroll::-webkit-scrollbar { display: none; }
-        .stat-card {
-            scroll-snap-align: center;
-            min-width: 80%;
-            background: var(--jx-card);
-            border: 1px solid var(--jx-divider);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-
-        /* 統計圖示 */
-        .icon-stat {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* 地圖容器 */
-        #map-container {
-            height: calc(100vh - 140px);
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .leaflet-container {
-            background: #E8E4DF;
-            font-family: inherit;
-        }
-
-        /* 雲端同步提示 */
-        #sync-toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--jx-dark);
-            color: var(--jx-gold);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
+        .stat-card { scroll-snap-align: center; min-width: 80%; background: var(--jx-card); border: 1px solid var(--jx-divider); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        #map-container { height: calc(100vh - 140px); width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .leaflet-container { background: #E8E4DF; font-family: inherit; }
+        #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #sync-toast.show { opacity: 1; }
-        .spinner {
-            width: 14px; height: 14px;
-            border: 2px solid rgba(194,163,112,0.3);
-            border-top-color: var(--jx-gold);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        #edit-banner.show { display: block; }
     </style>
 </head>
 <body class="pb-24">
 
-    <!-- 雲端同步狀態提示 -->
+    <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
-        <span id="sync-toast-text">Syncing with Google Cloud...</span>
+        <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
     </div>
 
     <!-- ==================== VIEW 1: LOG ENTRY ==================== -->
     <div id="view-entry" class="block">
-        <header class="bg-white pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
+        <div id="edit-banner">Editing Mode</div>
+        <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
             <div class="flex justify-between items-start mb-2">
                 <div>
                     <p id="dash-date" class="text-sm text-[var(--jx-gold-dark)] font-semibold uppercase tracking-wider">May 8, 2026</p>
@@ -198,7 +79,9 @@
             </div>
         </header>
 
-        <main class="max-w-md mx-auto">
+        <main class="max-w-md mx-auto mt-2">
+            <input type="hidden" id="inp-index">
+
             <!-- General Info -->
             <div class="section-title">General Info</div>
             <div class="ios-list shadow-sm">
@@ -223,51 +106,42 @@
                 </div>
             </div>
 
-            <!-- Aircraft -->
+            <!-- Aircraft Database -->
             <div class="section-title mt-2">Aircraft</div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Model / Type</span>
-                    <select id="inp-acft-select" class="ios-input">
-                        <option value="A339" selected>A339</option>
-                        <option value="A359">A359</option>
-                        <option value="ATR72-600">ATR72-600</option>
-                    </select>
+                    <input type="text" id="inp-acft-select" class="ios-input font-bold" readonly placeholder="Auto-filled">
                 </div>
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Registration</span>
-                    <select id="inp-reg" class="ios-input" onchange="updateEntryDash()">
-                        <option value="" disabled selected>Select...</option>
-                        <option value="B-58301">B-58301</option>
-                        <option value="B-58302">B-58302</option>
-                        <option value="B-58303">B-58303</option>
-                        <option value="B-58304">B-58304</option>
-                        <option value="B-58305">B-58305</option>
-                        <option value="B-58306">B-58306</option>
-                        <option value="B-58307">B-58307</option>
-                        <option value="B-58308">B-58308</option>
+                    <select id="inp-reg" class="ios-input" onchange="handleRegistrationChange()">
+                        <option value="" disabled selected>Loading...</option>
                     </select>
                 </div>
             </div>
 
-            <!-- OOOI Time -->
-            <div class="section-title mt-2">Time (UTC)</div>
+            <!-- OOOI Time (改為九宮格數字鍵盤輸入) -->
+            <div class="section-title mt-2 flex justify-between items-end">
+                <span>Time (UTC)</span>
+                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">format: 1402</span>
+            </div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Block Out</span>
-                    <input type="time" id="inp-out" class="ios-input" oninput="calculateTimes()">
+                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider" placeholder="e.g. 1402" maxlength="5" oninput="handleTimeInput(event)">
                 </div>
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Take Off</span>
-                    <input type="time" id="inp-off" class="ios-input" oninput="calculateTimes()">
+                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider" placeholder="e.g. 1415" maxlength="5" oninput="handleTimeInput(event)">
                 </div>
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Land On</span>
-                    <input type="time" id="inp-on" class="ios-input" oninput="calculateTimes()">
+                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider" placeholder="e.g. 1620" maxlength="5" oninput="handleTimeInput(event)">
                 </div>
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Block In</span>
-                    <input type="time" id="inp-in" class="ios-input" oninput="calculateTimes()">
+                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider" placeholder="e.g. 1635" maxlength="5" oninput="handleTimeInput(event)">
                 </div>
             </div>
 
@@ -293,9 +167,26 @@
                 </div>
             </div>
 
-            <!-- Crew (Pilots) -->
+            <!-- Crew Database -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium">Pilot 1</span>
+                    <select id="inp-pilot1-select" class="ios-input" onchange="handlePilotSelect('pilot1')"></select>
+                </div>
+                <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                        <input type="text" id="inp-pilot1-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                    </div>
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                        <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                    </div>
+                    <div class="w-full flex justify-end">
+                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                    </div>
+                </div>
                 <div class="ios-list-item bg-[#FDFBF7]">
                     <div class="flex flex-col">
                         <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
@@ -308,7 +199,7 @@
                 </div>
             </div>
 
-            <!-- Custom Fields / Remarks -->
+            <!-- Remarks & Approach -->
             <div class="section-title mt-2">Remarks & Approach</div>
             <div class="ios-list shadow-sm mb-4">
                 <div class="ios-list-item">
@@ -318,13 +209,14 @@
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium">Approach</span>
                     <div class="flex gap-2 items-center justify-end w-3/5">
-                        <select id="inp-app" class="ios-input !w-auto bg-transparent border-b border-gray-300 pb-1">
+                        <select id="inp-app" class="ios-input !w-auto bg-transparent border-b border-[var(--jx-divider)] pb-1">
                             <option value="ILS" selected>ILS</option>
                             <option value="RNP">RNP</option>
                             <option value="Visual">Visual</option>
                             <option value="NPA">NPA</option>
+                            <option value="">N/A</option>
                         </select>
-                        <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-gray-300 pb-1" placeholder="01R">
+                        <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-[var(--jx-divider)] pb-1" placeholder="01R">
                     </div>
                 </div>
                 <div class="ios-list-item items-start">
@@ -333,15 +225,38 @@
                 </div>
             </div>
 
-            <div class="p-4 pb-8">
-                <button onclick="saveLogbookEntry()" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
+            <div class="p-4 pb-8" id="action-create">
+                <button onclick="saveLogbookEntry('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
                     Save to Cloud Logbook
                 </button>
+            </div>
+            
+            <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-edit">
+                <button onclick="saveLogbookEntry('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
+                    Update Entry
+                </button>
+                <div class="flex gap-3">
+                    <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
+                        Delete
+                    </button>
+                    <button onclick="cancelEdit()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
+                        Cancel Edit
+                    </button>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- ==================== VIEW 2: STATISTICS (DASHBOARD) ==================== -->
+    <!-- ==================== VIEW 2: RECENT FLIGHTS ==================== -->
+    <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
+        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)]">
+            <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
+            <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view or edit details.</p>
+        </header>
+        <main class="max-w-md mx-auto" id="recent-list-container"></main>
+    </div>
+
+    <!-- ==================== VIEW 3: STATISTICS ==================== -->
     <div id="view-stats" class="hidden">
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
             <div class="flex justify-between items-center">
@@ -358,7 +273,6 @@
                 <div class="w-[88px]"></div>
             </div>
         </header>
-
         <main class="max-w-md mx-auto mt-2">
             <div class="horizontal-scroll" id="stats-cards-container"></div>
             <div class="mt-6 px-4">
@@ -366,7 +280,6 @@
                     <canvas id="flightChart" height="150"></canvas>
                 </div>
             </div>
-
             <div class="grid grid-cols-4 gap-y-6 gap-x-2 mt-8 px-2">
                 <div class="icon-stat">
                     <svg class="w-6 h-6 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -399,23 +312,21 @@
                     <span id="stat-tot-pax" class="font-bold text-xl">0</span>
                 </div>
                 <div class="icon-stat">
-                    <svg class="w-6 h-6 text-[var(--jx-gold-dark)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg class="w-6 h-6 text-[var(--jx-gold-dark)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Airports</span>
                     <span id="stat-tot-apt" class="font-bold text-xl">0</span>
                 </div>
             </div>
-
             <div class="mt-8 px-4 mb-8">
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Hours by Aircraft Type</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-acft"></div>
-
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
             </div>
         </main>
     </div>
 
-    <!-- ==================== VIEW 3: MAP (FOOTPRINTS) ==================== -->
+    <!-- ==================== VIEW 4: MAP ==================== -->
     <div id="view-map" class="hidden">
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
             <h1 class="text-lg font-bold text-[var(--jx-dark)] text-center">Flight Footprints</h1>
@@ -428,15 +339,19 @@
 
     <!-- ==================== BOTTOM TAB BAR ==================== -->
     <nav class="tab-bar fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <button class="tab-btn active flex flex-col items-center w-20" onclick="switchTab('entry')">
+        <button class="tab-btn active flex flex-col items-center w-1/4" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span class="text-[10px] font-semibold">Entry</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-20" onclick="switchTab('stats')">
-            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            <span class="text-[10px] font-semibold">Dashboard</span>
+        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('recent')">
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <span class="text-[10px] font-semibold">Recent</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-20" onclick="switchTab('map')">
+        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('stats')">
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span class="text-[10px] font-semibold">Stats</span>
+        </button>
+        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('map')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="text-[10px] font-semibold">Map</span>
         </button>
@@ -444,16 +359,16 @@
 
     <script>
         // ==========================================
-        // ✈️ 雲端 API 設定區 (請在此貼上您的 Google Apps Script URL)
+        // ✈️ 雲端 API 設定區
         // ==========================================
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbw_JJPY_u8WP0SM4d2HMp4aY6QNuzHWP9CRlLQ2p7f3BNZUtnbidbsYUGBShmcuid3BLw/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw96nL9XMvRLuuBn-xzfh625AmGpL8h-yDVpaf2i1E9efZPT3AOptxJBIEu5oUEYdjYDg/exec"; 
 
-        const NIGHT_START = 10 * 60; const NIGHT_END = 22 * 60;
+        const ADD_NEW_VAL = "___ADD_NEW___";
         let routeMemory = JSON.parse(localStorage.getItem('jxRouteMemory')) || {};
         
-        // 資料暫存區 (從雲端拉取後存放於此)
         let flightLogs = [];
-        let isDataLoaded = false;
+        let dbAircrafts = [];
+        let dbPilots = [];
         
         let flightChartInst = null;
         let leafletMap = null;
@@ -469,17 +384,86 @@
             'RJSS': {lat: 38.1397, lon: 140.9169}
         };
 
+        function generateUUID() {
+            if(crypto && crypto.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // ==========================================
+        // 🕒 時間格式化輸入 (Numpad) 
+        // ==========================================
+        function handleTimeInput(e) {
+            // 擷取輸入的純數字
+            let raw = e.target.value.replace(/\D/g, '');
+            // 限制最大長度為4
+            if (raw.length > 4) raw = raw.substring(0, 4);
+
+            // 當超過 2 碼時自動插入冒號
+            let formatted = raw;
+            if (raw.length >= 3) {
+                formatted = raw.substring(0, 2) + ':' + raw.substring(2);
+            }
+
+            e.target.value = formatted;
+            calculateTimes();
+        }
+
+        // ==========================================
+        // 【防呆過濾器】
+        // ==========================================
+        function parseTimeToMins(val) {
+            if (!val) return 0;
+            let str = String(val).trim();
+            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和')) return 0;
+            
+            if (str.includes(':')) {
+                const p = str.split(':');
+                return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
+            }
+            return parseInt(str) || 0;
+        }
+
+        function safeDateString(val) {
+            if (!val) return '';
+            const d = new Date(val);
+            if (isNaN(d)) return '';
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function minsToStr(mins) {
+            if(isNaN(mins) || mins === 0) return "00:00";
+            const h = Math.floor(mins / 60); const m = mins % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        // 【防呆過濾器 3】取得精確的排序時間戳 (Date + Block Out Time)
+        function getSortTimestamp(log) {
+            if (!log.date) return 0;
+            let timeStr = '00:00';
+            if (log.out) {
+                // 只取純數字，確保 "1402" 或 "14:02" 都能被正確剖析
+                let cleanTime = String(log.out).replace(/\D/g, ''); 
+                if (cleanTime.length >= 4) {
+                    timeStr = cleanTime.substring(0, 2) + ':' + cleanTime.substring(2, 4);
+                }
+            }
+            // 組合標準的 ISO 時間字串進行解析
+            const dt = new Date(`${log.date}T${timeStr}:00`);
+            return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
+        }
+
         window.onload = () => {
             document.getElementById('inp-date').valueAsDate = new Date();
             initTimeFilterDropdown();
-            updateEntryDash();
-            // 初始化時主動向 Google Cloud 請求歷史資料
-            fetchLogsFromCloud();
+            fetchDataFromCloud(); 
         };
 
-        // ==========================================
-        // ☁️ 雲端同步邏輯 (Cloud Sync)
-        // ==========================================
         function showToast(message, isLoading = false) {
             const toast = document.getElementById('sync-toast');
             document.getElementById('sync-toast-text').textContent = message;
@@ -488,62 +472,144 @@
             if(!isLoading) setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        async function fetchLogsFromCloud() {
+        // ==========================================
+        // ☁️ 雲端同步邏輯
+        // ==========================================
+        async function fetchDataFromCloud() {
             if(GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                console.warn("GAS URL 尚未設定。");
-                return;
+                console.warn("GAS URL 尚未設定。"); return;
             }
-            showToast("Fetching cloud database...", true);
+            showToast("Syncing with Cloud DB...", true);
             try {
                 const response = await fetch(GAS_URL);
-                const data = await response.json();
+                const data = await response.json(); 
                 
-                // 將雲端資料轉換回前端可用格式
-                flightLogs = data.map(row => ({
-                    date: row.date,
-                    flt: String(row.flt).replace('JX',''), // 確保乾淨的數字
-                    dep: row.dep, arr: row.arr,
-                    acft: row.acft, reg: row.reg,
-                    totalMins: parseInt(row.totalMins) || 0,
-                    nightMins: parseInt(row.nightMins) || 0,
-                    duty: row.duty,
-                    isToDay: String(row.isToDay).toLowerCase() === 'true',
-                    isLdgDay: String(row.isLdgDay).toLowerCase() === 'true',
-                    app: row.app, rwy: row.rwy, pax: parseInt(row.pax) || 0
-                }));
-                isDataLoaded = true;
+                dbAircrafts = data.aircrafts || [];
+                populateAircraftDropdowns();
+
+                dbPilots = (data.pilots || []).map(p => {
+                    const nickStr = p.nickname ? ` (${p.nickname})` : '';
+                    return { ...p, formattedName: `${p.name}${nickStr}` };
+                });
+                populatePilotDropdown('inp-pilot1-select');
+
+                flightLogs = (data.flights || [])
+                    .filter(row => {
+                        const dep = String(row.airport_departure || '').trim();
+                        return dep.length >= 3 && !dep.includes('總和') && !dep.includes('確認');
+                    })
+                    .map(row => {
+                        const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
+                        return {
+                            index: row.index, 
+                            date: safeDateString(row.date), 
+                            flt: String(row.filght_number).replace('JX',''), 
+                            dep: row.airport_departure, arr: row.airport_arrival, 
+                            reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
+                            out: String(row.time_blockout || '').substring(0,5), 
+                            off: String(row.time_takeoff || '').substring(0,5), 
+                            on: String(row.time_landing || '').substring(0,5), 
+                            in: String(row.time_blockin || '').substring(0,5),
+                            totalMins: parseTimeToMins(row.total_block),
+                            nightMins: parseTimeToMins(row.total_night),
+                            duty: row.duty,
+                            day_to: parseInt(row.day_takeoff) || 0,
+                            night_to: parseInt(row.night_takeoff) || 0,
+                            day_ldg: parseInt(row.day_landing) || 0,
+                            night_ldg: parseInt(row.night_landing) || 0,
+                            app: row.approach1_type, rwy: row.approach1_runway, 
+                            pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
+                            pilot1: row.pilot1 || ''
+                        };
+                    });
+                
                 document.getElementById('sync-toast').classList.remove('show');
-                
-                // 如果當前在 Dashboard 頁面，則立即更新
-                if(!document.getElementById('view-stats').classList.contains('hidden')) {
-                    renderStats();
-                }
+                if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
+                if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
             } catch (err) {
                 console.error("雲端讀取失敗:", err);
-                showToast("Cloud fetch failed. Offline mode.");
+                showToast("Cloud sync failed. Offline mode.");
             }
         }
 
         // ==========================================
-        // 📱 UI 切換邏輯 (TAB)
+        // 🗂️ 動態選單邏輯
+        // ==========================================
+        function populateAircraftDropdowns() {
+            const regSelect = document.getElementById('inp-reg');
+            regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
+            const activeAcfts = dbAircrafts.filter(a => a.is_active == 1 || a.is_active == "1");
+            activeAcfts.forEach(a => regSelect.innerHTML += `<option value="${a.aircraft_id}">${a.aircraft_id}</option>`);
+        }
+
+        function handleRegistrationChange() {
+            const selectedReg = document.getElementById('inp-reg').value;
+            const acftData = dbAircrafts.find(a => a.aircraft_id === selectedReg);
+            if(acftData) document.getElementById('inp-acft-select').value = acftData.type || '';
+            updateEntryDash();
+        }
+
+        function populatePilotDropdown(selectId) {
+            const select = document.getElementById(selectId);
+            const currentVal = select.value;
+            select.innerHTML = `<option value="" disabled selected>Select Pilot...</option>`;
+            dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
+            dbPilots.forEach(p => select.innerHTML += `<option value="${p.formattedName}">${p.formattedName}</option>`);
+            select.innerHTML += `<option value="${ADD_NEW_VAL}" style="color:var(--jx-gold-dark); font-weight:bold;">+ 新增組員 (Add New...)</option>`;
+            if (currentVal) select.value = currentVal;
+        }
+
+        function handlePilotSelect(type) {
+            const selectId = `inp-${type}-select`;
+            const wrapperId = `${type}-custom-wrapper`;
+            if (document.getElementById(selectId).value === ADD_NEW_VAL) {
+                document.getElementById(wrapperId).classList.remove('hidden');
+                document.getElementById(wrapperId).classList.add('flex');
+                document.getElementById(`inp-${type}-custom-name`).focus();
+            } else {
+                document.getElementById(wrapperId).classList.add('hidden');
+                document.getElementById(wrapperId).classList.remove('flex');
+            }
+        }
+
+        function saveNewPilotToCloud(type) {
+            const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
+            const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
+            const selectId = `inp-${type}-select`;
+            const wrapperId = `${type}-custom-wrapper`;
+
+            if (name) {
+                const finalName = nick ? `${name} (${nick})` : name;
+                dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
+                populatePilotDropdown(selectId); document.getElementById(selectId).value = finalName;
+                showToast("Adding pilot to database...", true);
+
+                if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                    const payload = { action: 'add_pilot', id: generateUUID(), name: name, nickname: nick };
+                    fetch(GAS_URL, {
+                        method: 'POST', mode: 'no-cors', body: new URLSearchParams(payload),
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    }).then(() => showToast("Pilot added to Cloud DB!"));
+                }
+            }
+            document.getElementById(wrapperId).classList.add('hidden');
+            document.getElementById(wrapperId).classList.remove('flex');
+        }
+
+        // ==========================================
+        // 📱 UI 導航與計算邏輯
         // ==========================================
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
-
-            document.getElementById('view-entry').classList.add('hidden');
-            document.getElementById('view-stats').classList.add('hidden');
-            document.getElementById('view-map').classList.add('hidden');
-
+            ['entry', 'recent', 'stats', 'map'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
 
+            if (tabId === 'recent') renderRecentFlights();
             if (tabId === 'stats') renderStats();
             if (tabId === 'map') initOrUpdateMap();
         }
 
-        // ==========================================
-        // 📝 Entry 畫面邏輯 
-        // ==========================================
         function handleFltInput() {
             const fltNum = document.getElementById('inp-flt').value.trim();
             if (fltNum && routeMemory[fltNum]) {
@@ -564,22 +630,23 @@
         }
 
         function calcDuration(t1, t2) {
-            if(!t1 || !t2) return 0;
+            if(!t1 || !t2 || t1.length < 5 || t2.length < 5) return 0;
             const [h1, m1] = t1.split(':').map(Number);
             const [h2, m2] = t2.split(':').map(Number);
             let min1 = h1 * 60 + m1; let min2 = h2 * 60 + m2;
             if (min2 < min1) min2 += 24 * 60; 
             return min2 - min1;
         }
-        function minsToStr(mins) {
-            const h = Math.floor(mins / 60); const m = mins % 60;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        }
 
         function calculateTimes() {
             const outT = document.getElementById('inp-out').value;
             const inT = document.getElementById('inp-in').value;
-            if (outT && inT) document.getElementById('dash-block-time').textContent = minsToStr(calcDuration(outT, inT));
+            // 確認皆為標準 HH:MM 五碼才計算
+            if (outT.length === 5 && inT.length === 5) {
+                document.getElementById('dash-block-time').textContent = minsToStr(calcDuration(outT, inT));
+            } else {
+                document.getElementById('dash-block-time').textContent = "00:00";
+            }
             evaluateOperations();
         }
 
@@ -592,21 +659,21 @@
             const resLdg = document.getElementById('ldg-result');
 
             if (chkTo) {
-                if (offT) {
+                if (offT && offT.length === 5) {
                     const h = parseInt(offT.split(':')[0]);
                     const isDay = !(h >= 10 && h < 22);
                     resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
                     resTo.classList.remove('hidden');
-                } else resTo.classList.remove('hidden'), resTo.innerHTML = '⚠️ Input "Take Off" time.';
+                } else { resTo.innerHTML = '⚠️ Input full "Take Off" time (e.g. 1402).'; resTo.classList.remove('hidden'); }
             } else resTo.classList.add('hidden');
 
             if (chkLdg) {
-                if (onT) {
+                if (onT && onT.length === 5) {
                     const h = parseInt(onT.split(':')[0]);
                     const isDay = !(h >= 10 && h < 22);
                     resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
                     resLdg.classList.remove('hidden');
-                } else resLdg.classList.remove('hidden'), resLdg.innerHTML = '⚠️ Input "Land On" time.';
+                } else { resLdg.innerHTML = '⚠️ Input full "Land On" time (e.g. 1620).'; resLdg.classList.remove('hidden'); }
             } else resLdg.classList.add('hidden');
         }
 
@@ -623,95 +690,227 @@
             
             const acft = document.getElementById('inp-acft-select').value;
             const reg = document.getElementById('inp-reg').value;
-            document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft})`;
+            document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
         }
 
-        // 【更新】雲端寫入版 Save
-        function saveLogbookEntry() {
-            saveRouteMemory();
-            const btn = document.querySelector('#view-entry button');
-            const originalText = btn.innerText;
-            btn.innerText = "Transmitting to Cloud...";
-            btn.classList.add('opacity-80');
-            showToast("Writing to Google Sheets...", true);
+        // ==========================================
+        // 🔄 CRUD 
+        // ==========================================
+        function editLog(index) {
+            const log = flightLogs.find(l => l.index === index);
+            if(!log) return;
             
-            const outT = document.getElementById('inp-out').value;
-            const inT = document.getElementById('inp-in').value;
+            document.getElementById('inp-index').value = log.index;
+            document.getElementById('inp-date').value = log.date; 
+            document.getElementById('inp-flt').value = log.flt;
+            document.getElementById('inp-dep').value = log.dep;
+            document.getElementById('inp-arr').value = log.arr;
+            document.getElementById('inp-reg').value = log.reg;
+            handleRegistrationChange(); 
             
-            const payloadData = {
-                date: document.getElementById('inp-date').value,
-                flt: "JX" + document.getElementById('inp-flt').value, // 寫入時加上前綴
-                dep: document.getElementById('inp-dep').value.toUpperCase(),
-                arr: document.getElementById('inp-arr').value.toUpperCase(),
-                acft: document.getElementById('inp-acft-select').value,
-                reg: document.getElementById('inp-reg').value,
-                out: outT,
-                off: document.getElementById('inp-off').value,
-                on: document.getElementById('inp-on').value,
-                in: inT,
-                totalMins: calcDuration(outT, inT),
-                nightMins: 0, 
-                duty: document.getElementById('inp-duty').value,
-                isToDay: document.getElementById('chk-to').checked,
-                isLdgDay: document.getElementById('chk-ldg').checked,
-                app: document.getElementById('inp-app').value,
-                rwy: document.getElementById('inp-rwy').value.toUpperCase(),
-                pax: parseInt(document.getElementById('inp-pax').value) || 0,
-                remarks: document.getElementById('inp-remarks').value
-            };
+            document.getElementById('inp-out').value = log.out || '';
+            document.getElementById('inp-off').value = log.off || '';
+            document.getElementById('inp-on').value = log.on || '';
+            document.getElementById('inp-in').value = log.in || '';
+            
+            document.getElementById('chk-to').checked = (log.day_to === 1 || log.night_to === 1);
+            document.getElementById('chk-ldg').checked = (log.day_ldg === 1 || log.night_ldg === 1);
+            
+            document.getElementById('inp-duty').value = log.duty || 'FO';
+            document.getElementById('inp-pax').value = log.pax || '';
+            document.getElementById('inp-app').value = log.app || '';
+            document.getElementById('inp-rwy').value = log.rwy || '';
+            document.getElementById('inp-remarks').value = log.remarks || '';
 
-            // 使用 URLSearchParams 以表單格式 POST (避開 GAS CORS 問題)
-            const urlParams = new URLSearchParams(payloadData);
-
-            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // 不要求讀取回傳結果，確保傳輸成功即可
-                    body: urlParams,
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                }).then(() => {
-                    finalizeSave(btn, originalText, payloadData);
-                }).catch(err => {
-                    console.error("雲端傳輸失敗", err);
-                    showToast("Sync failed. Check network.");
-                    btn.innerText = originalText;
-                    btn.classList.remove('opacity-80');
-                });
-            } else {
-                // 如果尚未綁定雲端，依然模擬儲存
-                setTimeout(() => finalizeSave(btn, originalText, payloadData), 800);
-            }
+            document.getElementById('action-create').classList.add('hidden');
+            document.getElementById('action-edit').classList.remove('hidden');
+            document.getElementById('edit-banner').classList.add('show');
+            
+            updateEntryDash(); calculateTimes();
+            document.querySelectorAll('.tab-btn')[0].click(); 
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function finalizeSave(btn, originalText, payloadData) {
-            // 也將新資料推入目前的暫存陣列，讓圖表能立刻看到
-            flightLogs.push(payloadData);
+        function cancelEdit() {
+            document.getElementById('inp-index').value = '';
+            document.getElementById('action-create').classList.remove('hidden');
+            document.getElementById('action-edit').classList.add('hidden');
+            document.getElementById('edit-banner').classList.remove('show');
             
-            showToast("Saved to Cloud successfully!");
-            btn.innerText = originalText;
-            btn.classList.remove('opacity-80');
-            
-            // 清空時間與狀態
             document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
             document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
+            document.getElementById('inp-remarks').value = '';
             document.getElementById('dash-block-time').textContent = '00:00';
             evaluateOperations();
         }
 
+        function deleteLogEntry() {
+            const index = document.getElementById('inp-index').value;
+            if(!index) return;
+            if(!confirm("確定要刪除這筆飛行紀錄嗎 (Are you sure)?")) return;
+
+            showToast("Deleting from Cloud...", true);
+            const payloadData = { action: 'delete', index: index }; 
+            
+            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                fetch(GAS_URL, {
+                    method: 'POST', mode: 'no-cors', body: new URLSearchParams(payloadData),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                }).then(() => {
+                    flightLogs = flightLogs.filter(l => l.index !== index);
+                    showToast("Deleted successfully!"); cancelEdit();
+                });
+            }
+        }
+
+        function saveLogbookEntry(actionType = 'create') {
+            saveRouteMemory();
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.innerText = "Transmitting to Cloud..."; btn.classList.add('opacity-80');
+            showToast("Writing to Google Sheets...", true);
+            
+            const outT = document.getElementById('inp-out').value;
+            const offT = document.getElementById('inp-off').value;
+            const onT = document.getElementById('inp-on').value;
+            const inT = document.getElementById('inp-in').value;
+            
+            const chkTo = document.getElementById('chk-to').checked;
+            const chkLdg = document.getElementById('chk-ldg').checked;
+            let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
+            if(chkTo && offT && offT.length === 5) {
+                const h = parseInt(offT.split(':')[0]);
+                if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1;
+            }
+            if(chkLdg && onT && onT.length === 5) {
+                const h = parseInt(onT.split(':')[0]);
+                if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1;
+            }
+
+            const payloadData = {
+                action: actionType,
+                index: document.getElementById('inp-index').value || generateUUID(),
+                date: document.getElementById('inp-date').value,
+                filght_number: "JX" + document.getElementById('inp-flt').value, 
+                airport_departure: document.getElementById('inp-dep').value.toUpperCase(),
+                airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
+                aircraft: document.getElementById('inp-reg').value,
+                time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
+                total_block: minsToStr(calcDuration(outT, inT)),
+                total_air: minsToStr(calcDuration(offT, onT)),
+                total_night: '00:00', 
+                duty: document.getElementById('inp-duty').value,
+                passenger: parseInt(document.getElementById('inp-pax').value) || 0,
+                day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
+                pilot1: document.getElementById('inp-pilot1-select').value,
+                pilot2: '', pilot3: '', pilot4: 'Self', 
+                custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
+                approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
+                approach1_type: document.getElementById('inp-app').value,
+                approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
+            };
+
+            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                fetch(GAS_URL, {
+                    method: 'POST', mode: 'no-cors', body: new URLSearchParams(payloadData),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                }).then(() => finalizeSave(btn, originalText, payloadData, actionType));
+            } else {
+                setTimeout(() => finalizeSave(btn, originalText, payloadData, actionType), 800);
+            }
+        }
+
+        function finalizeSave(btn, originalText, payloadData, actionType) {
+            const localLog = {
+                index: payloadData.index, date: payloadData.date,
+                flt: String(payloadData.filght_number).replace('JX',''),
+                dep: payloadData.airport_departure, arr: payloadData.airport_arrival,
+                reg: payloadData.aircraft,
+                out: payloadData.time_blockout, in: payloadData.time_blockin,
+                totalMins: parseTimeToMins(payloadData.total_block),
+                day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
+                day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
+                duty: payloadData.duty, pax: payloadData.passenger,
+                app: payloadData.approach1_type, rwy: payloadData.approach1_runway
+            };
+
+            const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
+            localLog.acft = acftData ? acftData.type : 'N/A';
+
+            if(actionType === 'update') {
+                const idx = flightLogs.findIndex(l => l.index === payloadData.index);
+                if(idx !== -1) flightLogs[idx] = localLog;
+                cancelEdit();
+            } else {
+                flightLogs.push(localLog);
+                document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
+                document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
+                document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
+                document.getElementById('dash-block-time').textContent = '00:00';
+            }
+            showToast(actionType === 'update' ? "Updated successfully!" : "Saved successfully!");
+            btn.innerText = originalText; btn.classList.remove('opacity-80');
+        }
+
         // ==========================================
-        // 📊 STATS (Dashboard) 邏輯
+        // 📋 RECENT FLIGHTS
+        // ==========================================
+        function renderRecentFlights() {
+            const container = document.getElementById('recent-list-container');
+            container.innerHTML = '';
+            if(flightLogs.length === 0) return container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
+
+            // 修正排序邏輯：結合 Date 與 Block Out 時間進行精確降序排列 (最新在前)
+            const sorted = [...flightLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            const groups = {};
+            sorted.forEach(log => {
+                if(!log.date) return;
+                const key = new Date(log.date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                if(!groups[key]) groups[key] = [];
+                groups[key].push(log);
+            });
+
+            for(const [monthYear, logs] of Object.entries(groups)) {
+                let groupHtml = `<div class="px-4 py-1.5 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)]"><span class="text-[11px] font-bold text-[var(--jx-gray)] uppercase">${monthYear}</span></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                logs.forEach(log => {
+                    const d = new Date(log.date);
+                    const blockTime = minsToStr(log.totalMins);
+                    groupHtml += `
+                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer" onclick="editLog('${log.index}')">
+                        <div class="flex items-center gap-4 w-full">
+                            <div class="flex flex-col items-center justify-center w-10">
+                                <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
+                                <span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span>
+                                    <span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)]">${blockTime}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium">
+                                    <span>${log.dep} ✈ ${log.arr}</span>
+                                    <span>${log.reg || log.acft}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                groupHtml += `</div>`;
+                container.innerHTML += groupHtml;
+            }
+        }
+        
+        // ==========================================
+        // 📊 STATS
         // ==========================================
         function initTimeFilterDropdown() {
             const select = document.getElementById('stats-time-filter');
             const now = new Date();
             const thisMonthName = now.toLocaleString('en-US', { month: 'short' });
-            
             let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthName = lastMonthDate.toLocaleString('en-US', { month: 'short' });
-            
-            const thisYear = now.getFullYear();
-            const lastYear = thisYear - 1;
+            const thisYear = now.getFullYear(); const lastYear = thisYear - 1;
 
             select.innerHTML += `
                 <option value="thisM">This month (${thisMonthName})</option>
@@ -725,11 +924,9 @@
             const filterVal = document.getElementById('stats-time-filter').value;
             const now = new Date();
             return logs.filter(log => {
+                if(!log.date) return false; 
                 const logDate = new Date(log.date);
-                if(isNaN(logDate)) return false; // 避開無效資料
-                
                 const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
-                
                 switch(filterVal) {
                     case '7d': return diffDays <= 7;
                     case '30d': return diffDays <= 30;
@@ -741,23 +938,143 @@
                         return logDate.getMonth() === lm && logDate.getFullYear() === ly;
                     case 'thisY': return logDate.getFullYear() === now.getFullYear();
                     case 'lastY': return logDate.getFullYear() === now.getFullYear() - 1;
-                    default: return true; // career
+                    default: return true; 
                 }
             });
         }
 
         function renderStats() {
             const filteredLogs = filterLogsByTime(flightLogs);
-
             const cardsContainer = document.getElementById('stats-cards-container');
             cardsContainer.innerHTML = '';
             
-            // 取最近 3 筆符合資料做預覽
-            const recentLogs = [...filteredLogs].reverse().slice(0, 3);
+            // 修正排序邏輯：結合 Date 與 Block Out 時間進行精確降序排列
+            const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            const recentLogs = sortedLogs.slice(0, 3);
             
             const createCardHTML = (title, items, type) => {
                 let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
                 if(items.length === 0) html += `<p class="text-xs text-[var(--jx-gray)]">No recent data.</p>`;
                 
                 items.forEach(log => {
+                    let d = new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
+                    let fltFormat = String(log.flt).includes('JX') ? log.flt : `JX${log.flt}`;
+                    let detail = type === 'app' ? `${log.app || ''} ${log.rwy || ''}` : `${log.dep || ''} / ${log.arr || ''}`;
+                    html += `<p class="text-xs text-[var(--jx-gray)] mb-1">${d} - ${fltFormat} ${detail}</p>`;
+                });
+                html += `</div>`;
+                return html;
+            };
+
+            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => l.day_to === 1 || l.night_to === 1), 'to');
+            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => l.day_ldg === 1 || l.night_ldg === 1), 'ldg');
+            cardsContainer.innerHTML += createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
+
+            let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
+            let aptSet = new Set(); let typeMins = {}, dutyMins = {};
+
+            filteredLogs.forEach(l => {
+                tTot++;
+                if(l.day_to === 1 || l.night_to === 1) tTo++;
+                if(l.day_ldg === 1 || l.night_ldg === 1) tLdg++;
+                tMins += l.totalMins || 0;
+                tNight += l.nightMins || 0;
+                tPax += l.pax || 0;
+                if(l.dep) aptSet.add(l.dep); if(l.arr) aptSet.add(l.arr);
+
+                let acftType = l.acft || 'Unknown'; let dutyType = l.duty || 'Unknown';
+                typeMins[acftType] = (typeMins[acftType] || 0) + (l.totalMins || 0);
+                dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
+            });
+
+            document.getElementById('stat-tot-flt').textContent = tTot;
+            document.getElementById('stat-tot-to').textContent = tTo;
+            document.getElementById('stat-tot-ldg').textContent = tLdg;
+            document.getElementById('stat-tot-time').textContent = minsToStr(tMins);
+            document.getElementById('stat-tot-night').textContent = minsToStr(tNight); 
+            document.getElementById('stat-tot-pax').textContent = tPax;
+            document.getElementById('stat-tot-apt').textContent = aptSet.size;
+
+            const renderList = (dataObj, containerId) => {
+                const el = document.getElementById(containerId);
+                el.innerHTML = '';
+                Object.keys(dataObj).forEach(key => {
+                    el.innerHTML += `
+                        <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                            <span class="text-sm font-medium text-[var(--jx-gray)]">${key}</span>
+                            <span class="text-sm font-bold text-[var(--jx-dark)]">${minsToStr(dataObj[key])}</span>
+                        </div>
+                    `;
+                });
+            };
+            renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
+            renderChart(sortedLogs);
+        }
+
+        function renderChart(logs) {
+            const ctx = document.getElementById('flightChart').getContext('2d');
+            const monthMap = {};
+            logs.forEach(l => {
+                if(!l.date) return;
+                const d = new Date(l.date);
+                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                monthMap[key] = (monthMap[key] || 0) + (l.totalMins / 60);
+            });
+            const sortedKeys = Object.keys(monthMap).sort();
+            const displayKeys = sortedKeys.slice(-6);
+            let labels = displayKeys.map(k => {
+                const [y, m] = k.split('-');
+                return new Date(y, m-1).toLocaleString('en-US', { month: 'short' });
+            });
+            let data = displayKeys.map(k => Math.round(monthMap[k] * 10) / 10);
+
+            if(labels.length === 0) { labels = ['No Data']; data = [0]; }
+            if(flightChartInst) flightChartInst.destroy();
+
+            let gradient = ctx.createLinearGradient(0, 0, 0, 150);
+            gradient.addColorStop(0, 'rgba(194, 163, 112, 0.4)'); 
+            gradient.addColorStop(1, 'rgba(194, 163, 112, 0)');
+
+            flightChartInst = new Chart(ctx, {
+                type: 'line', data: {
+                    labels: labels, datasets: [{
+                        label: 'Flight Hours', data: data,
+                        borderColor: '#C2A370', backgroundColor: gradient,
+                        borderWidth: 2, fill: true, tension: 0.4,
+                        pointRadius: 3, pointBackgroundColor: '#FFFFFF'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: {size: 10} } }, y: { display: false, min: 0 } }
+                }
+            });
+        }
+
+        // ==========================================
+        // 🌍 MAP
+        // ==========================================
+        function initOrUpdateMap() {
+            if(!leafletMap) {
+                leafletMap = L.map('map-container').setView([25.0797, 121.2342], 4);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(leafletMap);
+            }
+            leafletMap.eachLayer((layer) => { if (layer instanceof L.Marker) layer.remove(); });
+            let aptSet = new Set();
+            flightLogs.forEach(l => { if(l.dep) aptSet.add(l.dep); if(l.arr) aptSet.add(l.arr); });
+
+            aptSet.forEach(icao => {
+                if(airportCoordsFallback[icao]) {
+                    const coords = airportCoordsFallback[icao];
+                    const circleIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background-color:#9A7B4F; width:10px; height:10px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [14, 14], iconAnchor: [7, 7]
+                    });
+                    L.marker([coords.lat, coords.lon], {icon: circleIcon}).bindPopup(`<b>${icao}</b>`).addTo(leafletMap);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
        
