@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot Logbook - Starlux Numpad Edition</title>
+    <title>Pilot Logbook - Starlux Robust Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -54,6 +54,19 @@
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
+    </div>
+
+    <!-- 🆕 Data Audit Modal (資料稽核雷達彈窗) -->
+    <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
+                <h2 class="font-bold text-[var(--jx-gold)] tracking-wide">Data Audit 系統稽核雷達</h2>
+                <button onclick="document.getElementById('audit-modal').classList.add('hidden')" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
+            </div>
+            <div id="audit-content" class="p-4 overflow-y-auto bg-[var(--jx-bg)] text-sm space-y-3">
+                <!-- Audit results will be injected here -->
+            </div>
+        </div>
     </div>
 
     <!-- ==================== VIEW 1: LOG ENTRY ==================== -->
@@ -121,7 +134,7 @@
                 </div>
             </div>
 
-            <!-- OOOI Time (改為九宮格數字鍵盤輸入) -->
+            <!-- OOOI Time -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Time (UTC)</span>
                 <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">format: 1402</span>
@@ -171,7 +184,7 @@
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Pilot 1</span>
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
                     <select id="inp-pilot1-select" class="ios-input" onchange="handlePilotSelect('pilot1')"></select>
                 </div>
                 <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
@@ -187,7 +200,44 @@
                         <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
-                <div class="ios-list-item bg-[#FDFBF7]">
+
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
+                    <select id="inp-pilot2-select" class="ios-input" onchange="handlePilotSelect('pilot2')"></select>
+                </div>
+                <div id="pilot2-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                        <input type="text" id="inp-pilot2-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                    </div>
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                        <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                    </div>
+                    <div class="w-full flex justify-end">
+                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                    </div>
+                </div>
+
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
+                    <select id="inp-pilot3-select" class="ios-input" onchange="handlePilotSelect('pilot3')"></select>
+                </div>
+                <div id="pilot3-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                        <input type="text" id="inp-pilot3-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                    </div>
+                    <div class="flex justify-between w-full items-center">
+                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                        <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                    </div>
+                    <div class="w-full flex justify-end">
+                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                    </div>
+                </div>
+
+                <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
                     <div class="flex flex-col">
                         <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
                         <span class="text-[12px] text-[var(--jx-gray)] font-medium">Duty</span>
@@ -317,11 +367,20 @@
                     <span id="stat-tot-apt" class="font-bold text-xl">0</span>
                 </div>
             </div>
+            
             <div class="mt-8 px-4 mb-8">
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Hours by Aircraft Type</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-acft"></div>
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
+            </div>
+
+            <!-- 🆕 Data Audit Button (資料稽核雷達按鈕) -->
+            <div class="mt-8 px-4 pb-12 flex justify-center">
+                <button onclick="runDataAudit()" class="text-sm font-semibold text-[var(--jx-gold-dark)] flex items-center gap-1.5 border border-[var(--jx-gold-dark)] px-5 py-2.5 rounded-full hover:bg-[#FDFBF7] active:scale-95 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    執行資料稽核 (Run Data Audit)
+                </button>
             </div>
         </main>
     </div>
@@ -352,7 +411,7 @@
             <span class="text-[10px] font-semibold">Stats</span>
         </button>
         <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('map')">
-            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="text-[10px] font-semibold">Map</span>
         </button>
     </nav>
@@ -392,40 +451,54 @@
             });
         }
 
-        // ==========================================
-        // 🕒 時間格式化輸入 (Numpad) 
-        // ==========================================
         function handleTimeInput(e) {
-            // 擷取輸入的純數字
             let raw = e.target.value.replace(/\D/g, '');
-            // 限制最大長度為4
             if (raw.length > 4) raw = raw.substring(0, 4);
 
-            // 當超過 2 碼時自動插入冒號
             let formatted = raw;
             if (raw.length >= 3) {
                 formatted = raw.substring(0, 2) + ':' + raw.substring(2);
             }
-
             e.target.value = formatted;
             calculateTimes();
         }
 
         // ==========================================
-        // 【防呆過濾器】
+        // 【進階防呆過濾器 1】確保各種時數格式都能正確轉為分鐘數
         // ==========================================
         function parseTimeToMins(val) {
             if (!val) return 0;
             let str = String(val).trim();
-            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和')) return 0;
             
+            // 排除被 Excel 或其他軟體硬塞入的無效字眼
+            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和') || str.includes('確認')) return 0;
+            
+            // 如果傳來的是 ISO 時間字串 (Google Sheets 的 getValues 傑作)，例如 "1899-12-30T03:05:00.000Z"
+            if (str.includes('T') && str.includes('Z')) {
+                const dt = new Date(str);
+                if (!isNaN(dt)) {
+                    return dt.getUTCHours() * 60 + dt.getUTCMinutes();
+                }
+            }
+
+            // 一般正常的 HH:mm 或 HH:mm:ss
             if (str.includes(':')) {
                 const p = str.split(':');
                 return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
             }
+            
+            // 萬一收到的是小數點格式，表示 GAS 傳來了 Excel 的「日期小數」(1 代表 24 小時)
+            let num = parseFloat(str);
+            if (!isNaN(num) && str.includes('.')) {
+                return Math.round(num * 24 * 60);
+            }
+            
             return parseInt(str) || 0;
         }
 
+        // ==========================================
+        // 【進階防呆過濾器 2】確保日期不為亂碼
+        // ==========================================
         function safeDateString(val) {
             if (!val) return '';
             const d = new Date(val);
@@ -437,25 +510,42 @@
         }
 
         function minsToStr(mins) {
-            if(isNaN(mins) || mins === 0) return "00:00";
+            if(isNaN(mins) || mins <= 0) return "00:00";
             const h = Math.floor(mins / 60); const m = mins % 60;
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
 
-        // 【防呆過濾器 3】取得精確的排序時間戳 (Date + Block Out Time)
         function getSortTimestamp(log) {
             if (!log.date) return 0;
             let timeStr = '00:00';
             if (log.out) {
-                // 只取純數字，確保 "1402" 或 "14:02" 都能被正確剖析
                 let cleanTime = String(log.out).replace(/\D/g, ''); 
                 if (cleanTime.length >= 4) {
                     timeStr = cleanTime.substring(0, 2) + ':' + cleanTime.substring(2, 4);
                 }
             }
-            // 組合標準的 ISO 時間字串進行解析
             const dt = new Date(`${log.date}T${timeStr}:00`);
             return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
+        }
+
+        function matchPilotName(rawName) {
+            if (!rawName) return '';
+            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
+            if (exact) return exact.formattedName;
+            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
+            if (partial) return partial.formattedName;
+            return String(rawName).trim();
+        }
+
+        function setPilotDropdown(selectId, rawName) {
+            const select = document.getElementById(selectId);
+            if (!rawName) { select.value = ''; return; }
+            let matchedName = matchPilotName(rawName);
+            let exists = Array.from(select.options).some(opt => opt.value === matchedName);
+            if (!exists && matchedName !== '') {
+                select.insertAdjacentHTML('beforeend', `<option value="${matchedName}">${matchedName}</option>`);
+            }
+            select.value = matchedName;
         }
 
         window.onload = () => {
@@ -491,20 +581,21 @@
                     const nickStr = p.nickname ? ` (${p.nickname})` : '';
                     return { ...p, formattedName: `${p.name}${nickStr}` };
                 });
+                
                 populatePilotDropdown('inp-pilot1-select');
+                populatePilotDropdown('inp-pilot2-select');
+                populatePilotDropdown('inp-pilot3-select');
 
                 flightLogs = (data.flights || [])
-                    .filter(row => {
-                        const dep = String(row.airport_departure || '').trim();
-                        return dep.length >= 3 && !dep.includes('總和') && !dep.includes('確認');
-                    })
+                    .filter(row => row.date) // 只需要有日期即可，已移除之前的排除合併欄位邏輯
                     .map(row => {
                         const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
                         return {
                             index: row.index, 
                             date: safeDateString(row.date), 
                             flt: String(row.filght_number).replace('JX',''), 
-                            dep: row.airport_departure, arr: row.airport_arrival, 
+                            dep: String(row.airport_departure).trim(), 
+                            arr: String(row.airport_arrival).trim(), 
                             reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
                             out: String(row.time_blockout || '').substring(0,5), 
                             off: String(row.time_takeoff || '').substring(0,5), 
@@ -513,13 +604,15 @@
                             totalMins: parseTimeToMins(row.total_block),
                             nightMins: parseTimeToMins(row.total_night),
                             duty: row.duty,
-                            day_to: parseInt(row.day_takeoff) || 0,
-                            night_to: parseInt(row.night_takeoff) || 0,
-                            day_ldg: parseInt(row.day_landing) || 0,
-                            night_ldg: parseInt(row.night_landing) || 0,
+                            day_to: Number(row.day_takeoff) || 0,
+                            night_to: Number(row.night_takeoff) || 0,
+                            day_ldg: Number(row.day_landing) || 0,
+                            night_ldg: Number(row.night_landing) || 0,
                             app: row.approach1_type, rwy: row.approach1_runway, 
                             pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
-                            pilot1: row.pilot1 || ''
+                            pilot1: row.pilot1 || '',
+                            pilot2: row.pilot2 || '',
+                            pilot3: row.pilot3 || ''
                         };
                     });
                 
@@ -530,6 +623,52 @@
                 console.error("雲端讀取失敗:", err);
                 showToast("Cloud sync failed. Offline mode.");
             }
+        }
+
+        // ==========================================
+        // 🚨 資料稽核系統 (Data Audit Radar)
+        // ==========================================
+        function runDataAudit() {
+            const content = document.getElementById('audit-content');
+            content.innerHTML = '';
+            let errorCount = 0;
+
+            flightLogs.forEach((l, idx) => {
+                let issues = [];
+                // 檢查是否為真正的航班 (去除空資料或不明列)
+                if (!l.date || l.date === '') issues.push("日期無法解析 (Invalid Date)");
+                if (!l.dep || !l.arr || l.dep.length > 4) issues.push(`機場代碼異常 (${l.dep}/${l.arr})`);
+                if (l.totalMins <= 0) issues.push("Block Time 未計算 (格式錯誤或為 0)");
+                if (l.totalMins > 1200) issues.push(`Block Time 異常 (>20小時: ${minsToStr(l.totalMins)})`);
+                
+                if (issues.length > 0) {
+                    errorCount++;
+                    let fltStr = l.flt ? `JX${l.flt}` : "不明航班";
+                    content.innerHTML += `
+                        <div class="border border-red-200 bg-red-50 rounded-lg p-3">
+                            <div class="font-bold text-red-700 mb-1 border-b border-red-200 pb-1">
+                                第 ${idx + 2} 列 | ${fltStr} | ${l.date || '無日期'}
+                            </div>
+                            <ul class="list-disc pl-5 text-red-600 text-xs mt-2 space-y-1">
+                                ${issues.map(iss => `<li>${iss}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            });
+
+            if (errorCount === 0) {
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-8">
+                        <svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p>
+                        <p class="text-sm text-[var(--jx-gray)] mt-1">所有資料檢查皆為正常，無格式異常。</p>
+                    </div>`;
+            } else {
+                content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">偵測到 ${errorCount} 筆可疑資料，請回試算表修改：</p>`);
+            }
+            
+            document.getElementById('audit-modal').classList.remove('hidden');
         }
 
         // ==========================================
@@ -552,11 +691,11 @@
         function populatePilotDropdown(selectId) {
             const select = document.getElementById(selectId);
             const currentVal = select.value;
-            select.innerHTML = `<option value="" disabled selected>Select Pilot...</option>`;
+            select.innerHTML = `<option value="">-- Select Pilot --</option>`;
             dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
             dbPilots.forEach(p => select.innerHTML += `<option value="${p.formattedName}">${p.formattedName}</option>`);
             select.innerHTML += `<option value="${ADD_NEW_VAL}" style="color:var(--jx-gold-dark); font-weight:bold;">+ 新增組員 (Add New...)</option>`;
-            if (currentVal) select.value = currentVal;
+            select.value = currentVal || "";
         }
 
         function handlePilotSelect(type) {
@@ -581,7 +720,12 @@
             if (name) {
                 const finalName = nick ? `${name} (${nick})` : name;
                 dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
-                populatePilotDropdown(selectId); document.getElementById(selectId).value = finalName;
+                
+                populatePilotDropdown('inp-pilot1-select');
+                populatePilotDropdown('inp-pilot2-select');
+                populatePilotDropdown('inp-pilot3-select');
+                
+                document.getElementById(selectId).value = finalName;
                 showToast("Adding pilot to database...", true);
 
                 if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
@@ -641,7 +785,6 @@
         function calculateTimes() {
             const outT = document.getElementById('inp-out').value;
             const inT = document.getElementById('inp-in').value;
-            // 確認皆為標準 HH:MM 五碼才計算
             if (outT.length === 5 && inT.length === 5) {
                 document.getElementById('dash-block-time').textContent = minsToStr(calcDuration(outT, inT));
             } else {
@@ -713,14 +856,22 @@
             document.getElementById('inp-on').value = log.on || '';
             document.getElementById('inp-in').value = log.in || '';
             
-            document.getElementById('chk-to').checked = (log.day_to === 1 || log.night_to === 1);
-            document.getElementById('chk-ldg').checked = (log.day_ldg === 1 || log.night_ldg === 1);
+            document.getElementById('chk-to').checked = (Number(log.day_to) >= 1 || Number(log.night_to) >= 1);
+            document.getElementById('chk-ldg').checked = (Number(log.day_ldg) >= 1 || Number(log.night_ldg) >= 1);
             
             document.getElementById('inp-duty').value = log.duty || 'FO';
             document.getElementById('inp-pax').value = log.pax || '';
             document.getElementById('inp-app').value = log.app || '';
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
+
+            setPilotDropdown('inp-pilot1-select', log.pilot1);
+            setPilotDropdown('inp-pilot2-select', log.pilot2);
+            setPilotDropdown('inp-pilot3-select', log.pilot3);
+            
+            handlePilotSelect('pilot1');
+            handlePilotSelect('pilot2');
+            handlePilotSelect('pilot3');
 
             document.getElementById('action-create').classList.add('hidden');
             document.getElementById('action-edit').classList.remove('hidden');
@@ -741,6 +892,14 @@
             document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
+            
+            document.getElementById('inp-pilot1-select').value = '';
+            document.getElementById('inp-pilot2-select').value = '';
+            document.getElementById('inp-pilot3-select').value = '';
+            handlePilotSelect('pilot1');
+            handlePilotSelect('pilot2');
+            handlePilotSelect('pilot3');
+
             document.getElementById('dash-block-time').textContent = '00:00';
             evaluateOperations();
         }
@@ -803,8 +962,10 @@
                 duty: document.getElementById('inp-duty').value,
                 passenger: parseInt(document.getElementById('inp-pax').value) || 0,
                 day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
-                pilot1: document.getElementById('inp-pilot1-select').value,
-                pilot2: '', pilot3: '', pilot4: 'Self', 
+                pilot1: document.getElementById('inp-pilot1-select').value || '',
+                pilot2: document.getElementById('inp-pilot2-select').value || '', 
+                pilot3: document.getElementById('inp-pilot3-select').value || '', 
+                pilot4: 'Self', 
                 custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
                 approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
                 approach1_type: document.getElementById('inp-app').value,
@@ -832,7 +993,8 @@
                 day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
                 day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
                 duty: payloadData.duty, pax: payloadData.passenger,
-                app: payloadData.approach1_type, rwy: payloadData.approach1_runway
+                app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
+                pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3
             };
 
             const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
@@ -859,13 +1021,14 @@
         function renderRecentFlights() {
             const container = document.getElementById('recent-list-container');
             container.innerHTML = '';
-            if(flightLogs.length === 0) return container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
+            
+            // 使用嚴謹的過濾器確保不顯示無效的資料列
+            const validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
+            if(validLogs.length === 0) return container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
 
-            // 修正排序邏輯：結合 Date 與 Block Out 時間進行精確降序排列 (最新在前)
-            const sorted = [...flightLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            const sorted = [...validLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
             const groups = {};
             sorted.forEach(log => {
-                if(!log.date) return;
                 const key = new Date(log.date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
                 if(!groups[key]) groups[key] = [];
                 groups[key].push(log);
@@ -902,7 +1065,7 @@
         }
         
         // ==========================================
-        // 📊 STATS
+        // 📊 STATS (修正起降加總與日期過濾)
         // ==========================================
         function initTimeFilterDropdown() {
             const select = document.getElementById('stats-time-filter');
@@ -924,7 +1087,7 @@
             const filterVal = document.getElementById('stats-time-filter').value;
             const now = new Date();
             return logs.filter(log => {
-                if(!log.date) return false; 
+                if(!log.date || !log.dep) return false; // 排除無效列
                 const logDate = new Date(log.date);
                 const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
                 switch(filterVal) {
@@ -948,7 +1111,6 @@
             const cardsContainer = document.getElementById('stats-cards-container');
             cardsContainer.innerHTML = '';
             
-            // 修正排序邏輯：結合 Date 與 Block Out 時間進行精確降序排列
             const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
             const recentLogs = sortedLogs.slice(0, 3);
             
@@ -966,8 +1128,8 @@
                 return html;
             };
 
-            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => l.day_to === 1 || l.night_to === 1), 'to');
-            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => l.day_ldg === 1 || l.night_ldg === 1), 'ldg');
+            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => l.day_to >= 1 || l.night_to >= 1), 'to');
+            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => l.day_ldg >= 1 || l.night_ldg >= 1), 'ldg');
             cardsContainer.innerHTML += createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
 
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
@@ -975,8 +1137,10 @@
 
             filteredLogs.forEach(l => {
                 tTot++;
-                if(l.day_to === 1 || l.night_to === 1) tTo++;
-                if(l.day_ldg === 1 || l.night_ldg === 1) tLdg++;
+                // 【修復】真實累加起降次數 (而不是只看有沒有起降)
+                tTo += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
+                tLdg += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
+                
                 tMins += l.totalMins || 0;
                 tNight += l.nightMins || 0;
                 tPax += l.pax || 0;
@@ -1077,4 +1241,3 @@
     </script>
 </body>
 </html>
-       
