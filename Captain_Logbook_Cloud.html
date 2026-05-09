@@ -85,9 +85,9 @@
                     </div>
                     <p id="dash-acft" class="text-xs text-[var(--jx-gray)] mt-1 tracking-widest font-medium">---</p>
                 </div>
-                <div class="text-right">
-                    <!-- Dashboard Block Time Preview -->
-                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)]" id="dash-block-time-top">00:00</p>
+                <div class="text-right flex flex-col items-end justify-center">
+                    <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-0.5 tracking-wider">Block Time</div>
+                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)] leading-none" id="dash-block-time-top">00:00</p>
                 </div>
             </div>
         </header>
@@ -134,48 +134,48 @@
                 </div>
             </div>
 
-            <!-- OOOI Time (全新 3 欄快輸介面) -->
+            <!-- OOOI Time (由上而下排版 + 純數字快輸) -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Time (UTC)</span>
                 <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance enabled</span>
             </div>
-            <div class="ios-list shadow-sm bg-white p-4">
-                <div class="grid grid-cols-3 gap-3 text-center">
-                    <!-- Col 1: Out & Off -->
-                    <div class="flex flex-col gap-4">
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Out</div>
-                            <input type="tel" id="inp-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
-                        </div>
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Take Off</div>
-                            <input type="tel" id="inp-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
-                        </div>
+            <div class="ios-list shadow-sm">
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block Out</span>
+                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Take Off</span>
+                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Land On</span>
+                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                </div>
+                <div class="ios-list-item">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block In</span>
+                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                </div>
+                
+                <!-- Calculated Totals Box -->
+                <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
+                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
+                        <div id="dash-block-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
                     </div>
-                    <!-- Col 2: On & In -->
-                    <div class="flex flex-col gap-4">
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Land On</div>
-                            <input type="tel" id="inp-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
-                        </div>
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block In</div>
-                            <input type="tel" id="inp-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
-                        </div>
+                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
+                        <div id="dash-air-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
                     </div>
-                    <!-- Col 3: Calculated Totals -->
-                    <div class="flex flex-col gap-5 justify-center border-l border-[var(--jx-divider)] pl-2">
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Time</div>
-                            <div id="dash-block-time" class="font-mono text-2xl font-bold text-[var(--jx-dark)]">00:00</div>
-                        </div>
-                        <div>
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Air Time</div>
-                            <div id="dash-air-time" class="font-mono text-2xl font-bold text-[var(--jx-dark)]">00:00</div>
-                        </div>
+                    <div class="text-center w-1/3">
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
+                        <div id="dash-night-time" class="font-mono text-lg font-bold text-[#5856D6]">00:00</div>
                     </div>
                 </div>
             </div>
+            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">
+                * Night Time 採自動概算：交集 UTC 10:00 ~ 22:00
+            </p>
 
             <!-- Operations -->
             <div class="section-title mt-2 flex justify-between items-end">
@@ -492,27 +492,64 @@
             e.target.value = formatted;
             calculateTimes();
 
-            // 如果打滿了4碼轉換成5碼(帶冒號)，自動跳下一個輸入框
             if (formatted.length === 5 && nextFieldId) {
                 document.getElementById(nextFieldId).focus();
             }
         }
 
+        // ==========================================
+        // 【核心過濾器與時間解析器】
+        // ==========================================
+        
+        // 將系統或舊格式轉為一致的 5 碼字串 (例如 "08:05")，供前端欄位直接使用
+        function normalizeTimeDisplay(val) {
+            if (!val) return '';
+            let s = String(val).trim();
+            if (s.includes('1899') || s.includes('1900') || s.toLowerCase().includes('總和')) return '';
+            
+            if (s.includes('T') && s.includes('Z')) {
+                const dt = new Date(s);
+                if (!isNaN(dt)) return `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+            }
+            if (s.includes(':')) {
+                const p = s.split(':');
+                return `${String(parseInt(p[0])||0).padStart(2,'0')}:${String(parseInt(p[1])||0).padStart(2,'0')}`;
+            }
+            // 純數字防呆
+            if (s.length === 4 && !isNaN(parseInt(s))) return `${s.substring(0,2)}:${s.substring(2,4)}`;
+            if (s.length === 3 && !isNaN(parseInt(s))) return `0${s.substring(0,1)}:${s.substring(1,3)}`;
+            
+            return s;
+        }
+
+        // 將任何格式轉為純分鐘數 (供加總)
         function parseTimeToMins(val) {
-            if (!val) return 0;
-            let str = String(val).trim();
-            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和')) return 0;
-            if (str.includes('T') && str.includes('Z')) {
-                const dt = new Date(str);
-                if (!isNaN(dt)) return dt.getUTCHours() * 60 + dt.getUTCMinutes();
+            let s = normalizeTimeDisplay(val);
+            if (!s) return 0;
+            const p = s.split(':');
+            return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
+        }
+
+        function calcNightTime(t1, t2) {
+            const outM = parseTimeToMins(t1);
+            const inM = parseTimeToMins(t2);
+            if(outM === 0 && inM === 0) return 0;
+
+            let min1 = outM; 
+            let min2 = inM;
+            if (min2 < min1) min2 += 24 * 60; // 跨日處理
+
+            let nightMins = 0;
+            const nightStart = 10 * 60; // 10:00 UTC
+            const nightEnd = 22 * 60;   // 22:00 UTC
+            
+            for (let m = min1; m < min2; m++) {
+                let currentMofD = m % (24 * 60);
+                if (currentMofD >= nightStart && currentMofD < nightEnd) {
+                    nightMins++;
+                }
             }
-            if (str.includes(':')) {
-                const p = str.split(':');
-                return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
-            }
-            let num = parseFloat(str);
-            if (!isNaN(num) && str.includes('.')) return Math.round(num * 24 * 60);
-            return parseInt(str) || 0;
+            return nightMins;
         }
 
         function safeDateString(val) {
@@ -542,6 +579,26 @@
             }
             const dt = new Date(`${log.date}T${timeStr}:00`);
             return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
+        }
+
+        function matchPilotName(rawName) {
+            if (!rawName) return '';
+            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
+            if (exact) return exact.formattedName;
+            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
+            if (partial) return partial.formattedName;
+            return String(rawName).trim();
+        }
+
+        function setPilotDropdown(selectId, rawName) {
+            const select = document.getElementById(selectId);
+            if (!rawName) { select.value = ''; return; }
+            let matchedName = matchPilotName(rawName);
+            let exists = Array.from(select.options).some(opt => opt.value === matchedName);
+            if (!exists && matchedName !== '') {
+                select.insertAdjacentHTML('beforeend', `<option value="${matchedName}">${matchedName}</option>`);
+            }
+            select.value = matchedName;
         }
 
         function showToast(message, isLoading = false) {
@@ -634,12 +691,12 @@
                             flt: String(row.filght_number).replace('JX',''), 
                             dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
                             reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
-                            out: String(row.time_blockout || '').substring(0,5), 
-                            off: String(row.time_takeoff || '').substring(0,5), 
-                            on: String(row.time_landing || '').substring(0,5), 
-                            in: String(row.time_blockin || '').substring(0,5),
+                            out: normalizeTimeDisplay(row.time_blockout), 
+                            off: normalizeTimeDisplay(row.time_takeoff), 
+                            on: normalizeTimeDisplay(row.time_landing), 
+                            in: normalizeTimeDisplay(row.time_blockin),
                             totalMins: parseTimeToMins(row.total_block), nightMins: parseTimeToMins(row.total_night),
-                            airMins: parseTimeToMins(row.total_air), // 確保抓取 air time
+                            airMins: parseTimeToMins(row.total_air),
                             duty: row.duty,
                             day_to: Number(row.day_takeoff) || 0, night_to: Number(row.night_takeoff) || 0,
                             day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
@@ -691,7 +748,6 @@
             if(!val) return;
             const wrapperId = `${type}-custom-wrapper`;
             
-            // 檢查是否在名單內
             const exists = dbPilots.some(p => p.formattedName === val);
             
             if(!exists) {
@@ -759,12 +815,14 @@
         }
 
         function calcDuration(t1, t2) {
-            if(!t1 || !t2 || t1.length < 5 || t2.length < 5) return 0;
-            const [h1, m1] = t1.split(':').map(Number);
-            const [h2, m2] = t2.split(':').map(Number);
-            let min1 = h1 * 60 + m1; let min2 = h2 * 60 + m2;
-            if (min2 < min1) min2 += 24 * 60; 
-            return min2 - min1;
+            // 放寬檢查：只要能正確轉出分鐘數就予以計算
+            const m1 = parseTimeToMins(t1);
+            const m2 = parseTimeToMins(t2);
+            if(m1 === 0 && m2 === 0) return 0;
+            
+            let min2 = m2;
+            if (min2 < m1) min2 += 24 * 60; 
+            return min2 - m1;
         }
 
         function calculateTimes() {
@@ -773,18 +831,25 @@
             const onT = document.getElementById('inp-on').value;
             const inT = document.getElementById('inp-in').value;
 
-            // Block Time
-            if (outT.length === 5 && inT.length === 5) {
+            // 【修復核心】只要字串裡有冒號，代表使用者或雲端傳來了正確格式，就准許計算
+            const isValidTime = (t) => t && t.includes(':');
+
+            // Block Time & Night Time
+            if (isValidTime(outT) && isValidTime(inT)) {
                 const bTime = minsToStr(calcDuration(outT, inT));
                 document.getElementById('dash-block-time').textContent = bTime;
                 document.getElementById('dash-block-time-top').textContent = bTime;
+                
+                const nTimeMins = calcNightTime(outT, inT);
+                document.getElementById('dash-night-time').textContent = minsToStr(nTimeMins);
             } else {
                 document.getElementById('dash-block-time').textContent = "00:00";
                 document.getElementById('dash-block-time-top').textContent = "00:00";
+                document.getElementById('dash-night-time').textContent = "00:00";
             }
 
             // Air Time
-            if (offT.length === 5 && onT.length === 5) {
+            if (isValidTime(offT) && isValidTime(onT)) {
                 document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
             } else {
                 document.getElementById('dash-air-time').textContent = "00:00";
@@ -802,7 +867,7 @@
             const resLdg = document.getElementById('ldg-result');
 
             if (chkTo) {
-                if (offT && offT.length === 5) {
+                if (offT && offT.includes(':')) {
                     const h = parseInt(offT.split(':')[0]);
                     const isDay = !(h >= 10 && h < 22);
                     resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
@@ -811,7 +876,7 @@
             } else resTo.classList.add('hidden');
 
             if (chkLdg) {
-                if (onT && onT.length === 5) {
+                if (onT && onT.includes(':')) {
                     const h = parseInt(onT.split(':')[0]);
                     const isDay = !(h >= 10 && h < 22);
                     resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
@@ -837,7 +902,7 @@
         }
 
         // ==========================================
-        // 🔄 CRUD (導入離線佇列機制)
+        // 🔄 CRUD 
         // ==========================================
         function editLog(index) {
             const log = flightLogs.find(l => l.index === index);
@@ -851,10 +916,11 @@
             document.getElementById('inp-reg').value = log.reg;
             handleRegistrationChange(); 
             
-            document.getElementById('inp-out').value = log.out || '';
-            document.getElementById('inp-off').value = log.off || '';
-            document.getElementById('inp-on').value = log.on || '';
-            document.getElementById('inp-in').value = log.in || '';
+            // 透過防呆轉換，確保載回介面時必為完美的 08:05 格式
+            document.getElementById('inp-out').value = normalizeTimeDisplay(log.out);
+            document.getElementById('inp-off').value = normalizeTimeDisplay(log.off);
+            document.getElementById('inp-on').value  = normalizeTimeDisplay(log.on);
+            document.getElementById('inp-in').value  = normalizeTimeDisplay(log.in);
             
             document.getElementById('chk-to').checked = (Number(log.day_to) >= 1 || Number(log.night_to) >= 1);
             document.getElementById('chk-ldg').checked = (Number(log.day_ldg) >= 1 || Number(log.night_ldg) >= 1);
@@ -865,7 +931,6 @@
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
 
-            // 直接將對應的名字填入 input
             document.getElementById('inp-pilot1').value = log.pilot1 || '';
             document.getElementById('inp-pilot2').value = log.pilot2 || '';
             document.getElementById('inp-pilot3').value = log.pilot3 || '';
@@ -900,6 +965,7 @@
             document.getElementById('dash-block-time').textContent = '00:00';
             document.getElementById('dash-block-time-top').textContent = '00:00';
             document.getElementById('dash-air-time').textContent = '00:00';
+            document.getElementById('dash-night-time').textContent = '00:00';
             evaluateOperations();
         }
 
@@ -930,14 +996,16 @@
                 const chkTo = document.getElementById('chk-to').checked;
                 const chkLdg = document.getElementById('chk-ldg').checked;
                 let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
-                if(chkTo && offT && offT.length === 5) {
+                if(chkTo && offT && offT.includes(':')) {
                     const h = parseInt(offT.split(':')[0]);
                     if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1;
                 }
-                if(chkLdg && onT && onT.length === 5) {
+                if(chkLdg && onT && onT.includes(':')) {
                     const h = parseInt(onT.split(':')[0]);
                     if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1;
                 }
+
+                const nTimeMins = calcNightTime(outT, inT);
 
                 payloadData = {
                     action: actionType,
@@ -950,7 +1018,7 @@
                     time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
                     total_block: minsToStr(calcDuration(outT, inT)),
                     total_air: minsToStr(calcDuration(offT, onT)),
-                    total_night: '00:00', 
+                    total_night: minsToStr(nTimeMins), 
                     duty: document.getElementById('inp-duty').value,
                     passenger: parseInt(document.getElementById('inp-pax').value) || 0,
                     day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
@@ -973,6 +1041,7 @@
                     on: payloadData.time_landing, in: payloadData.time_blockin,
                     totalMins: parseTimeToMins(payloadData.total_block),
                     airMins: parseTimeToMins(payloadData.total_air),
+                    nightMins: parseTimeToMins(payloadData.total_night),
                     day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
                     day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
                     duty: payloadData.duty, pax: payloadData.passenger,
@@ -994,6 +1063,7 @@
                     document.getElementById('dash-block-time').textContent = '00:00';
                     document.getElementById('dash-block-time-top').textContent = '00:00';
                     document.getElementById('dash-air-time').textContent = '00:00';
+                    document.getElementById('dash-night-time').textContent = '00:00';
                 }
                 
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
