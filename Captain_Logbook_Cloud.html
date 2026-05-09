@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot Logbook - Starlux Offline Edition</title>
+    <title>Pilot Logbook - Starlux Ultimate FMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -40,26 +40,24 @@
         .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         #map-container { height: calc(100vh - 140px); width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .leaflet-container { background: #E8E4DF; font-family: inherit; }
-        
-        /* Sync Toast */
         #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
         #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         #edit-banner.show { display: block; }
     </style>
 </head>
 <body class="pb-24">
 
-    <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
     </div>
 
-    <!-- 🆕 Data Audit Modal -->
+    <!-- Datalist for Pilot Searching -->
+    <datalist id="pilot-datalist"></datalist>
+
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -88,7 +86,8 @@
                     <p id="dash-acft" class="text-xs text-[var(--jx-gray)] mt-1 tracking-widest font-medium">---</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)]" id="dash-block-time">00:00</p>
+                    <!-- Dashboard Block Time Preview -->
+                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)]" id="dash-block-time-top">00:00</p>
                 </div>
             </div>
         </header>
@@ -135,27 +134,46 @@
                 </div>
             </div>
 
-            <!-- OOOI Time -->
+            <!-- OOOI Time (全新 3 欄快輸介面) -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Time (UTC)</span>
-                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">format: 1402</span>
+                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance enabled</span>
             </div>
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Block Out</span>
-                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider" placeholder="e.g. 1402" maxlength="5" oninput="handleTimeInput(event)">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Take Off</span>
-                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider" placeholder="e.g. 1415" maxlength="5" oninput="handleTimeInput(event)">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Land On</span>
-                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider" placeholder="e.g. 1620" maxlength="5" oninput="handleTimeInput(event)">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Block In</span>
-                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider" placeholder="e.g. 1635" maxlength="5" oninput="handleTimeInput(event)">
+            <div class="ios-list shadow-sm bg-white p-4">
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <!-- Col 1: Out & Off -->
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Out</div>
+                            <input type="tel" id="inp-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Take Off</div>
+                            <input type="tel" id="inp-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                        </div>
+                    </div>
+                    <!-- Col 2: On & In -->
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Land On</div>
+                            <input type="tel" id="inp-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block In</div>
+                            <input type="tel" id="inp-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-gold-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                        </div>
+                    </div>
+                    <!-- Col 3: Calculated Totals -->
+                    <div class="flex flex-col gap-5 justify-center border-l border-[var(--jx-divider)] pl-2">
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Time</div>
+                            <div id="dash-block-time" class="font-mono text-2xl font-bold text-[var(--jx-dark)]">00:00</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Air Time</div>
+                            <div id="dash-air-time" class="font-mono text-2xl font-bold text-[var(--jx-dark)]">00:00</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -181,12 +199,13 @@
                 </div>
             </div>
 
-            <!-- Flight Crew -->
+            <!-- Crew Database (智慧搜尋選單) -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
+                <!-- Pilot 1 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
-                    <select id="inp-pilot1-select" class="ios-input" onchange="handlePilotSelect('pilot1')"></select>
+                    <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
                 </div>
                 <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
                     <div class="flex justify-between w-full items-center">
@@ -198,13 +217,14 @@
                         <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
+                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
 
+                <!-- Pilot 2 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
-                    <select id="inp-pilot2-select" class="ios-input" onchange="handlePilotSelect('pilot2')"></select>
+                    <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
                 </div>
                 <div id="pilot2-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
                     <div class="flex justify-between w-full items-center">
@@ -216,13 +236,14 @@
                         <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
+                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
 
+                <!-- Pilot 3 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
-                    <select id="inp-pilot3-select" class="ios-input" onchange="handlePilotSelect('pilot3')"></select>
+                    <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
                 </div>
                 <div id="pilot3-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
                     <div class="flex justify-between w-full items-center">
@@ -234,7 +255,7 @@
                         <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
+                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
 
@@ -393,7 +414,7 @@
         </header>
         <main class="max-w-md mx-auto p-4">
             <div id="map-container"></div>
-            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown.</p>
+            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown in your cloud database.</p>
         </main>
     </div>
 
@@ -421,9 +442,8 @@
         // ==========================================
         // ✈️ 雲端 API 設定區
         // ==========================================
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbw96nL9XMvRLuuBn-xzfh625AmGpL8h-yDVpaf2i1E9efZPT3AOptxJBIEu5oUEYdjYDg/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycby1_5vXkHiBQ3Pg6DleneEYqjEcSnHEu5Q8vvAtgZkgc30IrH_15XNQ7DIUqwY0UWNy2g/exec"; 
 
-        // 離線快取鍵值
         const CACHE_FLIGHTS = 'jx_cache_flights';
         const CACHE_AIRCRAFTS = 'jx_cache_aircrafts';
         const CACHE_PILOTS = 'jx_cache_pilots';
@@ -458,13 +478,24 @@
             });
         }
 
-        function handleTimeInput(e) {
+        // ==========================================
+        // 🕒 時間格式化輸入與自動跳格 
+        // ==========================================
+        function handleTimeInput(e, nextFieldId) {
             let raw = e.target.value.replace(/\D/g, '');
             if (raw.length > 4) raw = raw.substring(0, 4);
+
             let formatted = raw;
-            if (raw.length >= 3) formatted = raw.substring(0, 2) + ':' + raw.substring(2);
+            if (raw.length >= 3) {
+                formatted = raw.substring(0, 2) + ':' + raw.substring(2);
+            }
             e.target.value = formatted;
             calculateTimes();
+
+            // 如果打滿了4碼轉換成5碼(帶冒號)，自動跳下一個輸入框
+            if (formatted.length === 5 && nextFieldId) {
+                document.getElementById(nextFieldId).focus();
+            }
         }
 
         function parseTimeToMins(val) {
@@ -513,26 +544,6 @@
             return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
         }
 
-        function matchPilotName(rawName) {
-            if (!rawName) return '';
-            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
-            if (exact) return exact.formattedName;
-            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
-            if (partial) return partial.formattedName;
-            return String(rawName).trim();
-        }
-
-        function setPilotDropdown(selectId, rawName) {
-            const select = document.getElementById(selectId);
-            if (!rawName) { select.value = ''; return; }
-            let matchedName = matchPilotName(rawName);
-            let exists = Array.from(select.options).some(opt => opt.value === matchedName);
-            if (!exists && matchedName !== '') {
-                select.insertAdjacentHTML('beforeend', `<option value="${matchedName}">${matchedName}</option>`);
-            }
-            select.value = matchedName;
-        }
-
         function showToast(message, isLoading = false) {
             const toast = document.getElementById('sync-toast');
             document.getElementById('sync-toast-text').textContent = message;
@@ -542,23 +553,16 @@
         }
 
         // ==========================================
-        // 🚀 開機啟動程序 (Offline-First Architecture)
+        // 🚀 開機啟動程序
         // ==========================================
         window.onload = async () => {
             document.getElementById('inp-date').valueAsDate = new Date();
             initTimeFilterDropdown();
-            
-            // 1. 瞬間讀取本機快取，達到零秒顯示
             loadLocalCache();
-            
-            // 2. 處理離線時積壓的儲存動作
             await processSyncQueue();
-            
-            // 3. 背景悄悄拉取雲端最新資料並替換
             fetchDataFromCloud(); 
         };
 
-        // 📴 讀取本機快取 (瞬間渲染)
         function loadLocalCache() {
             try {
                 const cAcft = localStorage.getItem(CACHE_AIRCRAFTS);
@@ -568,19 +572,16 @@
                 if (cAcft) { dbAircrafts = JSON.parse(cAcft); populateAircraftDropdowns(); }
                 if (cPilots) {
                     dbPilots = JSON.parse(cPilots);
-                    populatePilotDropdown('inp-pilot1-select');
-                    populatePilotDropdown('inp-pilot2-select');
-                    populatePilotDropdown('inp-pilot3-select');
+                    populatePilotDropdown(); 
                 }
                 if (cFlights) {
                     flightLogs = JSON.parse(cFlights);
                     if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                     if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
                 }
-            } catch(e) { console.warn("Local cache empty or corrupted."); }
+            } catch(e) { console.warn("Local cache issue."); }
         }
 
-        // 📡 處理背景同步佇列
         async function processSyncQueue() {
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
             if (queue.length === 0) return;
@@ -590,16 +591,13 @@
 
             for (let item of queue) {
                 try {
-                    // 使用 fetch 向 GAS 發送
                     await fetch(GAS_URL, {
                         method: 'POST', mode: 'no-cors',
                         body: new URLSearchParams(item),
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                     });
-                    // 若無報錯(無網路例外)，視為傳送成功
                 } catch (err) {
-                    console.error("Queue sync failed (Offline)", err);
-                    remainingQueue.push(item); // 沒網路，繼續放回佇列排隊
+                    remainingQueue.push(item);
                 }
             }
             
@@ -608,10 +606,8 @@
             else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
         }
 
-        // ☁️ 雲端同步邏輯 (抓取並覆寫快取)
         async function fetchDataFromCloud() {
-            if(GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
-            // 如果剛開機就有快取，就靜默同步，不干擾畫面
+            if(GAS_URL === "https://script.google.com/macros/s/AKfycby1_5vXkHiBQ3Pg6DleneEYqjEcSnHEu5Q8vvAtgZkgc30IrH_15XNQ7DIUqwY0UWNy2g/exec") return;
             if(flightLogs.length === 0) showToast("Fetching initial data...", true);
             
             try {
@@ -626,9 +622,7 @@
                     const nickStr = p.nickname ? ` (${p.nickname})` : '';
                     return { ...p, formattedName: `${p.name}${nickStr}` };
                 });
-                populatePilotDropdown('inp-pilot1-select');
-                populatePilotDropdown('inp-pilot2-select');
-                populatePilotDropdown('inp-pilot3-select');
+                populatePilotDropdown();
                 localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
 
                 flightLogs = (data.flights || [])
@@ -645,6 +639,7 @@
                             on: String(row.time_landing || '').substring(0,5), 
                             in: String(row.time_blockin || '').substring(0,5),
                             totalMins: parseTimeToMins(row.total_block), nightMins: parseTimeToMins(row.total_night),
+                            airMins: parseTimeToMins(row.total_air), // 確保抓取 air time
                             duty: row.duty,
                             day_to: Number(row.day_takeoff) || 0, night_to: Number(row.night_takeoff) || 0,
                             day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
@@ -657,7 +652,6 @@
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
                 document.getElementById('sync-toast').classList.remove('show');
                 
-                // 更新當下畫面
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                 if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
             } catch (err) {
@@ -666,7 +660,7 @@
         }
 
         // ==========================================
-        // 🗂️ 動態選單邏輯
+        // 🗂️ 動態選單與 Datalist (智慧搜尋)
         // ==========================================
         function populateAircraftDropdowns() {
             const regSelect = document.getElementById('inp-reg');
@@ -682,23 +676,29 @@
             updateEntryDash();
         }
 
-        function populatePilotDropdown(selectId) {
-            const select = document.getElementById(selectId);
-            const currentVal = select.value;
-            select.innerHTML = `<option value="">-- Select Pilot --</option>`;
+        function populatePilotDropdown() {
+            const datalist = document.getElementById('pilot-datalist');
+            datalist.innerHTML = '';
             dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
-            dbPilots.forEach(p => select.innerHTML += `<option value="${p.formattedName}">${p.formattedName}</option>`);
-            select.innerHTML += `<option value="${ADD_NEW_VAL}" style="color:var(--jx-gold-dark); font-weight:bold;">+ 新增組員 (Add New...)</option>`;
-            select.value = currentVal || "";
+            dbPilots.forEach(p => {
+                datalist.innerHTML += `<option value="${p.formattedName}">`;
+            });
         }
 
-        function handlePilotSelect(type) {
-            const selectId = `inp-${type}-select`;
+        // 輸入離開焦點時，檢查是否為新組員
+        function checkNewPilot(inputElem, type) {
+            const val = inputElem.value.trim();
+            if(!val) return;
             const wrapperId = `${type}-custom-wrapper`;
-            if (document.getElementById(selectId).value === ADD_NEW_VAL) {
+            
+            // 檢查是否在名單內
+            const exists = dbPilots.some(p => p.formattedName === val);
+            
+            if(!exists) {
                 document.getElementById(wrapperId).classList.remove('hidden');
                 document.getElementById(wrapperId).classList.add('flex');
-                document.getElementById(`inp-${type}-custom-name`).focus();
+                document.getElementById(`inp-${type}-custom-name`).value = val;
+                document.getElementById(`inp-${type}-custom-nick`).focus();
             } else {
                 document.getElementById(wrapperId).classList.add('hidden');
                 document.getElementById(wrapperId).classList.remove('flex');
@@ -708,20 +708,17 @@
         function saveNewPilotToCloud(type) {
             const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
             const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
-            const selectId = `inp-${type}-select`;
+            const inputId = `inp-${type}`;
             const wrapperId = `${type}-custom-wrapper`;
 
             if (name) {
                 const finalName = nick ? `${name} (${nick})` : name;
                 dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
-                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots)); // 即時寫入快取
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
                 
-                populatePilotDropdown('inp-pilot1-select');
-                populatePilotDropdown('inp-pilot2-select');
-                populatePilotDropdown('inp-pilot3-select');
-                document.getElementById(selectId).value = finalName;
+                populatePilotDropdown();
+                document.getElementById(inputId).value = finalName;
                 
-                // 加入離線佇列，背景執行
                 queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
             }
             document.getElementById(wrapperId).classList.add('hidden');
@@ -772,12 +769,27 @@
 
         function calculateTimes() {
             const outT = document.getElementById('inp-out').value;
+            const offT = document.getElementById('inp-off').value;
+            const onT = document.getElementById('inp-on').value;
             const inT = document.getElementById('inp-in').value;
+
+            // Block Time
             if (outT.length === 5 && inT.length === 5) {
-                document.getElementById('dash-block-time').textContent = minsToStr(calcDuration(outT, inT));
+                const bTime = minsToStr(calcDuration(outT, inT));
+                document.getElementById('dash-block-time').textContent = bTime;
+                document.getElementById('dash-block-time-top').textContent = bTime;
             } else {
                 document.getElementById('dash-block-time').textContent = "00:00";
+                document.getElementById('dash-block-time-top').textContent = "00:00";
             }
+
+            // Air Time
+            if (offT.length === 5 && onT.length === 5) {
+                document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
+            } else {
+                document.getElementById('dash-air-time').textContent = "00:00";
+            }
+            
             evaluateOperations();
         }
 
@@ -853,11 +865,14 @@
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
 
-            setPilotDropdown('inp-pilot1-select', log.pilot1);
-            setPilotDropdown('inp-pilot2-select', log.pilot2);
-            setPilotDropdown('inp-pilot3-select', log.pilot3);
+            // 直接將對應的名字填入 input
+            document.getElementById('inp-pilot1').value = log.pilot1 || '';
+            document.getElementById('inp-pilot2').value = log.pilot2 || '';
+            document.getElementById('inp-pilot3').value = log.pilot3 || '';
             
-            handlePilotSelect('pilot1'); handlePilotSelect('pilot2'); handlePilotSelect('pilot3');
+            document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
+            document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
+            document.getElementById('pilot3-custom-wrapper').classList.add('hidden');
 
             document.getElementById('action-create').classList.add('hidden');
             document.getElementById('action-edit').classList.remove('hidden');
@@ -878,12 +893,13 @@
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
             
-            document.getElementById('inp-pilot1-select').value = '';
-            document.getElementById('inp-pilot2-select').value = '';
-            document.getElementById('inp-pilot3-select').value = '';
-            handlePilotSelect('pilot1'); handlePilotSelect('pilot2'); handlePilotSelect('pilot3');
+            document.getElementById('inp-pilot1').value = '';
+            document.getElementById('inp-pilot2').value = '';
+            document.getElementById('inp-pilot3').value = '';
 
             document.getElementById('dash-block-time').textContent = '00:00';
+            document.getElementById('dash-block-time-top').textContent = '00:00';
+            document.getElementById('dash-air-time').textContent = '00:00';
             evaluateOperations();
         }
 
@@ -892,22 +908,18 @@
             if(!index) return;
             if(!confirm("確定要刪除這筆飛行紀錄嗎 (Are you sure)?")) return;
 
-            // 1. 先殺掉本地資料
             flightLogs = flightLogs.filter(l => l.index !== index);
             localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
             showToast("Deleted locally. Syncing...");
             cancelEdit();
-
-            // 2. 加入佇列，背景刪除
             queueAction({ action: 'delete', index: index }, true);
         }
 
-        // 統一透過 queueAction 處理儲存，達成 Optimistic UI
         function queueAction(actionType, isSilent = false) {
             let payloadData;
             
             if (typeof actionType === 'object') {
-                payloadData = actionType; // 直接傳入 payload (例如刪除、新增組員)
+                payloadData = actionType; 
             } else {
                 saveRouteMemory();
                 const outT = document.getElementById('inp-out').value;
@@ -942,9 +954,9 @@
                     duty: document.getElementById('inp-duty').value,
                     passenger: parseInt(document.getElementById('inp-pax').value) || 0,
                     day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
-                    pilot1: document.getElementById('inp-pilot1-select').value || '',
-                    pilot2: document.getElementById('inp-pilot2-select').value || '', 
-                    pilot3: document.getElementById('inp-pilot3-select').value || '', 
+                    pilot1: document.getElementById('inp-pilot1').value.trim() || '',
+                    pilot2: document.getElementById('inp-pilot2').value.trim() || '', 
+                    pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
                     pilot4: 'Self', 
                     custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
                     approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
@@ -952,13 +964,15 @@
                     approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
                 };
 
-                // 立即更新前端與快取
                 const localLog = {
                     index: payloadData.index, date: payloadData.date,
                     flt: String(payloadData.filght_number).replace('JX',''),
                     dep: payloadData.airport_departure, arr: payloadData.airport_arrival,
-                    reg: payloadData.aircraft, out: payloadData.time_blockout, in: payloadData.time_blockin,
+                    reg: payloadData.aircraft, 
+                    out: payloadData.time_blockout, off: payloadData.time_takeoff,
+                    on: payloadData.time_landing, in: payloadData.time_blockin,
                     totalMins: parseTimeToMins(payloadData.total_block),
+                    airMins: parseTimeToMins(payloadData.total_air),
                     day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
                     day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
                     duty: payloadData.duty, pax: payloadData.passenger,
@@ -978,18 +992,18 @@
                     document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
                     document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
                     document.getElementById('dash-block-time').textContent = '00:00';
+                    document.getElementById('dash-block-time-top').textContent = '00:00';
+                    document.getElementById('dash-air-time').textContent = '00:00';
                 }
                 
-                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs)); // 覆寫快取
+                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
                 showToast("Saved offline instantly!");
             }
 
-            // 將 payload 推入 Sync Queue
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
             queue.push(payloadData);
             localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
 
-            // 觸發背景同步
             processSyncQueue();
         }
 
@@ -1150,8 +1164,8 @@
                 return html;
             };
 
-            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => l.day_to >= 1 || l.night_to >= 1), 'to');
-            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => l.day_ldg >= 1 || l.night_ldg >= 1), 'ldg');
+            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1), 'to');
+            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1), 'ldg');
             cardsContainer.innerHTML += createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
 
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
