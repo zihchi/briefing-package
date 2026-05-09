@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pilot Logbook - Starlux Robust Edition</title>
+    <title>Pilot Logbook - Starlux Offline Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -40,10 +40,13 @@
         .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         #map-container { height: calc(100vh - 140px); width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .leaflet-container { background: #E8E4DF; font-family: inherit; }
+        
+        /* Sync Toast */
         #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         #edit-banner.show { display: block; }
     </style>
@@ -56,16 +59,14 @@
         <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
     </div>
 
-    <!-- 🆕 Data Audit Modal (資料稽核雷達彈窗) -->
+    <!-- 🆕 Data Audit Modal -->
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
                 <h2 class="font-bold text-[var(--jx-gold)] tracking-wide">Data Audit 系統稽核雷達</h2>
                 <button onclick="document.getElementById('audit-modal').classList.add('hidden')" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
             </div>
-            <div id="audit-content" class="p-4 overflow-y-auto bg-[var(--jx-bg)] text-sm space-y-3">
-                <!-- Audit results will be injected here -->
-            </div>
+            <div id="audit-content" class="p-4 overflow-y-auto bg-[var(--jx-bg)] text-sm space-y-3"></div>
         </div>
     </div>
 
@@ -180,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- Crew Database -->
+            <!-- Flight Crew -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item">
@@ -197,7 +198,7 @@
                         <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
                     </div>
                 </div>
 
@@ -215,7 +216,7 @@
                         <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
                     </div>
                 </div>
 
@@ -233,7 +234,7 @@
                         <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
                     </div>
                     <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save</button>
                     </div>
                 </div>
 
@@ -276,13 +277,14 @@
             </div>
 
             <div class="p-4 pb-8" id="action-create">
-                <button onclick="saveLogbookEntry('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
-                    Save to Cloud Logbook
+                <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
+                    Save Logbook Entry
                 </button>
+                <p class="text-center text-xs text-[var(--jx-gray)] mt-2">Data is saved offline instantly and synced to cloud in background.</p>
             </div>
             
             <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-edit">
-                <button onclick="saveLogbookEntry('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
+                <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
                     Update Entry
                 </button>
                 <div class="flex gap-3">
@@ -375,7 +377,6 @@
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
             </div>
 
-            <!-- 🆕 Data Audit Button (資料稽核雷達按鈕) -->
             <div class="mt-8 px-4 pb-12 flex justify-center">
                 <button onclick="runDataAudit()" class="text-sm font-semibold text-[var(--jx-gold-dark)] flex items-center gap-1.5 border border-[var(--jx-gold-dark)] px-5 py-2.5 rounded-full hover:bg-[#FDFBF7] active:scale-95 transition-all">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -392,7 +393,7 @@
         </header>
         <main class="max-w-md mx-auto p-4">
             <div id="map-container"></div>
-            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown in your cloud database.</p>
+            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown.</p>
         </main>
     </div>
 
@@ -421,6 +422,12 @@
         // ✈️ 雲端 API 設定區
         // ==========================================
         const GAS_URL = "https://script.google.com/macros/s/AKfycbw96nL9XMvRLuuBn-xzfh625AmGpL8h-yDVpaf2i1E9efZPT3AOptxJBIEu5oUEYdjYDg/exec"; 
+
+        // 離線快取鍵值
+        const CACHE_FLIGHTS = 'jx_cache_flights';
+        const CACHE_AIRCRAFTS = 'jx_cache_aircrafts';
+        const CACHE_PILOTS = 'jx_cache_pilots';
+        const SYNC_QUEUE = 'jx_sync_queue';
 
         const ADD_NEW_VAL = "___ADD_NEW___";
         let routeMemory = JSON.parse(localStorage.getItem('jxRouteMemory')) || {};
@@ -454,51 +461,29 @@
         function handleTimeInput(e) {
             let raw = e.target.value.replace(/\D/g, '');
             if (raw.length > 4) raw = raw.substring(0, 4);
-
             let formatted = raw;
-            if (raw.length >= 3) {
-                formatted = raw.substring(0, 2) + ':' + raw.substring(2);
-            }
+            if (raw.length >= 3) formatted = raw.substring(0, 2) + ':' + raw.substring(2);
             e.target.value = formatted;
             calculateTimes();
         }
 
-        // ==========================================
-        // 【進階防呆過濾器 1】確保各種時數格式都能正確轉為分鐘數
-        // ==========================================
         function parseTimeToMins(val) {
             if (!val) return 0;
             let str = String(val).trim();
-            
-            // 排除被 Excel 或其他軟體硬塞入的無效字眼
-            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和') || str.includes('確認')) return 0;
-            
-            // 如果傳來的是 ISO 時間字串 (Google Sheets 的 getValues 傑作)，例如 "1899-12-30T03:05:00.000Z"
+            if (str.includes('1899') || str.includes('1900') || str.toLowerCase().includes('總和')) return 0;
             if (str.includes('T') && str.includes('Z')) {
                 const dt = new Date(str);
-                if (!isNaN(dt)) {
-                    return dt.getUTCHours() * 60 + dt.getUTCMinutes();
-                }
+                if (!isNaN(dt)) return dt.getUTCHours() * 60 + dt.getUTCMinutes();
             }
-
-            // 一般正常的 HH:mm 或 HH:mm:ss
             if (str.includes(':')) {
                 const p = str.split(':');
                 return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
             }
-            
-            // 萬一收到的是小數點格式，表示 GAS 傳來了 Excel 的「日期小數」(1 代表 24 小時)
             let num = parseFloat(str);
-            if (!isNaN(num) && str.includes('.')) {
-                return Math.round(num * 24 * 60);
-            }
-            
+            if (!isNaN(num) && str.includes('.')) return Math.round(num * 24 * 60);
             return parseInt(str) || 0;
         }
 
-        // ==========================================
-        // 【進階防呆過濾器 2】確保日期不為亂碼
-        // ==========================================
         function safeDateString(val) {
             if (!val) return '';
             const d = new Date(val);
@@ -548,12 +533,6 @@
             select.value = matchedName;
         }
 
-        window.onload = () => {
-            document.getElementById('inp-date').valueAsDate = new Date();
-            initTimeFilterDropdown();
-            fetchDataFromCloud(); 
-        };
-
         function showToast(message, isLoading = false) {
             const toast = document.getElementById('sync-toast');
             document.getElementById('sync-toast-text').textContent = message;
@@ -563,112 +542,127 @@
         }
 
         // ==========================================
-        // ☁️ 雲端同步邏輯
+        // 🚀 開機啟動程序 (Offline-First Architecture)
         // ==========================================
-        async function fetchDataFromCloud() {
-            if(GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                console.warn("GAS URL 尚未設定。"); return;
+        window.onload = async () => {
+            document.getElementById('inp-date').valueAsDate = new Date();
+            initTimeFilterDropdown();
+            
+            // 1. 瞬間讀取本機快取，達到零秒顯示
+            loadLocalCache();
+            
+            // 2. 處理離線時積壓的儲存動作
+            await processSyncQueue();
+            
+            // 3. 背景悄悄拉取雲端最新資料並替換
+            fetchDataFromCloud(); 
+        };
+
+        // 📴 讀取本機快取 (瞬間渲染)
+        function loadLocalCache() {
+            try {
+                const cAcft = localStorage.getItem(CACHE_AIRCRAFTS);
+                const cPilots = localStorage.getItem(CACHE_PILOTS);
+                const cFlights = localStorage.getItem(CACHE_FLIGHTS);
+
+                if (cAcft) { dbAircrafts = JSON.parse(cAcft); populateAircraftDropdowns(); }
+                if (cPilots) {
+                    dbPilots = JSON.parse(cPilots);
+                    populatePilotDropdown('inp-pilot1-select');
+                    populatePilotDropdown('inp-pilot2-select');
+                    populatePilotDropdown('inp-pilot3-select');
+                }
+                if (cFlights) {
+                    flightLogs = JSON.parse(cFlights);
+                    if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
+                    if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
+                }
+            } catch(e) { console.warn("Local cache empty or corrupted."); }
+        }
+
+        // 📡 處理背景同步佇列
+        async function processSyncQueue() {
+            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
+            if (queue.length === 0) return;
+
+            showToast(`Syncing ${queue.length} pending updates...`, true);
+            let remainingQueue = [];
+
+            for (let item of queue) {
+                try {
+                    // 使用 fetch 向 GAS 發送
+                    await fetch(GAS_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        body: new URLSearchParams(item),
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+                    // 若無報錯(無網路例外)，視為傳送成功
+                } catch (err) {
+                    console.error("Queue sync failed (Offline)", err);
+                    remainingQueue.push(item); // 沒網路，繼續放回佇列排隊
+                }
             }
-            showToast("Syncing with Cloud DB...", true);
+            
+            localStorage.setItem(SYNC_QUEUE, JSON.stringify(remainingQueue));
+            if (remainingQueue.length === 0) showToast("All offline data synced!");
+            else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
+        }
+
+        // ☁️ 雲端同步邏輯 (抓取並覆寫快取)
+        async function fetchDataFromCloud() {
+            if(GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
+            // 如果剛開機就有快取，就靜默同步，不干擾畫面
+            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
+            
             try {
                 const response = await fetch(GAS_URL);
                 const data = await response.json(); 
                 
                 dbAircrafts = data.aircrafts || [];
                 populateAircraftDropdowns();
+                localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
 
                 dbPilots = (data.pilots || []).map(p => {
                     const nickStr = p.nickname ? ` (${p.nickname})` : '';
                     return { ...p, formattedName: `${p.name}${nickStr}` };
                 });
-                
                 populatePilotDropdown('inp-pilot1-select');
                 populatePilotDropdown('inp-pilot2-select');
                 populatePilotDropdown('inp-pilot3-select');
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
 
                 flightLogs = (data.flights || [])
-                    .filter(row => row.date) // 只需要有日期即可，已移除之前的排除合併欄位邏輯
+                    .filter(row => row.date) 
                     .map(row => {
                         const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
                         return {
-                            index: row.index, 
-                            date: safeDateString(row.date), 
+                            index: row.index, date: safeDateString(row.date), 
                             flt: String(row.filght_number).replace('JX',''), 
-                            dep: String(row.airport_departure).trim(), 
-                            arr: String(row.airport_arrival).trim(), 
+                            dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
                             reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
                             out: String(row.time_blockout || '').substring(0,5), 
                             off: String(row.time_takeoff || '').substring(0,5), 
                             on: String(row.time_landing || '').substring(0,5), 
                             in: String(row.time_blockin || '').substring(0,5),
-                            totalMins: parseTimeToMins(row.total_block),
-                            nightMins: parseTimeToMins(row.total_night),
+                            totalMins: parseTimeToMins(row.total_block), nightMins: parseTimeToMins(row.total_night),
                             duty: row.duty,
-                            day_to: Number(row.day_takeoff) || 0,
-                            night_to: Number(row.night_takeoff) || 0,
-                            day_ldg: Number(row.day_landing) || 0,
-                            night_ldg: Number(row.night_landing) || 0,
+                            day_to: Number(row.day_takeoff) || 0, night_to: Number(row.night_takeoff) || 0,
+                            day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
                             app: row.approach1_type, rwy: row.approach1_runway, 
                             pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
-                            pilot1: row.pilot1 || '',
-                            pilot2: row.pilot2 || '',
-                            pilot3: row.pilot3 || ''
+                            pilot1: row.pilot1 || '', pilot2: row.pilot2 || '', pilot3: row.pilot3 || ''
                         };
                     });
                 
+                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
                 document.getElementById('sync-toast').classList.remove('show');
+                
+                // 更新當下畫面
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                 if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
             } catch (err) {
-                console.error("雲端讀取失敗:", err);
-                showToast("Cloud sync failed. Offline mode.");
+                console.error("雲端背景讀取失敗 (Offline):", err);
             }
-        }
-
-        // ==========================================
-        // 🚨 資料稽核系統 (Data Audit Radar)
-        // ==========================================
-        function runDataAudit() {
-            const content = document.getElementById('audit-content');
-            content.innerHTML = '';
-            let errorCount = 0;
-
-            flightLogs.forEach((l, idx) => {
-                let issues = [];
-                // 檢查是否為真正的航班 (去除空資料或不明列)
-                if (!l.date || l.date === '') issues.push("日期無法解析 (Invalid Date)");
-                if (!l.dep || !l.arr || l.dep.length > 4) issues.push(`機場代碼異常 (${l.dep}/${l.arr})`);
-                if (l.totalMins <= 0) issues.push("Block Time 未計算 (格式錯誤或為 0)");
-                if (l.totalMins > 1200) issues.push(`Block Time 異常 (>20小時: ${minsToStr(l.totalMins)})`);
-                
-                if (issues.length > 0) {
-                    errorCount++;
-                    let fltStr = l.flt ? `JX${l.flt}` : "不明航班";
-                    content.innerHTML += `
-                        <div class="border border-red-200 bg-red-50 rounded-lg p-3">
-                            <div class="font-bold text-red-700 mb-1 border-b border-red-200 pb-1">
-                                第 ${idx + 2} 列 | ${fltStr} | ${l.date || '無日期'}
-                            </div>
-                            <ul class="list-disc pl-5 text-red-600 text-xs mt-2 space-y-1">
-                                ${issues.map(iss => `<li>${iss}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-            });
-
-            if (errorCount === 0) {
-                content.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-8">
-                        <svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p>
-                        <p class="text-sm text-[var(--jx-gray)] mt-1">所有資料檢查皆為正常，無格式異常。</p>
-                    </div>`;
-            } else {
-                content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">偵測到 ${errorCount} 筆可疑資料，請回試算表修改：</p>`);
-            }
-            
-            document.getElementById('audit-modal').classList.remove('hidden');
         }
 
         // ==========================================
@@ -720,21 +714,15 @@
             if (name) {
                 const finalName = nick ? `${name} (${nick})` : name;
                 dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots)); // 即時寫入快取
                 
                 populatePilotDropdown('inp-pilot1-select');
                 populatePilotDropdown('inp-pilot2-select');
                 populatePilotDropdown('inp-pilot3-select');
-                
                 document.getElementById(selectId).value = finalName;
-                showToast("Adding pilot to database...", true);
-
-                if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                    const payload = { action: 'add_pilot', id: generateUUID(), name: name, nickname: nick };
-                    fetch(GAS_URL, {
-                        method: 'POST', mode: 'no-cors', body: new URLSearchParams(payload),
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                    }).then(() => showToast("Pilot added to Cloud DB!"));
-                }
+                
+                // 加入離線佇列，背景執行
+                queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
             }
             document.getElementById(wrapperId).classList.add('hidden');
             document.getElementById(wrapperId).classList.remove('flex');
@@ -807,7 +795,7 @@
                     const isDay = !(h >= 10 && h < 22);
                     resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
                     resTo.classList.remove('hidden');
-                } else { resTo.innerHTML = '⚠️ Input full "Take Off" time (e.g. 1402).'; resTo.classList.remove('hidden'); }
+                } else { resTo.innerHTML = '⚠️ Input full "Take Off" time.'; resTo.classList.remove('hidden'); }
             } else resTo.classList.add('hidden');
 
             if (chkLdg) {
@@ -816,7 +804,7 @@
                     const isDay = !(h >= 10 && h < 22);
                     resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
                     resLdg.classList.remove('hidden');
-                } else { resLdg.innerHTML = '⚠️ Input full "Land On" time (e.g. 1620).'; resLdg.classList.remove('hidden'); }
+                } else { resLdg.innerHTML = '⚠️ Input full "Land On" time.'; resLdg.classList.remove('hidden'); }
             } else resLdg.classList.add('hidden');
         }
 
@@ -837,7 +825,7 @@
         }
 
         // ==========================================
-        // 🔄 CRUD 
+        // 🔄 CRUD (導入離線佇列機制)
         // ==========================================
         function editLog(index) {
             const log = flightLogs.find(l => l.index === index);
@@ -869,17 +857,14 @@
             setPilotDropdown('inp-pilot2-select', log.pilot2);
             setPilotDropdown('inp-pilot3-select', log.pilot3);
             
-            handlePilotSelect('pilot1');
-            handlePilotSelect('pilot2');
-            handlePilotSelect('pilot3');
+            handlePilotSelect('pilot1'); handlePilotSelect('pilot2'); handlePilotSelect('pilot3');
 
             document.getElementById('action-create').classList.add('hidden');
             document.getElementById('action-edit').classList.remove('hidden');
             document.getElementById('edit-banner').classList.add('show');
             
             updateEntryDash(); calculateTimes();
-            document.querySelectorAll('.tab-btn')[0].click(); 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.querySelectorAll('.tab-btn')[0].click(); window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() {
@@ -896,9 +881,7 @@
             document.getElementById('inp-pilot1-select').value = '';
             document.getElementById('inp-pilot2-select').value = '';
             document.getElementById('inp-pilot3-select').value = '';
-            handlePilotSelect('pilot1');
-            handlePilotSelect('pilot2');
-            handlePilotSelect('pilot3');
+            handlePilotSelect('pilot1'); handlePilotSelect('pilot2'); handlePilotSelect('pilot3');
 
             document.getElementById('dash-block-time').textContent = '00:00';
             evaluateOperations();
@@ -909,110 +892,150 @@
             if(!index) return;
             if(!confirm("確定要刪除這筆飛行紀錄嗎 (Are you sure)?")) return;
 
-            showToast("Deleting from Cloud...", true);
-            const payloadData = { action: 'delete', index: index }; 
-            
-            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                fetch(GAS_URL, {
-                    method: 'POST', mode: 'no-cors', body: new URLSearchParams(payloadData),
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                }).then(() => {
-                    flightLogs = flightLogs.filter(l => l.index !== index);
-                    showToast("Deleted successfully!"); cancelEdit();
-                });
-            }
+            // 1. 先殺掉本地資料
+            flightLogs = flightLogs.filter(l => l.index !== index);
+            localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
+            showToast("Deleted locally. Syncing...");
+            cancelEdit();
+
+            // 2. 加入佇列，背景刪除
+            queueAction({ action: 'delete', index: index }, true);
         }
 
-        function saveLogbookEntry(actionType = 'create') {
-            saveRouteMemory();
-            const btn = event.currentTarget;
-            const originalText = btn.innerText;
-            btn.innerText = "Transmitting to Cloud..."; btn.classList.add('opacity-80');
-            showToast("Writing to Google Sheets...", true);
+        // 統一透過 queueAction 處理儲存，達成 Optimistic UI
+        function queueAction(actionType, isSilent = false) {
+            let payloadData;
             
-            const outT = document.getElementById('inp-out').value;
-            const offT = document.getElementById('inp-off').value;
-            const onT = document.getElementById('inp-on').value;
-            const inT = document.getElementById('inp-in').value;
-            
-            const chkTo = document.getElementById('chk-to').checked;
-            const chkLdg = document.getElementById('chk-ldg').checked;
-            let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
-            if(chkTo && offT && offT.length === 5) {
-                const h = parseInt(offT.split(':')[0]);
-                if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1;
-            }
-            if(chkLdg && onT && onT.length === 5) {
-                const h = parseInt(onT.split(':')[0]);
-                if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1;
-            }
-
-            const payloadData = {
-                action: actionType,
-                index: document.getElementById('inp-index').value || generateUUID(),
-                date: document.getElementById('inp-date').value,
-                filght_number: "JX" + document.getElementById('inp-flt').value, 
-                airport_departure: document.getElementById('inp-dep').value.toUpperCase(),
-                airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
-                aircraft: document.getElementById('inp-reg').value,
-                time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
-                total_block: minsToStr(calcDuration(outT, inT)),
-                total_air: minsToStr(calcDuration(offT, onT)),
-                total_night: '00:00', 
-                duty: document.getElementById('inp-duty').value,
-                passenger: parseInt(document.getElementById('inp-pax').value) || 0,
-                day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
-                pilot1: document.getElementById('inp-pilot1-select').value || '',
-                pilot2: document.getElementById('inp-pilot2-select').value || '', 
-                pilot3: document.getElementById('inp-pilot3-select').value || '', 
-                pilot4: 'Self', 
-                custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
-                approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
-                approach1_type: document.getElementById('inp-app').value,
-                approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
-            };
-
-            if(GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
-                fetch(GAS_URL, {
-                    method: 'POST', mode: 'no-cors', body: new URLSearchParams(payloadData),
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                }).then(() => finalizeSave(btn, originalText, payloadData, actionType));
+            if (typeof actionType === 'object') {
+                payloadData = actionType; // 直接傳入 payload (例如刪除、新增組員)
             } else {
-                setTimeout(() => finalizeSave(btn, originalText, payloadData, actionType), 800);
+                saveRouteMemory();
+                const outT = document.getElementById('inp-out').value;
+                const offT = document.getElementById('inp-off').value;
+                const onT = document.getElementById('inp-on').value;
+                const inT = document.getElementById('inp-in').value;
+                
+                const chkTo = document.getElementById('chk-to').checked;
+                const chkLdg = document.getElementById('chk-ldg').checked;
+                let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
+                if(chkTo && offT && offT.length === 5) {
+                    const h = parseInt(offT.split(':')[0]);
+                    if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1;
+                }
+                if(chkLdg && onT && onT.length === 5) {
+                    const h = parseInt(onT.split(':')[0]);
+                    if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1;
+                }
+
+                payloadData = {
+                    action: actionType,
+                    index: document.getElementById('inp-index').value || generateUUID(),
+                    date: document.getElementById('inp-date').value,
+                    filght_number: "JX" + document.getElementById('inp-flt').value, 
+                    airport_departure: document.getElementById('inp-dep').value.toUpperCase(),
+                    airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
+                    aircraft: document.getElementById('inp-reg').value,
+                    time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
+                    total_block: minsToStr(calcDuration(outT, inT)),
+                    total_air: minsToStr(calcDuration(offT, onT)),
+                    total_night: '00:00', 
+                    duty: document.getElementById('inp-duty').value,
+                    passenger: parseInt(document.getElementById('inp-pax').value) || 0,
+                    day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
+                    pilot1: document.getElementById('inp-pilot1-select').value || '',
+                    pilot2: document.getElementById('inp-pilot2-select').value || '', 
+                    pilot3: document.getElementById('inp-pilot3-select').value || '', 
+                    pilot4: 'Self', 
+                    custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
+                    approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
+                    approach1_type: document.getElementById('inp-app').value,
+                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
+                };
+
+                // 立即更新前端與快取
+                const localLog = {
+                    index: payloadData.index, date: payloadData.date,
+                    flt: String(payloadData.filght_number).replace('JX',''),
+                    dep: payloadData.airport_departure, arr: payloadData.airport_arrival,
+                    reg: payloadData.aircraft, out: payloadData.time_blockout, in: payloadData.time_blockin,
+                    totalMins: parseTimeToMins(payloadData.total_block),
+                    day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
+                    day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
+                    duty: payloadData.duty, pax: payloadData.passenger,
+                    app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
+                    pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3
+                };
+                const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
+                localLog.acft = acftData ? acftData.type : 'N/A';
+
+                if(actionType === 'update') {
+                    const idx = flightLogs.findIndex(l => l.index === payloadData.index);
+                    if(idx !== -1) flightLogs[idx] = localLog;
+                    cancelEdit();
+                } else {
+                    flightLogs.push(localLog);
+                    document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
+                    document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
+                    document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
+                    document.getElementById('dash-block-time').textContent = '00:00';
+                }
+                
+                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs)); // 覆寫快取
+                showToast("Saved offline instantly!");
             }
+
+            // 將 payload 推入 Sync Queue
+            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
+            queue.push(payloadData);
+            localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
+
+            // 觸發背景同步
+            processSyncQueue();
         }
 
-        function finalizeSave(btn, originalText, payloadData, actionType) {
-            const localLog = {
-                index: payloadData.index, date: payloadData.date,
-                flt: String(payloadData.filght_number).replace('JX',''),
-                dep: payloadData.airport_departure, arr: payloadData.airport_arrival,
-                reg: payloadData.aircraft,
-                out: payloadData.time_blockout, in: payloadData.time_blockin,
-                totalMins: parseTimeToMins(payloadData.total_block),
-                day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
-                day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
-                duty: payloadData.duty, pax: payloadData.passenger,
-                app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
-                pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3
-            };
+        // ==========================================
+        // 🚨 資料稽核系統
+        // ==========================================
+        function runDataAudit() {
+            const content = document.getElementById('audit-content');
+            content.innerHTML = '';
+            let errorCount = 0;
 
-            const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
-            localLog.acft = acftData ? acftData.type : 'N/A';
+            flightLogs.forEach((l, idx) => {
+                let issues = [];
+                if (!l.date || l.date === '') issues.push("日期無法解析 (Invalid Date)");
+                if (!l.dep || !l.arr || l.dep.length > 4) issues.push(`機場代碼異常 (${l.dep}/${l.arr})`);
+                if (l.totalMins <= 0) issues.push("Block Time 未計算 (格式錯誤或為 0)");
+                if (l.totalMins > 1200) issues.push(`Block Time 異常 (>20小時: ${minsToStr(l.totalMins)})`);
+                
+                if (issues.length > 0) {
+                    errorCount++;
+                    let fltStr = l.flt ? `JX${l.flt}` : "不明航班";
+                    content.innerHTML += `
+                        <div class="border border-red-200 bg-red-50 rounded-lg p-3">
+                            <div class="font-bold text-red-700 mb-1 border-b border-red-200 pb-1">
+                                第 ${idx + 2} 列 | ${fltStr} | ${l.date || '無日期'}
+                            </div>
+                            <ul class="list-disc pl-5 text-red-600 text-xs mt-2 space-y-1">
+                                ${issues.map(iss => `<li>${iss}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            });
 
-            if(actionType === 'update') {
-                const idx = flightLogs.findIndex(l => l.index === payloadData.index);
-                if(idx !== -1) flightLogs[idx] = localLog;
-                cancelEdit();
+            if (errorCount === 0) {
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-8">
+                        <svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p>
+                        <p class="text-sm text-[var(--jx-gray)] mt-1">所有資料檢查皆為正常，無格式異常。</p>
+                    </div>`;
             } else {
-                flightLogs.push(localLog);
-                document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
-                document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
-                document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
-                document.getElementById('dash-block-time').textContent = '00:00';
+                content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">偵測到 ${errorCount} 筆可疑資料，請回試算表修改：</p>`);
             }
-            showToast(actionType === 'update' ? "Updated successfully!" : "Saved successfully!");
-            btn.innerText = originalText; btn.classList.remove('opacity-80');
+            
+            document.getElementById('audit-modal').classList.remove('hidden');
         }
 
         // ==========================================
@@ -1022,7 +1045,6 @@
             const container = document.getElementById('recent-list-container');
             container.innerHTML = '';
             
-            // 使用嚴謹的過濾器確保不顯示無效的資料列
             const validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
             if(validLogs.length === 0) return container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
 
@@ -1065,7 +1087,7 @@
         }
         
         // ==========================================
-        // 📊 STATS (修正起降加總與日期過濾)
+        // 📊 STATS 
         // ==========================================
         function initTimeFilterDropdown() {
             const select = document.getElementById('stats-time-filter');
@@ -1087,7 +1109,7 @@
             const filterVal = document.getElementById('stats-time-filter').value;
             const now = new Date();
             return logs.filter(log => {
-                if(!log.date || !log.dep) return false; // 排除無效列
+                if(!log.date || !log.dep) return false; 
                 const logDate = new Date(log.date);
                 const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
                 switch(filterVal) {
@@ -1137,7 +1159,6 @@
 
             filteredLogs.forEach(l => {
                 tTot++;
-                // 【修復】真實累加起降次數 (而不是只看有沒有起降)
                 tTo += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
                 tLdg += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
                 
