@@ -50,6 +50,7 @@
 </head>
 <body class="pb-24">
 
+    <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
@@ -58,6 +59,7 @@
     <!-- Datalist for Pilot Searching -->
     <datalist id="pilot-datalist"></datalist>
 
+    <!-- Data Audit Modal -->
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -199,10 +201,9 @@
                 </div>
             </div>
 
-            <!-- Crew Database (智慧搜尋選單) -->
+            <!-- Crew Database -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
-                <!-- Pilot 1 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
                     <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
@@ -221,7 +222,6 @@
                     </div>
                 </div>
 
-                <!-- Pilot 2 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
                     <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
@@ -240,7 +240,6 @@
                     </div>
                 </div>
 
-                <!-- Pilot 3 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
                     <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
@@ -501,7 +500,6 @@
         // 【核心過濾器與時間解析器】
         // ==========================================
         
-        // 將系統或舊格式轉為一致的 5 碼字串 (例如 "08:05")，供前端欄位直接使用
         function normalizeTimeDisplay(val) {
             if (!val) return '';
             let s = String(val).trim();
@@ -515,14 +513,12 @@
                 const p = s.split(':');
                 return `${String(parseInt(p[0])||0).padStart(2,'0')}:${String(parseInt(p[1])||0).padStart(2,'0')}`;
             }
-            // 純數字防呆
             if (s.length === 4 && !isNaN(parseInt(s))) return `${s.substring(0,2)}:${s.substring(2,4)}`;
             if (s.length === 3 && !isNaN(parseInt(s))) return `0${s.substring(0,1)}:${s.substring(1,3)}`;
             
             return s;
         }
 
-        // 將任何格式轉為純分鐘數 (供加總)
         function parseTimeToMins(val) {
             let s = normalizeTimeDisplay(val);
             if (!s) return 0;
@@ -537,11 +533,11 @@
 
             let min1 = outM; 
             let min2 = inM;
-            if (min2 < min1) min2 += 24 * 60; // 跨日處理
+            if (min2 < min1) min2 += 24 * 60; 
 
             let nightMins = 0;
-            const nightStart = 10 * 60; // 10:00 UTC
-            const nightEnd = 22 * 60;   // 22:00 UTC
+            const nightStart = 10 * 60; 
+            const nightEnd = 22 * 60;   
             
             for (let m = min1; m < min2; m++) {
                 let currentMofD = m % (24 * 60);
@@ -594,10 +590,6 @@
             const select = document.getElementById(selectId);
             if (!rawName) { select.value = ''; return; }
             let matchedName = matchPilotName(rawName);
-            let exists = Array.from(select.options).some(opt => opt.value === matchedName);
-            if (!exists && matchedName !== '') {
-                select.insertAdjacentHTML('beforeend', `<option value="${matchedName}">${matchedName}</option>`);
-            }
             select.value = matchedName;
         }
 
@@ -664,7 +656,7 @@
         }
 
         async function fetchDataFromCloud() {
-            if(GAS_URL === "https://script.google.com/macros/s/AKfycby1_5vXkHiBQ3Pg6DleneEYqjEcSnHEu5Q8vvAtgZkgc30IrH_15XNQ7DIUqwY0UWNy2g/exec") return;
+            if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
             if(flightLogs.length === 0) showToast("Fetching initial data...", true);
             
             try {
@@ -702,7 +694,7 @@
                             day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
                             app: row.approach1_type, rwy: row.approach1_runway, 
                             pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
-                            pilot1: row.pilot1 || '', pilot2: row.pilot2 || '', pilot3: row.pilot3 || ''
+                            pilot1: matchPilotName(row.pilot1), pilot2: matchPilotName(row.pilot2), pilot3: matchPilotName(row.pilot3)
                         };
                     });
                 
@@ -742,7 +734,6 @@
             });
         }
 
-        // 輸入離開焦點時，檢查是否為新組員
         function checkNewPilot(inputElem, type) {
             const val = inputElem.value.trim();
             if(!val) return;
@@ -815,7 +806,6 @@
         }
 
         function calcDuration(t1, t2) {
-            // 放寬檢查：只要能正確轉出分鐘數就予以計算
             const m1 = parseTimeToMins(t1);
             const m2 = parseTimeToMins(t2);
             if(m1 === 0 && m2 === 0) return 0;
@@ -831,10 +821,8 @@
             const onT = document.getElementById('inp-on').value;
             const inT = document.getElementById('inp-in').value;
 
-            // 【修復核心】只要字串裡有冒號，代表使用者或雲端傳來了正確格式，就准許計算
             const isValidTime = (t) => t && t.includes(':');
 
-            // Block Time & Night Time
             if (isValidTime(outT) && isValidTime(inT)) {
                 const bTime = minsToStr(calcDuration(outT, inT));
                 document.getElementById('dash-block-time').textContent = bTime;
@@ -848,7 +836,6 @@
                 document.getElementById('dash-night-time').textContent = "00:00";
             }
 
-            // Air Time
             if (isValidTime(offT) && isValidTime(onT)) {
                 document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
             } else {
@@ -916,7 +903,6 @@
             document.getElementById('inp-reg').value = log.reg;
             handleRegistrationChange(); 
             
-            // 透過防呆轉換，確保載回介面時必為完美的 08:05 格式
             document.getElementById('inp-out').value = normalizeTimeDisplay(log.out);
             document.getElementById('inp-off').value = normalizeTimeDisplay(log.off);
             document.getElementById('inp-on').value  = normalizeTimeDisplay(log.on);
@@ -931,9 +917,9 @@
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
 
-            document.getElementById('inp-pilot1').value = log.pilot1 || '';
-            document.getElementById('inp-pilot2').value = log.pilot2 || '';
-            document.getElementById('inp-pilot3').value = log.pilot3 || '';
+            document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
+            document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
+            document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
             
             document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
             document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
@@ -1127,10 +1113,12 @@
         // ==========================================
         function renderRecentFlights() {
             const container = document.getElementById('recent-list-container');
-            container.innerHTML = '';
             
             const validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
-            if(validLogs.length === 0) return container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
+            if(validLogs.length === 0) {
+                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
+                return;
+            }
 
             const sorted = [...validLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
             const groups = {};
@@ -1140,13 +1128,15 @@
                 groups[key].push(log);
             });
 
+            // 優化 DOM 渲染效能 (防止「卡卡的」)
+            let finalHtml = '';
             for(const [monthYear, logs] of Object.entries(groups)) {
                 let groupHtml = `<div class="px-4 py-1.5 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)]"><span class="text-[11px] font-bold text-[var(--jx-gray)] uppercase">${monthYear}</span></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
                 logs.forEach(log => {
                     const d = new Date(log.date);
                     const blockTime = minsToStr(log.totalMins);
                     groupHtml += `
-                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer" onclick="editLog('${log.index}')">
+                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="editLog('${log.index}')">
                         <div class="flex items-center gap-4 w-full">
                             <div class="flex flex-col items-center justify-center w-10">
                                 <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
@@ -1166,8 +1156,9 @@
                     </div>`;
                 });
                 groupHtml += `</div>`;
-                container.innerHTML += groupHtml;
+                finalHtml += groupHtml;
             }
+            container.innerHTML = finalHtml;
         }
         
         // ==========================================
@@ -1215,7 +1206,6 @@
         function renderStats() {
             const filteredLogs = filterLogsByTime(flightLogs);
             const cardsContainer = document.getElementById('stats-cards-container');
-            cardsContainer.innerHTML = '';
             
             const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
             const recentLogs = sortedLogs.slice(0, 3);
@@ -1234,9 +1224,10 @@
                 return html;
             };
 
-            cardsContainer.innerHTML += createCardHTML('PF Takeoffs', recentLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1), 'to');
-            cardsContainer.innerHTML += createCardHTML('PF Landings', recentLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1), 'ldg');
-            cardsContainer.innerHTML += createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
+            cardsContainer.innerHTML = 
+                createCardHTML('PF Takeoffs', recentLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1), 'to') +
+                createCardHTML('PF Landings', recentLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1), 'ldg') +
+                createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
 
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
             let aptSet = new Set(); let typeMins = {}, dutyMins = {};
@@ -1266,15 +1257,16 @@
 
             const renderList = (dataObj, containerId) => {
                 const el = document.getElementById(containerId);
-                el.innerHTML = '';
+                let listHtml = '';
                 Object.keys(dataObj).forEach(key => {
-                    el.innerHTML += `
+                    listHtml += `
                         <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
                             <span class="text-sm font-medium text-[var(--jx-gray)]">${key}</span>
                             <span class="text-sm font-bold text-[var(--jx-dark)]">${minsToStr(dataObj[key])}</span>
                         </div>
                     `;
                 });
+                el.innerHTML = listHtml;
             };
             renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
             renderChart(sortedLogs);
