@@ -71,7 +71,7 @@
     <!-- 📷 Camera Modal for OOOI OCR -->
     <div id="camera-modal" class="hidden fixed inset-0 bg-black z-[110] flex flex-col justify-center items-center">
         <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10">
-            <span class="text-[var(--jx-gold)] font-bold text-sm tracking-widest">OOOI SCANNER</span>
+            <span class="text-[var(--jx-gold)] font-bold text-sm tracking-widest">ACARS OCR SCANNER</span>
             <button onclick="closeCamera()" class="text-white text-2xl font-bold leading-none">&times;</button>
         </div>
         <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline muted></video>
@@ -79,7 +79,7 @@
 
         <!-- Targeting Box overlay -->
         <div class="absolute w-[90%] h-1/2 border-2 border-[var(--jx-gold)] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
-            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align OOOI/FOB Text Here</div>
+            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align Entire ACARS Text Here</div>
             <div class="w-full border-t border-[var(--jx-gold)] opacity-30"></div>
         </div>
 
@@ -169,37 +169,55 @@
                 </div>
             </div>
             <div class="ios-list shadow-sm">
-                <!-- OOOI 垂直面板 -->
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block Out</span>
-                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Take Off</span>
-                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Land On</span>
-                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block In</span>
-                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                <!-- OOOI 垂直面板 (2x2 左至右，上至下) -->
+                <div class="p-4 bg-white flex flex-col gap-4">
+                    <div class="flex justify-between gap-4">
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Out</div>
+                            <input type="tel" id="inp-out" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                        </div>
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Take Off</div>
+                            <input type="tel" id="inp-off" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                        </div>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Land On</div>
+                            <input type="tel" id="inp-on" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                        </div>
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block In</div>
+                            <input type="tel" id="inp-in" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Fuel Info Toggle (隱藏油量) -->
+                <!-- 🆕 Fuel Info Toggle (擴充為 4 格) -->
                 <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
                     <button onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
                         ⛽️ Toggle Fuel Info (FOB)
                     </button>
-                    <div id="fuel-section" class="hidden mt-3 flex justify-between gap-4">
-                        <div class="w-1/2">
-                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Out) Tonnes</div>
-                            <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
+                    <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
+                        <div class="flex justify-between gap-4">
+                            <div class="w-1/2">
+                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Out) Tonnes</div>
+                                <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
+                            </div>
+                            <div class="w-1/2">
+                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Off) Tonnes</div>
+                                <input type="number" step="0.1" id="inp-fob-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 14.8">
+                            </div>
                         </div>
-                        <div class="w-1/2">
-                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (In) Tonnes</div>
-                            <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.2">
+                        <div class="flex justify-between gap-4">
+                            <div class="w-1/2">
+                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (On) Tonnes</div>
+                                <input type="number" step="0.1" id="inp-fob-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.5">
+                            </div>
+                            <div class="w-1/2">
+                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (In) Tonnes</div>
+                                <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.2">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -366,6 +384,7 @@
 
     <!-- ==================== VIEW 2: RECENT FLIGHTS ==================== -->
     <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
+        <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm hidden" id="hud-recent"></header>
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-30 border-b border-[var(--jx-divider)]" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
             <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view or edit details.</p>
@@ -561,65 +580,88 @@
                 const text = result.data.text.toUpperCase();
                 console.log("Raw OCR Text:\n", text);
 
-                // 1. 解析 FLT ID (JX0805 自動過濾為 805)
-                const fltMatch = text.match(/FLT\s*ID[\s:]*[A-Z]*(\d+)/i);
-                if (fltMatch) {
-                    document.getElementById('inp-flt').value = parseInt(fltMatch[1], 10);
-                }
-
-                // 2. 解析 DEPT / DEST
-                const deptMatch = text.match(/DEPT[\s:]*([A-Z]{4})/i);
-                if (deptMatch) document.getElementById('inp-dep').value = deptMatch[1];
-                const destMatch = text.match(/DEST[\s:]*([A-Z]{4})/i);
-                if (destMatch) document.getElementById('inp-arr').value = destMatch[1];
-
-                // 3. 解析 DATE (如 08 MAY)
-                const dateMatch = text.match(/DATE[\s:]*(\d{1,2})\s*([A-Z]{3})/i);
-                if (dateMatch) {
-                    const currYear = new Date().getFullYear();
-                    const d = new Date(`${dateMatch[1]} ${dateMatch[2]} ${currYear}`);
-                    if (!isNaN(d)) document.getElementById('inp-date').value = safeDateString(d);
-                }
-
-                // 4. 解析 OOOI 
-                const extractTime = (keyword) => {
-                    const regex = new RegExp(`${keyword}[^\\d\\n]*?([\\dOIlZS]{4}|\\d{2}:\\d{2})`, 'i');
-                    const match = text.match(regex);
-                    if (match) {
-                        let timeVal = match[1].replace(':', '').replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
-                        if (/^\d{4}$/.test(timeVal)) return timeVal;
-                    }
-                    return null;
-                };
-
-                const outT = extractTime('OUT');
-                const offT = extractTime('OFF');
-                const onT  = extractTime('ON');
-                const inT  = extractTime('IN');
-
                 let foundAny = false;
-                if(outT) { document.getElementById('inp-out').value = outT.substring(0,2) + ':' + outT.substring(2,4); foundAny = true; }
-                if(offT) { document.getElementById('inp-off').value = offT.substring(0,2) + ':' + offT.substring(2,4); foundAny = true; }
-                if(onT)  { document.getElementById('inp-on').value  = onT.substring(0,2)  + ':' + onT.substring(2,4); foundAny = true; }
-                if(inT)  { document.getElementById('inp-in').value  = inT.substring(0,2)  + ':' + inT.substring(2,4); foundAny = true; }
+                
+                // 將文字扁平化處理，減少換行造成的比對錯誤
+                const fullTextFlattened = text.replace(/\n/g, ' ');
 
-                // 5. 解析 FOB(T)
-                const fobMatches = [...text.matchAll(/FOB[A-Z\(\)]*[\s:]*([\d\.]+)/gi)];
-                if (fobMatches.length > 0) {
-                    if (fobMatches[0]) {
-                        document.getElementById('inp-fob-out').value = fobMatches[0][1];
-                        document.getElementById('fuel-section').classList.remove('hidden');
+                // 1. 解析 FLT ID (捕捉 JX 或 FLT 後方的數字，利用 parseInt 過濾前導 0)
+                const fltMatch = fullTextFlattened.match(/(?:JX|FLT)[^\d]*([0-9OIlZS]+)/i);
+                if (fltMatch) {
+                     let numStr = fltMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                     let fltNum = parseInt(numStr, 10);
+                     if (!isNaN(fltNum)) {
+                         document.getElementById('inp-flt').value = fltNum;
+                         foundAny = true;
+                     }
+                }
+
+                // 2. 解析 Airports (鎖定 R, V, W, K 開頭的標準四碼 ICAO)
+                const airportRegex = /\b([RVKW][A-Z]{3})\b/g;
+                const airports = [...fullTextFlattened.matchAll(airportRegex)].map(m => m[1]);
+                const uniqueAirports = [...new Set(airports)];
+                if (uniqueAirports.length >= 2) {
+                    document.getElementById('inp-dep').value = uniqueAirports[0];
+                    document.getElementById('inp-arr').value = uniqueAirports[1];
+                    foundAny = true;
+                }
+
+                // 3. 解析 DATE
+                const dateMatch = fullTextFlattened.match(/(?:DATE|DT|DAT)[^\d]*([0-3]?[0-9OIlZS])[\s\-\.]*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/i);
+                if (dateMatch) {
+                    let dayStr = dateMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                    const d = new Date(`${dayStr} ${dateMatch[2]} ${new Date().getFullYear()}`);
+                    if (!isNaN(d)) {
+                        document.getElementById('inp-date').value = safeDateString(d);
                         foundAny = true;
                     }
-                    if (fobMatches[1]) {
-                        document.getElementById('inp-fob-in').value = fobMatches[1][1];
-                    }
                 }
 
-                if (foundAny || fltMatch || deptMatch) {
+                // 4. 解析 OOOI & Fuel (逐行精準掃描，確保時間與油量互相綁定)
+                const lines = text.split('\n');
+                const extractEvent = (keyword) => {
+                    const line = lines.find(l => l.includes(keyword));
+                    if (!line) return { time: null, fuel: null };
+                    
+                    const tMatch = line.match(/(?:[^A-Z]|^)([0-2OIlZS][0-9OIlZS][0-5OIlZS][0-9OIlZS]|(?:[0-2][0-9]:[0-5][0-9]))(?:[^A-Z]|$)/i);
+                    let timeVal = null;
+                    if (tMatch) {
+                        timeVal = tMatch[1].replace(':', '').replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                    }
+
+                    const fMatch = line.match(/(\d{1,3}[\.\,]\d{1,2})/);
+                    let fuelVal = null;
+                    if (fMatch) {
+                        fuelVal = fMatch[1].replace(',', '.');
+                    }
+                    return { time: timeVal, fuel: fuelVal };
+                };
+
+                const outData = extractEvent('OUT');
+                const offData = extractEvent('OFF');
+                const onData  = extractEvent('ON');
+                const inData  = extractEvent('IN');
+
+                if(outData.time) { document.getElementById('inp-out').value = outData.time.substring(0,2) + ':' + outData.time.substring(2,4); foundAny = true; }
+                if(offData.time) { document.getElementById('inp-off').value = offData.time.substring(0,2) + ':' + offData.time.substring(2,4); foundAny = true; }
+                if(onData.time)  { document.getElementById('inp-on').value  = onData.time.substring(0,2)  + ':' + onData.time.substring(2,4); foundAny = true; }
+                if(inData.time)  { document.getElementById('inp-in').value  = inData.time.substring(0,2)  + ':' + inData.time.substring(2,4); foundAny = true; }
+
+                let showFuel = false;
+                if(outData.fuel) { document.getElementById('inp-fob-out').value = outData.fuel; showFuel = true; }
+                if(offData.fuel) { document.getElementById('inp-fob-off').value = offData.fuel; showFuel = true; }
+                if(onData.fuel)  { document.getElementById('inp-fob-on').value  = onData.fuel; showFuel = true; }
+                if(inData.fuel)  { document.getElementById('inp-fob-in').value  = inData.fuel; showFuel = true; }
+
+                if (showFuel) {
+                    document.getElementById('fuel-section').classList.remove('hidden');
+                    foundAny = true;
+                }
+
+                if (foundAny) {
                     calculateTimes();
                     updateEntryDash();
-                    showToast("OOOI 掃描成功！ (Scan Success)");
+                    showToast("掃描與資料萃取成功！ (Scan Success)");
                 } else {
                     alert("未偵測到完整格式，請重新對準螢幕並避免反光。");
                 }
@@ -840,7 +882,7 @@
                             app: row.approach1_type, rwy: row.approach1_runway, 
                             pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
                             pilot1: matchPilotName(row.pilot1), pilot2: matchPilotName(row.pilot2), pilot3: matchPilotName(row.pilot3),
-                            fob_out: row.fob_out || '', fob_in: row.fob_in || ''
+                            fob_out: row.fob_out || '', fob_off: row.fob_off || '', fob_on: row.fob_on || '', fob_in: row.fob_in || ''
                         };
                     });
                 
@@ -1063,14 +1105,19 @@
             document.getElementById('inp-remarks').value = log.remarks || '';
 
             document.getElementById('inp-fob-out').value = log.fob_out || '';
+            document.getElementById('inp-fob-off').value = log.fob_off || '';
+            document.getElementById('inp-fob-on').value = log.fob_on || '';
             document.getElementById('inp-fob-in').value = log.fob_in || '';
-            if(log.fob_out || log.fob_in) {
+            
+            if(log.fob_out || log.fob_off || log.fob_on || log.fob_in) {
                 document.getElementById('fuel-section').classList.remove('hidden');
+            } else {
+                document.getElementById('fuel-section').classList.add('hidden');
             }
 
-            document.getElementById('inp-pilot1').value = log.pilot1 || '';
-            document.getElementById('inp-pilot2').value = log.pilot2 || '';
-            document.getElementById('inp-pilot3').value = log.pilot3 || '';
+            document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
+            document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
+            document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
             
             document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
             document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
@@ -1094,7 +1141,10 @@
             document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
+            
             document.getElementById('inp-fob-out').value = '';
+            document.getElementById('inp-fob-off').value = '';
+            document.getElementById('inp-fob-on').value = '';
             document.getElementById('inp-fob-in').value = '';
             document.getElementById('fuel-section').classList.add('hidden');
             
@@ -1171,6 +1221,8 @@
                     approach1_type: document.getElementById('inp-app').value,
                     approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
                     fob_out: document.getElementById('inp-fob-out').value,
+                    fob_off: document.getElementById('inp-fob-off').value,
+                    fob_on: document.getElementById('inp-fob-on').value,
                     fob_in: document.getElementById('inp-fob-in').value
                 };
 
@@ -1189,7 +1241,7 @@
                     duty: payloadData.duty, pax: payloadData.passenger,
                     app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
                     pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3,
-                    fob_out: payloadData.fob_out, fob_in: payloadData.fob_in
+                    fob_out: payloadData.fob_out, fob_off: payloadData.fob_off, fob_on: payloadData.fob_on, fob_in: payloadData.fob_in
                 };
                 const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
                 localLog.acft = acftData ? acftData.type : 'N/A';
@@ -1204,6 +1256,7 @@
                     document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
                     document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
                     document.getElementById('inp-fob-out').value = ''; document.getElementById('inp-fob-in').value = '';
+                    document.getElementById('inp-fob-off').value = ''; document.getElementById('inp-fob-on').value = '';
                     document.getElementById('dash-block-time').textContent = '00:00';
                     document.getElementById('dash-block-time-top').textContent = '00:00';
                     document.getElementById('dash-air-time').textContent = '00:00';
