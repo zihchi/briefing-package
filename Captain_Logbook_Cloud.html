@@ -6,8 +6,8 @@
     <title>Pilot Logbook - Starlux Ultimate FMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 引入 OCR 辨識引擎 Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         :root {
@@ -38,8 +38,6 @@
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .stat-card { scroll-snap-align: center; min-width: 80%; background: var(--jx-card); border: 1px solid var(--jx-divider); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        #map-container { height: calc(100vh - 140px); width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .leaflet-container { background: #E8E4DF; font-family: inherit; }
         #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -67,6 +65,27 @@
                 <button onclick="document.getElementById('audit-modal').classList.add('hidden')" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
             </div>
             <div id="audit-content" class="p-4 overflow-y-auto bg-[var(--jx-bg)] text-sm space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- 📷 Camera Modal for OOOI OCR -->
+    <div id="camera-modal" class="hidden fixed inset-0 bg-black z-[110] flex flex-col justify-center items-center">
+        <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10">
+            <span class="text-[var(--jx-gold)] font-bold text-sm tracking-widest">OOOI SCANNER</span>
+            <button onclick="closeCamera()" class="text-white text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline muted></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+
+        <!-- Targeting Box overlay -->
+        <div class="absolute w-[80%] h-1/3 border-2 border-[var(--jx-gold)] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center">
+            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded">Align OOOI Times within box</div>
+            <div class="w-full border-t border-[var(--jx-gold)] opacity-30"></div>
+        </div>
+
+        <div class="absolute bottom-10 w-full flex flex-col items-center gap-4">
+            <p id="ocr-status" class="text-white text-xs bg-black/70 px-4 py-2 rounded-full hidden font-mono tracking-wide">Initializing Scanner...</p>
+            <button onclick="captureAndScan()" class="w-16 h-16 bg-white rounded-full border-4 border-[var(--jx-gold)] active:scale-95 transition-transform shadow-[0_0_15px_rgba(194,163,112,0.5)]"></button>
         </div>
     </div>
 
@@ -136,42 +155,56 @@
                 </div>
             </div>
 
-            <!-- OOOI Time (由上而下排版 + 純數字快輸) -->
+            <!-- OOOI Time (由上而下排版 + 純數字快輸 + OCR 按鈕) -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Time (UTC)</span>
-                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance enabled</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance enabled</span>
+                    <button onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Scan OOOI (BETA)
+                    </button>
+                </div>
             </div>
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block Out</span>
-                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+            <div class="ios-list shadow-sm bg-white p-4">
+                <div class="flex flex-col gap-4">
+                    <!-- Row 1: OUT -> OFF -->
+                    <div class="flex justify-between gap-4">
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Out</div>
+                            <input type="tel" id="inp-out" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                        </div>
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Take Off</div>
+                            <input type="tel" id="inp-off" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                        </div>
+                    </div>
+                    <!-- Row 2: ON -> IN -->
+                    <div class="flex justify-between gap-4">
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Land On</div>
+                            <input type="tel" id="inp-on" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                        </div>
+                        <div class="w-1/2">
+                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block In</div>
+                            <input type="tel" id="inp-in" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                        </div>
+                    </div>
                 </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Take Off</span>
-                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Land On</span>
-                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Block In</span>
-                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
-                </div>
-                
+
                 <!-- Calculated Totals Box -->
-                <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
-                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
-                        <div id="dash-block-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
+                <div class="mt-4 pt-4 border-t border-[var(--jx-divider)] grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Time</div>
+                        <div id="dash-block-time" class="font-mono text-xl font-bold text-[var(--jx-gold-dark)]">00:00</div>
                     </div>
-                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
-                        <div id="dash-air-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
+                    <div class="border-l border-r border-[var(--jx-divider)]">
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Air Time</div>
+                        <div id="dash-air-time" class="font-mono text-xl font-bold text-[var(--jx-gold-dark)]">00:00</div>
                     </div>
-                    <div class="text-center w-1/3">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
-                        <div id="dash-night-time" class="font-mono text-lg font-bold text-[#5856D6]">00:00</div>
+                    <div>
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Night Time</div>
+                        <div id="dash-night-time" class="font-mono text-xl font-bold text-[#5856D6]">00:00</div>
                     </div>
                 </div>
             </div>
@@ -201,7 +234,7 @@
                 </div>
             </div>
 
-            <!-- Crew Database -->
+            <!-- Crew Database (智慧搜尋選單) -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item">
@@ -321,7 +354,12 @@
 
     <!-- ==================== VIEW 2: RECENT FLIGHTS ==================== -->
     <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
-        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)]">
+        <!-- 頂部 HUD (Recent Flights 頁面也共用) -->
+        <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm hidden" id="hud-recent">
+            <!-- HUD 內容會在點擊時動態注入 -->
+        </header>
+
+        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-30 border-b border-[var(--jx-divider)]" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
             <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view or edit details.</p>
         </header>
@@ -406,34 +444,19 @@
         </main>
     </div>
 
-    <!-- ==================== VIEW 4: MAP ==================== -->
-    <div id="view-map" class="hidden">
-        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
-            <h1 class="text-lg font-bold text-[var(--jx-dark)] text-center">Flight Footprints</h1>
-        </header>
-        <main class="max-w-md mx-auto p-4">
-            <div id="map-container"></div>
-            <p class="text-center text-xs text-[var(--jx-gray)] mt-3">Showing all unique airports flown in your cloud database.</p>
-        </main>
-    </div>
-
     <!-- ==================== BOTTOM TAB BAR ==================== -->
     <nav class="tab-bar fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <button class="tab-btn active flex flex-col items-center w-1/4" onclick="switchTab('entry')">
+        <button class="tab-btn active flex flex-col items-center w-1/3" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span class="text-[10px] font-semibold">Entry</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('recent')">
+        <button class="tab-btn flex flex-col items-center w-1/3" onclick="switchTab('recent')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             <span class="text-[10px] font-semibold">Recent</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('stats')">
+        <button class="tab-btn flex flex-col items-center w-1/3" onclick="switchTab('stats')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             <span class="text-[10px] font-semibold">Stats</span>
-        </button>
-        <button class="tab-btn flex flex-col items-center w-1/4" onclick="switchTab('map')">
-            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span class="text-[10px] font-semibold">Map</span>
         </button>
     </nav>
 
@@ -456,7 +479,7 @@
         let dbPilots = [];
         
         let flightChartInst = null;
-        let leafletMap = null;
+        let videoStream = null;
 
         const airportCoordsFallback = {
             'RCTP': {lat: 25.0797, lon: 121.2342}, 'RCKH': {lat: 22.5771, lon: 120.3500},
@@ -475,6 +498,103 @@
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
+        }
+
+        // ==========================================
+        // 📷 OOOI OCR 相機掃描引擎 (BETA)
+        // ==========================================
+        async function openCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-stream');
+            const status = document.getElementById('ocr-status');
+            
+            modal.classList.remove('hidden');
+            status.classList.add('hidden');
+            
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = videoStream;
+            } catch (err) {
+                alert("無法存取相機 (Camera access denied/unavailable)。請確認瀏覽器權限。");
+                closeCamera();
+            }
+        }
+
+        function closeCamera() {
+            document.getElementById('camera-modal').classList.add('hidden');
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        async function captureAndScan() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            const status = document.getElementById('ocr-status');
+
+            if (!videoStream) return;
+
+            // 擷取當前影像
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            status.classList.remove('hidden');
+            status.textContent = "Analyzing image... (Analyzing...)";
+
+            try {
+                if (typeof Tesseract === 'undefined') throw new Error("OCR Library not loaded.");
+
+                // 執行辨識
+                const result = await Tesseract.recognize(
+                    canvas.toDataURL('image/jpeg'),
+                    'eng',
+                    { logger: m => { if (m.status === 'recognizing text') status.textContent = `Scanning OOOI: ${Math.round(m.progress * 100)}%`; } }
+                );
+
+                const text = result.data.text.toUpperCase();
+                console.log("Raw OCR Text:\n", text);
+
+                // 智慧萃取 Regex 引擎 (尋找 OUT/OFF/ON/IN 關鍵字與鄰近時間)
+                const extractTime = (keyword) => {
+                    const regex = new RegExp(`${keyword}[^\\d\\n]*?([\\dOIlZS]{4}|\\d{2}:\\d{2})`, 'i');
+                    const match = text.match(regex);
+                    if (match) {
+                        let timeVal = match[1].replace(':', '')
+                                              .replace(/[Oo]/g, '0').replace(/[Il|]/g, '1')
+                                              .replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                        if (/^\d{4}$/.test(timeVal)) return timeVal;
+                    }
+                    return null;
+                };
+
+                const outT = extractTime('OUT');
+                const offT = extractTime('OFF');
+                const onT  = extractTime('ON');
+                const inT  = extractTime('IN');
+
+                let foundAny = false;
+                if(outT) { document.getElementById('inp-out').value = outT.substring(0,2) + ':' + outT.substring(2,4); foundAny = true; }
+                if(offT) { document.getElementById('inp-off').value = offT.substring(0,2) + ':' + offT.substring(2,4); foundAny = true; }
+                if(onT)  { document.getElementById('inp-on').value  = onT.substring(0,2)  + ':' + onT.substring(2,4); foundAny = true; }
+                if(inT)  { document.getElementById('inp-in').value  = inT.substring(0,2)  + ':' + inT.substring(2,4); foundAny = true; }
+
+                if (foundAny) {
+                    calculateTimes();
+                    showToast("OOOI 掃描成功！ (Scan Success)");
+                } else {
+                    alert("未偵測到完整 OOOI 格式，請重新對準螢幕並避免反光。");
+                }
+                closeCamera();
+            } catch (err) {
+                console.error("OCR Error: ", err);
+                status.textContent = "OCR Failed!";
+                setTimeout(() => { status.classList.add('hidden'); closeCamera(); }, 2000);
+            }
         }
 
         // ==========================================
@@ -499,7 +619,6 @@
         // ==========================================
         // 【核心過濾器與時間解析器】
         // ==========================================
-        
         function normalizeTimeDisplay(val) {
             if (!val) return '';
             let s = String(val).trim();
@@ -587,10 +706,10 @@
         }
 
         function setPilotDropdown(selectId, rawName) {
-            const select = document.getElementById(selectId);
-            if (!rawName) { select.value = ''; return; }
+            const inputElem = document.getElementById(selectId);
+            if (!rawName) { inputElem.value = ''; return; }
             let matchedName = matchPilotName(rawName);
-            select.value = matchedName;
+            inputElem.value = matchedName;
         }
 
         function showToast(message, isLoading = false) {
@@ -778,12 +897,11 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
-            ['entry', 'recent', 'stats', 'map'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
+            ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
 
             if (tabId === 'recent') renderRecentFlights();
             if (tabId === 'stats') renderStats();
-            if (tabId === 'map') initOrUpdateMap();
         }
 
         function handleFltInput() {
@@ -1128,7 +1246,6 @@
                 groups[key].push(log);
             });
 
-            // 優化 DOM 渲染效能 (防止「卡卡的」)
             let finalHtml = '';
             for(const [monthYear, logs] of Object.entries(groups)) {
                 let groupHtml = `<div class="px-4 py-1.5 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)]"><span class="text-[11px] font-bold text-[var(--jx-gray)] uppercase">${monthYear}</span></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
@@ -1206,9 +1323,9 @@
         function renderStats() {
             const filteredLogs = filterLogsByTime(flightLogs);
             const cardsContainer = document.getElementById('stats-cards-container');
+            cardsContainer.innerHTML = '';
             
             const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
-            const recentLogs = sortedLogs.slice(0, 3);
             
             const createCardHTML = (title, items, type) => {
                 let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
@@ -1224,10 +1341,15 @@
                 return html;
             };
 
+            // 【重點修正】獨立向後搜尋最近 3 筆符合條件的資料，而非只看全域的前三筆
+            const recentTakeoffs = sortedLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1).slice(0, 3);
+            const recentLandings = sortedLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1).slice(0, 3);
+            const recentApproaches = sortedLogs.filter(l => l.app && l.app !== 'N/A').slice(0, 3);
+
             cardsContainer.innerHTML = 
-                createCardHTML('PF Takeoffs', recentLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1), 'to') +
-                createCardHTML('PF Landings', recentLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1), 'ldg') +
-                createCardHTML('Approaches', recentLogs.filter(l => l.app && l.app !== 'N/A'), 'app');
+                createCardHTML('PF Takeoffs', recentTakeoffs, 'to') +
+                createCardHTML('PF Landings', recentLandings, 'ldg') +
+                createCardHTML('Approaches', recentApproaches, 'app');
 
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
             let aptSet = new Set(); let typeMins = {}, dutyMins = {};
@@ -1307,31 +1429,6 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                     scales: { x: { grid: { display: false }, ticks: { font: {size: 10} } }, y: { display: false, min: 0 } }
-                }
-            });
-        }
-
-        // ==========================================
-        // 🌍 MAP
-        // ==========================================
-        function initOrUpdateMap() {
-            if(!leafletMap) {
-                leafletMap = L.map('map-container').setView([25.0797, 121.2342], 4);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(leafletMap);
-            }
-            leafletMap.eachLayer((layer) => { if (layer instanceof L.Marker) layer.remove(); });
-            let aptSet = new Set();
-            flightLogs.forEach(l => { if(l.dep) aptSet.add(l.dep); if(l.arr) aptSet.add(l.arr); });
-
-            aptSet.forEach(icao => {
-                if(airportCoordsFallback[icao]) {
-                    const coords = airportCoordsFallback[icao];
-                    const circleIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div style="background-color:#9A7B4F; width:10px; height:10px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.3);"></div>`,
-                        iconSize: [14, 14], iconAnchor: [7, 7]
-                    });
-                    L.marker([coords.lat, coords.lon], {icon: circleIcon}).bindPopup(`<b>${icao}</b>`).addTo(leafletMap);
                 }
             });
         }
