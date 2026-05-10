@@ -6,7 +6,6 @@
     <title>Pilot Logbook - Starlux Ultimate FMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 引入 OCR 辨識引擎 Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
@@ -47,11 +46,7 @@
         #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
         #edit-banner.show { display: block; }
 
-        /* 瀏覽模式樣式 */
-        body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea {
-            pointer-events: none;
-            opacity: 0.8;
-        }
+        body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea { pointer-events: none; opacity: 0.8; }
         body.view-mode select.ios-input { background-image: none; padding-right: 0; }
         body.view-mode #btn-scan-ocr, body.view-mode #btn-toggle-fuel { display: none; }
     </style>
@@ -61,10 +56,10 @@
     <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
-        <span id="sync-toast-text">Syncing with Google Cloud DB...</span>
+        <span id="sync-toast-text">Syncing...</span>
     </div>
 
-    <!-- Datalist for Pilot Searching -->
+    <!-- Datalist -->
     <datalist id="pilot-datalist"></datalist>
 
     <!-- Data Audit Modal -->
@@ -78,7 +73,61 @@
         </div>
     </div>
 
-    <!-- 📷 Camera Modal for OOOI OCR -->
+    <!-- Carry Forward Settings Modal -->
+    <div id="cf-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
+                <h2 class="font-bold text-[var(--jx-gold)] tracking-wide flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Carry Forward (前期累積)
+                </h2>
+                <button onclick="closeCFModal()" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-0 overflow-y-auto">
+                <div class="px-4 pt-4 pb-2 text-xs leading-relaxed text-red-600 bg-red-50 border-b border-red-100 flex flex-col gap-1">
+                    <span class="font-bold">⚠️ 注意：為確保數據永久不遺失，本介面僅供「暫存預覽」。</span>
+                    <span class="text-[var(--jx-gray)]">如需永久生效，請使用文字編輯器打開此 HTML 檔案，修改最上方的 <code>CF_CONFIG</code> 區塊。</span>
+                </div>
+                <div class="ios-list shadow-sm my-2 pointer-events-none opacity-80">
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium">Total Flights</span>
+                        <input type="number" id="cf-flights" class="ios-input !w-24" placeholder="0">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium">Total Takeoffs</span>
+                        <input type="number" id="cf-to" class="ios-input !w-24" placeholder="0">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium">Total Landings</span>
+                        <input type="number" id="cf-ldg" class="ios-input !w-24" placeholder="0">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium text-[var(--jx-gold-dark)]">Total Time (HH:MM)</span>
+                        <input type="tel" id="cf-time" class="ios-input !w-24 font-mono font-bold" placeholder="00:00">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium text-[var(--jx-gold-dark)]">Night Time (HH:MM)</span>
+                        <input type="tel" id="cf-night" class="ios-input !w-24 font-mono font-bold" placeholder="00:00">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium">Passengers</span>
+                        <input type="number" id="cf-pax" class="ios-input !w-24" placeholder="0">
+                    </div>
+                    <div class="ios-list-item bg-white">
+                        <span class="text-[15px] font-medium">Unique Airports</span>
+                        <input type="number" id="cf-apt" class="ios-input !w-24" placeholder="0">
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-white border-t border-[var(--jx-divider)]">
+                <button onclick="closeCFModal()" class="w-full bg-[var(--jx-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
+                    了解，我會修改源代碼
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
     <div id="camera-modal" class="hidden fixed inset-0 bg-black z-[110] flex flex-col justify-center items-center">
         <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10">
             <span class="text-[var(--jx-gold)] font-bold text-sm tracking-widest">ACARS OCR SCANNER</span>
@@ -86,21 +135,19 @@
         </div>
         <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline muted></video>
         <canvas id="camera-canvas" class="hidden"></canvas>
-
         <div class="absolute w-[90%] h-1/2 border-2 border-[var(--jx-gold)] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
             <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align OOOI/FOB Text Here</div>
             <div class="w-full border-t border-[var(--jx-gold)] opacity-30"></div>
         </div>
-
         <div class="absolute bottom-10 w-full flex flex-col items-center gap-4 z-20">
-            <p id="ocr-status" class="text-white text-xs bg-black/70 px-4 py-2 rounded-full hidden font-mono tracking-wide">Initializing Scanner...</p>
-            <button onclick="captureAndScan()" class="w-16 h-16 bg-white rounded-full border-4 border-[var(--jx-gold)] active:scale-95 transition-transform shadow-[0_0_15px_rgba(194,163,112,0.5)] flex items-center justify-center">
+            <p id="ocr-status" class="text-white text-xs bg-black/70 px-4 py-2 rounded-full hidden font-mono tracking-wide">Initializing...</p>
+            <button onclick="captureAndScan()" class="w-16 h-16 bg-white rounded-full border-4 border-[var(--jx-gold)] active:scale-95 transition-transform flex items-center justify-center">
                 <div class="w-12 h-12 bg-white rounded-full border border-gray-200"></div>
             </button>
         </div>
     </div>
 
-    <!-- ==================== VIEW 1: LOG ENTRY ==================== -->
+    <!-- MAIN VIEWS -->
     <div id="view-entry" class="block">
         <div id="edit-banner">Editing Mode</div>
         <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
@@ -166,7 +213,6 @@
                 </div>
             </div>
 
-            <!-- OOOI Time & Fuel (OCR + Manual) -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Time (UTC) & Fuel</span>
                 <div class="flex items-center gap-3">
@@ -179,7 +225,6 @@
             </div>
             
             <div class="ios-list shadow-sm">
-                <!-- 由上至下的經典 OOOI 垂直面板 -->
                 <div class="ios-list-item bg-white">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block Out</span>
                     <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
@@ -197,7 +242,6 @@
                     <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
                 </div>
                 
-                <!-- Fuel Info Toggle (擴充為 4 格) -->
                 <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
                     <button id="btn-toggle-fuel" onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
                         ⛽️ Toggle Fuel Info (FOB)
@@ -226,7 +270,6 @@
                     </div>
                 </div>
 
-                <!-- Calculated Totals Box (Air, Block, Night) -->
                 <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
                     <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
                         <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
@@ -242,14 +285,10 @@
                     </div>
                 </div>
             </div>
-            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">
-                * Night Time 採自動概算：交集 UTC 10:00 ~ 22:00
-            </p>
+            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 採自動概算：交集 UTC 10:00 ~ 22:00</p>
 
-            <!-- Operations -->
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Operations (PF)</span>
-                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">auto day/night via oooi</span>
             </div>
             <div class="ios-list shadow-sm">
                 <div class="ios-list-item flex-col items-start gap-2">
@@ -271,6 +310,7 @@
             <!-- Crew Database -->
             <div class="section-title mt-2">Flight Crew</div>
             <div class="ios-list shadow-sm">
+                <!-- Pilot 1 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
                     <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
@@ -288,7 +328,7 @@
                         <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
-
+                <!-- Pilot 2 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
                     <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
@@ -306,7 +346,7 @@
                         <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
-
+                <!-- Pilot 3 -->
                 <div class="ios-list-item">
                     <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
                     <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
@@ -324,7 +364,7 @@
                         <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                     </div>
                 </div>
-
+                <!-- Self Duty -->
                 <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
                     <div class="flex flex-col">
                         <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
@@ -337,7 +377,7 @@
                 </div>
             </div>
 
-            <!-- Remarks & Approach -->
+            <!-- Remarks -->
             <div class="section-title mt-2">Remarks & Approach</div>
             <div class="ios-list shadow-sm mb-4">
                 <div class="ios-list-item">
@@ -363,66 +403,62 @@
                 </div>
             </div>
 
-            <!-- Buttons Actions State -->
+            <!-- Action Buttons -->
             <div class="p-4 pb-8" id="action-create">
-                <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
-                    Save Logbook Entry
-                </button>
-                <p class="text-center text-xs text-[var(--jx-gray)] mt-2">Data is saved offline instantly and synced to cloud.</p>
+                <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">Save Logbook Entry</button>
             </div>
-
             <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-view">
-                <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
-                    Edit Entry (解鎖編輯)
-                </button>
-                <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm active:scale-95 transition-transform">
-                    Back to Recent
-                </button>
+                <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">Edit Entry (解鎖編輯)</button>
+                <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm active:scale-95 transition-transform">Back to Recent</button>
             </div>
-            
             <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-edit">
-                <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
-                    Save Changes (儲存修改)
-                </button>
+                <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">Save Changes</button>
                 <div class="flex gap-3">
-                    <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
-                        Delete
-                    </button>
-                    <button onclick="cancelEntry()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
-                        Cancel
-                    </button>
+                    <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">Delete</button>
+                    <button onclick="cancelEntry()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">Cancel</button>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- ==================== VIEW 2: RECENT FLIGHTS ==================== -->
     <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-30 border-b border-[var(--jx-divider)]" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
             <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
+            
+            <!-- 搜尋框 Search Bar -->
+            <div class="mt-4">
+                <div class="relative">
+                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight No. or Pilot Name..." oninput="renderRecentFlights()">
+                </div>
+            </div>
         </header>
         <main class="max-w-md mx-auto pb-12" id="recent-list-container"></main>
     </div>
 
-    <!-- ==================== VIEW 3: STATISTICS ==================== -->
     <div id="view-stats" class="hidden">
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
             <div class="flex justify-between items-center">
                 <div class="relative">
                     <select id="stats-time-filter" class="appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="renderStats()">
-                        <option value="career">Career</option>
-                        <option value="7d">Last 7 days</option>
-                        <option value="30d">Last 30 days</option>
-                        <option value="365d">Last 365 days</option>
+                        <!-- Options generated dynamically -->
                     </select>
                     <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
-                <h1 class="text-lg font-bold text-[var(--jx-dark)]">Captain Logbook</h1>
-                <div class="w-[88px]"></div>
+                <h1 class="text-lg font-bold text-[var(--jx-dark)] ml-2">Captain Logbook</h1>
+                <button onclick="openCFModal()" class="flex items-center justify-center p-2 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] ml-auto" title="Carry Forward Settings">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
             </div>
         </header>
         <main class="max-w-md mx-auto mt-2">
+            <!-- Indicator for Active CF -->
+            <div id="cf-indicator" class="hidden mx-4 mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Carry Forward Data is Active (Career View)
+            </div>
+
             <div class="horizontal-scroll" id="stats-cards-container"></div>
             <div class="mt-6 px-4">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)]">
@@ -468,8 +504,14 @@
             </div>
             
             <div class="mt-8 px-4 mb-8">
+                <!-- 原有的機型與任務時數 -->
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Hours by Aircraft Type</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-acft"></div>
+                
+                <!-- 新增：前期累積獨立顯示區塊 (僅在 Career 模式顯示) -->
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 hidden" id="cf-prev-acft-title">Previous flight hours (included)</div>
+                <div class="ios-list rounded-xl overflow-hidden hidden" id="stat-list-prev-acft"></div>
+
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
             </div>
@@ -483,7 +525,6 @@
         </main>
     </div>
 
-    <!-- ==================== BOTTOM TAB BAR ==================== -->
     <nav class="tab-bar fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
         <button class="tab-btn active flex flex-col items-center w-1/3" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -494,15 +535,33 @@
             <span class="text-[10px] font-semibold">Recent</span>
         </button>
         <button class="tab-btn flex flex-col items-center w-1/3" onclick="switchTab('stats')">
-            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             <span class="text-[10px] font-semibold">Stats</span>
         </button>
     </nav>
 
     <script>
         // ==========================================
-        // ✈️ 雲端 API 設定區
+        // 🚀 使用者自定義：Carry Forward (前期累積) 🚀
         // ==========================================
+        // 請將您在此系統建立之前的紀錄填寫於下方。
+        // 未來每次載入網頁時，系統皆會以這裡的數字為基礎，往上疊加總計。
+        const CF_CONFIG = {
+            flights: 1796,         
+            takeoffs: 1574,        
+            landings: 1579,        
+            totalTime: "2827:18", 
+            nightTime: "461:49", 
+            pax: 166213,           
+            airports: 5,           
+            // 新增：前期累積的個別機型時數明細 (僅作展示，不影響已包含在內的 Total Time)
+            previousAircraft: [
+                { type: "ATR", hours: "2566:42" },
+                { type: "CPL", hours: "260:36" }
+            ]
+        };
+        // ==========================================
+
         const GAS_URL = "https://script.google.com/macros/s/AKfycby1_5vXkHiBQ3Pg6DleneEYqjEcSnHEu5Q8vvAtgZkgc30IrH_15XNQ7DIUqwY0UWNy2g/exec"; 
 
         const CACHE_FLIGHTS = 'jx_cache_flights';
@@ -510,12 +569,12 @@
         const CACHE_PILOTS = 'jx_cache_pilots';
         const SYNC_QUEUE = 'jx_sync_queue';
 
-        const ADD_NEW_VAL = "___ADD_NEW___";
         let routeMemory = JSON.parse(localStorage.getItem('jxRouteMemory')) || {};
         
         let flightLogs = [];
         let dbAircrafts = [];
         let dbPilots = [];
+        let cfData = {}; 
         
         let flightChartInst = null;
         let videoStream = null;
@@ -536,8 +595,799 @@
             });
         }
 
+        function handleTimeInput(e, nextFieldId) {
+            let raw = e.target.value.replace(/\D/g, '');
+            if (raw.length > 4) raw = raw.substring(0, 4);
+
+            let formatted = raw;
+            if (raw.length >= 3) {
+                formatted = raw.substring(0, 2) + ':' + raw.substring(2);
+            }
+            e.target.value = formatted;
+            
+            if (document.getElementById('view-entry').classList.contains('block') && e.target.id.includes('inp-')) {
+                calculateTimes();
+            }
+
+            if (formatted.length === 5 && nextFieldId) {
+                const nextField = document.getElementById(nextFieldId);
+                if(nextField) nextField.focus();
+            }
+        }
+
+        function normalizeTimeDisplay(val) {
+            if (!val) return '';
+            let s = String(val).trim();
+            if (s.includes('1899') || s.includes('1900') || s.toLowerCase().includes('總和')) return '';
+            
+            if (s.includes('T') && s.includes('Z')) {
+                const dt = new Date(s);
+                if (!isNaN(dt)) return `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+            }
+            if (s.includes(':')) {
+                const p = s.split(':');
+                return `${String(parseInt(p[0])||0).padStart(2,'0')}:${String(parseInt(p[1])||0).padStart(2,'0')}`;
+            }
+            if (s.length === 4 && !isNaN(parseInt(s))) return `${s.substring(0,2)}:${s.substring(2,4)}`;
+            if (s.length === 3 && !isNaN(parseInt(s))) return `0${s.substring(0,1)}:${s.substring(1,3)}`;
+            
+            return s;
+        }
+
+        function parseTimeToMins(val) {
+            let s = normalizeTimeDisplay(val);
+            if (!s) return 0;
+            const p = s.split(':');
+            return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
+        }
+
+        function calcDuration(t1, t2) {
+            const m1 = parseTimeToMins(t1);
+            const m2 = parseTimeToMins(t2);
+            if (m1 === 0 && m2 === 0) return 0;
+            let diff = m2 - m1;
+            if (diff < 0) diff += 24 * 60;
+            return diff;
+        }
+
+        function calcNightTime(t1, t2) {
+            const outM = parseTimeToMins(t1);
+            const inM = parseTimeToMins(t2);
+            if(outM === 0 && inM === 0) return 0;
+
+            let min1 = outM; 
+            let min2 = inM;
+            if (min2 < min1) min2 += 24 * 60; 
+
+            let nightMins = 0;
+            const nightStart = 10 * 60; 
+            const nightEnd = 22 * 60;   
+            
+            for (let m = min1; m < min2; m++) {
+                let currentMofD = m % (24 * 60);
+                if (currentMofD >= nightStart && currentMofD < nightEnd) {
+                    nightMins++;
+                }
+            }
+            return nightMins;
+        }
+
+        function safeDateString(val) {
+            if (!val) return '';
+            const d = new Date(val);
+            if (isNaN(d)) return '';
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function minsToStr(mins) {
+            if(isNaN(mins) || mins <= 0) return "00:00";
+            const h = Math.floor(mins / 60); const m = mins % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function getSortTimestamp(log) {
+            if (!log.date) return 0;
+            let timeStr = '00:00';
+            if (log.out) {
+                let cleanTime = String(log.out).replace(/\D/g, ''); 
+                if (cleanTime.length >= 4) {
+                    timeStr = cleanTime.substring(0, 2) + ':' + cleanTime.substring(2, 4);
+                }
+            }
+            const dt = new Date(`${log.date}T${timeStr}:00`);
+            return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
+        }
+
+        window.onload = async () => {
+            cfData = {
+                flights: parseInt(CF_CONFIG.flights) || 0,
+                takeoffs: parseInt(CF_CONFIG.takeoffs) || 0,
+                landings: parseInt(CF_CONFIG.landings) || 0,
+                totalMins: parseTimeToMins(CF_CONFIG.totalTime || "00:00"),
+                nightMins: parseTimeToMins(CF_CONFIG.nightTime || "00:00"),
+                pax: parseInt(CF_CONFIG.pax) || 0,
+                airports: parseInt(CF_CONFIG.airports) || 0
+            };
+
+            document.getElementById('inp-date').valueAsDate = new Date();
+            initTimeFilterDropdown();
+            loadLocalCache();
+            await processSyncQueue();
+            fetchDataFromCloud(); 
+        };
+
+        function loadLocalCache() {
+            try {
+                const cAcft = localStorage.getItem(CACHE_AIRCRAFTS);
+                const cPilots = localStorage.getItem(CACHE_PILOTS);
+                const cFlights = localStorage.getItem(CACHE_FLIGHTS);
+
+                if (cAcft) { dbAircrafts = JSON.parse(cAcft); populateAircraftDropdowns(); }
+                if (cPilots) { dbPilots = JSON.parse(cPilots); populatePilotDropdown(); }
+                if (cFlights) {
+                    flightLogs = JSON.parse(cFlights);
+                    if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
+                    if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
+                }
+            } catch(e) { console.warn("Local cache issue."); }
+        }
+
+        async function processSyncQueue() {
+            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
+            if (queue.length === 0) return;
+            showToast(`Syncing ${queue.length} updates...`, true);
+            let remainingQueue = [];
+            for (let item of queue) {
+                try {
+                    await fetch(GAS_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        body: new URLSearchParams(item),
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+                } catch (err) { remainingQueue.push(item); }
+            }
+            localStorage.setItem(SYNC_QUEUE, JSON.stringify(remainingQueue));
+            if (remainingQueue.length === 0) showToast("All offline data synced!");
+            else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
+        }
+
+        async function fetchDataFromCloud() {
+            if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
+            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
+            
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json(); 
+                
+                dbAircrafts = data.aircrafts || []; populateAircraftDropdowns();
+                localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
+
+                dbPilots = (data.pilots || []).map(p => {
+                    const nickStr = p.nickname ? ` (${p.nickname})` : '';
+                    return { ...p, formattedName: `${p.name}${nickStr}` };
+                });
+                populatePilotDropdown();
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
+
+                flightLogs = (data.flights || []).filter(row => row.date).map(row => {
+                    const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
+                    return {
+                        index: row.index, date: safeDateString(row.date), 
+                        flt: String(row.filght_number).replace('JX',''), 
+                        dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
+                        reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
+                        out: normalizeTimeDisplay(row.time_blockout), off: normalizeTimeDisplay(row.time_takeoff), 
+                        on: normalizeTimeDisplay(row.time_landing), in: normalizeTimeDisplay(row.time_blockin),
+                        totalMins: parseTimeToMins(row.total_block), nightMins: parseTimeToMins(row.total_night),
+                        airMins: parseTimeToMins(row.total_air), duty: row.duty,
+                        day_to: Number(row.day_takeoff) || 0, night_to: Number(row.night_takeoff) || 0,
+                        day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
+                        app: row.approach1_type, rwy: row.approach1_runway, 
+                        pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
+                        pilot1: matchPilotName(row.pilot1), pilot2: matchPilotName(row.pilot2), pilot3: matchPilotName(row.pilot3),
+                        fob_out: row.fob_out || '', fob_off: row.fob_off || '', fob_on: row.fob_on || '', fob_in: row.fob_in || ''
+                    };
+                });
+                
+                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
+                document.getElementById('sync-toast').classList.remove('show');
+                
+                if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
+                if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
+            } catch (err) { console.error("Cloud fetch failed (Offline):", err); }
+        }
+
+        function openCFModal() {
+            document.getElementById('cf-flights').value = cfData.flights || '';
+            document.getElementById('cf-to').value = cfData.takeoffs || '';
+            document.getElementById('cf-ldg').value = cfData.landings || '';
+            document.getElementById('cf-time').value = minsToStr(cfData.totalMins || 0);
+            document.getElementById('cf-night').value = minsToStr(cfData.nightMins || 0);
+            document.getElementById('cf-pax').value = cfData.pax || '';
+            document.getElementById('cf-apt').value = cfData.airports || '';
+            document.getElementById('cf-modal').classList.remove('hidden');
+        }
+
+        function closeCFModal() {
+            document.getElementById('cf-modal').classList.add('hidden');
+        }
+
+        function switchTab(tabId, bypassReset = false) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick').includes(`'${tabId}'`)) btn.classList.add('active');
+            });
+            ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+            if (tabId === 'entry' && !bypassReset && document.getElementById('action-create').classList.contains('hidden')) {
+                cancelEntry(); 
+            }
+            if (tabId === 'recent') renderRecentFlights();
+            if (tabId === 'stats') renderStats();
+        }
+
+        function setFormMode(mode) {
+            const inputs = document.querySelectorAll('#view-entry input, #view-entry select, #view-entry textarea');
+            inputs.forEach(inp => inp.disabled = (mode === 'view'));
+            document.getElementById('btn-scan-ocr').style.display = (mode === 'view') ? 'none' : 'flex';
+            document.getElementById('btn-toggle-fuel').style.display = (mode === 'view') ? 'none' : 'flex';
+            
+            document.getElementById('action-create').classList.toggle('hidden', mode !== 'create');
+            document.getElementById('action-view').classList.toggle('hidden', mode !== 'view');
+            document.getElementById('action-edit').classList.toggle('hidden', mode !== 'edit');
+
+            const banner = document.getElementById('edit-banner');
+            document.body.classList.toggle('view-mode', mode === 'view');
+
+            if (mode === 'create') banner.classList.remove('show');
+            else if (mode === 'view') { banner.textContent = 'View Mode (解鎖請點擊 Edit)'; banner.classList.add('show'); banner.style.backgroundColor = 'var(--jx-gray)'; }
+            else if (mode === 'edit') { banner.textContent = 'Editing Mode'; banner.classList.add('show'); banner.style.backgroundColor = 'var(--jx-gold-dark)'; }
+        }
+
+        function handleFltInput() {
+            const fltNum = document.getElementById('inp-flt').value.trim();
+            if (fltNum && routeMemory[fltNum]) {
+                document.getElementById('inp-dep').value = routeMemory[fltNum].dep;
+                document.getElementById('inp-arr').value = routeMemory[fltNum].arr;
+            }
+            updateEntryDash();
+        }
+
+        function saveRouteMemory() {
+            const fltNum = document.getElementById('inp-flt').value.trim();
+            const dep = document.getElementById('inp-dep').value.trim().toUpperCase();
+            const arr = document.getElementById('inp-arr').value.trim().toUpperCase();
+            if (fltNum && dep && arr) {
+                routeMemory[fltNum] = { dep: dep, arr: arr };
+                localStorage.setItem('jxRouteMemory', JSON.stringify(routeMemory));
+            }
+        }
+
+        function calculateTimes() {
+            const outT = document.getElementById('inp-out').value;
+            const offT = document.getElementById('inp-off').value;
+            const onT = document.getElementById('inp-on').value;
+            const inT = document.getElementById('inp-in').value;
+            const isValidTime = (t) => t && t.includes(':');
+
+            if (isValidTime(outT) && isValidTime(inT)) {
+                const bTime = minsToStr(calcDuration(outT, inT));
+                document.getElementById('dash-block-time').textContent = bTime;
+                document.getElementById('dash-block-time-top').textContent = bTime;
+                document.getElementById('dash-night-time').textContent = minsToStr(calcNightTime(outT, inT));
+            } else {
+                document.getElementById('dash-block-time').textContent = "00:00";
+                document.getElementById('dash-block-time-top').textContent = "00:00";
+                document.getElementById('dash-night-time').textContent = "00:00";
+            }
+            if (isValidTime(offT) && isValidTime(onT)) {
+                document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
+            } else document.getElementById('dash-air-time').textContent = "00:00";
+            
+            evaluateOperations();
+        }
+
+        function evaluateOperations() {
+            const chkTo = document.getElementById('chk-to').checked;
+            const chkLdg = document.getElementById('chk-ldg').checked;
+            const offT = document.getElementById('inp-off').value;
+            const onT = document.getElementById('inp-on').value;
+            const resTo = document.getElementById('to-result');
+            const resLdg = document.getElementById('ldg-result');
+
+            if (chkTo) {
+                if (offT && offT.includes(':')) {
+                    const h = parseInt(offT.split(':')[0]);
+                    const isDay = !(h >= 10 && h < 22);
+                    resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
+                    resTo.classList.remove('hidden');
+                } else { resTo.innerHTML = '⚠️ Input full "Take Off" time.'; resTo.classList.remove('hidden'); }
+            } else resTo.classList.add('hidden');
+
+            if (chkLdg) {
+                if (onT && onT.includes(':')) {
+                    const h = parseInt(onT.split(':')[0]);
+                    const isDay = !(h >= 10 && h < 22);
+                    resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
+                    resLdg.classList.remove('hidden');
+                } else { resLdg.innerHTML = '⚠️ Input full "Land On" time.'; resLdg.classList.remove('hidden'); }
+            } else resLdg.classList.add('hidden');
+        }
+
+        function updateEntryDash() {
+            const rawDate = document.getElementById('inp-date').value;
+            if (rawDate) {
+                const d = new Date(rawDate);
+                document.getElementById('dash-date').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+            const fltNum = document.getElementById('inp-flt').value;
+            document.getElementById('dash-flt').textContent = fltNum ? `JX${fltNum}` : "JX---";
+            document.getElementById('dash-dep').textContent = document.getElementById('inp-dep').value.toUpperCase() || "---";
+            document.getElementById('dash-arr').textContent = document.getElementById('inp-arr').value.toUpperCase() || "---";
+            const acft = document.getElementById('inp-acft-select').value;
+            const reg = document.getElementById('inp-reg').value;
+            document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
+        }
+
+        function initTimeFilterDropdown() {
+            const select = document.getElementById('stats-time-filter');
+            select.innerHTML = ''; 
+            
+            select.innerHTML += `<option value="career" selected>Career (All Time)</option>`;
+            select.innerHTML += `<option value="7d">Last 7 days</option>`;
+            select.innerHTML += `<option value="30d">Last 30 days</option>`;
+            select.innerHTML += `<option value="365d">Last 365 days</option>`;
+            
+            const now = new Date();
+            const thisMonthName = now.toLocaleString('en-US', { month: 'short' });
+            let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthName = lastMonthDate.toLocaleString('en-US', { month: 'short' });
+            const thisYear = now.getFullYear(); const lastYear = thisYear - 1;
+
+            select.innerHTML += `
+                <option value="thisM">This month (${thisMonthName})</option>
+                <option value="lastM">Last month (${lastMonthName})</option>
+                <option value="thisY">This year (${thisYear})</option>
+                <option value="lastY">Last year (${lastYear})</option>
+            `;
+        }
+
+        function filterLogsByTime(logs) {
+            const filterVal = document.getElementById('stats-time-filter').value;
+            const now = new Date();
+            return logs.filter(log => {
+                if(!log.date || !log.dep) return false; 
+                const logDate = new Date(log.date);
+                const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
+                switch(filterVal) {
+                    case '7d': return diffDays <= 7;
+                    case '30d': return diffDays <= 30;
+                    case '365d': return diffDays <= 365;
+                    case 'thisM': return logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear();
+                    case 'lastM': 
+                        let lm = now.getMonth() - 1; let ly = now.getFullYear();
+                        if(lm < 0) { lm = 11; ly--; }
+                        return logDate.getMonth() === lm && logDate.getFullYear() === ly;
+                    case 'thisY': return logDate.getFullYear() === now.getFullYear();
+                    case 'lastY': return logDate.getFullYear() === now.getFullYear() - 1;
+                    case 'career':
+                    default: return true; 
+                }
+            });
+        }
+
+        function renderStats() {
+            const filterVal = document.getElementById('stats-time-filter').value;
+            const isCareer = (filterVal === 'career');
+            const cfIndicator = document.getElementById('cf-indicator');
+            
+            const filteredLogs = filterLogsByTime(flightLogs);
+            const cardsContainer = document.getElementById('stats-cards-container');
+            cardsContainer.innerHTML = '';
+            
+            const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            
+            const createCardHTML = (title, items, type) => {
+                let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
+                if(items.length === 0) html += `<p class="text-xs text-[var(--jx-gray)]">No recent data.</p>`;
+                items.forEach(log => {
+                    let d = new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
+                    let fltFormat = String(log.flt).includes('JX') ? log.flt : `JX${log.flt}`;
+                    let detail = type === 'app' ? `${log.app || ''} ${log.rwy || ''}` : `${log.dep || ''} / ${log.arr || ''}`;
+                    html += `<p class="text-xs text-[var(--jx-gray)] mb-1">${d} - ${fltFormat} ${detail}</p>`;
+                });
+                html += `</div>`;
+                return html;
+            };
+
+            const recentTakeoffs = sortedLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1).slice(0, 3);
+            const recentLandings = sortedLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1).slice(0, 3);
+            const recentApproaches = sortedLogs.filter(l => l.app && l.app !== 'N/A').slice(0, 3);
+
+            cardsContainer.innerHTML = 
+                createCardHTML('PF Takeoffs', recentTakeoffs, 'to') +
+                createCardHTML('PF Landings', recentLandings, 'ldg') +
+                createCardHTML('Approaches', recentApproaches, 'app');
+
+            let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
+            let aptSet = new Set(); 
+            let typeMins = {}, dutyMins = {};
+
+            filteredLogs.forEach(l => {
+                tTot++;
+                tTo += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
+                tLdg += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
+                tMins += l.totalMins || 0;
+                tNight += l.nightMins || 0;
+                tPax += l.pax || 0;
+                if(l.dep) aptSet.add(l.dep); if(l.arr) aptSet.add(l.arr);
+
+                let acftType = l.acft || 'Unknown'; let dutyType = l.duty || 'Unknown';
+                typeMins[acftType] = (typeMins[acftType] || 0) + (l.totalMins || 0);
+                dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
+            });
+
+            // --- Carry Forward 邏輯 ---
+            if (isCareer) {
+                tTot += cfData.flights || 0;
+                tTo += cfData.takeoffs || 0;
+                tLdg += cfData.landings || 0;
+                tMins += cfData.totalMins || 0;
+                tNight += cfData.nightMins || 0;
+                tPax += cfData.pax || 0;
+                let totalAirports = aptSet.size + (cfData.airports || 0);
+                document.getElementById('stat-tot-apt').textContent = totalAirports;
+                
+                if((cfData.flights || cfData.totalMins) > 0) cfIndicator.classList.remove('hidden');
+                else cfIndicator.classList.add('hidden');
+
+                // 顯示自定義的前期機型時數 (僅 UI 呈現)
+                if (CF_CONFIG.previousAircraft && CF_CONFIG.previousAircraft.length > 0) {
+                    document.getElementById('cf-prev-acft-title').classList.remove('hidden');
+                    const prevAcftContainer = document.getElementById('stat-list-prev-acft');
+                    prevAcftContainer.classList.remove('hidden');
+                    let prevHtml = '';
+                    CF_CONFIG.previousAircraft.forEach(item => {
+                        prevHtml += `
+                            <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                                <span class="text-sm font-medium text-[var(--jx-gray)]">${item.type}</span>
+                                <span class="text-sm font-bold text-[var(--jx-dark)]">${item.hours}</span>
+                            </div>
+                        `;
+                    });
+                    prevAcftContainer.innerHTML = prevHtml;
+                }
+            } else {
+                document.getElementById('stat-tot-apt').textContent = aptSet.size;
+                cfIndicator.classList.add('hidden');
+                document.getElementById('cf-prev-acft-title').classList.add('hidden');
+                document.getElementById('stat-list-prev-acft').classList.add('hidden');
+            }
+
+            document.getElementById('stat-tot-flt').textContent = tTot;
+            document.getElementById('stat-tot-to').textContent = tTo;
+            document.getElementById('stat-tot-ldg').textContent = tLdg;
+            document.getElementById('stat-tot-time').textContent = minsToStr(tMins);
+            document.getElementById('stat-tot-night').textContent = minsToStr(tNight); 
+            document.getElementById('stat-tot-pax').textContent = tPax;
+
+            const renderList = (dataObj, containerId) => {
+                const el = document.getElementById(containerId);
+                let listHtml = '';
+                Object.keys(dataObj).forEach(key => {
+                    listHtml += `
+                        <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                            <span class="text-sm font-medium text-[var(--jx-gray)]">${key}</span>
+                            <span class="text-sm font-bold text-[var(--jx-dark)]">${minsToStr(dataObj[key])}</span>
+                        </div>
+                    `;
+                });
+                el.innerHTML = listHtml;
+            };
+            renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
+            renderChart(sortedLogs);
+        }
+
+        function renderChart(logs) {
+            const ctx = document.getElementById('flightChart').getContext('2d');
+            const monthMap = {};
+            logs.forEach(l => {
+                if(!l.date) return;
+                const d = new Date(l.date);
+                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                monthMap[key] = (monthMap[key] || 0) + (l.totalMins / 60);
+            });
+            const sortedKeys = Object.keys(monthMap).sort();
+            const displayKeys = sortedKeys.slice(-6);
+            let labels = displayKeys.map(k => {
+                const [y, m] = k.split('-');
+                return new Date(y, m-1).toLocaleString('en-US', { month: 'short' });
+            });
+            let data = displayKeys.map(k => Math.round(monthMap[k] * 10) / 10);
+            if(labels.length === 0) { labels = ['No Data']; data = [0]; }
+            if(flightChartInst) flightChartInst.destroy();
+            let gradient = ctx.createLinearGradient(0, 0, 0, 150);
+            gradient.addColorStop(0, 'rgba(194, 163, 112, 0.4)'); 
+            gradient.addColorStop(1, 'rgba(194, 163, 112, 0)');
+            flightChartInst = new Chart(ctx, {
+                type: 'line', data: {
+                    labels: labels, datasets: [{
+                        label: 'Flight Hours', data: data, borderColor: '#C2A370', backgroundColor: gradient,
+                        borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#FFFFFF'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: {size: 10} } }, y: { display: false, min: 0 } }
+                }
+            });
+        }
+        
+        function populateAircraftDropdowns() {
+            const regSelect = document.getElementById('inp-reg');
+            regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
+            const activeAcfts = dbAircrafts.filter(a => a.is_active == 1 || a.is_active == "1");
+            activeAcfts.forEach(a => regSelect.innerHTML += `<option value="${a.aircraft_id}">${a.aircraft_id}</option>`);
+        }
+
+        function handleRegistrationChange() {
+            const selectedReg = document.getElementById('inp-reg').value;
+            const acftData = dbAircrafts.find(a => a.aircraft_id === selectedReg);
+            if(acftData) document.getElementById('inp-acft-select').value = acftData.type || '';
+            updateEntryDash();
+        }
+
+        function populatePilotDropdown() {
+            const datalist = document.getElementById('pilot-datalist');
+            datalist.innerHTML = '';
+            dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
+            dbPilots.forEach(p => datalist.innerHTML += `<option value="${p.formattedName}">`);
+        }
+
+        function matchPilotName(rawName) {
+            if (!rawName) return '';
+            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
+            if (exact) return exact.formattedName;
+            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
+            if (partial) return partial.formattedName;
+            return String(rawName).trim();
+        }
+        
+        function checkNewPilot(inputElem, type) {
+            const val = inputElem.value.trim();
+            if(!val) return;
+            const wrapperId = `${type}-custom-wrapper`;
+            const exists = dbPilots.some(p => p.formattedName === val);
+            if(!exists) {
+                document.getElementById(wrapperId).classList.remove('hidden');
+                document.getElementById(wrapperId).classList.add('flex');
+                document.getElementById(`inp-${type}-custom-name`).value = val;
+                document.getElementById(`inp-${type}-custom-nick`).focus();
+            } else {
+                document.getElementById(wrapperId).classList.add('hidden');
+                document.getElementById(wrapperId).classList.remove('flex');
+            }
+        }
+
+        function saveNewPilotToCloud(type) {
+            const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
+            const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
+            const inputId = `inp-${type}`;
+            const wrapperId = `${type}-custom-wrapper`;
+            if (name) {
+                const finalName = nick ? `${name} (${nick})` : name;
+                dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
+                populatePilotDropdown();
+                document.getElementById(inputId).value = finalName;
+                queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
+            }
+            document.getElementById(wrapperId).classList.add('hidden');
+            document.getElementById(wrapperId).classList.remove('flex');
+        }
+
+        function renderRecentFlights() {
+            const container = document.getElementById('recent-list-container');
+            const searchInput = document.getElementById('inp-search-recent');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            let validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
+            
+            // 執行搜尋過濾
+            if(query) {
+                validLogs = validLogs.filter(l => {
+                    const fltMatch = String(l.flt).toLowerCase().includes(query);
+                    const p1Match = String(l.pilot1).toLowerCase().includes(query);
+                    const p2Match = String(l.pilot2).toLowerCase().includes(query);
+                    const p3Match = String(l.pilot3).toLowerCase().includes(query);
+                    return fltMatch || p1Match || p2Match || p3Match;
+                });
+            }
+
+            if(validLogs.length === 0) { 
+                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)] font-medium">No flights found matching your search.</p>'; 
+                return; 
+            }
+
+            const sorted = [...validLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            const groups = {};
+            sorted.forEach(log => {
+                const key = new Date(log.date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                if(!groups[key]) groups[key] = []; groups[key].push(log);
+            });
+
+            let finalHtml = '';
+            for(const [monthYear, logs] of Object.entries(groups)) {
+                let monthTotalMins = 0; let monthTakeoffs = 0; let monthLandings = 0; let monthPax = 0;
+                logs.forEach(l => {
+                    monthTotalMins += l.totalMins || 0;
+                    monthTakeoffs += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
+                    monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
+                    monthPax += (Number(l.pax) || 0);
+                });
+                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                logs.forEach(log => {
+                    const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
+                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')"><div class="flex items-center gap-4 w-full"><div class="flex flex-col items-center justify-center w-10"><span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span></div><div class="flex-1"><div class="flex justify-between items-center mb-1"><span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span><span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)]">${blockTime}</span></div><div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium"><span>${log.dep} ✈ ${log.arr}</span><span>${log.reg || log.acft}</span></div></div></div></div>`;
+                });
+                groupHtml += `</div>`; finalHtml += groupHtml;
+            }
+            container.innerHTML = finalHtml;
+        }
+
+        function cancelEntry() {
+            document.getElementById('inp-index').value = '';
+            document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
+            document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
+            document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
+            document.getElementById('inp-remarks').value = '';
+            document.getElementById('inp-fob-out').value = ''; document.getElementById('inp-fob-in').value = '';
+            document.getElementById('inp-fob-off').value = ''; document.getElementById('inp-fob-on').value = '';
+            document.getElementById('fuel-section').classList.add('hidden');
+            document.getElementById('inp-pilot1').value = ''; document.getElementById('inp-pilot2').value = ''; document.getElementById('inp-pilot3').value = '';
+            document.getElementById('dash-block-time').textContent = '00:00'; document.getElementById('dash-block-time-top').textContent = '00:00';
+            document.getElementById('dash-air-time').textContent = '00:00'; document.getElementById('dash-night-time').textContent = '00:00';
+            setFormMode('create'); evaluateOperations();
+        }
+
+        function viewLog(index) {
+            const log = flightLogs.find(l => l.index === index);
+            if(!log) return;
+            document.getElementById('inp-index').value = log.index;
+            document.getElementById('inp-date').value = log.date; 
+            document.getElementById('inp-flt').value = log.flt;
+            document.getElementById('inp-dep').value = log.dep;
+            document.getElementById('inp-arr').value = log.arr;
+            document.getElementById('inp-reg').value = log.reg;
+            handleRegistrationChange(); 
+            document.getElementById('inp-out').value = normalizeTimeDisplay(log.out);
+            document.getElementById('inp-off').value = normalizeTimeDisplay(log.off);
+            document.getElementById('inp-on').value  = normalizeTimeDisplay(log.on);
+            document.getElementById('inp-in').value  = normalizeTimeDisplay(log.in);
+            document.getElementById('chk-to').checked = (Number(log.day_to) >= 1 || Number(log.night_to) >= 1);
+            document.getElementById('chk-ldg').checked = (Number(log.day_ldg) >= 1 || Number(log.night_ldg) >= 1);
+            document.getElementById('inp-duty').value = log.duty || 'FO';
+            document.getElementById('inp-pax').value = log.pax || '';
+            document.getElementById('inp-app').value = log.app || '';
+            document.getElementById('inp-rwy').value = log.rwy || '';
+            document.getElementById('inp-remarks').value = log.remarks || '';
+            document.getElementById('inp-fob-out').value = log.fob_out || '';
+            document.getElementById('inp-fob-off').value = log.fob_off || '';
+            document.getElementById('inp-fob-on').value = log.fob_on || '';
+            document.getElementById('inp-fob-in').value = log.fob_in || '';
+            if(log.fob_out || log.fob_off || log.fob_on || log.fob_in) document.getElementById('fuel-section').classList.remove('hidden');
+            else document.getElementById('fuel-section').classList.add('hidden');
+            
+            // 填充人員資料
+            document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
+            document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
+            document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
+            document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
+            document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
+            document.getElementById('pilot3-custom-wrapper').classList.add('hidden');
+            
+            setFormMode('view'); 
+            updateEntryDash(); 
+            calculateTimes();
+
+            switchTab('entry', true); 
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function enableEditMode() { setFormMode('edit'); }
+
+        function deleteLogEntry() {
+            const index = document.getElementById('inp-index').value;
+            if(!index) return;
+            if(!confirm("Are you sure?")) return;
+            flightLogs = flightLogs.filter(l => l.index !== index);
+            localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
+            showToast("Deleted locally. Syncing...");
+            cancelEntry();
+            queueAction({ action: 'delete', index: index }, true);
+        }
+
+        function queueAction(actionType, isSilent = false) {
+            let payloadData;
+            if (typeof actionType === 'object') { payloadData = actionType; } 
+            else {
+                saveRouteMemory();
+                const outT = document.getElementById('inp-out').value; const offT = document.getElementById('inp-off').value;
+                const onT = document.getElementById('inp-on').value; const inT = document.getElementById('inp-in').value;
+                const chkTo = document.getElementById('chk-to').checked; const chkLdg = document.getElementById('chk-ldg').checked;
+                let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
+                if(chkTo && offT && offT.includes(':')) { const h = parseInt(offT.split(':')[0]); if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1; }
+                if(chkLdg && onT && onT.includes(':')) { const h = parseInt(onT.split(':')[0]); if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1; }
+                const nTimeMins = calcNightTime(outT, inT);
+
+                payloadData = {
+                    action: actionType, index: document.getElementById('inp-index').value || generateUUID(),
+                    date: document.getElementById('inp-date').value, filght_number: "JX" + document.getElementById('inp-flt').value, 
+                    airport_departure: document.getElementById('inp-dep').value.toUpperCase(), airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
+                    aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
+                    total_block: minsToStr(calcDuration(outT, inT)), total_air: minsToStr(calcDuration(offT, onT)),
+                    total_night: minsToStr(nTimeMins), duty: document.getElementById('inp-duty').value,
+                    passenger: parseInt(document.getElementById('inp-pax').value) || 0,
+                    day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
+                    pilot1: document.getElementById('inp-pilot1').value.trim() || '', pilot2: document.getElementById('inp-pilot2').value.trim() || '', pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
+                    pilot4: 'Self', custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
+                    approach1_airport: document.getElementById('inp-arr').value.toUpperCase(), approach1_type: document.getElementById('inp-app').value,
+                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), fob_out: document.getElementById('inp-fob-out').value,
+                    fob_off: document.getElementById('inp-fob-off').value, fob_on: document.getElementById('inp-fob-on').value, fob_in: document.getElementById('inp-fob-in').value
+                };
+
+                const localLog = {
+                    index: payloadData.index, date: payloadData.date, flt: String(payloadData.filght_number).replace('JX',''),
+                    dep: payloadData.airport_departure, arr: payloadData.airport_arrival, reg: payloadData.aircraft, 
+                    out: payloadData.time_blockout, off: payloadData.time_takeoff, on: payloadData.time_landing, in: payloadData.time_blockin,
+                    totalMins: parseTimeToMins(payloadData.total_block), airMins: parseTimeToMins(payloadData.total_air), nightMins: parseTimeToMins(payloadData.total_night),
+                    day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff, day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
+                    duty: payloadData.duty, pax: payloadData.passenger, app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
+                    pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3,
+                    fob_out: payloadData.fob_out, fob_off: payloadData.fob_off, fob_on: payloadData.fob_on, fob_in: payloadData.fob_in
+                };
+                const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
+                localLog.acft = acftData ? acftData.type : 'N/A';
+
+                if(actionType === 'update') {
+                    const idx = flightLogs.findIndex(l => l.index === payloadData.index);
+                    if(idx !== -1) flightLogs[idx] = localLog; cancelEntry();
+                } else { flightLogs.push(localLog); cancelEntry(); }
+                
+                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
+                showToast("Saved offline instantly!");
+            }
+
+            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
+            queue.push(payloadData); localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
+            processSyncQueue();
+        }
+
+        function runDataAudit() {
+            const content = document.getElementById('audit-content');
+            content.innerHTML = ''; let errorCount = 0;
+            flightLogs.forEach((l, idx) => {
+                let issues = [];
+                if (!l.date || l.date === '') issues.push("Invalid Date");
+                if (!l.dep || !l.arr || l.dep.length > 4) issues.push(`Invalid Airport (${l.dep}/${l.arr})`);
+                if (l.totalMins <= 0) issues.push("Zero Block Time");
+                if (l.totalMins > 1200) issues.push(`Unusual Block Time (>20h)`);
+                if (issues.length > 0) {
+                    errorCount++;
+                    let fltStr = l.flt ? `JX${l.flt}` : "Unknown";
+                    content.innerHTML += `<div class="border border-red-200 bg-red-50 rounded-lg p-3"><div class="font-bold text-red-700 mb-1 border-b border-red-200 pb-1">Row ${idx + 2} | ${fltStr} | ${l.date}</div><ul class="list-disc pl-5 text-red-600 text-xs mt-2 space-y-1">${issues.map(iss => `<li>${iss}</li>`).join('')}</ul></div>`;
+                }
+            });
+            if (errorCount === 0) content.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p></div>`;
+            else content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">Found ${errorCount} suspicious entries:</p>`);
+            document.getElementById('audit-modal').classList.remove('hidden');
+        }
+
         // ==========================================
-        // 📷 OOOI OCR 相機掃描引擎
+        // 📷 完整相機與 OCR 掃描解析引擎
         // ==========================================
         async function openCamera() {
             const modal = document.getElementById('camera-modal');
@@ -596,7 +1446,6 @@
                 let foundAny = false;
                 const lines = text.split('\n');
 
-                // 專門解析含有 OUT, OFF, ON, IN 的行
                 const parseLineForTimeAndFuel = (line) => {
                     if (!line) return { time: null, fuel: null };
                     let cleanLine = line.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
@@ -647,896 +1496,6 @@
                 status.textContent = "OCR Failed!";
                 setTimeout(() => { status.classList.add('hidden'); closeCamera(); }, 2000);
             }
-        }
-
-        // ==========================================
-        // 🕒 時間格式化輸入與自動跳格 
-        // ==========================================
-        function handleTimeInput(e, nextFieldId) {
-            let raw = e.target.value.replace(/\D/g, '');
-            if (raw.length > 4) raw = raw.substring(0, 4);
-
-            let formatted = raw;
-            if (raw.length >= 3) {
-                formatted = raw.substring(0, 2) + ':' + raw.substring(2);
-            }
-            e.target.value = formatted;
-            calculateTimes();
-
-            if (formatted.length === 5 && nextFieldId) {
-                document.getElementById(nextFieldId).focus();
-            }
-        }
-
-        // ==========================================
-        // 【核心過濾器與時間解析器】
-        // ==========================================
-        function normalizeTimeDisplay(val) {
-            if (!val) return '';
-            let s = String(val).trim();
-            if (s.includes('1899') || s.includes('1900') || s.toLowerCase().includes('總和')) return '';
-            
-            if (s.includes('T') && s.includes('Z')) {
-                const dt = new Date(s);
-                if (!isNaN(dt)) return `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
-            }
-            if (s.includes(':')) {
-                const p = s.split(':');
-                return `${String(parseInt(p[0])||0).padStart(2,'0')}:${String(parseInt(p[1])||0).padStart(2,'0')}`;
-            }
-            if (s.length === 4 && !isNaN(parseInt(s))) return `${s.substring(0,2)}:${s.substring(2,4)}`;
-            if (s.length === 3 && !isNaN(parseInt(s))) return `0${s.substring(0,1)}:${s.substring(1,3)}`;
-            
-            return s;
-        }
-
-        function parseTimeToMins(val) {
-            let s = normalizeTimeDisplay(val);
-            if (!s) return 0;
-            const p = s.split(':');
-            return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0);
-        }
-
-        function calcNightTime(t1, t2) {
-            const outM = parseTimeToMins(t1);
-            const inM = parseTimeToMins(t2);
-            if(outM === 0 && inM === 0) return 0;
-
-            let min1 = outM; 
-            let min2 = inM;
-            if (min2 < min1) min2 += 24 * 60; 
-
-            let nightMins = 0;
-            const nightStart = 10 * 60; 
-            const nightEnd = 22 * 60;   
-            
-            for (let m = min1; m < min2; m++) {
-                let currentMofD = m % (24 * 60);
-                if (currentMofD >= nightStart && currentMofD < nightEnd) {
-                    nightMins++;
-                }
-            }
-            return nightMins;
-        }
-
-        function safeDateString(val) {
-            if (!val) return '';
-            const d = new Date(val);
-            if (isNaN(d)) return '';
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function minsToStr(mins) {
-            if(isNaN(mins) || mins <= 0) return "00:00";
-            const h = Math.floor(mins / 60); const m = mins % 60;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        }
-
-        function getSortTimestamp(log) {
-            if (!log.date) return 0;
-            let timeStr = '00:00';
-            if (log.out) {
-                let cleanTime = String(log.out).replace(/\D/g, ''); 
-                if (cleanTime.length >= 4) {
-                    timeStr = cleanTime.substring(0, 2) + ':' + cleanTime.substring(2, 4);
-                }
-            }
-            const dt = new Date(`${log.date}T${timeStr}:00`);
-            return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
-        }
-
-        function matchPilotName(rawName) {
-            if (!rawName) return '';
-            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
-            if (exact) return exact.formattedName;
-            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
-            if (partial) return partial.formattedName;
-            return String(rawName).trim();
-        }
-
-        function setPilotDropdown(selectId, rawName) {
-            const inputElem = document.getElementById(selectId);
-            if (!rawName) { inputElem.value = ''; return; }
-            let matchedName = matchPilotName(rawName);
-            inputElem.value = matchedName;
-        }
-
-        // ==========================================
-        // 🚀 開機啟動程序
-        // ==========================================
-        window.onload = async () => {
-            document.getElementById('inp-date').valueAsDate = new Date();
-            initTimeFilterDropdown();
-            loadLocalCache();
-            await processSyncQueue();
-            fetchDataFromCloud(); 
-        };
-
-        function loadLocalCache() {
-            try {
-                const cAcft = localStorage.getItem(CACHE_AIRCRAFTS);
-                const cPilots = localStorage.getItem(CACHE_PILOTS);
-                const cFlights = localStorage.getItem(CACHE_FLIGHTS);
-
-                if (cAcft) { dbAircrafts = JSON.parse(cAcft); populateAircraftDropdowns(); }
-                if (cPilots) {
-                    dbPilots = JSON.parse(cPilots);
-                    populatePilotDropdown(); 
-                }
-                if (cFlights) {
-                    flightLogs = JSON.parse(cFlights);
-                    if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
-                    if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
-                }
-            } catch(e) { console.warn("Local cache issue."); }
-        }
-
-        async function processSyncQueue() {
-            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
-            if (queue.length === 0) return;
-
-            showToast(`Syncing ${queue.length} pending updates...`, true);
-            let remainingQueue = [];
-
-            for (let item of queue) {
-                try {
-                    await fetch(GAS_URL, {
-                        method: 'POST', mode: 'no-cors',
-                        body: new URLSearchParams(item),
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                    });
-                } catch (err) {
-                    remainingQueue.push(item);
-                }
-            }
-            
-            localStorage.setItem(SYNC_QUEUE, JSON.stringify(remainingQueue));
-            if (remainingQueue.length === 0) showToast("All offline data synced!");
-            else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
-        }
-
-        async function fetchDataFromCloud() {
-            if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
-            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
-            
-            try {
-                const response = await fetch(GAS_URL);
-                const data = await response.json(); 
-                
-                dbAircrafts = data.aircrafts || [];
-                populateAircraftDropdowns();
-                localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
-
-                dbPilots = (data.pilots || []).map(p => {
-                    const nickStr = p.nickname ? ` (${p.nickname})` : '';
-                    return { ...p, formattedName: `${p.name}${nickStr}` };
-                });
-                populatePilotDropdown();
-                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
-
-                flightLogs = (data.flights || [])
-                    .filter(row => row.date) 
-                    .map(row => {
-                        const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
-                        return {
-                            index: row.index, date: safeDateString(row.date), 
-                            flt: String(row.filght_number).replace('JX',''), 
-                            dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
-                            reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
-                            out: normalizeTimeDisplay(row.time_blockout), 
-                            off: normalizeTimeDisplay(row.time_takeoff), 
-                            on: normalizeTimeDisplay(row.time_landing), 
-                            in: normalizeTimeDisplay(row.time_blockin),
-                            totalMins: parseTimeToMins(row.total_block), nightMins: parseTimeToMins(row.total_night),
-                            airMins: parseTimeToMins(row.total_air),
-                            duty: row.duty,
-                            day_to: Number(row.day_takeoff) || 0, night_to: Number(row.night_takeoff) || 0,
-                            day_ldg: Number(row.day_landing) || 0, night_ldg: Number(row.night_landing) || 0,
-                            app: row.approach1_type, rwy: row.approach1_runway, 
-                            pax: parseInt(row.passenger) || 0, remarks: row.remarks || '',
-                            pilot1: matchPilotName(row.pilot1), pilot2: matchPilotName(row.pilot2), pilot3: matchPilotName(row.pilot3),
-                            fob_out: row.fob_out || '', fob_off: row.fob_off || '', fob_on: row.fob_on || '', fob_in: row.fob_in || ''
-                        };
-                    });
-                
-                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-                document.getElementById('sync-toast').classList.remove('show');
-                
-                if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
-                if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
-            } catch (err) {
-                console.error("雲端背景讀取失敗 (Offline):", err);
-            }
-        }
-
-        // ==========================================
-        // 🗂️ 動態選單與 Datalist (智慧搜尋)
-        // ==========================================
-        function populateAircraftDropdowns() {
-            const regSelect = document.getElementById('inp-reg');
-            regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
-            const activeAcfts = dbAircrafts.filter(a => a.is_active == 1 || a.is_active == "1");
-            activeAcfts.forEach(a => regSelect.innerHTML += `<option value="${a.aircraft_id}">${a.aircraft_id}</option>`);
-        }
-
-        function handleRegistrationChange() {
-            const selectedReg = document.getElementById('inp-reg').value;
-            const acftData = dbAircrafts.find(a => a.aircraft_id === selectedReg);
-            if(acftData) document.getElementById('inp-acft-select').value = acftData.type || '';
-            updateEntryDash();
-        }
-
-        function populatePilotDropdown() {
-            const datalist = document.getElementById('pilot-datalist');
-            datalist.innerHTML = '';
-            dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
-            dbPilots.forEach(p => {
-                datalist.innerHTML += `<option value="${p.formattedName}">`;
-            });
-        }
-
-        function checkNewPilot(inputElem, type) {
-            const val = inputElem.value.trim();
-            if(!val) return;
-            const wrapperId = `${type}-custom-wrapper`;
-            
-            const exists = dbPilots.some(p => p.formattedName === val);
-            
-            if(!exists) {
-                document.getElementById(wrapperId).classList.remove('hidden');
-                document.getElementById(wrapperId).classList.add('flex');
-                document.getElementById(`inp-${type}-custom-name`).value = val;
-                document.getElementById(`inp-${type}-custom-nick`).focus();
-            } else {
-                document.getElementById(wrapperId).classList.add('hidden');
-                document.getElementById(wrapperId).classList.remove('flex');
-            }
-        }
-
-        function saveNewPilotToCloud(type) {
-            const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
-            const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
-            const inputId = `inp-${type}`;
-            const wrapperId = `${type}-custom-wrapper`;
-
-            if (name) {
-                const finalName = nick ? `${name} (${nick})` : name;
-                dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
-                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
-                
-                populatePilotDropdown();
-                document.getElementById(inputId).value = finalName;
-                
-                queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
-            }
-            document.getElementById(wrapperId).classList.add('hidden');
-            document.getElementById(wrapperId).classList.remove('flex');
-        }
-
-        // ==========================================
-        // 📱 UI 導航、表單模式切換與計算邏輯
-        // ==========================================
-        function setFormMode(mode) {
-            const inputs = document.querySelectorAll('#view-entry input, #view-entry select, #view-entry textarea');
-            inputs.forEach(inp => inp.disabled = (mode === 'view'));
-
-            document.getElementById('btn-scan-ocr').style.display = (mode === 'view') ? 'none' : 'flex';
-            document.getElementById('btn-toggle-fuel').style.display = (mode === 'view') ? 'none' : 'flex';
-            
-            document.getElementById('action-create').classList.toggle('hidden', mode !== 'create');
-            document.getElementById('action-view').classList.toggle('hidden', mode !== 'view');
-            document.getElementById('action-edit').classList.toggle('hidden', mode !== 'edit');
-
-            const banner = document.getElementById('edit-banner');
-            document.body.classList.toggle('view-mode', mode === 'view');
-
-            if (mode === 'create') {
-                banner.classList.remove('show');
-            } else if (mode === 'view') {
-                banner.textContent = 'View Mode (Read-Only)';
-                banner.classList.add('show');
-                banner.style.backgroundColor = 'var(--jx-gray)';
-            } else if (mode === 'edit') {
-                banner.textContent = 'Editing Mode';
-                banner.classList.add('show');
-                banner.style.backgroundColor = 'var(--jx-gold-dark)';
-            }
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
-            document.getElementById(`view-${tabId}`).classList.remove('hidden');
-
-            if (tabId === 'entry' && document.getElementById('action-create').classList.contains('hidden')) {
-                cancelEntry(); 
-            }
-            if (tabId === 'recent') renderRecentFlights();
-            if (tabId === 'stats') renderStats();
-        }
-
-        function handleFltInput() {
-            const fltNum = document.getElementById('inp-flt').value.trim();
-            if (fltNum && routeMemory[fltNum]) {
-                document.getElementById('inp-dep').value = routeMemory[fltNum].dep;
-                document.getElementById('inp-arr').value = routeMemory[fltNum].arr;
-            }
-            updateEntryDash();
-        }
-
-        function saveRouteMemory() {
-            const fltNum = document.getElementById('inp-flt').value.trim();
-            const dep = document.getElementById('inp-dep').value.trim().toUpperCase();
-            const arr = document.getElementById('inp-arr').value.trim().toUpperCase();
-            if (fltNum && dep && arr) {
-                routeMemory[fltNum] = { dep: dep, arr: arr };
-                localStorage.setItem('jxRouteMemory', JSON.stringify(routeMemory));
-            }
-        }
-
-        function calculateTimes() {
-            const outT = document.getElementById('inp-out').value;
-            const offT = document.getElementById('inp-off').value;
-            const onT = document.getElementById('inp-on').value;
-            const inT = document.getElementById('inp-in').value;
-
-            const isValidTime = (t) => t && t.includes(':');
-
-            // Block Time & Night Time
-            if (isValidTime(outT) && isValidTime(inT)) {
-                const bTime = minsToStr(calcDuration(outT, inT));
-                document.getElementById('dash-block-time').textContent = bTime;
-                document.getElementById('dash-block-time-top').textContent = bTime;
-                const nTimeMins = calcNightTime(outT, inT);
-                document.getElementById('dash-night-time').textContent = minsToStr(nTimeMins);
-            } else {
-                document.getElementById('dash-block-time').textContent = "00:00";
-                document.getElementById('dash-block-time-top').textContent = "00:00";
-                document.getElementById('dash-night-time').textContent = "00:00";
-            }
-
-            // Air Time
-            if (isValidTime(offT) && isValidTime(onT)) {
-                document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
-            } else {
-                document.getElementById('dash-air-time').textContent = "00:00";
-            }
-            
-            evaluateOperations();
-        }
-
-        function evaluateOperations() {
-            const chkTo = document.getElementById('chk-to').checked;
-            const chkLdg = document.getElementById('chk-ldg').checked;
-            const offT = document.getElementById('inp-off').value;
-            const onT = document.getElementById('inp-on').value;
-            const resTo = document.getElementById('to-result');
-            const resLdg = document.getElementById('ldg-result');
-
-            if (chkTo) {
-                if (offT && offT.includes(':')) {
-                    const h = parseInt(offT.split(':')[0]);
-                    const isDay = !(h >= 10 && h < 22);
-                    resTo.innerHTML = isDay ? '☀️ Day Takeoff (+1)' : '🌙 Night Takeoff (+1)';
-                    resTo.classList.remove('hidden');
-                } else { resTo.innerHTML = '⚠️ Input full "Take Off" time.'; resTo.classList.remove('hidden'); }
-            } else resTo.classList.add('hidden');
-
-            if (chkLdg) {
-                if (onT && onT.includes(':')) {
-                    const h = parseInt(onT.split(':')[0]);
-                    const isDay = !(h >= 10 && h < 22);
-                    resLdg.innerHTML = isDay ? '☀️ Day Landing (+1)' : '🌙 Night Landing (+1)';
-                    resLdg.classList.remove('hidden');
-                } else { resLdg.innerHTML = '⚠️ Input full "Land On" time.'; resLdg.classList.remove('hidden'); }
-            } else resLdg.classList.add('hidden');
-        }
-
-        function updateEntryDash() {
-            const rawDate = document.getElementById('inp-date').value;
-            if (rawDate) {
-                const d = new Date(rawDate);
-                document.getElementById('dash-date').textContent = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            }
-            const fltNum = document.getElementById('inp-flt').value;
-            document.getElementById('dash-flt').textContent = fltNum ? `JX${fltNum}` : "JX---";
-            document.getElementById('dash-dep').textContent = document.getElementById('inp-dep').value.toUpperCase() || "---";
-            document.getElementById('dash-arr').textContent = document.getElementById('inp-arr').value.toUpperCase() || "---";
-            
-            const acft = document.getElementById('inp-acft-select').value;
-            const reg = document.getElementById('inp-reg').value;
-            document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
-        }
-
-        // ==========================================
-        // 🔄 CRUD 
-        // ==========================================
-        function viewLog(index) {
-            const log = flightLogs.find(l => l.index === index);
-            if(!log) return;
-            
-            document.getElementById('inp-index').value = log.index;
-            document.getElementById('inp-date').value = log.date; 
-            document.getElementById('inp-flt').value = log.flt;
-            document.getElementById('inp-dep').value = log.dep;
-            document.getElementById('inp-arr').value = log.arr;
-            document.getElementById('inp-reg').value = log.reg;
-            handleRegistrationChange(); 
-            
-            document.getElementById('inp-out').value = normalizeTimeDisplay(log.out);
-            document.getElementById('inp-off').value = normalizeTimeDisplay(log.off);
-            document.getElementById('inp-on').value  = normalizeTimeDisplay(log.on);
-            document.getElementById('inp-in').value  = normalizeTimeDisplay(log.in);
-            
-            document.getElementById('chk-to').checked = (Number(log.day_to) >= 1 || Number(log.night_to) >= 1);
-            document.getElementById('chk-ldg').checked = (Number(log.day_ldg) >= 1 || Number(log.night_ldg) >= 1);
-            
-            document.getElementById('inp-duty').value = log.duty || 'FO';
-            document.getElementById('inp-pax').value = log.pax || '';
-            document.getElementById('inp-app').value = log.app || '';
-            document.getElementById('inp-rwy').value = log.rwy || '';
-            document.getElementById('inp-remarks').value = log.remarks || '';
-
-            document.getElementById('inp-fob-out').value = log.fob_out || '';
-            document.getElementById('inp-fob-off').value = log.fob_off || '';
-            document.getElementById('inp-fob-on').value = log.fob_on || '';
-            document.getElementById('inp-fob-in').value = log.fob_in || '';
-            
-            if(log.fob_out || log.fob_off || log.fob_on || log.fob_in) {
-                document.getElementById('fuel-section').classList.remove('hidden');
-            } else {
-                document.getElementById('fuel-section').classList.add('hidden');
-            }
-
-            document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
-            document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
-            document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
-            
-            document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
-            document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
-            document.getElementById('pilot3-custom-wrapper').classList.add('hidden');
-
-            setFormMode('view');
-            
-            updateEntryDash(); calculateTimes();
-            document.querySelectorAll('.tab-btn')[0].click(); window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function enableEditMode() {
-            setFormMode('edit');
-        }
-
-        function cancelEntry() {
-            document.getElementById('inp-index').value = '';
-            document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
-            document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
-            document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
-            document.getElementById('inp-remarks').value = '';
-            document.getElementById('inp-fob-out').value = ''; document.getElementById('inp-fob-in').value = '';
-            document.getElementById('inp-fob-off').value = ''; document.getElementById('inp-fob-on').value = '';
-            document.getElementById('fuel-section').classList.add('hidden');
-            
-            document.getElementById('inp-pilot1').value = '';
-            document.getElementById('inp-pilot2').value = '';
-            document.getElementById('inp-pilot3').value = '';
-
-            document.getElementById('dash-block-time').textContent = '00:00';
-            document.getElementById('dash-block-time-top').textContent = '00:00';
-            document.getElementById('dash-air-time').textContent = '00:00';
-            document.getElementById('dash-night-time').textContent = '00:00';
-            
-            setFormMode('create');
-            evaluateOperations();
-        }
-
-        function deleteLogEntry() {
-            const index = document.getElementById('inp-index').value;
-            if(!index) return;
-            if(!confirm("確定要刪除這筆飛行紀錄嗎 (Are you sure)?")) return;
-
-            flightLogs = flightLogs.filter(l => l.index !== index);
-            localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-            showToast("Deleted locally. Syncing...");
-            cancelEntry();
-            queueAction({ action: 'delete', index: index }, true);
-        }
-
-        function queueAction(actionType, isSilent = false) {
-            let payloadData;
-            
-            if (typeof actionType === 'object') {
-                payloadData = actionType; 
-            } else {
-                saveRouteMemory();
-                const outT = document.getElementById('inp-out').value;
-                const offT = document.getElementById('inp-off').value;
-                const onT = document.getElementById('inp-on').value;
-                const inT = document.getElementById('inp-in').value;
-                
-                const chkTo = document.getElementById('chk-to').checked;
-                const chkLdg = document.getElementById('chk-ldg').checked;
-                let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
-                if(chkTo && offT && offT.includes(':')) {
-                    const h = parseInt(offT.split(':')[0]);
-                    if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1;
-                }
-                if(chkLdg && onT && onT.includes(':')) {
-                    const h = parseInt(onT.split(':')[0]);
-                    if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1;
-                }
-
-                const nTimeMins = calcNightTime(outT, inT);
-
-                payloadData = {
-                    action: actionType,
-                    index: document.getElementById('inp-index').value || generateUUID(),
-                    date: document.getElementById('inp-date').value,
-                    filght_number: "JX" + document.getElementById('inp-flt').value, 
-                    airport_departure: document.getElementById('inp-dep').value.toUpperCase(),
-                    airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
-                    aircraft: document.getElementById('inp-reg').value,
-                    time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
-                    total_block: minsToStr(calcDuration(outT, inT)),
-                    total_air: minsToStr(calcDuration(offT, onT)),
-                    total_night: minsToStr(nTimeMins), 
-                    duty: document.getElementById('inp-duty').value,
-                    passenger: parseInt(document.getElementById('inp-pax').value) || 0,
-                    day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
-                    pilot1: document.getElementById('inp-pilot1').value.trim() || '',
-                    pilot2: document.getElementById('inp-pilot2').value.trim() || '', 
-                    pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
-                    pilot4: 'Self', 
-                    custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
-                    approach1_airport: document.getElementById('inp-arr').value.toUpperCase(),
-                    approach1_type: document.getElementById('inp-app').value,
-                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(),
-                    fob_out: document.getElementById('inp-fob-out').value,
-                    fob_off: document.getElementById('inp-fob-off').value,
-                    fob_on: document.getElementById('inp-fob-on').value,
-                    fob_in: document.getElementById('inp-fob-in').value
-                };
-
-                const localLog = {
-                    index: payloadData.index, date: payloadData.date,
-                    flt: String(payloadData.filght_number).replace('JX',''),
-                    dep: payloadData.airport_departure, arr: payloadData.airport_arrival,
-                    reg: payloadData.aircraft, 
-                    out: payloadData.time_blockout, off: payloadData.time_takeoff,
-                    on: payloadData.time_landing, in: payloadData.time_blockin,
-                    totalMins: parseTimeToMins(payloadData.total_block),
-                    airMins: parseTimeToMins(payloadData.total_air),
-                    nightMins: parseTimeToMins(payloadData.total_night),
-                    day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff,
-                    day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
-                    duty: payloadData.duty, pax: payloadData.passenger,
-                    app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
-                    pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3,
-                    fob_out: payloadData.fob_out, fob_off: payloadData.fob_off, fob_on: payloadData.fob_on, fob_in: payloadData.fob_in
-                };
-                const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
-                localLog.acft = acftData ? acftData.type : 'N/A';
-
-                if(actionType === 'update') {
-                    const idx = flightLogs.findIndex(l => l.index === payloadData.index);
-                    if(idx !== -1) flightLogs[idx] = localLog;
-                    cancelEntry();
-                } else {
-                    flightLogs.push(localLog);
-                    cancelEntry();
-                }
-                
-                localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-                showToast("Saved offline instantly!");
-            }
-
-            let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
-            queue.push(payloadData);
-            localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
-
-            processSyncQueue();
-        }
-
-        // ==========================================
-        // 🚨 資料稽核系統
-        // ==========================================
-        function runDataAudit() {
-            const content = document.getElementById('audit-content');
-            content.innerHTML = '';
-            let errorCount = 0;
-
-            flightLogs.forEach((l, idx) => {
-                let issues = [];
-                if (!l.date || l.date === '') issues.push("日期無法解析 (Invalid Date)");
-                if (!l.dep || !l.arr || l.dep.length > 4) issues.push(`機場代碼異常 (${l.dep}/${l.arr})`);
-                if (l.totalMins <= 0) issues.push("Block Time 未計算 (格式錯誤或為 0)");
-                if (l.totalMins > 1200) issues.push(`Block Time 異常 (>20小時: ${minsToStr(l.totalMins)})`);
-                
-                if (issues.length > 0) {
-                    errorCount++;
-                    let fltStr = l.flt ? `JX${l.flt}` : "不明航班";
-                    content.innerHTML += `
-                        <div class="border border-red-200 bg-red-50 rounded-lg p-3">
-                            <div class="font-bold text-red-700 mb-1 border-b border-red-200 pb-1">
-                                第 ${idx + 2} 列 | ${fltStr} | ${l.date || '無日期'}
-                            </div>
-                            <ul class="list-disc pl-5 text-red-600 text-xs mt-2 space-y-1">
-                                ${issues.map(iss => `<li>${iss}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-            });
-
-            if (errorCount === 0) {
-                content.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-8">
-                        <svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p>
-                        <p class="text-sm text-[var(--jx-gray)] mt-1">所有資料檢查皆為正常，無格式異常。</p>
-                    </div>`;
-            } else {
-                content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">偵測到 ${errorCount} 筆可疑資料，請回試算表修改：</p>`);
-            }
-            
-            document.getElementById('audit-modal').classList.remove('hidden');
-        }
-
-        // ==========================================
-        // 📋 RECENT FLIGHTS
-        // ==========================================
-        function renderRecentFlights() {
-            const container = document.getElementById('recent-list-container');
-            
-            const validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
-            if(validLogs.length === 0) {
-                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)]">No recent flights.</p>';
-                return;
-            }
-
-            const sorted = [...validLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
-            const groups = {};
-            sorted.forEach(log => {
-                const key = new Date(log.date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
-                if(!groups[key]) groups[key] = [];
-                groups[key].push(log);
-            });
-
-            let finalHtml = '';
-            for(const [monthYear, logs] of Object.entries(groups)) {
-                
-                // 運算該月份的統計資料
-                let monthTotalMins = 0;
-                let monthTakeoffs = 0;
-                let monthLandings = 0;
-                let monthPax = 0;
-                
-                logs.forEach(l => {
-                    monthTotalMins += l.totalMins || 0;
-                    monthTakeoffs += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
-                    monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
-                    monthPax += (Number(l.pax) || 0);
-                });
-
-                // 組合帶有統計數據的月份標題橫幅
-                let groupHtml = `
-                <div class="px-4 py-2 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)] flex flex-col gap-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span>
-                        <span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span>
-                    </div>
-                    <div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium">
-                        <span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span>
-                        <span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span>
-                        <span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span>
-                    </div>
-                </div>
-                <div class="bg-white border-b border-[var(--jx-divider)]">`;
-
-                logs.forEach(log => {
-                    const d = new Date(log.date);
-                    const blockTime = minsToStr(log.totalMins);
-                    groupHtml += `
-                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')">
-                        <div class="flex items-center gap-4 w-full">
-                            <div class="flex flex-col items-center justify-center w-10">
-                                <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
-                                <span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span>
-                                    <span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)]">${blockTime}</span>
-                                </div>
-                                <div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium">
-                                    <span>${log.dep} ✈ ${log.arr}</span>
-                                    <span>${log.reg || log.acft}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-                groupHtml += `</div>`;
-                finalHtml += groupHtml;
-            }
-            container.innerHTML = finalHtml;
-        }
-        
-        // ==========================================
-        // 📊 STATS 
-        // ==========================================
-        function initTimeFilterDropdown() {
-            const select = document.getElementById('stats-time-filter');
-            const now = new Date();
-            const thisMonthName = now.toLocaleString('en-US', { month: 'short' });
-            let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const lastMonthName = lastMonthDate.toLocaleString('en-US', { month: 'short' });
-            const thisYear = now.getFullYear(); const lastYear = thisYear - 1;
-
-            select.innerHTML += `
-                <option value="thisM">This month (${thisMonthName})</option>
-                <option value="lastM">Last month (${lastMonthName})</option>
-                <option value="thisY">This year (${thisYear})</option>
-                <option value="lastY">Last year (${lastYear})</option>
-            `;
-        }
-
-        function filterLogsByTime(logs) {
-            const filterVal = document.getElementById('stats-time-filter').value;
-            const now = new Date();
-            return logs.filter(log => {
-                if(!log.date || !log.dep) return false; 
-                const logDate = new Date(log.date);
-                const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
-                switch(filterVal) {
-                    case '7d': return diffDays <= 7;
-                    case '30d': return diffDays <= 30;
-                    case '365d': return diffDays <= 365;
-                    case 'thisM': return logDate.getMonth() === now.getMonth() && logDate.getFullYear() === now.getFullYear();
-                    case 'lastM': 
-                        let lm = now.getMonth() - 1; let ly = now.getFullYear();
-                        if(lm < 0) { lm = 11; ly--; }
-                        return logDate.getMonth() === lm && logDate.getFullYear() === ly;
-                    case 'thisY': return logDate.getFullYear() === now.getFullYear();
-                    case 'lastY': return logDate.getFullYear() === now.getFullYear() - 1;
-                    default: return true; 
-                }
-            });
-        }
-
-        function renderStats() {
-            const filteredLogs = filterLogsByTime(flightLogs);
-            const cardsContainer = document.getElementById('stats-cards-container');
-            cardsContainer.innerHTML = '';
-            
-            const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
-            
-            const createCardHTML = (title, items, type) => {
-                let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
-                if(items.length === 0) html += `<p class="text-xs text-[var(--jx-gray)]">No recent data.</p>`;
-                
-                items.forEach(log => {
-                    let d = new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
-                    let fltFormat = String(log.flt).includes('JX') ? log.flt : `JX${log.flt}`;
-                    let detail = type === 'app' ? `${log.app || ''} ${log.rwy || ''}` : `${log.dep || ''} / ${log.arr || ''}`;
-                    html += `<p class="text-xs text-[var(--jx-gray)] mb-1">${d} - ${fltFormat} ${detail}</p>`;
-                });
-                html += `</div>`;
-                return html;
-            };
-
-            const recentTakeoffs = sortedLogs.filter(l => Number(l.day_to) >= 1 || Number(l.night_to) >= 1).slice(0, 3);
-            const recentLandings = sortedLogs.filter(l => Number(l.day_ldg) >= 1 || Number(l.night_ldg) >= 1).slice(0, 3);
-            const recentApproaches = sortedLogs.filter(l => l.app && l.app !== 'N/A').slice(0, 3);
-
-            cardsContainer.innerHTML = 
-                createCardHTML('PF Takeoffs', recentTakeoffs, 'to') +
-                createCardHTML('PF Landings', recentLandings, 'ldg') +
-                createCardHTML('Approaches', recentApproaches, 'app');
-
-            let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
-            let aptSet = new Set(); let typeMins = {}, dutyMins = {};
-
-            filteredLogs.forEach(l => {
-                tTot++;
-                tTo += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
-                tLdg += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
-                
-                tMins += l.totalMins || 0;
-                tNight += l.nightMins || 0;
-                tPax += l.pax || 0;
-                if(l.dep) aptSet.add(l.dep); if(l.arr) aptSet.add(l.arr);
-
-                let acftType = l.acft || 'Unknown'; let dutyType = l.duty || 'Unknown';
-                typeMins[acftType] = (typeMins[acftType] || 0) + (l.totalMins || 0);
-                dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
-            });
-
-            document.getElementById('stat-tot-flt').textContent = tTot;
-            document.getElementById('stat-tot-to').textContent = tTo;
-            document.getElementById('stat-tot-ldg').textContent = tLdg;
-            document.getElementById('stat-tot-time').textContent = minsToStr(tMins);
-            document.getElementById('stat-tot-night').textContent = minsToStr(tNight); 
-            document.getElementById('stat-tot-pax').textContent = tPax;
-            document.getElementById('stat-tot-apt').textContent = aptSet.size;
-
-            const renderList = (dataObj, containerId) => {
-                const el = document.getElementById(containerId);
-                let listHtml = '';
-                Object.keys(dataObj).forEach(key => {
-                    listHtml += `
-                        <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
-                            <span class="text-sm font-medium text-[var(--jx-gray)]">${key}</span>
-                            <span class="text-sm font-bold text-[var(--jx-dark)]">${minsToStr(dataObj[key])}</span>
-                        </div>
-                    `;
-                });
-                el.innerHTML = listHtml;
-            };
-            renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
-            renderChart(sortedLogs);
-        }
-
-        function renderChart(logs) {
-            const ctx = document.getElementById('flightChart').getContext('2d');
-            const monthMap = {};
-            logs.forEach(l => {
-                if(!l.date) return;
-                const d = new Date(l.date);
-                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                monthMap[key] = (monthMap[key] || 0) + (l.totalMins / 60);
-            });
-            const sortedKeys = Object.keys(monthMap).sort();
-            const displayKeys = sortedKeys.slice(-6);
-            let labels = displayKeys.map(k => {
-                const [y, m] = k.split('-');
-                return new Date(y, m-1).toLocaleString('en-US', { month: 'short' });
-            });
-            let data = displayKeys.map(k => Math.round(monthMap[k] * 10) / 10);
-
-            if(labels.length === 0) { labels = ['No Data']; data = [0]; }
-            if(flightChartInst) flightChartInst.destroy();
-
-            let gradient = ctx.createLinearGradient(0, 0, 0, 150);
-            gradient.addColorStop(0, 'rgba(194, 163, 112, 0.4)'); 
-            gradient.addColorStop(1, 'rgba(194, 163, 112, 0)');
-
-            flightChartInst = new Chart(ctx, {
-                type: 'line', data: {
-                    labels: labels, datasets: [{
-                        label: 'Flight Hours', data: data,
-                        borderColor: '#C2A370', backgroundColor: gradient,
-                        borderWidth: 2, fill: true, tension: 0.4,
-                        pointRadius: 3, pointBackgroundColor: '#FFFFFF'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false }, ticks: { font: {size: 10} } }, y: { display: false, min: 0 } }
-                }
-            });
         }
     </script>
 </body>
