@@ -3,13 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- PWA 支援核心 Meta Tags -->
+    <meta name="theme-color" content="#4a3627">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Briefing Pro">
     <title>個人專屬 - 航班擷取與簡報系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- 引入 jsPDF 用於產製無限長無縫 PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+        /* iOS/iPadOS 防護機制：防止邊緣誤觸、拖曳、與意外的分割畫面 */
+        html, body {
+            -webkit-user-drag: none;
+            -webkit-touch-callout: none; /* 禁用全域長按選單 */
+            overscroll-behavior-x: none; /* 禁用左右滑動的邊緣彈性效果 */
+        }
+
+        /* 絕對禁止拖曳網頁中的連結、圖片與圖示，杜絕產生拖曳網址的現象 */
+        a, img, svg {
+            -webkit-user-drag: none !important;
+        }
+
+        /* 確保輸入框可以正常長按複製/貼上與點擊，不受全域禁用影響 */
+        input, textarea {
+            -webkit-touch-callout: default;
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
 
         body {
             font-family: 'Noto Sans TC', sans-serif;
@@ -61,45 +82,10 @@
             transition: all 0.3s ease;
         }
 
-        img { -webkit-touch-callout: default; }
-
         #offline-banner {
             display: none; background-color: #e74c3c; color: white; text-align: center;
             padding: 10px; font-size: 12px; font-weight: bold; letter-spacing: 1px;
             position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* ==========================================
-           無縫截圖/列印專用準備模式 (Capture Mode)
-           ========================================== */
-        body.capture-mode {
-            overflow: visible !important;
-            height: auto !important;
-            background-color: #f4ece4 !important;
-        }
-
-        /* 強制將戰情板擴展到固定寬度，避免行動版尺寸導致排版被壓縮 */
-        .capture-mode #dashboard-content {
-            width: 1200px !important;
-            max-width: none !important;
-            margin: 0 auto !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 40px !important;
-            border-radius: 0 !important;
-        }
-
-        /* 關鍵修正：將所有捲軸區塊展開到最大高度 */
-        .capture-mode .mel-scroll,
-        .capture-mode #out-mel-container,
-        .capture-mode textarea {
-            max-height: none !important;
-            height: auto !important;
-            overflow: visible !important;
-        }
-
-        .capture-mode .no-print {
-            display: none !important;
         }
 
         @media print {
@@ -114,24 +100,8 @@
     <div id="offline-banner" class="fixed top-0 left-0 w-full hidden no-print">⚠️ 目前處於離線模式。顯示資料為系統最後一次快取紀錄。</div>
 
     <!-- 登入與鎖定畫面 -->
-    <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-center p-4 relative no-print">
-        <!-- 返回按鈕 -->
-        <a href="index.html" class="absolute top-6 left-6 md:top-8 md:left-8 p-2.5 bg-white/40 hover:bg-white/80 backdrop-blur-md text-stone-700 rounded-xl transition-all shadow-sm border border-white/60 flex items-center justify-center hover:scale-105 active:scale-95 z-50" title="返回上一頁">
-            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-        </a>
-
-        <!-- 第一層：網頁密碼鎖 -->
-        <div id="lock-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500">
-            <svg class="w-16 h-16 mx-auto mb-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-            <h2 class="text-2xl font-bold mb-6 tracking-wider text-stone-700">系統已鎖定</h2>
-            <input type="password" id="page-password" placeholder="請輸入網頁密碼" class="w-full px-4 py-3 mb-4 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5a2b] text-center tracking-[0.5em] transition-all shadow-inner text-stone-700">
-            <button id="unlock-btn" class="w-full px-4 py-3 bg-[#4a3627] hover:bg-[#5c4033] text-white font-bold rounded-xl transition-colors shadow-md active:scale-95">解鎖系統</button>
-        </div>
-
-        <!-- 第二層：Lido 伺服器驗證 -->
-        <div id="lido-login-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500 hidden">
+    <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-start pt-[15vh] p-4 relative no-print overflow-y-auto">
+        <div id="lido-login-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <h2 class="text-2xl font-bold mb-4 tracking-wider text-stone-700">伺服器驗證</h2>
             <p class="text-xs text-stone-500 mb-6 font-medium">請輸入帳密，系統將於背景保持連線狀態。</p>
@@ -142,24 +112,19 @@
     </div>
 
     <!-- 主程式戰情室 -->
-    <div id="main-app" class="w-full max-w-[1600px] mx-auto transition-opacity duration-500 hidden flex flex-col p-3 md:p-6">
+    <div id="main-app" class="w-full max-w-[1600px] mx-auto transition-opacity duration-500 hidden flex flex-col p-3 md:p-6 pb-12">
         
         <!-- 頂部 Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-stone-300 pb-4 gap-4 no-print">
             <div class="flex items-center gap-3">
-                <a href="index.html" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl transition-colors shadow-sm border border-stone-200" title="返回上一頁">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                </a>
                 <h1 class="text-xl md:text-2xl font-black text-[#4a3627] tracking-wide flex items-center">
                     <svg class="w-6 h-6 mr-2 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    Briefing
+                    Briefing Pro
                 </h1>
             </div>
             <div class="flex gap-3 items-center w-full sm:w-auto">
                 <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
-                <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 鎖定系統</button>
+                <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
         </div>
          
@@ -168,7 +133,6 @@
             
             <!-- 【左側控制台】 -->
             <div class="w-full xl:w-[340px] shrink-0 flex flex-col gap-4 xl:sticky xl:top-6 z-40 no-print">
-                <!-- 區塊 1: 狙擊與擷取 -->
                 <div class="flex flex-col gap-3 p-4 md:p-5 bg-white rounded-2xl border border-stone-200 shadow-sm">
                     <label class="text-sm font-bold text-stone-600 tracking-wide flex items-center gap-1.5"><span>🎯</span> 目標航班鎖定</label>
                     <div class="flex shadow-inner rounded-xl overflow-hidden border border-stone-300 focus-within:border-[#8b5a2b] focus-within:ring-2 focus-within:ring-[#8b5a2b]/30 bg-stone-50 transition-all">
@@ -181,272 +145,256 @@
                     </button>
                 </div>
 
-                <!-- 區塊 3: 手動補充區 (PAX/MEL/BAY) -->
                 <div class="flex flex-col h-40 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden">
                     <div class="bg-orange-100/50 px-4 py-2 border-b border-orange-200/60 flex justify-between items-center">
                         <span class="font-bold text-[#b35900] text-xs tracking-widest flex items-center gap-1">📦 手動補充 (PAX/MEL/BAY)</span>
+                        <button onclick="pasteTextToRawInput2()" class="text-[10px] bg-orange-200/50 hover:bg-orange-300/50 text-[#b35900] px-2 py-1 rounded transition-colors flex items-center gap-1 border border-orange-300/50">📋 貼上</button>
                     </div>
                     <textarea id="rawInput2" class="w-full flex-grow p-4 bg-transparent text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="若有額外地勤資訊，請貼於此處..." oninput="debouncedParseData()"></textarea>
                 </div>
-                <!-- 隱藏的資料橋接區 -->
                 <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
             </div>
 
             <!-- 【右側簡報畫布】 (Pro Edition Dashboard) -->
             <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
                 
-                <!-- ROW 1: Flight Info & Route (並排顯示) -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
+                <!-- ROW 1: Flight Info & Payload (Symmetrically aligned for iPad Landscape) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 items-stretch h-full">
                     
-                    <!-- Flight Info (7/12) -->
-                    <div class="md:col-span-7 flex flex-col gap-0 border border-[#8b5a2b] rounded-2xl overflow-hidden shadow-sm bg-white">
-                        <div class="bg-gradient-to-r from-[#4a3627] to-[#8b5a2b] p-4 flex flex-row justify-between items-center text-white relative overflow-hidden">
-                            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-                            <div class="relative z-10 text-left">
-                                <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5 flex items-center gap-2">
-                                    Flight Number <span id="out-utc-date" class="bg-white/20 text-white px-1.5 py-0.5 rounded data-font shadow-sm tracking-wide">----</span>
-                                </div>
-                                <div class="text-3xl md:text-5xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-flight-no">----</div>
+                    <!-- Flight Info Card (Left: 2/3 width on LG+) - Redesigned to match requested aesthetics -->
+                    <div class="lg:col-span-2 w-full flex flex-col border border-stone-300 rounded-2xl overflow-hidden shadow-sm bg-[#fbf9f6] h-full">
+                        <!-- Top Header: Flight, Date, OFP, EFB -->
+                        <div class="bg-[#785b42] p-4 md:p-5 flex justify-between items-start text-white">
+                            <div class="flex flex-col gap-1.5 z-10">
+                                <span id="out-utc-date" class="bg-white/20 text-white/90 px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max">----</span>
+                                <div class="text-4xl lg:text-5xl font-black data-font tracking-widest leading-none mt-1" id="out-flight-no">----</div>
                             </div>
-                            <div class="h-10 md:h-12 w-px bg-white/20 relative z-10 mx-2 hidden sm:block"></div>
-                            <div class="relative z-10 text-right">
-                                <div class="text-[10px] md:text-xs text-stone-300 font-bold tracking-widest uppercase mb-0.5">Aircraft Reg</div>
-                                <div class="text-xl md:text-3xl font-black data-font tracking-wider leading-none whitespace-nowrap" id="out-reg">----</div>
+
+                            <div class="flex flex-col gap-1.5 z-10">
+                                <div class="bg-[#5c4431] border border-[#85674f] px-3 py-1 rounded-md text-[10px] shadow-sm flex items-center justify-between gap-6">
+                                    <span class="text-white/70 font-bold uppercase tracking-wider">OFP</span>
+                                    <span class="text-white data-font font-black flex items-center gap-1" id="out-ofp">--</span>
+                                </div>
+                                <div class="bg-[#5c4431] border border-[#85674f] px-3 py-1 rounded-md text-[10px] shadow-sm flex items-center justify-between gap-6">
+                                    <span class="text-white/70 font-bold uppercase tracking-wider">EFB</span>
+                                    <span class="text-white data-font font-black" id="out-efb">--</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="p-3 md:p-4 flex-grow flex flex-col gap-3 bg-[#fbf9f6]">
+
+                        <!-- Bottom Body: 3 Vertical Cards (DEP, CRZ, ARR) -->
+                        <div class="p-3 md:p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                            
                             <!-- Departure Card -->
-                            <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
+                            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
-                                <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
-                                    <div>
-                                        <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">DEPARTURE</div>
-                                        <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
-                                    </div>
-                                    <div class="text-right flex flex-col items-end gap-1">
-                                        <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-dep-utc">UTC</span>
-                                        <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-dep-bay">--</span></span>
+                                <div class="flex justify-between items-start mb-2 pl-2">
+                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Departure</div>
+                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-dep-utc">UTC</span>
+                                </div>
+                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-dep">----</div>
+                                <div class="mt-auto pl-2">
+                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
+                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STD</span>
+                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-std">--:--</span>
                                     </div>
                                 </div>
-                                <div class="flex flex-row gap-2 ml-2 md:ml-3 mt-3">
-                                    <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                        <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STD</span>
-                                        <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-std">--:--</span>
-                                    </div>
-                                    <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                        <span class="text-[9px] md:text-[11px] font-bold text-[#b35900] mb-0.5">ETD</span>
-                                        <span class="data-font font-black text-xl md:text-2xl text-[#b35900] leading-none" id="out-etd">--:--</span>
+                            </div>
+
+                            <!-- Center Info (ETE & CRZ & ETD) -->
+                            <div class="bg-[#344155] rounded-xl shadow-md border border-[#232e3d] p-4 flex flex-col h-full text-center">
+                                <div class="flex flex-col items-center justify-center flex-grow">
+                                    <span class="data-font font-black text-3xl xl:text-4xl text-[#f6ca6b] leading-none mb-3 drop-shadow-sm" id="out-ete-center">--:--</span>
+                                    <div class="w-16 h-px bg-stone-500/50 mb-3"></div>
+                                    <span class="data-font font-black text-2xl xl:text-3xl text-[#8bb4d6] leading-none mb-2" id="out-cruise-alt">---</span>
+                                    <div class="flex justify-center items-center gap-2">
+                                        <span class="data-font font-bold text-sm text-sky-100" id="out-cruise-temp"></span>
+                                        <span class="data-font font-bold text-[10px] text-white bg-[#1e293b] border border-[#475569] px-1.5 py-0.5 rounded shadow-inner" id="out-wc">---</span>
                                     </div>
                                 </div>
-                                <div id="dep-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
-                                    <div class="text-xl md:text-2xl leading-none" id="dep-wx-icon">☁️</div>
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Departure WX</span>
-                                        <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="dep-wx-desc">Loading...</span>
+                                <div class="mt-auto pt-3 w-full">
+                                    <div class="bg-[#1e293b]/60 border border-[#475569]/50 rounded-lg p-2.5 flex flex-col justify-center items-center">
+                                        <span class="text-[9px] font-bold text-[#eab308] mb-0.5 tracking-wider uppercase">ETD</span>
+                                        <span class="data-font font-black text-sm md:text-base text-[#fde047] tracking-wide" id="out-etd">--:--</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Arrival Card -->
+                            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
+                                <div class="flex justify-between items-start mb-2 pl-2">
+                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Arrival</div>
+                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-arr-utc">UTC</span>
+                                </div>
+                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-arr">----</div>
+                                <div class="mt-auto pl-2">
+                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
+                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
+                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-sta">--:--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Payload & Cabin Card (Right: 1/3 width on LG+, highly compact) -->
+                    <div class="lg:col-span-1 w-full border border-[#d4c3b3] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col h-full">
+                        <div class="bg-[#4a3627] p-2.5 text-center">
+                            <div class="text-2xl font-black data-font tracking-widest text-white" id="out-reg">----</div>
+                        </div>
+                        
+                        <div class="flex-grow flex flex-col justify-evenly p-3 lg:p-4 gap-2 bg-white">
+                            <!-- PAX -->
+                            <div class="text-center mb-1">
+                                <div class="text-[9px] text-stone-500 font-bold tracking-wider mb-0.5">TOTAL PAX</div>
+                                <div class="flex items-baseline justify-center gap-1.5">
+                                    <div class="data-font font-black text-3xl lg:text-4xl text-[#b35900]" id="out-pax">---</div>
+                                    <div class="data-font font-bold text-xs text-stone-400" id="out-pax-raw"></div>
                                 </div>
                             </div>
                             
-                          <!-- 核心飛行時間與巡航高度 (縮小緊湊版) -->
-<div class="flex flex-row bg-gradient-to-b from-[#3b4c59] to-[#2c3e50] rounded-xl shadow-md overflow-hidden relative z-10 border border-stone-300 mx-2 md:mx-3">
-    <!-- 裝飾背景圖形 (圖示等比例調小) -->
-    <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/10 z-0">
-        <svg class="w-12 h-12 md:w-16 md:h-16 rotate-90" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
-    </div>
-    
-    <!-- 左側面板 (留白從 p-4 縮減為 p-3) -->
-    <div class="flex-1 p-3 md:p-4 flex flex-col items-center justify-center relative z-10">
-        <span class="text-[9px] md:text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1 drop-shadow-md">Flight Time</span>
-        <!-- 數據字體從 3xl/5xl 調降為 2xl/4xl -->
-        <span class="data-font font-black text-2xl md:text-4xl text-amber-400 leading-none tracking-wider drop-shadow-lg" id="out-ete-center">--:--</span>
-    </div>
-    
-    <!-- 中央分隔線 (上下間距微調) -->
-    <div class="w-px bg-white/20 my-3 z-10"></div>
-    
-    <!-- 右側面板 (留白與字體同步調小) -->
-    <div class="flex-1 p-3 md:p-4 flex flex-col items-center justify-center relative z-10">
-        <span class="text-[9px] md:text-[10px] font-bold text-stone-300 uppercase tracking-widest mb-1 drop-shadow-md">CRZ Alt / Temp</span>
-        <span class="data-font font-black text-2xl md:text-4xl text-sky-300 leading-none tracking-wider drop-shadow-lg" id="out-cruise-center">---</span>
-    </div>
-</div>
+                            <div class="w-full h-px bg-stone-100"></div>
 
-                            <!-- Arrival Card -->
-                            <div class="bg-white rounded-xl border border-stone-200 p-3 md:p-4 shadow-sm relative overflow-hidden">
-                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
-                                <div class="flex justify-between items-start mb-2 ml-2 md:ml-3">
-                                    <div>
-                                        <div class="text-[10px] md:text-xs font-bold text-stone-400 tracking-widest mb-1">ARRIVAL</div>
-                                        <div class="text-4xl md:text-5xl lg:text-5xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
-                                    </div>
-                                    <div class="text-right flex flex-col items-end gap-1">
-                                        <span class="text-[10px] md:text-xs bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold shadow-sm" id="out-arr-utc">UTC</span>
-                                        <span class="text-[11px] md:text-sm text-stone-500 font-bold flex items-center mt-1">BAY <span class="bg-amber-100 border border-amber-300 text-[#b35900] px-2 py-0.5 rounded-md shadow-sm text-xl md:text-2xl data-font font-black ml-1.5" id="out-arr-bay">--</span></span>
-                                    </div>
+                            <!-- CARGO & FCST -->
+                            <div class="flex justify-between items-center px-1">
+                                <div class="text-[9px] text-stone-400 font-bold tracking-wider">CARGO(KG)</div>
+                                <div class="data-font font-bold text-md text-stone-700" id="out-cargo">----</div>
+                            </div>
+                            <div class="flex justify-between items-center px-1">
+                                <div class="text-[9px] text-stone-400 font-bold tracking-wider">FCST PLD</div>
+                                <div class="data-font font-bold text-md text-stone-700" id="out-fcst">----</div>
+                            </div>
+                            
+                            <div class="w-full h-px bg-stone-100"></div>
+                            
+                            <!-- WATER -->
+                            <div class="text-center bg-blue-50/50 rounded-lg py-1.5">
+                                <div class="text-[9px] text-blue-400 font-bold tracking-wider">WATER</div>
+                                <div class="data-font font-black text-xl text-blue-600" id="out-water">--%</div>
+                            </div>
+                            
+                            <div class="w-full h-px bg-stone-100"></div>
+                            
+                            <!-- BAYS -->
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50">
+                                    <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">DEP BAY</span>
+                                    <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-dep-bay">--</span>
                                 </div>
-                                <div class="flex ml-2 md:ml-3 mt-3">
-                                    <div class="flex-1 bg-stone-100 rounded-lg px-2 md:px-3 py-1.5 flex flex-col justify-center">
-                                        <span class="text-[9px] md:text-[11px] font-bold text-stone-500 mb-0.5">STA</span>
-                                        <span class="data-font font-black text-xl md:text-2xl text-stone-800 leading-none" id="out-sta">--:--</span>
-                                    </div>
-                                </div>
-                                <div id="arr-simple-wx" class="hidden mt-3 bg-white rounded-xl p-2 md:p-3 flex items-center gap-2 shadow-sm border border-stone-200 ml-2 md:ml-3">
-                                    <div class="text-xl md:text-2xl leading-none" id="arr-wx-icon">☁️</div>
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-[10px] md:text-[11px] font-bold text-stone-500 tracking-wide uppercase">Arrival WX</span>
-                                        <span class="text-[11px] md:text-[12px] text-stone-700 font-medium" id="arr-wx-desc">Loading...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Route & Wind (5/12) -->
-                    <div class="md:col-span-5 flex flex-col gap-4">
-                        <div class="border border-[#e8dfd5] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
-                            <div class="bg-[#5c4033] text-[#f7f4f0] text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 md:px-4 py-2.5 flex justify-between items-center">
-                                <span>ATC Clearance Route</span>
-                                <div class="flex gap-1.5">
-                                    <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">OFP:<span id="out-ofp" class="text-white font-bold ml-1">--</span></span>
-                                    <span class="bg-[#3a2a1f] px-1.5 py-0.5 rounded text-[#d4c3b3] data-font text-[9px] shadow-inner">EFB:<span id="out-efb" class="text-white font-bold ml-1">--</span></span>
-                                </div>
-                            </div>
-                            <div class="p-4 md:p-5 flex-grow flex flex-col justify-center">
-                                <div class="data-font text-sm md:text-[15px] leading-relaxed text-[#3a2a1f] tracking-wide break-words" id="out-route">NO ROUTE DATA</div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
-                                <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Wind Component</div>
-                                <div class="data-font font-bold text-lg text-stone-800" id="out-wc">---</div>
-                            </div>
-                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
-                                <div class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">Max Shear</div>
-                                <div class="data-font font-bold text-base text-[#d97706]" id="out-mxsh">---</div>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
-                                <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">TOW</span>
-                                <span class="data-font font-bold text-xl text-[#4a3627]" id="out-tow">--.-</span>
-                            </div>
-                            <div class="border border-[#e8dfd5] rounded-xl p-3 bg-white shadow-sm flex justify-between items-center">
-                                <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">LDW</span>
-                                <span class="data-font font-bold text-xl text-[#4a3627]" id="out-ldw">--.-</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ROW 2: Payload (窄直列) & Fuel (寬並排) -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5">
-                    
-                    <!-- Payload (4/12) -->
-                    <div class="md:col-span-4 border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
-                        <div class="bg-[#7a5c43] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 text-center">Payload & Cabin</div>
-                        <div class="p-4 flex flex-col gap-3 flex-grow justify-center">
-                            <div class="text-center">
-                                <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">TOTAL PAX</div>
-                                <div class="flex items-baseline justify-center gap-1.5">
-                                    <div class="data-font font-black text-4xl text-[#b35900]" id="out-pax">---</div>
-                                    <div class="data-font font-bold text-sm text-stone-400" id="out-pax-raw"></div>
-                                </div>
-                            </div>
-                            <div class="w-full h-px bg-stone-200 my-1"></div>
-                            <div class="flex justify-between items-center w-full px-1">
-                                <div class="text-[10px] text-stone-400 font-bold tracking-wider">CARGO(KG)</div>
-                                <div class="data-font font-bold text-lg text-stone-700" id="out-cargo">----</div>
-                            </div>
-                            <div class="flex justify-between items-center w-full px-1">
-                                <div class="text-[10px] text-stone-400 font-bold tracking-wider">FCST PLD</div>
-                                <div class="data-font font-bold text-lg text-stone-700" id="out-fcst">----</div>
-                            </div>
-                            <div class="w-full h-px bg-stone-200 my-1"></div>
-                            <div class="text-center bg-blue-50/50 rounded-lg py-2.5">
-                                <div class="text-[10px] text-stone-500 font-bold tracking-wider mb-1">WATER</div>
-                                <div class="data-font font-black text-2xl text-blue-600" id="out-water">--%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Fuel Distribution (8/12) -->
-                    <div class="md:col-span-8 flex flex-col gap-4">
-                        <div class="border border-[#d4c3b3] rounded-2xl overflow-hidden flex-grow flex flex-col shadow-sm bg-white">
-                            <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-3 py-2.5">Fuel Distribution</div>
-                            <div class="p-3 bg-[#fdfaf6] flex flex-col gap-3 flex-grow">
-                                <div class="flex justify-between items-end">
-                                    <div class="text-xs font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
-                                    <div class="data-font font-black text-2xl text-[#6e4620]" id="out-total-fuel">----</div>
-                                </div>
-                                <div class="w-full h-px bg-[#e8dfd5] my-1"></div>
-                                <div class="flex flex-row justify-between gap-4">
-                                    <div class="flex-1">
-                                        <div class="text-[10px] text-[#8c6b5d] font-bold mb-1" id="label-div-fuel">Division Fuel</div>
-                                        <div class="data-font font-bold text-xl text-[#5c4033]" id="out-div-fuel">----</div>
-                                    </div>
-                                    <div class="w-px bg-[#e8dfd5] my-1"></div>
-                                    <div class="flex-1 text-right">
-                                        <div class="text-[10px] text-[#8c6b5d] font-bold mb-1">Spare Fuel</div>
-                                        <div class="data-font font-bold text-xl text-[#4b6b3e]" id="out-spare-fuel">----</div>
-                                    </div>
-                                </div>
-                                <div class="pl-2 border-l-2 border-[#d4c3b3] flex flex-col gap-1.5 mt-2 flex-grow justify-center">
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-wxx">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-opn">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD ATC</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-atc">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD DEV</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-add-dev">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CONT</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-cont">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-crit-fuel">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">TANKERING</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-tankering">--</span></div>
-                                    <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">EXTRA</span><span class="data-font text-[13px] font-bold text-stone-700" id="out-extra">--</span></div>
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50">
+                                    <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">ARR BAY</span>
+                                    <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-arr-bay">--</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ROW 3: MEL & eLB Image Area (完全復原為上下垂直堆疊) -->
+                <!-- ROW 2: MEL Text Block (Flexible full width row) -->
+                <div class="w-full border border-[#e8dfd5] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                    <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
+                        <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
+                    </div>
+                    <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto min-h-[100px] max-h-[500px]" id="out-mel-container">
+                        <div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>
+                    </div>
+                </div>
+
+                <!-- ROW 3: MEL Image Block -->
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
-                    
-                    <!-- MEL Text Block -->
-                    <div class="border border-[#e8dfd5] rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
-                        <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
-                            <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
-                            <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 eLB 系統</a>
-                        </div>
-                        <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto max-h-[150px]" id="out-mel-container">
-                            <div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>
-                        </div>
-                    </div>
-
-                    <!-- MEL Image Block -->
-                    <div class="border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white flex flex-col">
-                        <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
+                        <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 DEFECT / eLB 截圖區
                             </span>
-                            <button onclick="clearImage('mel')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
+                            <div class="flex items-center gap-3">
+                                <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 eLB 系統</a>
+                                <button onclick="clearImage('mel')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[150px] relative">
-                            <div id="mel-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                            <div id="mel-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                                 <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                    <button onclick="document.getElementById('mel-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                                    <button onclick="pasteFromClipboard('mel')" class="flex-1 bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                    <button onclick="pasteFromClipboard('mel')" class="w-full bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
                                 </div>
                             </div>
                             <img id="mel-image" src="" alt="MEL Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                            <input type="file" id="mel-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'mel')" data-html2canvas-ignore>
                         </div>
                     </div>
                 </div>
 
-                <!-- ROW 4: AVIATION WEATHER -->
+                <!-- ROW 4: Weights & Fuel Distribution (3-Column Layout specifically optimized for iPad Pro Landscape) -->
+                <div class="w-full flex flex-col border border-[#d4c3b3] rounded-2xl overflow-hidden shadow-sm bg-white">
+                    <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5">Weights & Fuel Distribution</div>
+                    <!-- 強制啟用 lg:grid-cols-3 三欄網格，創造充裕呼吸空間 -->
+                    <div class="p-4 lg:p-6 bg-[#fdfaf6] grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
+                        
+                        <!-- Left Box: TOW & LDW & Total -->
+                        <div class="flex flex-col gap-4 justify-between h-full">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center h-[90px]">
+                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">TOW</span>
+                                    <span class="data-font font-black text-2xl xl:text-3xl text-[#4a3627] leading-none" id="out-tow">--.-</span>
+                                </div>
+                                <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center h-[90px]">
+                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">LDW</span>
+                                    <span class="data-font font-black text-2xl xl:text-3xl text-[#4a3627] leading-none" id="out-ldw">--.-</span>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm flex-grow flex justify-between items-end">
+                                <div class="text-sm font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
+                                <div class="text-right flex items-baseline gap-2">
+                                    <span class="text-xs text-[#8b5a2b] font-bold opacity-70" id="time-total-fuel"></span>
+                                    <div class="data-font font-black text-4xl text-[#6e4620] leading-none" id="out-total-fuel">----</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Middle Box: Div Fuel & Spare Fuel -->
+                        <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm flex flex-col justify-between h-full">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="flex flex-col gap-1">
+                                    <div class="text-[11px] text-stone-500 font-bold" id="label-div-fuel">Minimum Diversion Fuel</div>
+                                    <span class="text-[9px] text-stone-400 font-bold opacity-70 mt-1" id="time-div-fuel"></span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="data-font font-black text-2xl xl:text-3xl text-[#5c4033] tracking-widest" id="out-div-fuel">----</div>
+                                </div>
+                            </div>
+                            
+                            <div id="altn-bof-container" class="hidden flex flex-col gap-1.5 mb-6 bg-[#fdfaf6] p-2.5 rounded-lg border border-[#e8dfd5]/60"></div>
+
+                            <div class="mt-auto">
+                                <div class="w-full h-px bg-[#e8dfd5] mb-4"></div>
+                                <div class="flex justify-between items-end">
+                                    <div class="text-[11px] text-[#8c6b5d] font-bold">Spare Fuel</div>
+                                    <div class="data-font font-black text-3xl text-[#4b6b3e] leading-none" id="out-spare-fuel">----</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Box: Additions breakdown -->
+                        <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-wxx"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-wxx">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-opn"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-opn">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD ATC</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-atc"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-atc">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD DEV</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-dev"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-dev">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CONT</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-cont"></span><span class="data-font text-sm font-bold text-stone-700" id="out-cont">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">CRIT FUEL</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-crit-fuel"></span><span class="data-font text-sm font-bold text-stone-700" id="out-crit-fuel">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">TANKERING</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-tankering"></span><span class="data-font text-sm font-bold text-stone-700" id="out-tankering">--</span></div></div>
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">EXTRA</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-extra"></span><span class="data-font text-sm font-bold text-stone-700" id="out-extra">--</span></div></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ROW 5: AVIATION WEATHER -->
                 <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white">
                     <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
                         <div>
@@ -456,10 +404,6 @@
                             </h1>
                             <div class="flex items-center gap-2 mt-1">
                                 <p class="text-[9px] md:text-[10px] text-stone-300 tracking-widest uppercase font-semibold">METAR & TAF Reports</p>
-                                <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-200 text-[9px] md:text-[10px] px-2 py-0.5 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                    Turbli 亂流預測
-                                </a>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
@@ -479,12 +423,12 @@
                     </div>
                 </div>
 
-                <!-- ROW 5: VERTICAL PROFILE, WNI, ATC & EDTO -->
+                <!-- ROW 6: VERTICAL PROFILE, WNI, ATC & EDTO -->
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
                     
                     <!-- Vertical Flight Profile -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                        <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                        <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
                                 Vertical Flight Profile
@@ -494,7 +438,7 @@
                             </button>
                         </div>
                         <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                            <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                            <div id="profile-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                                 <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
                                     <button onclick="document.getElementById('profile-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
@@ -502,72 +446,101 @@
                                 </div>                                      
                             </div>
                             <img id="profile-image" src="" alt="Vertical Profile" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                            <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')" data-html2canvas-ignore>
+                            <input type="file" id="profile-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'profile')">
                         </div>
                     </div>
 
-                 
-    <!-- SigWX With Route 修改區塊開始 -->
-    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mx-auto">
-        <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
-            <span class="flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                SigWX With Route
-            </span>
-            <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-        </div>
-        
-        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col lg:flex-row lg:flex-wrap items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
-            <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                    <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
-                    <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                </div>                                      
-            </div>
-            <!-- SigWX 圖檔將動態插入至此 -->
-            <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')" data-html2canvas-ignore>
-        </div>
-    </div>
-    <!-- SigWX With Route 修改區塊結束 -->
+                    <!-- SigWX With Route -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mx-auto">
+                        <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                SigWX With Route
+                            </span>
+                            <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col lg:flex-row lg:flex-wrap items-center justify-center min-h-[200px] relative gap-4" id="sigwx-container">
+                            <div id="sigwx-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full min-h-[200px] flex flex-col items-center justify-center py-8">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="document.getElementById('sigwx-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿</button>
+                                    <button onclick="pasteFromClipboard('sigwx')" class="flex-1 bg-teal-50 border border-teal-200 text-teal-700 py-3 rounded-xl shadow-sm hover:bg-teal-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                </div>                                      
+                            </div>
+                            <input type="file" id="sigwx-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'sigwx')">
+                        </div>
+                    </div>
 
                     <!-- ATC 報文保留區 -->
                     <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
                         <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
                             <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
                             <div class="flex items-center gap-2 no-print">
-                                <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
                                 <button id="copy-btn-atc" class="hidden text-[10px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#8b5a2b]/30">📋 複製</button>
+                                <a href="https://flight-plan-editor.weathernews.com/flight_plan_editor/#login" target="_blank" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded">🔗 WNI Editor</a>
                             </div>
                         </div>
                         <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
                     </div>
                     
-                    <!-- WNI Image Area -->
+                    <!-- WNI Image Area with MAX SHEAR -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
-                        <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center" data-html2canvas-ignore>
+                        <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 WNI 氣象剖面資訊
                             </span>
-                            <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-red-500/90 border border-red-400 px-2 py-0.5 rounded shadow-sm flex items-center gap-1.5 text-white">
+                                    <span class="text-[9px] font-bold opacity-80 tracking-wider">MAX SHEAR</span>
+                                    <span class="data-font text-xs font-black" id="out-mxsh">---</span>
+                                </span>
+                                <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
-                            <div id="wni-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8" data-html2canvas-ignore>
+                            <div id="wni-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 
                                 <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                    <button onclick="document.getElementById('wni-upload').click()" class="flex-1 bg-white border border-stone-300 text-stone-600 py-3 rounded-xl shadow-sm hover:bg-stone-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📁 相簿圖片</button>
-                                    <button onclick="pasteFromClipboard('wni')" class="flex-1 bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 一鍵貼上</button>
+                                    <button onclick="pasteFromClipboard('wni')" class="w-full bg-blue-50 border border-blue-200 text-blue-600 py-3 rounded-xl shadow-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
                                 </div>
                             </div>
                             
                             <img id="wni-image" src="" alt="WNI Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
-                            <input type="file" id="wni-upload" accept="image/*" class="hidden no-print" onchange="handleImageUpload(event, 'wni')" data-html2canvas-ignore>
+                        </div>
+                    </div>
+
+                    <!-- Turbli Image Area -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
+                        <div class="bg-gradient-to-r from-indigo-700 to-indigo-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                Turbli 亂流預測
+                            </span>
+                            <div class="flex items-center gap-3">
+                                <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-100 text-[9px] md:text-[10px] px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
+                                    🔗 前往預測
+                                </a>
+                                <button onclick="clearImage('turbli')" class="text-indigo-300 hover:text-white transition-colors no-print" title="Clear Image">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                            <div id="turbli-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                
+                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
+                                    <button onclick="pasteFromClipboard('turbli')" class="w-full bg-indigo-50 border border-indigo-200 text-indigo-600 py-3 rounded-xl shadow-sm hover:bg-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                </div>
+                            </div>
+                            
+                            <img id="turbli-image" src="" alt="Turbli Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
                         </div>
                     </div>
 
@@ -584,22 +557,29 @@
                         </div>
                     </div>
 
+                    <!-- ROW 7: NOTAM 智慧擷取與分類 -->
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3">
+                        <div class="bg-gradient-to-r from-stone-700 to-stone-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                NOTAM 智慧擷取與分類 (Airports / FIR)
+                            </span>
+                            <button onclick="parseNotams()" class="text-stone-300 hover:text-white transition-colors no-print" title="重新解析 NOTAM">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            </button>
+                        </div>
+                        <div class="p-4 md:p-5 bg-[#fbf9f6] flex flex-col gap-4">
+                            <textarea id="raw-notam-input" class="w-full p-3 bg-white border border-stone-300 rounded-xl text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none focus:ring-2 focus:ring-[#8b5a2b]/50 resize-y min-h-[80px]" placeholder="若系統有抓取到 NOTAM，將自動帶入並分類。您也可以手動貼上 NOTAM 報文至此處，點擊右上角重整按鈕進行解析..." oninput="debouncedParseNotams()"></textarea>
+                            
+                            <div id="notam-buttons-container" class="flex flex-wrap gap-2 md:gap-3">
+                                <div class="text-stone-400 text-[11px] md:text-sm font-bold w-full text-center py-4">請先擷取航班或手動貼上 NOTAM 資料</div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- 匯出與截圖按鈕區域 (置底，並排或堆疊) -->
-            <div class="w-full max-w-[1194px] mx-auto flex flex-col md:flex-row justify-center items-center gap-4 pb-8 mt-6 no-print">
-                <!-- 圖片匯出/分享按鈕 -->
-                <button id="capture-btn" onclick="shareDashboardImage()" class="flex-1 w-full md:max-w-md bg-[#4a3627]/95 backdrop-blur hover:bg-[#5c4033] text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-[#8b5a2b]/80">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    匯出圖片並分享 (iOS 原生)
-                </button>
-                <!-- 新增的匯出高畫質無縫 PDF 按鈕 -->
-                <button id="pdf-btn" onclick="exportContinuousPDF()" class="flex-1 w-full md:max-w-md bg-red-800/95 backdrop-blur hover:bg-red-900 text-white font-bold py-4 md:py-3.5 px-6 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-base md:text-lg tracking-wide border-2 border-red-700/80">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    匯出無縫長條 PDF (供標示)
-                </button>
-            </div>
         </div>
 
     </div>
@@ -607,15 +587,63 @@
     <!-- 腳本整合 -->
     <script>
         // ==========================================
+        // PWA 與離線支援模組 (Single-File Architecture)
+        // ==========================================
+        (function initPWA() {
+            const manifest = {
+                "name": "Flight Briefing Pro",
+                "short_name": "Briefing",
+                "display": "standalone",
+                "start_url": location.pathname,
+                "background_color": "#f4ece4",
+                "theme_color": "#4a3627",
+                "icons": [{
+                    "src": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5a2b'%3E%3Cpath d='M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'/%3E%3C/svg%3E",
+                    "sizes": "512x512",
+                    "type": "image/svg+xml"
+                }]
+            };
+            const manifestTag = document.createElement('link');
+            manifestTag.rel = 'manifest';
+            manifestTag.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+            document.head.appendChild(manifestTag);
+
+            if ('caches' in window) {
+                window.addEventListener('load', () => {
+                    caches.open('briefing-core-v1').then(cache => {
+                        cache.add(location.href).catch(() => {});
+                        const extRes = [ 'https://cdn.tailwindcss.com' ];
+                        cache.addAll(extRes).catch(() => {});
+                    });
+                });
+            }
+
+            const swCode = `
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+                self.addEventListener('fetch', e => {
+                    e.respondWith(
+                        caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match(location.origin)))
+                    );
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {
+                    console.log('單一檔案模式下的 SW 註冊受限，但已透過 Cache API 提供基礎離線支援');
+                });
+            }
+        })();
+
+        // ==========================================
         // 變數與核心功能
         // ==========================================
-        const getSecKey = () => [49, 48, 52, 55, 56, 56].map(c => String.fromCharCode(c)).join('');
         const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLGUt7oKbBMpcwGFkFiDWp1mMlrQiP1UND07XyWB4LTXYjq-WSkUf_zmzoAGwyLIfaTA/exec'; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
         
         const airportMap = {
-            'RCTP':'TPE', 'RCKH':'KHH', 'RCSS':'TSA', 'RMQ':'RMQ',
+            'RCTP':'TPE', 'RCKH':'KHH', 'RCSS':'TSA', 'RCMQ':'RMQ',
             'VMMC':'MFM', 'VHHH':'HKG',
             'RJAA':'NRT', 'RJTT':'HND', 'RJBB':'KIX', 'RJGG':'NGO', 'RJFT':'KMJ','RJFF':'FUK', 'ROAH':'OKA', 'RJSS':'SDJ', 'RJCC':'CTS', 'RJCH':'HKD', 'RJFU':'NGS', 'RJOA':'HIJ', 'RJSN':'KIJ', 'RJFK':'KOJ',
             'KSFO':'SFO', 'KLAX':'LAX', 'KSEA':'SEA', 'KOAK':'OAK', 'KSMF':'SMF', 'KONT':'ONT', 'KPDX':'PDX', 'PANC':'ANC', 'PMDY':'MDY', 'PHNL':'HNL',
@@ -623,7 +651,7 @@
             'VVNB':'HAN', 'VVTS':'SGN', 'VVDN':'DAD', 'VVCR':'CXR', 'VVPQ':'PQC',
             'VTBS':'BKK', 'VTBD':'DMK', 'VTSG':'HKT', 'VTCC':'CNX',
             'WMKK':'KUL', 'WMKP':'PEN', 'WSSS':'SIN',
-            'WIII':'CGK', 'WADD':'DPS'
+            'WIII':'CGK', 'WADD':'DPS', 'KPHX':'PHX', 'LFBO':'TLS'
         };
         const getAirportStr = (icao) => icao && airportMap[icao] ? `${icao}/${airportMap[icao]}` : icao;
 
@@ -645,7 +673,7 @@
             'WIII': 'Asia/Jakarta', 'CGK': 'Asia/Jakarta', 'RPLL': 'Asia/Manila', 'MNL': 'Asia/Manila',
             'RPVM': 'Asia/Manila', 'CEB': 'Asia/Manila', 'RPLC': 'Asia/Manila', 'CRK': 'Asia/Manila',
             'KLAX': 'America/Los_Angeles', 'KSFO': 'America/Los_Angeles', 'KONT': 'America/Los_Angeles',
-            'KSEA': 'America/Los_Angeles'
+            'KSEA': 'America/Los_Angeles', 'KPHX': 'America/Phoenix', 'PHX': 'America/Phoenix', 'LFBO': 'Europe/Paris', 'TLS': 'Europe/Paris'
         };
 
         const airportCoordsFallback = {
@@ -656,17 +684,16 @@
         };
 
         // UI 元件
-        const lockScreen = document.getElementById('lock-screen');
         const lidoLoginScreen = document.getElementById('lido-login-screen');
         const mainApp = document.getElementById('main-app');
         const loginWrapper = document.getElementById('login-wrapper');
-        const pagePwdInput = document.getElementById('page-password');
         const toast = document.getElementById('toast');
 
         let currentDepICAO = '----', currentArrICAO = '----';
         let currentDepUTC = '', currentArrUTC = '';
         let currentIcaosToFetch = [], currentDateUTC = '----';
         let runwayMap = {};
+        window.parsedNotamGroups = {}; 
 
         // Toast 訊息提示
         function showToast(msg, isError = false, duration = 3000) {
@@ -679,19 +706,21 @@
         }
         function showToastMessage(msg) { showToast(msg, false, 4000); }
 
-        // 解鎖邏輯
-        function attemptUnlock() {
-            if (pagePwdInput.value === getSecKey()) {
-                lockScreen.classList.add('hidden');
-                lidoLoginScreen.classList.remove('hidden');
-                pagePwdInput.value = '';
-            } else {
-                showToast('登入授權碼無效', true);
-                pagePwdInput.value = '';
+        // Keyboard submission for login
+        document.getElementById('lido-pass').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('lido-pass').blur();
+                document.getElementById('lido-connect-btn').click();
             }
-        }
-        document.getElementById('unlock-btn').addEventListener('click', attemptUnlock);
-        pagePwdInput.addEventListener('keypress', e => { if (e.key === 'Enter') attemptUnlock(); });
+        });
+
+        document.getElementById('lido-user').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('lido-pass').focus();
+            }
+        });
 
         document.getElementById('lido-connect-btn').addEventListener('click', () => {
             const user = document.getElementById('lido-user').value.trim();
@@ -711,13 +740,11 @@
             document.getElementById('lido-pass').value = '';
             mainApp.classList.add('hidden');
             loginWrapper.classList.remove('hidden');
-            lockScreen.classList.remove('hidden');
-            lidoLoginScreen.classList.add('hidden');
+            lidoLoginScreen.classList.remove('hidden');
             clearData();
             showToast('已斷開連線，憑證清除並鎖定');
         });
 
-        // 輔助格式化函數
         function formatAviationTime(ms) {
             if (!ms) return 'N/A';
             const d = new Date(ms);
@@ -741,6 +768,188 @@
         }
 
         // ==========================================
+        // NOTAM 解析與按鈕生成邏輯
+        // ==========================================
+        let parseNotamTimer;
+        function debouncedParseNotams() {
+            clearTimeout(parseNotamTimer);
+            parseNotamTimer = setTimeout(parseNotams, 500);
+        }
+
+        function parseNotams() {
+            const text = document.getElementById('raw-notam-input').value;
+            localStorage.setItem('dispatch_notam_input', text);
+            const container = document.getElementById('notam-buttons-container');
+            
+            if (!text.trim()) {
+                container.innerHTML = '<div class="text-stone-400 text-[11px] md:text-sm font-bold w-full text-center py-4">等待 NOTAM 資料匯入...</div>';
+                return;
+            }
+            
+            const lines = text.split('\n');
+            let parsedAirports = [];
+            let parsedAreas = []; 
+
+            let currentMajorCategory = null;
+            let currentSubCategory = null;
+            let currentBlock = [];
+            let isAirportSection = false;
+
+            const airportCategories = [
+                'DEPARTURE AIRPORT',
+                'DESTINATION AIRPORT',
+                'DESTINATION ALTERNATE(S)',
+                'ENROUTE AIRPORT(S)',
+                'SUITABLE ENROUTE AIRPORT(S)'
+            ];
+
+            const areaMappings = {
+                'EXTENDED AREA AROUND DEPARTURE': 'EXTENDED AREA (DEP & DEST)',
+                'EXTENDED AREA AROUND DESTINATION': 'EXTENDED AREA (DEP & DEST)',
+                'AREA ENROUTE DESTINATION - DESTINATION ALTERNATE(S)': 'AREA ENROUTE & EXTENDED (ALTN)',
+                'EXTENDED AREA AROUND DESTINATION ALTERNATE AIRPORT(S)': 'AREA ENROUTE & EXTENDED (ALTN)'
+            };
+
+            function saveBlock() {
+                if (currentBlock.length > 0) {
+                    if (isAirportSection && currentSubCategory) {
+                        parsedAirports.push({
+                            title: currentSubCategory,
+                            text: currentBlock.join('\n') + '\n'
+                        });
+                    } else if (!isAirportSection && currentMajorCategory) {
+                        let normCat = currentMajorCategory.replace(/\s+/g, ' ');
+                        let displayTitle = areaMappings[normCat] || normCat;
+                        
+                        let existingArea = parsedAreas.find(a => a.title === displayTitle);
+                        if (existingArea) {
+                            existingArea.text += currentBlock.join('\n') + '\n';
+                        } else {
+                            parsedAreas.push({
+                                title: displayTitle,
+                                text: currentBlock.join('\n') + '\n'
+                            });
+                        }
+                    }
+                    currentBlock = [];
+                }
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const cl = line.trim();
+
+                if (/^={5,}$/.test(cl)) {
+                    let j = i + 1;
+                    let catName = "";
+                    while (j < lines.length && !/^={5,}$/.test(lines[j].trim())) {
+                        if (lines[j].trim()) catName += lines[j].trim() + " ";
+                        j++;
+                    }
+
+                    if (j < lines.length && /^={5,}$/.test(lines[j].trim())) {
+                        saveBlock(); 
+
+                        currentMajorCategory = catName.trim().toUpperCase();
+                        currentSubCategory = null;
+                        isAirportSection = airportCategories.includes(currentMajorCategory);
+
+                        if (!isAirportSection) {
+                            for (let k = i; k <= j; k++) {
+                                currentBlock.push(lines[k]);
+                            }
+                        }
+                        
+                        i = j; 
+                        continue;
+                    }
+                }
+
+                if (isAirportSection && i + 1 < lines.length && /^-{5,}$/.test(lines[i+1].trim())) {
+                    if (!line.startsWith(' ') && line.trim().length > 0) {
+                        saveBlock(); 
+
+                        const titleParts = cl.split(/\s{2,}|\s+\//);
+                        currentSubCategory = titleParts[0].trim(); 
+                        currentBlock = [line]; 
+                        continue;
+                    }
+                }
+
+                if (isAirportSection && currentSubCategory) {
+                    currentBlock.push(line);
+                } else if (!isAirportSection && currentMajorCategory) {
+                    currentBlock.push(line);
+                }
+            }
+            
+            saveBlock(); 
+            
+            container.innerHTML = '';
+            
+            const copyAllBtn = document.createElement('button');
+            copyAllBtn.className = "w-full py-3.5 px-4 rounded-xl font-bold shadow-md bg-stone-700 text-white hover:bg-stone-600 transition-all active:scale-95 text-[13px] md:text-sm flex items-center justify-center gap-2 mb-2";
+            copyAllBtn.innerHTML = `📋 複製全文 NOTAM (${lines.length} 行)`;
+            copyAllBtn.onclick = () => copyNotamData(text, '完整');
+            container.appendChild(copyAllBtn);
+
+            if (parsedAirports.length === 0 && parsedAreas.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = "text-stone-400 text-[11px] md:text-sm font-bold w-full text-center py-4";
+                emptyMsg.textContent = "無法辨識標準 Lido 標題結構，但您仍可使用上方按鈕複製全文。";
+                container.appendChild(emptyMsg);
+                return;
+            }
+            
+            if (parsedAirports.length > 0) {
+                const aptGrid = document.createElement('div');
+                aptGrid.className = "grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 w-full";
+                parsedAirports.forEach(apt => {
+                    const btn = document.createElement('button');
+                    const lineCount = apt.text.trim().split('\n').length;
+                    btn.className = "py-3 px-2 rounded-xl font-bold shadow-sm transition-all active:scale-95 text-base md:text-lg tracking-widest flex flex-wrap items-baseline justify-center gap-1 border bg-[#8b5a2b]/10 text-[#8b5a2b] border-[#8b5a2b]/30 hover:bg-[#8b5a2b]/20";
+                    btn.innerHTML = `<span>${apt.title}</span><span class="text-[10px] md:text-[11px] font-normal opacity-75 tracking-normal whitespace-nowrap">(${lineCount}行)</span>`;
+                    btn.onclick = () => copyNotamData(apt.text, apt.title);
+                    aptGrid.appendChild(btn);
+                });
+                container.appendChild(aptGrid);
+            }
+
+            if (parsedAreas.length > 0) {
+                const areaContainer = document.createElement('div');
+                areaContainer.className = "flex flex-col gap-2 mt-2 w-full";
+                parsedAreas.forEach(area => {
+                    const btn = document.createElement('button');
+                    const lineCount = area.text.trim().split('\n').length;
+                    btn.className = "w-full py-3.5 px-4 rounded-xl font-bold shadow-sm transition-all active:scale-95 text-[12px] md:text-sm tracking-widest flex flex-wrap items-baseline justify-center gap-1.5 border bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100";
+                    btn.innerHTML = `<span class="uppercase">${area.title}</span><span class="text-[10px] md:text-[11px] font-normal opacity-75 tracking-normal whitespace-nowrap">(${lineCount}行)</span>`;
+                    btn.onclick = () => copyNotamData(area.text, area.title);
+                    areaContainer.appendChild(btn);
+                });
+                container.appendChild(areaContainer);
+            }
+        }
+
+        function copyNotamData(text, title) {
+            if (!text) return;
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = text.trim();
+            tempTextarea.style.position = 'fixed';
+            tempTextarea.style.top = '0';
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToastMessage(`✅ 已成功複製 ${title} NOTAM`);
+            } catch (err) {
+                showToastMessage('❌ 複製失敗，請手動框選複製');
+            }
+            
+            document.body.removeChild(tempTextarea);
+        }
+
+        // ==========================================
         // 核心擷取邏輯 (Fetch API)
         // ==========================================
         const fetchBtn = document.getElementById('fetch-data-btn');
@@ -751,9 +960,8 @@
 
             if (!savedLidoUser || !savedLidoPass || !targetRaw) return showToast('請輸入有效的航班編號', true);
 
-            // 擷取前先歸零（保留目標航班號碼）
             const currentTargetVal = document.getElementById('target-flight').value;
-            clearData(true); // 使用 silent 模式，避免蓋掉下一個 Toast
+            clearData(true); 
             document.getElementById('target-flight').value = currentTargetVal;
 
             fetchBtn.disabled = true;
@@ -769,7 +977,13 @@
                     body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
                 });
 
-                const responseData = await response.json();
+                const textResponse = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(textResponse);
+                } catch (parseError) {
+                    throw new Error('伺服器回傳了無效的格式 (HTML)。可能是查無此航班資料，或 GAS 伺服器內部發生錯誤。');
+                }
 
                 if (responseData.status === 'success') {
                     const f = responseData.data;
@@ -778,16 +992,15 @@
                     const leg = ofpData.briefingPackages && ofpData.briefingPackages[0] && ofpData.briefingPackages[0].leg ? ofpData.briefingPackages[0].leg[0] : {};
                     const rawTexts = f.rawTexts || {};
 
-                    // 1. 處理 ATC 報文獨立顯示
                     let atcText = '未尋獲 ATC 報文';
                     if (rawTexts['ATS']) {
                         const fplMatch = rawTexts['ATS'].match(/\(FPL-[\s\S]*?\)/);
                         if (fplMatch) atcText = fplMatch[0];
                     }
                     document.getElementById('atc-display').value = atcText;
+                    localStorage.setItem('dispatch_atc_input', atcText);
                     if (atcText !== '未尋獲 ATC 報文') document.getElementById('copy-btn-atc').classList.remove('hidden');
 
-                    // 2. 解析核心資訊以建造 rawBlock 供 Pro 儀表板使用
                     const flightNo = (leg.commercialAirlineICAO || '') + (leg.flightNumber || '');
                     const reg = leg.aircraftDetails?.aircraftRegistration || 'N/A';
                     const dep = leg.departureAirportICAO || 'N/A';
@@ -829,7 +1042,6 @@
                         extractAirports('SUITABLE ENROUTE AIRPORT\\(S\\)', suitableSet);
                     }
 
-                    // 從 OFP 中補充備降機場（以防 IWFR 解析失敗）
                     if (destAltnSet.size === 0 && rawTexts['OFP']) {
                         const altnSection = rawTexts['OFP'].match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
                         if (altnSection) {
@@ -890,7 +1102,6 @@
 
                     let cruiseAltStr = 'N/A', wc = 'N/A', mxsh = 'N/A';
                     let totalFuel = 'N/A', divFuelCalc = 'N/A', spareFuelCalc = 'N/A';
-                    let f_addWxx = 0, f_addOpn = 0, f_addAtc = 0, f_addDev = 0, f_cont = 0, f_crit = 0, f_tank = 0, f_extra = 0;
                     let edtoData = [];
 
                     if (rawTexts['OFP']) {
@@ -901,14 +1112,11 @@
                         const mxshMatch = ofpText.match(/MXSH\s+([A-Z0-9\/]+)/);
                         if (mxshMatch) {
                             mxsh = mxshMatch[1];
-                            // 智能提取航點名稱 (例如 05/TASOT 或純 TASOT)，只要連續3個以上英文字母就當作航點
                             const wptMatch = mxsh.match(/[A-Z]{3,}/);
                             if (wptMatch) {
                                 const wptName = wptMatch[0];
-                                // 動態鎖定 MAX SHEAR 的航點，往下掃描最多300字元，抓取經緯度座標前的4碼時間
                                 const wptRegex = new RegExp(`\\b${wptName}\\b[\\s\\S]{1,300}?\\b(\\d{4})\\s+[NS]\\d{2}`);
                                 const atgoMatch = ofpText.match(wptRegex);
-                                // 將時間格式化為 XXhYYm 並接在 waypoint 後面
                                 if (atgoMatch) {
                                     const timeRaw = atgoMatch[1];
                                     mxsh += `/${timeRaw.substring(0,2)}h${timeRaw.substring(2,4)}m`;
@@ -924,36 +1132,76 @@
                             const altMatch = tocLine.match(/\b([2-4]\d{2})\b/);
                             if (altMatch) tocAlt = 'FL' + altMatch[1];
                             
-                            // 往下掃描最多 5 行，抓取 TOC 下一個航點的溫度
                             for (let i = tocIndex + 1; i <= Math.min(tocIndex + 5, ofpLines.length - 1); i++) {
                                 const nextLine = ofpLines[i];
-                                // 增強型溫度擷取正則：可以抓到獨立的 -46、M46 或連在風速後的 /M46
                                 const tempMatch = nextLine.match(/(?:\/|\s)([MP+-]\d{2})(?=\s|$)/i);
                                 if (tempMatch) {
                                     let tVal = tempMatch[1].toUpperCase();
-                                    // 將 M 替換成 -，將 P 替換成 + 確保符合 /-46 的格式
                                     tVal = tVal.replace('M', '-').replace('P', '+');
                                     tocTemp = '/' + tVal;
-                                    break; // 找到第一個溫度就跳出迴圈
+                                    break;
                                 }
                             }
                         }
                         cruiseAltStr = tocAlt + tocTemp;
 
-                        const getFuel = (regex) => { const m = ofpText.match(regex); return m ? parseInt(m[1], 10) : 0; };
-                        const f_total = getFuel(/TOTAL\s+(\d+)/);
-                        if (f_total > 0) totalFuel = f_total;
-                        
-                        const f_altn = getFuel(/ALTN(?:\s+[A-Z0-9]{3,4})?\s+(\d+)/);
-                        const f_frf = getFuel(/FINAL RES\s+(\d+)/);
-                        divFuelCalc = `${f_altn} + ${f_frf} = ${f_altn + f_frf}`;
-                        
-                        f_addWxx = getFuel(/ADD WXX\s+(\d+)/); f_addOpn = getFuel(/ADD OPN\s+(\d+)/);
-                        f_addAtc = getFuel(/ADD ATC\s+(\d+)/); f_addDev = getFuel(/ADD DEV\s+(\d+)/);
-                        f_cont = getFuel(/CONT\s+(\d+)/); f_crit = getFuel(/CRIT FUEL\s+(\d+)/);
-                        f_tank = getFuel(/TANKERING\s+(\d+)/); f_extra = getFuel(/EXTRA\s+(\d+)/);
-                        spareFuelCalc = (f_addWxx + f_addOpn + f_addAtc + f_addDev + f_cont + f_crit + f_tank + f_extra).toString();
-                        
+                        const getFuelExtended = (label) => {
+                             const regex = new RegExp(label + '\\s+(\\d{1,6})(?:\\s+(\\d{2}\\.\\d{2}))?');
+                             const m = ofpText.match(regex);
+                             if (!m) return { w: 0, t: '' };
+                             return { w: parseInt(m[1], 10), t: m[2] || '' };
+                        };
+
+                        const fw_total = getFuelExtended('TOTAL'); totalFuel = fw_total.w > 0 ? fw_total.w : 'N/A';
+                        const fw_altn = getFuelExtended('ALTN(?:\\s+[A-Z0-9]{3,4})?');
+                        const fw_frf = getFuelExtended('FINAL RES');
+                        divFuelCalc = `${fw_altn.w} + ${fw_frf.w} = ${fw_altn.w + fw_frf.w}`;
+                        let t_divFuel = '';
+                        if (fw_altn.t || fw_frf.t) t_divFuel = ` / ${fw_altn.t || '00.00'}+${fw_frf.t || '00.00'}`;
+
+                        const fw_addWxx = getFuelExtended('ADD WXX');
+                        const fw_addOpn = getFuelExtended('ADD OPN');
+                        const fw_addAtc = getFuelExtended('ADD ATC');
+                        const fw_addDev = getFuelExtended('ADD DEV');
+                        const fw_cont = getFuelExtended('CONT');
+                        const fw_crit = getFuelExtended('CRIT FUEL');
+                        const fw_tank = getFuelExtended('TANKERING');
+                        const fw_extra = getFuelExtended('EXTRA');
+                        spareFuelCalc = (fw_addWxx.w + fw_addOpn.w + fw_addAtc.w + fw_addDev.w + fw_cont.w + fw_crit.w + fw_tank.w + fw_extra.w).toString();
+
+                        const formatFuelVal = (fw) => fw.t ? `${fw.w} / ${fw.t.replace('.', ':')}` : `${fw.w}`;
+
+                        const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
+
+                        let bof1 = 0, bof2 = 0, bof3 = 0;
+                        if (destAltnAirports.length > 0) {
+                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[0] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            if (m) bof1 = parseInt(m[1], 10);
+                        }
+                        if (destAltnAirports.length > 1) {
+                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[1] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            if (m) bof2 = parseInt(m[1], 10);
+                        }
+                        if (destAltnAirports.length > 2) {
+                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[2] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            if (m) bof3 = parseInt(m[1], 10);
+                        }
+
+                        var perfBlock = `性能資訊：\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
+                        perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
+                        perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
+                        perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
+                        perfBlock += `ADD OPN: ${formatFuelVal(fw_addOpn)}\n`;
+                        perfBlock += `ADD ATC: ${formatFuelVal(fw_addAtc)}\n`;
+                        perfBlock += `ADD DEV: ${formatFuelVal(fw_addDev)}\n`;
+                        perfBlock += `CONT: ${formatFuelVal(fw_cont)}\n`;
+                        perfBlock += `CRIT FUEL: ${formatFuelVal(fw_crit)}\n`;
+                        perfBlock += `TANKERING: ${formatFuelVal(fw_tank)}\n`;
+                        perfBlock += `EXTRA: ${formatFuelVal(fw_extra)}\n`;
+                        perfBlock += `ALT1 BOF: ${bof1 > 0 ? bof1 : 'N/A'}\n`;
+                        perfBlock += `ALT2 BOF: ${bof2 > 0 ? bof2 + ' (' + (bof2 - bof1 > 0 ? '+' : '') + (bof2 - bof1) + ')' : 'N/A'}\n`;
+                        perfBlock += `ALT3 BOF: ${bof3 > 0 ? bof3 + ' (' + (bof3 - bof1 > 0 ? '+' : '') + (bof3 - bof1) + ')' : 'N/A'}\n------------------------------------------------------\n`;
+
                         if (/EDTO|ETOPS|E\.ENT/.test(ofpText)) {
                             let entMatch = ofpText.match(/E\.ENT[\s\S]{0,150}?([NS]\d{4}\.\d\s+[EW]\d{4,5}\.\d)/);
                             if (entMatch) edtoData.push(`E.ENT: ${entMatch[1].replace(/\s+/g, ' ')}`);
@@ -970,16 +1218,14 @@
                     }
 
                     let edtoRawStr = edtoData.length > 0 ? edtoData.join('\n') : 'non-EDTO';
-                    const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
 
-                    // 組裝 Part 1 RawBlock
                     let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
                     rawBlock += `第一備降機場/跑道: ${alt1Rwy}\n`;
                     if (alt2Rwy !== 'N/A') rawBlock += `第二備降機場/跑道: ${alt2Rwy}\n`;
                     if (alt3Rwy !== 'N/A') rawBlock += `第三備降機場/跑道: ${alt3Rwy}\n`;
                     rawBlock += `------------------------------------------------------\n`;
                     rawBlock += `航路資訊：\nOFP 號碼: ${ofpNo}\nEFB 版本: ${efbVer}\nRoute: ${flightRoute}\nW/C: ${wc}\nMXSH: ${mxsh}\nEDTO 座標:\n${edtoRawStr}\n------------------------------------------------------\n`;
-                    rawBlock += `性能資訊：\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${totalFuel}\nDivision Fuel (${altnLabel}+FRF): ${divFuelCalc}\nSPARE Fuel: ${spareFuelCalc}\nADD WXX: ${f_addWxx}\nADD OPN: ${f_addOpn}\nADD ATC: ${f_addAtc}\nADD DEV: ${f_addDev}\nCONT: ${f_cont}\nCRIT FUEL: ${f_crit}\nTANKERING: ${f_tank}\nEXTRA: ${f_extra}\n------------------------------------------------------\n`;
+                    rawBlock += (typeof perfBlock !== 'undefined' ? perfBlock : '');
                     
                     let airportBlock = `機場資訊：\nDEPARTURE AIRPORT:\n${getAirportStr(dep)}\nDESTINATION AIRPORT:\n${getAirportStr(dest)}\n`;
                     if (destAltnSet.size > 0) { airportBlock += `DESTINATION ALTERNATE:\n`; destAltnSet.forEach(a => airportBlock += `${getAirportStr(a)}\n`); }
@@ -987,23 +1233,29 @@
                     if (suitableSet.size > 0) { airportBlock += `SUITABLE ENROUTE AIRPORT(S):\n`; suitableSet.forEach(a => airportBlock += `${getAirportStr(a)}\n`); }
                     rawBlock += airportBlock;
 
-                    // 寫入畫面
                     document.getElementById('rawInput').value = rawBlock;
                     
-                    // Vertical Profile 處理
                     if (rawTexts['VERTPROF'] && rawTexts['VERTPROF'].startsWith('data:image')) {
-                        showImage(rawTexts['VERTPROF'], 'profile');
+                        showImage(rawTexts['VERTPROF'], 'profile', true); // explicit true to avoid double saving if not needed, though the routine will handle it
                     }
 
-                    // ★ SIGWX 陣列圖檔處理 (支援多張圖表) - 已相容 UAD 分類！
                     Object.keys(rawTexts).forEach(key => {
                         if ((key.startsWith('SIGWX') || key.startsWith('UAD')) && rawTexts[key].startsWith('data:image')) {
                             showImage(rawTexts[key], 'sigwx');
                         }
                     });
+                    
+                    let notamFound = '';
+                    if (rawTexts['NOTAM']) {
+                        notamFound = rawTexts['NOTAM'];
+                    } else if (rawTexts['NOTAMS']) {
+                        notamFound = rawTexts['NOTAMS'];
+                    }
+                    document.getElementById('raw-notam-input').value = notamFound;
 
-                    // 強制觸發 Dashboard 更新
                     debouncedParseData();
+                    parseNotams();
+                    
                     showToast('資料完美縫合！儀表板已更新。');
                 } else {
                     showToast(`擷取失敗：${responseData.message}`, true);
@@ -1031,14 +1283,18 @@
             document.getElementById('rawInput').value = '';
             document.getElementById('rawInput2').value = '';
             document.getElementById('atc-display').value = '';
+            document.getElementById('copy-btn-atc').classList.add('hidden');
             document.getElementById('target-flight').value = '';
+            document.getElementById('raw-notam-input').value = '';
             
             localStorage.removeItem('dispatch_rawInput_1');
             localStorage.removeItem('dispatch_rawInput_2');
+            localStorage.removeItem('dispatch_notam_input');
+            localStorage.removeItem('dispatch_atc_input');
             
-            // 清空所有圖檔區塊
-            ['profile', 'mel', 'wni', 'sigwx'].forEach(prefix => clearImage(prefix));
+            ['profile', 'mel', 'wni', 'sigwx', 'turbli'].forEach(prefix => clearImage(prefix));
             parseData();
+            parseNotams();
             
             const weatherContainer = document.getElementById('weather-blocks-container');
             weatherContainer.innerHTML = '<div class="col-span-1 md:col-span-2 lg:col-span-2 flex items-center justify-center h-full text-sm text-stone-400 font-bold py-10 text-center">等待擷取機場資料，系統將自動解析氣象。</div>';
@@ -1046,9 +1302,6 @@
             const syncStatus = document.getElementById('global-wx-sync');
             syncStatus.textContent = "Standby";
             syncStatus.className = "text-[10px] md:text-xs font-bold text-stone-300 bg-stone-800/50 px-2 py-1 rounded transition-colors";
-            
-            document.getElementById('dep-simple-wx').classList.add('hidden');
-            document.getElementById('arr-simple-wx').classList.add('hidden');
 
             if (!silent) showToastMessage('🧹 所有航班資料與快取已清除完畢！');
         }
@@ -1056,21 +1309,29 @@
         window.addEventListener('DOMContentLoaded', () => {
             const savedInput1 = localStorage.getItem('dispatch_rawInput_1');
             const savedInput2 = localStorage.getItem('dispatch_rawInput_2');
+            const savedNotam = localStorage.getItem('dispatch_notam_input');
+            const savedAtc = localStorage.getItem('dispatch_atc_input');
             
             if (savedInput1) document.getElementById('rawInput').value = savedInput1;
             if (savedInput2) document.getElementById('rawInput2').value = savedInput2;
+            if (savedNotam) document.getElementById('raw-notam-input').value = savedNotam;
+            if (savedAtc) {
+                document.getElementById('atc-display').value = savedAtc;
+                if (savedAtc !== '未尋獲 ATC 報文' && savedAtc !== '資料處理中...' && savedAtc !== '') {
+                    document.getElementById('copy-btn-atc').classList.remove('hidden');
+                }
+            }
             
-            // 回復一般單張截圖
-            ['profile', 'mel', 'wni'].forEach(prefix => {
+            ['profile', 'mel', 'wni', 'turbli'].forEach(prefix => {
                 const savedImg = localStorage.getItem(`dispatch_${prefix}_image`);
                 if (savedImg) showImage(savedImg, prefix, true);
             });
-            // 回復 SigWX 多張圖表
             const savedSigwx = JSON.parse(localStorage.getItem('dispatch_sigwx_image') || '[]');
             savedSigwx.forEach(dataUrl => showImage(dataUrl, 'sigwx', true));
             
             checkNetworkStatus();
             if (savedInput1 || savedInput2) parseData();
+            if (savedNotam) parseNotams();
         });
 
         window.addEventListener('online', checkNetworkStatus);
@@ -1089,11 +1350,8 @@
             }
         }
 
-       window.addEventListener('paste', function(e) {
-            // 如果焦點在一般的輸入框或文字區域，則不攔截（讓使用者能正常貼上文字）
+        window.addEventListener('paste', function(e) {
             if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return; }
-
-            // 全域貼上快捷鍵預設將圖片放至 profile
             let prefix = 'profile'; 
 
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -1134,6 +1392,18 @@
             }
         }
 
+        async function pasteTextToRawInput2() {
+            try {
+                const text = await navigator.clipboard.readText();
+                const el = document.getElementById('rawInput2');
+                el.value = text;
+                debouncedParseData();
+                showToastMessage('✅ 已貼上手動補充資料');
+            } catch (err) {
+                showToastMessage('❌ 貼上失敗，請手動點擊輸入框貼上');
+            }
+        }
+
         function handleImageUpload(event, prefix) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
@@ -1146,32 +1416,77 @@
             event.target.value = '';
         }
 
+        // 高效圖像壓縮與快取機制 (修復 Safari QuotaExceededError)
         function showImage(dataUrl, prefix, skipSave = false) {
             document.getElementById(`${prefix}-placeholder`).classList.add('hidden');
             
-            // 針對 sigwx，允許堆疊插入多張圖表
-            if (prefix === 'sigwx') {
-                const container = document.getElementById('sigwx-container');
-                const img = document.createElement('img');
-                img.src = dataUrl;
-                // 加入 lg:w-[calc(50%-0.5rem)] 與 lg:max-h-[350px] 確保在 iPad Pro 11 橫向(1194px)時縮小且水平排列
-                img.className = "w-full lg:w-[calc(50%-0.5rem)] h-auto max-h-[600px] lg:max-h-[350px] object-contain rounded-lg shadow-sm border border-stone-200 sigwx-img-item transition-all duration-300";
-                container.insertBefore(img, document.getElementById('sigwx-upload'));
-                
-                if (!skipSave) {
-                    let saved = JSON.parse(localStorage.getItem('dispatch_sigwx_image') || '[]');
-                    if (!saved.includes(dataUrl)) {
-                        saved.push(dataUrl);
-                        localStorage.setItem('dispatch_sigwx_image', JSON.stringify(saved));
+            const applyAndSave = (finalUrl) => {
+                if (prefix === 'sigwx') {
+                    const container = document.getElementById('sigwx-container');
+                    const img = document.createElement('img');
+                    img.src = finalUrl;
+                    img.className = "w-full lg:w-[calc(50%-0.5rem)] h-auto max-h-[600px] lg:max-h-[350px] object-contain rounded-lg shadow-sm border border-stone-200 sigwx-img-item transition-all duration-300";
+                    container.insertBefore(img, document.getElementById('sigwx-upload'));
+                    
+                    if (!skipSave) {
+                        try {
+                            let saved = JSON.parse(localStorage.getItem('dispatch_sigwx_image') || '[]');
+                            if (!saved.includes(finalUrl)) {
+                                saved.push(finalUrl);
+                                localStorage.setItem('dispatch_sigwx_image', JSON.stringify(saved));
+                            }
+                        } catch (e) {
+                            console.warn('Storage quota exceeded', e);
+                            showToast('設備儲存空間不足，部分圖片可能無法保留', true);
+                        }
+                    }
+                } else {
+                    const img = document.getElementById(`${prefix}-image`);
+                    if (img) {
+                        img.src = finalUrl; 
+                        img.classList.remove('hidden');
+                        if (!skipSave) {
+                            try {
+                                localStorage.setItem(`dispatch_${prefix}_image`, finalUrl);
+                            } catch (e) {
+                                console.warn('Storage quota exceeded', e);
+                                showToast('設備儲存空間不足，部分圖片可能無法保留', true);
+                            }
+                        }
                     }
                 }
+            };
+
+            // 如果是新上傳或貼上的圖片，自動進行等比例壓縮編碼至 JPEG
+            if (!skipSave && dataUrl.startsWith('data:image/')) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_WIDTH = 2000;
+                    const MAX_HEIGHT = 2000;
+                    if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                        const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 填充白底，防範 PNG 透明圖檔變黑
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 利用 JPEG 0.82 轉換，能將動輒 4~5MB 的圖幅壓縮到 200KB 左右
+                    const compressedUrl = canvas.toDataURL('image/jpeg', 0.82);
+                    applyAndSave(compressedUrl);
+                };
+                img.src = dataUrl;
             } else {
-                const img = document.getElementById(`${prefix}-image`);
-                if (img) {
-                    img.src = dataUrl; 
-                    img.classList.remove('hidden');
-                    if (!skipSave) localStorage.setItem(`dispatch_${prefix}_image`, dataUrl);
-                }
+                applyAndSave(dataUrl);
             }
         }
 
@@ -1187,159 +1502,6 @@
                 }
             }
             document.getElementById(`${prefix}-placeholder`).classList.remove('hidden');
-        }
-
-        // ==========================================
-        // 核心突破點：Capture Mode 準備函式
-        // ==========================================
-        function prepareForCapture() {
-            document.body.classList.add('capture-mode');
-            // 強制展開所有 textarea 使其高度真實反映內部文字
-            document.querySelectorAll('textarea').forEach(ta => {
-                ta.dataset.origHeight = ta.style.height;
-                ta.style.height = 'auto'; // Reset
-                ta.style.height = ta.scrollHeight + 'px';
-            });
-        }
-
-        function cleanupAfterCapture() {
-            document.body.classList.remove('capture-mode');
-            document.querySelectorAll('textarea').forEach(ta => {
-                if(ta.dataset.origHeight) ta.style.height = ta.dataset.origHeight;
-            });
-        }
-
-        async function getCanvasFromDashboard() {
-            const dashboard = document.getElementById('dashboard-content');
-            prepareForCapture();
-            // 延遲等待瀏覽器重新渲染排版 (極為重要)
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            try {
-                const canvas = await html2canvas(dashboard, {
-                    scale: 2, // 確保高畫質
-                    useCORS: true,
-                    backgroundColor: '#f4ece4',
-                    windowWidth: dashboard.scrollWidth,
-                    windowHeight: dashboard.scrollHeight,
-                    scrollY: -window.scrollY // 修正捲軸位移造成的頂部截斷
-                });
-                return canvas;
-            } finally {
-                cleanupAfterCapture();
-            }
-        }
-
-        // ==========================================
-        // 原生分享與無縫 PDF 匯出
-        // ==========================================
-        async function shareDashboardImage() {
-            const btn = document.getElementById('capture-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ 正在產製高畫質圖片...';
-            
-            try {
-                const canvas = await getCanvasFromDashboard();
-                
-                canvas.toBlob(async (blob) => {
-                    const file = new File([blob], `Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.png`, { type: 'image/png' });
-                    
-                    // 優先使用 iOS 原生分享 (Navigator Share)
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({
-                                files: [file],
-                                title: 'Flight Briefing',
-                                text: '這是您的飛航簡報圖片，可直接儲存或標示。'
-                            });
-                            showToastMessage('✅ 分享選單已開啟！請選擇儲存或標示。');
-                        } catch (err) {
-                            console.log('Share API cancelled or failed:', err);
-                        }
-                    } else if (navigator.clipboard && window.ClipboardItem) {
-                        // 若不支援 Share，退回剪貼簿
-                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                        showToastMessage('✅ 截圖已複製！可直接貼上至備忘錄。');
-                    } else {
-                        showFallbackImageModal(canvas.toDataURL('image/png'));
-                    }
-                }, 'image/png');
-            } catch (err) {
-                console.error(err);
-                showToastMessage('❌ 圖片產製失敗。');
-            } finally {
-                btn.innerHTML = originalText;
-            }
-        }
-
-        async function exportContinuousPDF() {
-            const btn = document.getElementById('pdf-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ 正在編織無縫 PDF...';
-
-            try {
-                const canvas = await getCanvasFromDashboard();
-                const { jsPDF } = window.jspdf;
-                
-                // 將 Canvas 依照 A4 寬度(210mm)等比例計算出連續長度
-                const pdfWidth = 210; 
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                
-                // 動態宣告 PDF 尺寸為我們算出來的長度！
-                const pdf = new jsPDF({
-                    orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
-                    unit: 'mm',
-                    format: [pdfWidth, pdfHeight]
-                });
-
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                const pdfBlob = pdf.output('blob');
-                const file = new File([pdfBlob], `Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.pdf`, { type: 'application/pdf' });
-
-                // iOS 專武：透過分享選單傳遞檔案，即可直接存入「檔案」App
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            files: [file],
-                            title: 'Flight Briefing PDF',
-                        });
-                        showToastMessage('✅ 請在選單中點選「儲存到檔案」，即可開始標示！');
-                    } catch (err) {
-                        console.log('Share API cancelled or failed:', err);
-                    }
-                } else {
-                    // 若不支援 Share (如電腦版瀏覽器)，則直接下載
-                    pdf.save(`Briefing_JX${document.getElementById('out-flight-no').textContent || 'FLT'}.pdf`);
-                    showToastMessage('✅ 無縫 PDF 已下載！');
-                }
-            } catch (error) {
-                console.error(error);
-                showToastMessage('❌ 無縫 PDF 生成失敗');
-            } finally {
-                btn.innerHTML = originalText;
-            }
-        }
-
-        function showFallbackImageModal(dataUrl) {
-            let modal = document.getElementById('screenshot-modal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'screenshot-modal';
-                modal.className = 'fixed inset-0 z-[300] bg-black/80 flex flex-col items-center justify-center p-4 md:p-8 backdrop-blur-sm';
-                document.body.appendChild(modal);
-            }
-            modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-3 md:p-5 w-full max-w-[1194px] max-h-[95vh] flex flex-col shadow-2xl">
-                    <div class="flex justify-between items-center mb-3 px-2">
-                        <span class="font-bold text-stone-700 text-sm md:text-base flex items-center gap-2">iOS/iPadOS 專用：請「長按」圖片拷貝</span>
-                        <button onclick="document.getElementById('screenshot-modal').classList.add('hidden')" class="bg-stone-200 hover:bg-stone-300 text-stone-700 px-5 py-2 rounded-xl text-sm md:text-base font-bold transition-colors">關閉</button>
-                    </div>
-                    <div class="overflow-y-auto flex-grow border-2 border-stone-200 rounded-2xl bg-[#f4ece4] p-2 relative" style="-webkit-overflow-scrolling: touch;">
-                        <img src="${dataUrl}" class="w-full h-auto rounded-xl shadow-sm" style="pointer-events: auto; user-select: auto; -webkit-touch-callout: default;">
-                    </div>
-                </div>
-            `;
-            modal.classList.remove('hidden');
         }
 
         function extractData(text, keyword) {
@@ -1412,45 +1574,6 @@
             clearTimeout(parseTimer); parseTimer = setTimeout(parseData, 500);
         }
 
-        async function fetchSimpleWeather(icao, prefix) {
-            const container = document.getElementById(`${prefix}-simple-wx`);
-            const descEl = document.getElementById(`${prefix}-wx-desc`);
-            const iconEl = document.getElementById(`${prefix}-wx-icon`);
-            const cacheKey = `wx_cache_simple_${icao}`;
-            if (icao === '----' || !icao) return;
-            container.classList.remove('hidden');
-
-            if (!navigator.onLine) {
-                const cachedData = localStorage.getItem(cacheKey);
-                if (cachedData) {
-                    const parsed = JSON.parse(cachedData);
-                    descEl.innerText = `${parsed.temp}°C and ${parsed.desc.toLowerCase()}`; iconEl.innerText = parsed.icon;
-                } else { descEl.innerText = "Offline (無快取)"; iconEl.innerText = "☁️"; }
-                return;
-            }
-            try {
-                descEl.innerText = "Fetching data...";
-                let lat, lon;
-                if (airportCoordsFallback[icao]) { lat = airportCoordsFallback[icao].lat; lon = airportCoordsFallback[icao].lon; } 
-                else {
-                    const geoData = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${icao}&count=1`)).json();
-                    if (!geoData.results || geoData.results.length === 0) throw new Error("Not found");
-                    lat = geoData.results[0].latitude; lon = geoData.results[0].longitude;
-                }
-                const wxData = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)).json();
-                const temp = Math.round(wxData.current_weather.temperature), code = wxData.current_weather.weathercode;
-                const wmoMap = {
-                    0: {desc: 'Clear sky', icon: '☀️'}, 1: {desc: 'Mainly clear', icon: '🌤️'}, 2: {desc: 'Partly cloudy', icon: '⛅'}, 3: {desc: 'Overcast', icon: '☁️'},
-                    45: {desc: 'Fog', icon: '🌫️'}, 48: {desc: 'Depositing rime fog', icon: '🌫️'}, 51: {desc: 'Light drizzle', icon: '🌧️'}, 61: {desc: 'Slight rain', icon: '🌦️'},
-                    63: {desc: 'Moderate rain', icon: '🌧️'}, 65: {desc: 'Heavy rain', icon: '🌧️'}, 71: {desc: 'Slight snow', icon: '🌨️'}, 80: {desc: 'Slight rain showers', icon: '🌦️'},
-                    95: {desc: 'Thunderstorm', icon: '🌩️'}
-                };
-                const condition = wmoMap[code] || {desc: 'Unknown', icon: '☁️'};
-                descEl.innerText = `${temp}°C and ${condition.desc.toLowerCase()}`; iconEl.innerText = condition.icon;
-                localStorage.setItem(cacheKey, JSON.stringify({ temp, desc: condition.desc, icon: condition.icon }));
-            } catch (e) { descEl.innerText = "Weather unavailable"; iconEl.innerText = "☁️"; }
-        }
-
         function parseData() {
             const rawText = document.getElementById('rawInput').value;
             const rawText2 = document.getElementById('rawInput2').value || '';
@@ -1477,20 +1600,11 @@
             document.getElementById('out-utc-date').textContent = currentDateUTC;
             document.getElementById('wx-utc-date').textContent = currentDateUTC;
 
-            if (currentDepICAO !== '----') fetchSimpleWeather(currentDepICAO, 'dep');
-            if (currentArrICAO !== '----') fetchSimpleWeather(currentArrICAO, 'arr');
-
             const mapping = [
                 { id: 'out-flight-no', key: 'Flight number' }, { id: 'out-reg', key: '機號' },
-                { id: 'out-ete', key: 'ETE' }, { id: 'out-cruise-alt-temp', key: '巡航高度' },
-                { id: 'out-efb', key: 'EFB 版本' }, { id: 'out-route', key: 'Route' },
+                { id: 'out-ete', key: 'ETE' }, { id: 'out-efb', key: 'EFB 版本' }, 
                 { id: 'out-wc', key: 'W/C' }, { id: 'out-mxsh', key: 'MXSH' },
-                { id: 'out-tow', key: 'TOW' }, { id: 'out-ldw', key: 'LDW' },
-                { id: 'out-total-fuel', key: 'Total Fuel' }, { id: 'out-spare-fuel', key: 'SPARE Fuel' }, 
-                { id: 'out-add-wxx', key: 'ADD WXX' }, { id: 'out-add-opn', key: 'ADD OPN' }, 
-                { id: 'out-add-atc', key: 'ADD ATC' }, { id: 'out-add-dev', key: 'ADD DEV' }, 
-                { id: 'out-cont', key: 'CONT' }, { id: 'out-crit-fuel', key: 'CRIT FUEL' }, 
-                { id: 'out-tankering', key: 'TANKERING' }, { id: 'out-extra', key: 'EXTRA' }
+                { id: 'out-tow', key: 'TOW' }, { id: 'out-ldw', key: 'LDW' }
             ];
 
             let valFlight = '----';
@@ -1503,15 +1617,114 @@
                 }
             });
 
-            // Handle Airplane Section updates
+            const fuelItems = [
+                { id: 'out-add-wxx', timeId: 'time-add-wxx', key: 'ADD WXX' },
+                { id: 'out-add-opn', timeId: 'time-add-opn', key: 'ADD OPN' },
+                { id: 'out-add-atc', timeId: 'time-add-atc', key: 'ADD ATC' },
+                { id: 'out-add-dev', timeId: 'time-add-dev', key: 'ADD DEV' },
+                { id: 'out-cont', timeId: 'time-cont', key: 'CONT' },
+                { id: 'out-crit-fuel', timeId: 'time-crit-fuel', key: 'CRIT FUEL' },
+                { id: 'out-tankering', timeId: 'time-tankering', key: 'TANKERING' },
+                { id: 'out-extra', timeId: 'time-extra', key: 'EXTRA' },
+                { id: 'out-total-fuel', timeId: 'time-total-fuel', key: 'Total Fuel' },
+                { id: 'out-spare-fuel', timeId: '', key: 'SPARE Fuel' }
+            ];
+
+            fuelItems.forEach(item => {
+                const el = document.getElementById(item.id);
+                const timeEl = document.getElementById(item.timeId);
+                let val = extractData(rawText, item.key);
+                if (val !== 'N/A' && val.includes('/')) {
+                    const parts = val.split('/');
+                    if (el) el.textContent = parts[0].trim();
+                    if (timeEl) {
+                        let tStr = parts[1].trim();
+                        timeEl.textContent = tStr ? tStr + 'H' : '';
+                    }
+                } else {
+                    if (el) el.textContent = (val === 'N/A' || val === '') ? '--' : val;
+                    if (timeEl) timeEl.textContent = '';
+                }
+            });
+
+            const divFuelLabel = document.getElementById('label-div-fuel');
+            const divMatch = rawText.match(/Division Fuel\s*\((.*?)\)\s*:\s*(.*?)(?:\n|$)/i);
+            document.getElementById('out-div-fuel').textContent = '----';
+            if (document.getElementById('time-div-fuel')) document.getElementById('time-div-fuel').textContent = '';
+            
+            if (divMatch) {
+                let rawDiv = divMatch[1].toUpperCase().replace(/^ALTN\s*/i, '').trim();
+                let divBase = rawDiv.includes('+') ? rawDiv.split('+')[0].trim() : rawDiv;
+                let suffix = rawDiv.includes('+') ? '+' + rawDiv.split('+').slice(1).join('+').trim() : '';
+                if (divBase !== 'N/A' && divBase !== 'FRF') divFuelLabel.innerHTML = `Min Diversion Fuel <span class="bg-amber-200 text-amber-900 border border-amber-400 px-1.5 py-0.5 rounded shadow-sm mx-1 inline-block">${divBase}</span><span class="text-[#8c6b5d] font-bold">${suffix}</span>`;
+                else divFuelLabel.textContent = `Min Diversion Fuel (${rawDiv})`;
+
+                let valStr = divMatch[2]; 
+                if (valStr.includes('/')) {
+                    let parts = valStr.split('/');
+                    document.getElementById('out-div-fuel').textContent = parts[0].trim();
+                    if(document.getElementById('time-div-fuel')) document.getElementById('time-div-fuel').textContent = parts[1].trim().replace('+', 'H + ') + 'H';
+                } else {
+                    document.getElementById('out-div-fuel').textContent = valStr.trim();
+                }
+            }
+
+            const alt1 = extractData(rawText, '第一備降機場/跑道');
+            const alt2 = extractData(rawText, '第二備降機場/跑道');
+            const alt3 = extractData(rawText, '第三備降機場/跑道');
+
+            const alt2Bof = extractData(rawText, 'ALT2 BOF');
+            const alt3Bof = extractData(rawText, 'ALT3 BOF');
+            const altnContainer = document.getElementById('altn-bof-container');
+            
+            let altnHtml = '';
+            
+            const alt2Icao = alt2 !== 'N/A' && alt2 !== '----' ? alt2.split('/')[0].trim() : null;
+            const alt3Icao = alt3 !== 'N/A' && alt3 !== '----' ? alt3.split('/')[0].trim() : null;
+
+            if (alt2Icao && alt2Bof !== 'N/A') {
+                const parts = alt2Bof.match(/(\d+)\s*\(([-+]\d+)\)/);
+                if(parts) {
+                    const diffColor = parseInt(parts[2]) > 0 ? 'text-red-500' : 'text-emerald-600';
+                    altnHtml += `<div class="flex justify-between items-center"><span class="text-[10px] font-bold text-[#8c6b5d]">2nd ALTN ${alt2}</span><span class="data-font text-[13px] font-bold text-stone-600">${parts[1]} <span class="${diffColor}">(${parts[2]})</span></span></div>`;
+                }
+            }
+            if (alt3Icao && alt3Bof !== 'N/A') {
+                const parts = alt3Bof.match(/(\d+)\s*\(([-+]\d+)\)/);
+                if(parts) {
+                    const diffColor = parseInt(parts[2]) > 0 ? 'text-red-500' : 'text-emerald-600';
+                    altnHtml += `<div class="flex justify-between items-center"><span class="text-[10px] font-bold text-[#8c6b5d]">3rd ALTN ${alt3}</span><span class="data-font text-[13px] font-bold text-stone-600">${parts[1]} <span class="${diffColor}">(${parts[2]})</span></span></div>`;
+                }
+            }
+            
+            if (altnHtml) {
+                if(altnContainer) {
+                    altnContainer.innerHTML = altnHtml;
+                    altnContainer.classList.remove('hidden');
+                }
+            } else {
+                if(altnContainer) {
+                    altnContainer.innerHTML = '';
+                    altnContainer.classList.add('hidden');
+                }
+            }
+
             const eteVal = extractData(rawText, 'ETE');
             const cruVal = extractData(rawText, '巡航高度');
             const elEteCenter = document.getElementById('out-ete-center');
             if(elEteCenter) elEteCenter.textContent = (eteVal !== 'N/A' && eteVal !== '') ? eteVal : '--:--';
-            const elCruCenter = document.getElementById('out-cruise-center');
-            if(elCruCenter) elCruCenter.textContent = (cruVal !== 'N/A' && cruVal !== '') ? cruVal : '---';
+            
+            let altPart = '---', tempPart = '';
+            if (cruVal !== 'N/A' && cruVal !== '') {
+                const parts = cruVal.split('/');
+                altPart = parts[0];
+                if (parts.length > 1) tempPart = '/' + parts[1];
+            }
+            const elCruAlt = document.getElementById('out-cruise-alt');
+            const elCruTemp = document.getElementById('out-cruise-temp');
+            if(elCruAlt) elCruAlt.textContent = altPart;
+            if(elCruTemp) elCruTemp.textContent = tempPart;
 
-            // Handle MEL Header Registration update
             let regVal = extractData(rawText, '機號');
             const melHeaderReg = document.getElementById('mel-header-reg');
             if(melHeaderReg) melHeaderReg.textContent = (regVal !== 'N/A' && regVal !== '') ? regVal : '----';
@@ -1528,22 +1741,7 @@
             document.getElementById('out-std').textContent = convertToZuluLocalStr(stdStr, currentDepICAO);
             document.getElementById('out-etd').textContent = convertToZuluLocalStr(extractData(rawText, 'ETD'), currentDepICAO);
             document.getElementById('out-sta').textContent = convertToZuluLocalStr(staStr, currentArrICAO);
-            
-            const divFuelLabel = document.getElementById('label-div-fuel');
-            const divMatch = rawText.match(/Division Fuel\s*\((.*?)\)\s*:/i);
-            document.getElementById('out-div-fuel').textContent = extractData(rawText, 'Division Fuel') !== 'N/A' ? extractData(rawText, 'Division Fuel') : '----';
-            if (divMatch) {
-                let rawDiv = divMatch[1].toUpperCase().replace(/^ALTN\s*/i, '').trim();
-                let divBase = rawDiv.includes('+') ? rawDiv.split('+')[0].trim() : rawDiv;
-                let suffix = rawDiv.includes('+') ? '+' + rawDiv.split('+').slice(1).join('+').trim() : '';
-                if (divBase !== 'N/A' && divBase !== 'FRF') divFuelLabel.innerHTML = `Division Fuel <span class="bg-amber-200 text-amber-900 border border-amber-400 px-1.5 py-0.5 rounded shadow-sm mx-1 inline-block">${divBase}</span><span class="text-[#8c6b5d] font-bold">${suffix}</span>`;
-                else divFuelLabel.textContent = `Division Fuel (${rawDiv})`;
-            } else { divFuelLabel.textContent = `Division Fuel`; }
 
-            const routeEl = document.getElementById('out-route');
-            if (routeEl.textContent !== '----' && routeEl.textContent !== 'NO ROUTE DATA') routeEl.textContent = routeEl.textContent.toUpperCase();
-
-            // Handle PAX calculation and raw details
             const paxMatch = rawText2.match(/PAX\s*:\s*(\d+)\/(\d+)/i);
             if (paxMatch) {
                 const p1 = parseInt(paxMatch[1], 10);
@@ -1565,9 +1763,13 @@
             let cleanOfp1 = extractData(rawText, 'OFP 號碼') !== 'N/A' ? extractData(rawText, 'OFP 號碼').replace(/^OFP\s*/i, '').trim() : '----';
             let cleanOfp2 = rawText2.match(/OFP\s*:\s*(.+)/i) ? rawText2.match(/OFP\s*:\s*(.+)/i)[1].trim().replace(/^OFP\s*/i, '').trim() : '----';
             const ofpEl = document.getElementById('out-ofp');
-            if (cleanOfp1 !== '----' && cleanOfp2 !== '----' && cleanOfp1 === cleanOfp2) ofpEl.innerHTML = `${cleanOfp1} <svg class="inline w-3.5 h-3.5 text-emerald-400 ml-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
-            else if (cleanOfp1 !== '----' && cleanOfp2 !== '----' && cleanOfp1 !== cleanOfp2) ofpEl.innerHTML = `${cleanOfp1} / <span class="text-red-400">${cleanOfp2}</span>`;
-            else ofpEl.textContent = cleanOfp1 !== '----' ? cleanOfp1 : (cleanOfp2 !== '----' ? cleanOfp2 : '----');
+            if (cleanOfp1 !== '----' && cleanOfp2 !== '----' && cleanOfp1 === cleanOfp2) {
+                ofpEl.innerHTML = `${cleanOfp1} <svg class="w-3.5 h-3.5 text-emerald-400 inline-block -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
+            } else if (cleanOfp1 !== '----' && cleanOfp2 !== '----' && cleanOfp1 !== cleanOfp2) {
+                ofpEl.innerHTML = `${cleanOfp1} / <span class="text-red-400">${cleanOfp2}</span>`;
+            } else {
+                ofpEl.textContent = cleanOfp1 !== '----' ? cleanOfp1 : (cleanOfp2 !== '----' ? cleanOfp2 : '--');
+            }
 
             let depBay = '--', arrBay = '--';
             const bayMatch = rawText2.match(/BAY:\s*([^]+?)(?=\(\d+\)|ADD OPN|$)/i);
@@ -1582,12 +1784,9 @@
                     }
                 });
             }
-            document.getElementById('out-dep-bay').textContent = depBay; document.getElementById('out-arr-bay').textContent = arrBay;
+            if (document.getElementById('out-pld-dep-bay')) document.getElementById('out-pld-dep-bay').textContent = depBay; 
+            if (document.getElementById('out-pld-arr-bay')) document.getElementById('out-pld-arr-bay').textContent = arrBay;
 
-            // 備降機場提取 (純供抓天氣使用，畫面區塊已移除)
-            const alt1 = extractData(rawText, '第一備降機場/跑道');
-            const alt2 = extractData(rawText, '第二備降機場/跑道');
-            const alt3 = extractData(rawText, '第三備降機場/跑道');
             [alt1, alt2, alt3].forEach(alt => {
                 if (alt !== 'N/A' && alt !== '----' && alt !== '') {
                     const icao = alt.split('/')[0].trim();
@@ -1602,7 +1801,7 @@
             } else {
                 let htmlObj = '<div class="flex flex-col gap-2">';
                 melMatch[1].trim().replace(/\bB-?\d{5}\b/gi, '').trim().split('\n').map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
-                    htmlObj += `<div class="flex items-start gap-2 border-b border-stone-100 pb-1.5 last:border-0"><span class="text-[#e74c3c] mt-0.5 shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></span><span class="leading-relaxed text-red-700 font-bold text-xs md:text-sm lg:text-[14px]">${line.replace(/\s{2,}/g, ' ')}</span></div>`;
+                    htmlObj += `<div class="flex items-start gap-2 border-b border-stone-100 pb-1.5 last:border-0"><span class="text-[#e74c3c] mt-0.5 shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742-2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></span><span class="leading-relaxed text-red-700 font-bold text-xs md:text-sm lg:text-[14px]">${line.replace(/\s{2,}/g, ' ')}</span></div>`;
                 });
                 melContainer.innerHTML = htmlObj + '</div>';
             }
@@ -1628,12 +1827,93 @@
             if(currentIcaosToFetch.length > 0) fetchAllWeather(currentIcaosToFetch);
         }
 
+        // ==========================================
+        // 【全新升級】開源天氣：支援動態預報擷取邏輯
+        // ==========================================
+        async function fetchSimpleWeather(icao, isArrival = false, baseDate = null, targetZulu = null, depZulu = null) {
+            const container = document.getElementById(`awc-simple-wx-${icao}`);
+            const descEl = document.getElementById(`awc-wx-desc-${icao}`);
+            const iconEl = document.getElementById(`awc-wx-icon-${icao}`);
+            if (!container) return;
+
+            const cacheKey = `wx_cache_simple_${icao}`;
+            if (icao === '----' || !icao) return;
+            container.classList.remove('hidden');
+
+            if (!navigator.onLine) {
+                const cachedData = localStorage.getItem(cacheKey);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    descEl.innerText = `${parsed.temp}°C and ${parsed.desc.toLowerCase()}`; iconEl.innerText = parsed.icon;
+                } else { descEl.innerText = "Offline (無快取)"; iconEl.innerText = "☁️"; }
+                return;
+            }
+            
+            try {
+                descEl.innerText = "Fetching data...";
+                let lat, lon;
+                if (airportCoordsFallback[icao]) { lat = airportCoordsFallback[icao].lat; lon = airportCoordsFallback[icao].lon; } 
+                else {
+                    const geoData = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${icao}&count=1`)).json();
+                    if (!geoData.results || geoData.results.length === 0) throw new Error("Not found");
+                    lat = geoData.results[0].latitude; lon = geoData.results[0].longitude;
+                }
+
+                let targetIso = null;
+                if (targetZulu && baseDate && baseDate !== '----') {
+                    const months = {JAN:'01', FEB:'02', MAR:'03', APR:'04', MAY:'05', JUN:'06', JUL:'07', AUG:'08', SEP:'09', OCT:'10', NOV:'11', DEC:'12'};
+                    let parts = baseDate.split('-'); 
+                    if(parts.length === 3) {
+                        const monthNum = months[parts[1].toUpperCase()];
+                        let d = new Date(Date.UTC(parts[0], parseInt(monthNum, 10) - 1, parts[2], parseInt(targetZulu.substring(0,2), 10), 0));
+                        
+                        if (isArrival && depZulu && targetZulu.substring(0,2) < depZulu.substring(0,2)) {
+                            d.setUTCDate(d.getUTCDate() + 1);
+                        }
+                        
+                        targetIso = d.toISOString().substring(0,13) + ":00";
+                    }
+                }
+
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&timezone=GMT&past_days=1&forecast_days=7`;
+                const wxData = await (await fetch(url)).json();
+
+                let temp = Math.round(wxData.current_weather.temperature);
+                let code = wxData.current_weather.weathercode;
+                let isForecast = false;
+
+                if (targetIso && wxData.hourly && wxData.hourly.time) {
+                    const idx = wxData.hourly.time.indexOf(targetIso);
+                    if (idx !== -1 && wxData.hourly.temperature_2m[idx] !== null) {
+                        temp = Math.round(wxData.hourly.temperature_2m[idx]);
+                        code = wxData.hourly.weathercode[idx];
+                        isForecast = true;
+                    }
+                }
+
+                const wmoMap = {
+                    0: {desc: 'Clear sky', icon: '☀️'}, 1: {desc: 'Mainly clear', icon: '🌤️'}, 2: {desc: 'Partly cloudy', icon: '⛅'}, 3: {desc: 'Overcast', icon: '☁️'},
+                    45: {desc: 'Fog', icon: '🌫️'}, 48: {desc: 'Depositing rime fog', icon: '🌫️'}, 51: {desc: 'Light drizzle', icon: '🌧️'}, 61: {desc: 'Slight rain', icon: '🌦️'},
+                    63: {desc: 'Moderate rain', icon: '🌧️'}, 65: {desc: 'Heavy rain', icon: '🌧️'}, 71: {desc: 'Slight snow', icon: '🌨️'}, 80: {desc: 'Slight rain showers', icon: '🌦️'},
+                    95: {desc: 'Thunderstorm', icon: '🌩️'}
+                };
+                const condition = wmoMap[code] || {desc: 'Unknown', icon: '☁️'};
+                
+                let prefixStr = isForecast ? (isArrival ? '預計抵達 ' : '預計起飛 ') : '目前 ';
+                descEl.innerText = `${prefixStr}${temp}°C and ${condition.desc.toLowerCase()}`; 
+                iconEl.innerText = condition.icon;
+                
+                localStorage.setItem(cacheKey, JSON.stringify({ temp, desc: condition.desc, icon: condition.icon }));
+            } catch (e) { 
+                descEl.innerText = "Weather unavailable"; 
+                iconEl.innerText = "☁️"; 
+            }
+        }
+
         function refreshWeather() {
             if (!navigator.onLine) { checkNetworkStatus(); return; }
             if (currentIcaosToFetch && currentIcaosToFetch.length > 0) {
                 fetchAllWeather(currentIcaosToFetch);
-                if (currentDepICAO !== '----') fetchSimpleWeather(currentDepICAO, 'dep');
-                if (currentArrICAO !== '----') fetchSimpleWeather(currentArrICAO, 'arr');
             } else {
                 const syncLabel = document.getElementById('global-wx-sync');
                 syncLabel.textContent = "NO DATA"; syncLabel.className = "text-[10px] md:text-xs font-bold text-red-300 bg-red-900/50 px-2 py-1 rounded transition-colors";
@@ -1647,7 +1927,17 @@
             else { syncLabel.textContent = "OFFLINE CACHE"; syncLabel.className = "text-[10px] md:text-xs font-bold text-stone-300 bg-stone-800/50 px-2 py-1 rounded transition-colors"; }
             
             for (const icao of icaos) container.innerHTML += createWeatherBlockHTML(icao);
+            
             await Promise.allSettled(icaos.map(icao => fetchSingleAirportWeather(icao)));
+            
+            [currentDepICAO, currentArrICAO].forEach(icao => {
+                if (icao && icao !== '----') {
+                    const isArrival = (icao === currentArrICAO);
+                    const targetZulu = isArrival ? currentArrUTC : currentDepUTC;
+                    fetchSimpleWeather(icao, isArrival, currentDateUTC, targetZulu, currentDepUTC);
+                }
+            });
+
             if (navigator.onLine) { syncLabel.textContent = "SYNCED"; syncLabel.className = "text-[10px] md:text-xs font-bold text-emerald-300 bg-emerald-900/50 px-2 py-1 rounded transition-colors"; }
         }
 
@@ -1655,9 +1945,16 @@
             let timeTag = icao === currentDepICAO && currentDepUTC ? `<span class="bg-[#e8dfd5] text-[#8b5a2b] px-2 py-0.5 rounded text-[10px] font-bold shadow-sm ml-2 tracking-wide">DEP: ${currentDepUTC}</span>` : (icao === currentArrICAO && currentArrUTC ? `<span class="bg-[#e8dfd5] text-[#8b5a2b] px-2 py-0.5 rounded text-[10px] font-bold shadow-sm ml-2 tracking-wide">ARR: ${currentArrUTC}</span>` : '');
             let rwyTag = runwayMap[icao] ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2 py-0.5 rounded text-[11px] md:text-xs font-black shadow-sm ml-2 tracking-wider">RWY ${runwayMap[icao]}</span>` : '';
             return `<div class="weather-block border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white" data-html2canvas-ignore="false">
-                <div class="bg-stone-100/50 text-[#3b4c59] px-3 md:px-4 py-2 border-b border-stone-200 flex justify-between items-center">
-                    <div class="flex items-center flex-wrap gap-y-1"><span class="text-lg md:text-xl font-bold tracking-widest data-font">${icao}</span>${rwyTag}${timeTag}</div>
-                    <span id="sync-${icao}" class="text-[10px] px-2 py-0.5 rounded bg-stone-300 text-stone-600 font-bold tracking-wider shadow-sm ml-2">Loading...</span>
+                <div class="bg-stone-100/50 text-[#3b4c59] px-3 md:px-4 py-2 border-b border-stone-200 flex flex-col justify-center">
+                    <div class="flex justify-between items-center w-full">
+                        <div class="flex items-center flex-wrap gap-y-1"><span class="text-lg md:text-xl font-bold tracking-widest data-font">${icao}</span>${rwyTag}${timeTag}</div>
+                        <span id="sync-${icao}" class="text-[10px] px-2 py-0.5 rounded bg-stone-300 text-stone-600 font-bold tracking-wider shadow-sm ml-2 shrink-0">Loading...</span>
+                    </div>
+                    ${(icao === currentDepICAO || icao === currentArrICAO) ? `
+                    <div id="awc-simple-wx-${icao}" class="hidden flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-stone-200/60">
+                        <span id="awc-wx-icon-${icao}" class="text-[13px] md:text-sm">☁️</span>
+                        <span id="awc-wx-desc-${icao}" class="text-[10px] md:text-[11px] text-[#8b5a2b] font-bold tracking-wide">Loading...</span>
+                    </div>` : ''}
                 </div>
                 <div class="p-3 md:p-4 flex flex-col gap-3 md:gap-4">
                     <div>
