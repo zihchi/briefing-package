@@ -38,12 +38,22 @@
         .horizontal-scroll::-webkit-scrollbar { display: none; }
         .stat-card { scroll-snap-align: center; min-width: 80%; background: var(--jx-card); border: 1px solid var(--jx-divider); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        
         #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        
+        #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
         #edit-banner.show { display: block; }
+
+        /* 瀏覽模式樣式 */
+        body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        body.view-mode select.ios-input { background-image: none; padding-right: 0; }
+        body.view-mode #btn-scan-ocr, body.view-mode #btn-toggle-fuel { display: none; }
     </style>
 </head>
 <body class="pb-24">
@@ -77,9 +87,8 @@
         <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline muted></video>
         <canvas id="camera-canvas" class="hidden"></canvas>
 
-        <!-- Targeting Box overlay -->
         <div class="absolute w-[90%] h-1/2 border-2 border-[var(--jx-gold)] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
-            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align Entire ACARS Text Here</div>
+            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align OOOI/FOB Text Here</div>
             <div class="w-full border-t border-[var(--jx-gold)] opacity-30"></div>
         </div>
 
@@ -110,7 +119,7 @@
                 </div>
                 <div class="text-right flex flex-col items-end justify-center">
                     <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-0.5 tracking-wider">Block Time</div>
-                    <p class="text-4xl font-bold tracking-tight text-[var(--jx-gold-dark)] leading-none" id="dash-block-time-top">00:00</p>
+                    <p class="text-4xl font-bold tracking-tight text-red-600 leading-none" id="dash-block-time-top">00:00</p>
                 </div>
             </div>
         </header>
@@ -162,40 +171,35 @@
                 <span>Time (UTC) & Fuel</span>
                 <div class="flex items-center gap-3">
                     <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance</span>
-                    <button onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
+                    <button id="btn-scan-ocr" onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         Scan ACARS
                     </button>
                 </div>
             </div>
+            
             <div class="ios-list shadow-sm">
-                <!-- OOOI 垂直面板 (2x2 左至右，上至下) -->
-                <div class="p-4 bg-white flex flex-col gap-4">
-                    <div class="flex justify-between gap-4">
-                        <div class="w-1/2">
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block Out</div>
-                            <input type="tel" id="inp-out" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
-                        </div>
-                        <div class="w-1/2">
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Take Off</div>
-                            <input type="tel" id="inp-off" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <div class="w-1/2">
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Land On</div>
-                            <input type="tel" id="inp-on" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
-                        </div>
-                        <div class="w-1/2">
-                            <div class="text-[11px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider">Block In</div>
-                            <input type="tel" id="inp-in" class="w-full text-center font-mono text-xl font-bold text-[var(--jx-dark)] bg-[#F8F6F3] border border-[#E5E5EA] rounded-md py-2 outline-none focus:ring-2 focus:ring-[var(--jx-gold)] transition-all" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
-                        </div>
-                    </div>
+                <!-- 由上至下的經典 OOOI 垂直面板 -->
+                <div class="ios-list-item bg-white">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block Out</span>
+                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                </div>
+                <div class="ios-list-item bg-white">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Take Off</span>
+                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                </div>
+                <div class="ios-list-item bg-white">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Land On</span>
+                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                </div>
+                <div class="ios-list-item bg-white">
+                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block In</span>
+                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
                 </div>
                 
-                <!-- 🆕 Fuel Info Toggle (擴充為 4 格) -->
+                <!-- Fuel Info Toggle (擴充為 4 格) -->
                 <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
-                    <button onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
+                    <button id="btn-toggle-fuel" onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
                         ⛽️ Toggle Fuel Info (FOB)
                     </button>
                     <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
@@ -222,19 +226,19 @@
                     </div>
                 </div>
 
-                <!-- Calculated Totals Box -->
+                <!-- Calculated Totals Box (Air, Block, Night) -->
                 <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
                     <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
-                        <div id="dash-block-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
+                        <div id="dash-air-time" class="font-mono text-lg font-bold text-blue-500">00:00</div>
                     </div>
                     <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
-                        <div id="dash-air-time" class="font-mono text-lg font-bold text-[var(--jx-gold-dark)]">00:00</div>
+                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
+                        <div id="dash-block-time" class="font-mono text-lg font-bold text-red-500">00:00</div>
                     </div>
                     <div class="text-center w-1/3">
                         <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
-                        <div id="dash-night-time" class="font-mono text-lg font-bold text-[#5856D6]">00:00</div>
+                        <div id="dash-night-time" class="font-mono text-lg font-bold text-gray-500">00:00</div>
                     </div>
                 </div>
             </div>
@@ -359,23 +363,33 @@
                 </div>
             </div>
 
+            <!-- Buttons Actions State -->
             <div class="p-4 pb-8" id="action-create">
                 <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">
                     Save Logbook Entry
                 </button>
-                <p class="text-center text-xs text-[var(--jx-gray)] mt-2">Data is saved offline instantly and synced to cloud in background.</p>
+                <p class="text-center text-xs text-[var(--jx-gray)] mt-2">Data is saved offline instantly and synced to cloud.</p>
+            </div>
+
+            <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-view">
+                <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
+                    Edit Entry (解鎖編輯)
+                </button>
+                <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm active:scale-95 transition-transform">
+                    Back to Recent
+                </button>
             </div>
             
             <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-edit">
                 <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">
-                    Update Entry
+                    Save Changes (儲存修改)
                 </button>
                 <div class="flex gap-3">
                     <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
                         Delete
                     </button>
-                    <button onclick="cancelEdit()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
-                        Cancel Edit
+                    <button onclick="cancelEntry()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -384,12 +398,11 @@
 
     <!-- ==================== VIEW 2: RECENT FLIGHTS ==================== -->
     <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
-        <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm hidden" id="hud-recent"></header>
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-30 border-b border-[var(--jx-divider)]" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
-            <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view or edit details.</p>
+            <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
         </header>
-        <main class="max-w-md mx-auto" id="recent-list-container"></main>
+        <main class="max-w-md mx-auto pb-12" id="recent-list-container"></main>
     </div>
 
     <!-- ==================== VIEW 3: STATISTICS ==================== -->
@@ -581,36 +594,34 @@
                 console.log("Raw OCR Text:\n", text);
 
                 let foundAny = false;
-                
-                // 4. 解析 OOOI & Fuel (逐行精準掃描，確保時間與油量互相綁定)
                 const lines = text.split('\n');
-                const extractEvent = (keyword) => {
-                    const line = lines.find(l => l.includes(keyword));
-                    if (!line) return { time: null, fuel: null };
-                    
-                    const tMatch = line.match(/(?:[^A-Z]|^)([0-2OIlZS][0-9OIlZS][0-5OIlZS][0-9OIlZS]|(?:[0-2][0-9]:[0-5][0-9]))(?:[^A-Z]|$)/i);
-                    let timeVal = null;
-                    if (tMatch) {
-                        timeVal = tMatch[1].replace(':', '').replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
-                    }
 
-                    const fMatch = line.match(/(?:FOB|FUEL)?[^\d]*?(\d{1,3}[\.\,]\d{1,2})/);
-                    let fuelVal = null;
-                    if (fMatch) {
-                        fuelVal = fMatch[1].replace(',', '.');
-                    }
+                // 專門解析含有 OUT, OFF, ON, IN 的行
+                const parseLineForTimeAndFuel = (line) => {
+                    if (!line) return { time: null, fuel: null };
+                    let cleanLine = line.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                    
+                    const tMatch = cleanLine.match(/\b([0-2]\d[:\.]?[0-5]\d)\b/);
+                    let timeVal = tMatch ? tMatch[1].replace(/[:\.]/g, '') : null;
+                    if (timeVal && timeVal.length === 4) timeVal = timeVal.substring(0,2) + ':' + timeVal.substring(2,4);
+
+                    const fMatch = line.match(/(\d{1,3}[\.,]\d{1,2})/);
+                    let fuelVal = fMatch ? fMatch[1].replace(',', '.') : null;
+
                     return { time: timeVal, fuel: fuelVal };
                 };
 
-                const outData = extractEvent('OUT');
-                const offData = extractEvent('OFF');
-                const onData  = extractEvent('ON');
-                const inData  = extractEvent('IN');
+                const getLineByRegex = (regex) => lines.find(l => regex.test(l));
 
-                if(outData.time) { document.getElementById('inp-out').value = outData.time.substring(0,2) + ':' + outData.time.substring(2,4); foundAny = true; }
-                if(offData.time) { document.getElementById('inp-off').value = offData.time.substring(0,2) + ':' + offData.time.substring(2,4); foundAny = true; }
-                if(onData.time)  { document.getElementById('inp-on').value  = onData.time.substring(0,2)  + ':' + onData.time.substring(2,4); foundAny = true; }
-                if(inData.time)  { document.getElementById('inp-in').value  = inData.time.substring(0,2)  + ':' + inData.time.substring(2,4); foundAny = true; }
+                const outData = parseLineForTimeAndFuel(getLineByRegex(/OUT|0UT/i));
+                const offData = parseLineForTimeAndFuel(getLineByRegex(/OFF|0FF/i));
+                const onData  = parseLineForTimeAndFuel(getLineByRegex(/\bON\b|0N/i));
+                const inData  = parseLineForTimeAndFuel(getLineByRegex(/\bIN\b|1N/i));
+
+                if(outData.time) { document.getElementById('inp-out').value = outData.time; foundAny = true; }
+                if(offData.time) { document.getElementById('inp-off').value = offData.time; foundAny = true; }
+                if(onData.time)  { document.getElementById('inp-on').value  = onData.time; foundAny = true; }
+                if(inData.time)  { document.getElementById('inp-in').value  = inData.time; foundAny = true; }
 
                 let showFuel = false;
                 if(outData.fuel) { document.getElementById('inp-fob-out').value = outData.fuel; showFuel = true; }
@@ -626,9 +637,9 @@
                 if (foundAny) {
                     calculateTimes();
                     updateEntryDash();
-                    showToast("掃描與資料萃取成功！ (Scan Success)");
+                    showToast("OOOI 掃描與解析成功！ (Scan Success)");
                 } else {
-                    alert("未偵測到完整 OOOI 格式，請重新對準螢幕並避免反光。");
+                    alert("未偵測到完整的 OOOI 與 FOB 格式，請重新對準螢幕並避免反光。");
                 }
                 closeCamera();
             } catch (err) {
@@ -926,14 +937,44 @@
         }
 
         // ==========================================
-        // 📱 UI 導航與計算邏輯
+        // 📱 UI 導航、表單模式切換與計算邏輯
         // ==========================================
+        function setFormMode(mode) {
+            const inputs = document.querySelectorAll('#view-entry input, #view-entry select, #view-entry textarea');
+            inputs.forEach(inp => inp.disabled = (mode === 'view'));
+
+            document.getElementById('btn-scan-ocr').style.display = (mode === 'view') ? 'none' : 'flex';
+            document.getElementById('btn-toggle-fuel').style.display = (mode === 'view') ? 'none' : 'flex';
+            
+            document.getElementById('action-create').classList.toggle('hidden', mode !== 'create');
+            document.getElementById('action-view').classList.toggle('hidden', mode !== 'view');
+            document.getElementById('action-edit').classList.toggle('hidden', mode !== 'edit');
+
+            const banner = document.getElementById('edit-banner');
+            document.body.classList.toggle('view-mode', mode === 'view');
+
+            if (mode === 'create') {
+                banner.classList.remove('show');
+            } else if (mode === 'view') {
+                banner.textContent = 'View Mode (Read-Only)';
+                banner.classList.add('show');
+                banner.style.backgroundColor = 'var(--jx-gray)';
+            } else if (mode === 'edit') {
+                banner.textContent = 'Editing Mode';
+                banner.classList.add('show');
+                banner.style.backgroundColor = 'var(--jx-gold-dark)';
+            }
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
             ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
 
+            if (tabId === 'entry' && document.getElementById('action-create').classList.contains('hidden')) {
+                cancelEntry(); 
+            }
             if (tabId === 'recent') renderRecentFlights();
             if (tabId === 'stats') renderStats();
         }
@@ -957,16 +998,6 @@
             }
         }
 
-        function calcDuration(t1, t2) {
-            const m1 = parseTimeToMins(t1);
-            const m2 = parseTimeToMins(t2);
-            if(m1 === 0 && m2 === 0) return 0;
-            
-            let min2 = m2;
-            if (min2 < m1) min2 += 24 * 60; 
-            return min2 - m1;
-        }
-
         function calculateTimes() {
             const outT = document.getElementById('inp-out').value;
             const offT = document.getElementById('inp-off').value;
@@ -975,11 +1006,11 @@
 
             const isValidTime = (t) => t && t.includes(':');
 
+            // Block Time & Night Time
             if (isValidTime(outT) && isValidTime(inT)) {
                 const bTime = minsToStr(calcDuration(outT, inT));
                 document.getElementById('dash-block-time').textContent = bTime;
                 document.getElementById('dash-block-time-top').textContent = bTime;
-                
                 const nTimeMins = calcNightTime(outT, inT);
                 document.getElementById('dash-night-time').textContent = minsToStr(nTimeMins);
             } else {
@@ -988,6 +1019,7 @@
                 document.getElementById('dash-night-time').textContent = "00:00";
             }
 
+            // Air Time
             if (isValidTime(offT) && isValidTime(onT)) {
                 document.getElementById('dash-air-time').textContent = minsToStr(calcDuration(offT, onT));
             } else {
@@ -1043,7 +1075,7 @@
         // ==========================================
         // 🔄 CRUD 
         // ==========================================
-        function editLog(index) {
+        function viewLog(index) {
             const log = flightLogs.find(l => l.index === index);
             if(!log) return;
             
@@ -1088,29 +1120,24 @@
             document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
             document.getElementById('pilot3-custom-wrapper').classList.add('hidden');
 
-            document.getElementById('action-create').classList.add('hidden');
-            document.getElementById('action-edit').classList.remove('hidden');
-            document.getElementById('edit-banner').classList.add('show');
+            setFormMode('view');
             
             updateEntryDash(); calculateTimes();
             document.querySelectorAll('.tab-btn')[0].click(); window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function cancelEdit() {
+        function enableEditMode() {
+            setFormMode('edit');
+        }
+
+        function cancelEntry() {
             document.getElementById('inp-index').value = '';
-            document.getElementById('action-create').classList.remove('hidden');
-            document.getElementById('action-edit').classList.add('hidden');
-            document.getElementById('edit-banner').classList.remove('show');
-            
             document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
             document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
-            
-            document.getElementById('inp-fob-out').value = '';
-            document.getElementById('inp-fob-off').value = '';
-            document.getElementById('inp-fob-on').value = '';
-            document.getElementById('inp-fob-in').value = '';
+            document.getElementById('inp-fob-out').value = ''; document.getElementById('inp-fob-in').value = '';
+            document.getElementById('inp-fob-off').value = ''; document.getElementById('inp-fob-on').value = '';
             document.getElementById('fuel-section').classList.add('hidden');
             
             document.getElementById('inp-pilot1').value = '';
@@ -1121,6 +1148,8 @@
             document.getElementById('dash-block-time-top').textContent = '00:00';
             document.getElementById('dash-air-time').textContent = '00:00';
             document.getElementById('dash-night-time').textContent = '00:00';
+            
+            setFormMode('create');
             evaluateOperations();
         }
 
@@ -1132,7 +1161,7 @@
             flightLogs = flightLogs.filter(l => l.index !== index);
             localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
             showToast("Deleted locally. Syncing...");
-            cancelEdit();
+            cancelEntry();
             queueAction({ action: 'delete', index: index }, true);
         }
 
@@ -1214,18 +1243,10 @@
                 if(actionType === 'update') {
                     const idx = flightLogs.findIndex(l => l.index === payloadData.index);
                     if(idx !== -1) flightLogs[idx] = localLog;
-                    cancelEdit();
+                    cancelEntry();
                 } else {
                     flightLogs.push(localLog);
-                    document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
-                    document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
-                    document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
-                    document.getElementById('inp-fob-out').value = ''; document.getElementById('inp-fob-in').value = '';
-                    document.getElementById('inp-fob-off').value = ''; document.getElementById('inp-fob-on').value = '';
-                    document.getElementById('dash-block-time').textContent = '00:00';
-                    document.getElementById('dash-block-time-top').textContent = '00:00';
-                    document.getElementById('dash-air-time').textContent = '00:00';
-                    document.getElementById('dash-night-time').textContent = '00:00';
+                    cancelEntry();
                 }
                 
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
@@ -1306,12 +1327,40 @@
 
             let finalHtml = '';
             for(const [monthYear, logs] of Object.entries(groups)) {
-                let groupHtml = `<div class="px-4 py-1.5 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)]"><span class="text-[11px] font-bold text-[var(--jx-gray)] uppercase">${monthYear}</span></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                
+                // 運算該月份的統計資料
+                let monthTotalMins = 0;
+                let monthTakeoffs = 0;
+                let monthLandings = 0;
+                let monthPax = 0;
+                
+                logs.forEach(l => {
+                    monthTotalMins += l.totalMins || 0;
+                    monthTakeoffs += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
+                    monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
+                    monthPax += (Number(l.pax) || 0);
+                });
+
+                // 組合帶有統計數據的月份標題橫幅
+                let groupHtml = `
+                <div class="px-4 py-2 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)] flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span>
+                        <span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium">
+                        <span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span>
+                        <span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span>
+                        <span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span>
+                    </div>
+                </div>
+                <div class="bg-white border-b border-[var(--jx-divider)]">`;
+
                 logs.forEach(log => {
                     const d = new Date(log.date);
                     const blockTime = minsToStr(log.totalMins);
                     groupHtml += `
-                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="editLog('${log.index}')">
+                    <div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')">
                         <div class="flex items-center gap-4 w-full">
                             <div class="flex flex-col items-center justify-center w-10">
                                 <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
