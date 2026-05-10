@@ -131,7 +131,7 @@
         <!-- 彈性雙欄排版 (左側控制台 / 右側簡報區) -->
         <div class="flex flex-col xl:flex-row gap-6 items-start">
             
-            <!-- 【左側控制台】 -->
+             <!-- 【左側控制台】 -->
             <div class="w-full xl:w-[340px] shrink-0 flex flex-col gap-4 xl:sticky xl:top-6 z-40 no-print">
                 <div class="flex flex-col gap-3 p-4 md:p-5 bg-white rounded-2xl border border-stone-200 shadow-sm">
                     <label class="text-sm font-bold text-stone-600 tracking-wide flex items-center gap-1.5"><span>🎯</span> 目標航班鎖定</label>
@@ -145,12 +145,20 @@
                     </button>
                 </div>
 
-                <div class="flex flex-col h-40 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden">
-                    <div class="bg-orange-100/50 px-4 py-2 border-b border-orange-200/60 flex justify-between items-center">
+                <div class="flex flex-col h-48 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden relative">
+                    <div class="bg-orange-100/50 px-4 py-2 border-b border-orange-200/60 flex justify-between items-center z-10">
                         <span class="font-bold text-[#b35900] text-xs tracking-widest flex items-center gap-1">📦 手動補充 (PAX/MEL/BAY)</span>
-                        <button onclick="pasteTextToRawInput2()" class="text-[10px] bg-orange-200/50 hover:bg-orange-300/50 text-[#b35900] px-2 py-1 rounded transition-colors flex items-center gap-1 border border-orange-300/50">📋 貼上</button>
                     </div>
-                    <textarea id="rawInput2" class="w-full flex-grow p-4 bg-transparent text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="若有額外地勤資訊，請貼於此處..." oninput="debouncedParseData()"></textarea>
+                    <div class="relative flex-grow flex p-2">
+                        <div id="rawInput2-placeholder" class="absolute inset-3 flex flex-col items-center justify-center border-2 border-dashed border-orange-300/60 rounded-xl bg-orange-50/80 z-10 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-3 text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <div class="flex gap-3 w-full max-w-[200px] no-print">
+                                <button onclick="focusRawInput2()" class="flex-1 bg-white border border-orange-200 text-orange-600 py-2.5 rounded-xl shadow-sm hover:bg-orange-50 active:scale-95 transition-all text-xs font-bold">✍️ 輸入</button>
+                                <button onclick="pasteTextToRawInput2()" class="flex-1 bg-orange-200/60 border border-orange-300/60 text-[#b35900] py-2.5 rounded-xl shadow-sm hover:bg-orange-300/60 active:scale-95 transition-all text-xs font-bold">📋 貼上</button>
+                            </div>
+                        </div>
+                        <textarea id="rawInput2" class="w-full h-full p-2 bg-transparent text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed relative z-0" placeholder="輸入或貼上額外地勤資訊..." oninput="handleRawInput2()" onblur="handleRawInput2Blur()"></textarea>
+                    </div>
                 </div>
                 <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
             </div>
@@ -1279,7 +1287,7 @@
         // ==========================================
         // Pro Dashboard 邏輯 (解析、氣象、呈現)
         // ==========================================
-        function clearData(silent = false) {
+       function clearData(silent = false) {
             document.getElementById('rawInput').value = '';
             document.getElementById('rawInput2').value = '';
             document.getElementById('atc-display').value = '';
@@ -1291,6 +1299,9 @@
             localStorage.removeItem('dispatch_rawInput_2');
             localStorage.removeItem('dispatch_notam_input');
             localStorage.removeItem('dispatch_atc_input');
+            
+            const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
+            if (rawInput2Placeholder) rawInput2Placeholder.classList.remove('hidden');
             
             ['profile', 'mel', 'wni', 'sigwx', 'turbli'].forEach(prefix => clearImage(prefix));
             parseData();
@@ -1313,7 +1324,11 @@
             const savedAtc = localStorage.getItem('dispatch_atc_input');
             
             if (savedInput1) document.getElementById('rawInput').value = savedInput1;
-            if (savedInput2) document.getElementById('rawInput2').value = savedInput2;
+            if (savedInput2) {
+                document.getElementById('rawInput2').value = savedInput2;
+                const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
+                if (rawInput2Placeholder) rawInput2Placeholder.classList.add('hidden');
+            }
             if (savedNotam) document.getElementById('raw-notam-input').value = savedNotam;
             if (savedAtc) {
                 document.getElementById('atc-display').value = savedAtc;
@@ -1352,7 +1367,7 @@
 
         window.addEventListener('paste', function(e) {
             if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') { return; }
-            let prefix = 'profile'; 
+            let prefix = 'profile';
 
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let index in items) {
@@ -1397,10 +1412,30 @@
                 const text = await navigator.clipboard.readText();
                 const el = document.getElementById('rawInput2');
                 el.value = text;
-                debouncedParseData();
+                handleRawInput2();
                 showToastMessage('✅ 已貼上手動補充資料');
             } catch (err) {
-                showToastMessage('❌ 貼上失敗，請手動點擊輸入框貼上');
+                showToastMessage('❌ 貼上失敗，請點擊「輸入」手動貼上');
+            }
+        }
+
+        function focusRawInput2() {
+            document.getElementById('rawInput2-placeholder').classList.add('hidden');
+            document.getElementById('rawInput2').focus();
+        }
+
+        function handleRawInput2() {
+            debouncedParseData();
+            if (document.getElementById('rawInput2').value.trim() !== '') {
+                document.getElementById('rawInput2-placeholder').classList.add('hidden');
+            } else {
+                document.getElementById('rawInput2-placeholder').classList.remove('hidden');
+            }
+        }
+
+        function handleRawInput2Blur() {
+            if (document.getElementById('rawInput2').value.trim() === '') {
+                document.getElementById('rawInput2-placeholder').classList.remove('hidden');
             }
         }
 
