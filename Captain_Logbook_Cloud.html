@@ -132,6 +132,17 @@
         </div>
     </div>
 
+    <!-- List Modal (For Pilots & Airports) -->
+    <div id="list-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <h2 id="list-modal-title" class="font-bold text-[var(--jx-gold)] tracking-wide">Title</h2>
+                <button onclick="document.getElementById('list-modal').classList.add('hidden')" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
+            </div>
+            <div id="list-modal-content" class="p-0 overflow-y-auto pb-6"></div>
+        </div>
+    </div>
+
     <!-- Camera Modal -->
     <div id="camera-modal" class="hidden fixed inset-0 bg-black z-[110] flex flex-col justify-center items-center">
         <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10">
@@ -514,7 +525,7 @@
                 <div class="icon-stat">
                     <svg class="w-6 h-6 text-[#FF2D55]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Passengers</span>
-                    <span id="stat-tot-pax" class="font-bold text-xl">0</span>
+                    <span id="stat-tot-pax" class="font-bold text-xl flex items-baseline">0</span>
                 </div>
                 <div class="icon-stat">
                     <svg class="w-6 h-6 text-[var(--jx-gold-dark)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -534,6 +545,13 @@
 
                 <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
                 <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
+
+                <!-- 新增：Top Pilots & Top Airports 排行榜 -->
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top Pilots Flown With</div>
+                <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
+
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top Destinations (Arrivals)</div>
+                <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-airports"></div>
             </div>
 
             <div class="mt-8 px-4 pb-12 flex justify-center">
@@ -1149,6 +1167,7 @@
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
             let aptSet = new Set(); 
             let typeMins = {}, dutyMins = {};
+            let pilotCounts = {}, arrCounts = {};
 
             filteredLogs.forEach(l => {
                 tTot++;
@@ -1162,6 +1181,15 @@
                 let acftType = l.acft || 'Unknown'; let dutyType = l.duty || 'Unknown';
                 typeMins[acftType] = (typeMins[acftType] || 0) + (l.totalMins || 0);
                 dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
+
+                // 統計到達機場
+                if(l.arr) arrCounts[l.arr] = (arrCounts[l.arr] || 0) + 1;
+                // 統計共同飛行的飛行員
+                [l.pilot1, l.pilot2, l.pilot3].forEach(p => {
+                    if (p && String(p).trim() !== '' && String(p).toLowerCase() !== 'self') {
+                        pilotCounts[p] = (pilotCounts[p] || 0) + 1;
+                    }
+                });
             });
 
             if (isCareer) {
@@ -1204,7 +1232,14 @@
             document.getElementById('stat-tot-ldg').textContent = tLdg;
             document.getElementById('stat-tot-time').textContent = minsToStr(tMins);
             document.getElementById('stat-tot-night').textContent = minsToStr(tNight); 
-            document.getElementById('stat-tot-pax').textContent = tPax;
+            
+            // 處理載客率顯示 (除了 Career 以外)
+            let paxText = tPax;
+            if (!isCareer && tTot > 0) {
+                let lf = (((tPax / tTot) / 297) * 100).toFixed(1);
+                paxText = `${tPax} <span class="text-[10px] text-[var(--jx-gray)] font-normal ml-0.5 tracking-tight">(${lf}%)</span>`;
+            }
+            document.getElementById('stat-tot-pax').innerHTML = paxText;
 
             const renderList = (dataObj, containerId) => {
                 const el = document.getElementById(containerId);
@@ -1220,7 +1255,71 @@
                 el.innerHTML = listHtml;
             };
             renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
+            
+            // 渲染排行榜 (Top Pilots & Airports)
+            let sortedPilots = Object.entries(pilotCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
+            let sortedArr = Object.entries(arrCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
+            
+            window.currentSortedPilots = sortedPilots;
+            window.currentSortedAirports = sortedArr;
+
+            const renderTopList = (dataArr, containerId, title, emptyMsg, type) => {
+                const el = document.getElementById(containerId);
+                let html = '';
+                let top5 = dataArr.slice(0, 5);
+                if(top5.length === 0) {
+                    html = `<div class="p-3 text-sm text-center text-[var(--jx-gray)]">${emptyMsg}</div>`;
+                } else {
+                    top5.forEach((item, idx) => {
+                        let rankBadge = idx < 3 ? `<span class="bg-[var(--jx-gold)] text-white text-[9px] px-1.5 py-0.5 rounded ml-2 shadow-sm">Top ${idx+1}</span>` : '';
+                        html += `
+                            <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                                <span class="text-sm font-medium text-[var(--jx-gray)] flex items-center">${item.name} ${rankBadge}</span>
+                                <span class="text-sm font-bold text-[var(--jx-dark)]">${item.count} <span class="text-[10px] font-normal text-gray-400">flights</span></span>
+                            </div>
+                        `;
+                    });
+                    if (dataArr.length > 0) {
+                        html += `
+                            <div class="p-0 border-t border-[var(--jx-divider)] bg-[#FDFBF7]">
+                                <button onclick="showListModal('${title}', '${type}')" class="w-full py-3 text-[13px] font-bold text-[var(--jx-gold-dark)] active:bg-[#E8E4DF] transition-colors tracking-wide">
+                                    Show All (${dataArr.length})
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+                el.innerHTML = html;
+            };
+
+            renderTopList(sortedPilots, 'stat-list-pilots', 'All Pilots Flown With', 'No pilots recorded.', 'pilots');
+            renderTopList(sortedArr, 'stat-list-airports', 'All Destinations (Arrivals)', 'No arrivals recorded.', 'airports');
+
             renderChart(sortedLogs);
+        }
+
+        // 顯示排名列表 Modal 的函式
+        function showListModal(title, type) {
+            document.getElementById('list-modal-title').textContent = title;
+            const content = document.getElementById('list-modal-content');
+            let dataArr = type === 'pilots' ? window.currentSortedPilots : window.currentSortedAirports;
+            
+            let html = '<div class="ios-list shadow-sm my-2">';
+            dataArr.forEach((item, index) => {
+                let rankBadge = index < 3 ? `<span class="bg-[var(--jx-gold)] text-white text-[9px] px-1.5 py-0.5 rounded ml-2 shadow-sm">Top ${index+1}</span>` : '';
+                html += `
+                    <div class="ios-list-item bg-white flex justify-between items-center">
+                        <span class="text-[15px] font-medium text-[var(--jx-gray)] flex items-center">
+                            <span class="w-6 text-[var(--jx-gold-dark)] font-bold text-xs">${index + 1}.</span> 
+                            ${item.name} ${rankBadge}
+                        </span>
+                        <span class="text-[15px] font-bold text-[var(--jx-dark)]">${item.count}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            content.innerHTML = html;
+            document.getElementById('list-modal').classList.remove('hidden');
         }
 
         function renderChart(logs) {
@@ -1378,7 +1477,12 @@
                     monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
                     monthPax += (Number(l.pax) || 0);
                 });
-                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                
+                // 計算載客率 (平均每趟載客數 / 297)
+                let lf = logs.length > 0 ? (((monthPax / logs.length) / 297) * 100).toFixed(1) : 0;
+                let paxDisplay = `${monthPax} <span class="text-[9px] text-[var(--jx-gray)] font-normal ml-0.5">(${lf}%)</span>`;
+
+                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${paxDisplay}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
                 
                 logs.forEach(log => {
                     const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
