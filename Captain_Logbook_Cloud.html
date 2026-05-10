@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pilot Logbook - Starlux Ultimate FMS</title>
+    
+    <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 新增 Chart.js DataLabels 套件以顯示數值 -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- 引入 SunCalc 天文計算引擎，用於精準計算 ICAO Night Time -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
 
     <style>
         :root {
@@ -283,11 +286,12 @@
                     </div>
                     <div class="text-center w-1/3">
                         <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
-                        <div id="dash-night-time" class="font-mono text-lg font-bold text-gray-500">00:00</div>
+                        <div id="dash-night-time" class="font-mono text-lg font-bold text-[var(--jx-gray)]">00:00</div>
                     </div>
                 </div>
             </div>
-            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 採自動概算：交集 UTC 10:00 ~ 22:00</p>
+            <!-- 修改了提示文字，標示已採用 ICAO 航線積分法 -->
+            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 採 ICAO 標準精算：依據航線軌跡與太陽高度角 (-6°) 動態積分。</p>
 
             <div class="section-title mt-2 flex justify-between items-end">
                 <span>Operations (PF)</span>
@@ -424,17 +428,18 @@
     </div>
 
     <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
-        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-30 border-b border-[var(--jx-divider)]" id="header-recent-title">
+        <!-- 搜尋框獨立固定在最上方 -->
+        <div class="bg-[var(--jx-bg)] pt-12 pb-3 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
+            <div class="relative">
+                <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight, Airport, or Pilot..." oninput="renderRecentFlights()">
+            </div>
+        </div>
+        
+        <!-- 標題部分，隨畫面滾動 -->
+        <header class="pt-6 pb-2 px-4" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
             <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
-            
-            <!-- 搜尋框 Search Bar -->
-            <div class="mt-4">
-                <div class="relative">
-                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight No. or Pilot Name..." oninput="renderRecentFlights()">
-                </div>
-            </div>
         </header>
         <main class="max-w-md mx-auto pb-12" id="recent-list-container"></main>
     </div>
@@ -473,7 +478,6 @@
             <div class="horizontal-scroll" id="stats-cards-container"></div>
             
             <div class="mt-6 px-4">
-                <!-- 圖表外部加上 overflow-x-auto 允許水平滑動 -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)] overflow-x-auto overflow-y-hidden">
                     <div id="chart-container" style="min-width: 100%; height: 160px; position: relative;">
                         <canvas id="flightChart"></canvas>
@@ -575,6 +579,34 @@
         };
         // ==========================================
 
+        // ==========================================
+        // 🌐 建立機場坐標資料庫 (Lat/Lon) 供計算 Night Time 使用
+        // ==========================================
+        const AIRPORT_DB = {
+            // Taiwan
+            'RCTP': { lat: 25.0777, lon: 121.2328 }, 'RCKH': { lat: 22.5771, lon: 120.3500 }, 'RCSS': { lat: 25.0697, lon: 121.5520 }, 'RCMQ': { lat: 24.2646, lon: 120.6200 },
+            // HK / Macau
+            'VMMC': { lat: 22.1496, lon: 113.5910 }, 'VHHH': { lat: 22.3089, lon: 113.9140 },
+            // Japan
+            'RJAA': { lat: 35.7647, lon: 140.3860 }, 'RJTT': { lat: 35.5522, lon: 139.7790 }, 'RJBB': { lat: 34.4272, lon: 135.2440 }, 'RJGG': { lat: 34.8583, lon: 136.8050 }, 
+            'RJFT': { lat: 32.8372, lon: 130.8580 }, 'RJFF': { lat: 33.5858, lon: 130.4500 }, 'ROAH': { lat: 26.1958, lon: 127.6460 }, 'RJSS': { lat: 38.1397, lon: 140.9170 }, 
+            'RJCC': { lat: 42.7752, lon: 141.6920 }, 'RJCH': { lat: 41.7700, lon: 140.8180 }, 'RJFU': { lat: 32.9169, lon: 129.9130 }, 'RJOA': { lat: 34.4361, lon: 132.9190 }, 
+            'RJSN': { lat: 37.9558, lon: 139.1160 }, 'RJFK': { lat: 31.8033, lon: 130.7180 },
+            // USA
+            'KSFO': { lat: 37.6188, lon: -122.375 }, 'KLAX': { lat: 33.9425, lon: -118.408 }, 'KSEA': { lat: 47.4490, lon: -122.309 }, 'KOAK': { lat: 37.7214, lon: -122.221 }, 
+            'KSMF': { lat: 38.6953, lon: -121.591 }, 'KONT': { lat: 34.0558, lon: -117.550 }, 'KPDX': { lat: 45.5886, lon: -122.597 }, 'PANC': { lat: 61.1744, lon: -149.996 }, 
+            'PMDY': { lat: 28.2014, lon: -177.380 }, 'PHNL': { lat: 21.3186, lon: -157.922 }, 'KPHX': { lat: 33.4343, lon: -112.012 },
+            // Philippines / Vietnam
+            'RPLL': { lat: 14.5086, lon: 121.0190 }, 'RPVM': { lat: 10.3075, lon: 123.9790 }, 'RPLC': { lat: 15.1858, lon: 120.5590 },
+            'VVNB': { lat: 21.2212, lon: 105.8070 }, 'VVTS': { lat: 10.8188, lon: 106.6660 }, 'VVDN': { lat: 16.0439, lon: 108.1990 }, 'VVCR': { lat: 11.9981, lon: 109.2190 }, 'VVPQ': { lat: 10.1664, lon: 103.9960 },
+            // Thailand / SE Asia
+            'VTBS': { lat: 13.6811, lon: 100.7470 }, 'VTBD': { lat: 13.9125, lon: 100.6060 }, 'VTSG': { lat:  8.1132, lon:  98.3169 }, 'VTCC': { lat: 18.7668, lon:  98.9626 },
+            'WMKK': { lat:  2.7456, lon: 101.7090 }, 'WMKP': { lat:  5.2971, lon: 100.2760 }, 'WSSS': { lat:  1.3644, lon: 103.9910 },
+            'WIII': { lat: -6.1256, lon: 106.6550 }, 'WADD': { lat: -8.7481, lon: 115.1670 }, 
+            // Europe
+            'LFBO': { lat: 43.6291, lon:   1.3638 }
+        };
+
         // 全域啟用 ChartDataLabels 外掛
         Chart.register(ChartDataLabels);
 
@@ -611,9 +643,6 @@
             });
         }
 
-        // ==========================================
-        // 🚀 核心更新：根據現有資料生成升冪 Index
-        // ==========================================
         function generateNextIndex() {
             let maxIdx = 0;
             flightLogs.forEach(l => {
@@ -680,22 +709,70 @@
             return diff;
         }
 
-        function calcNightTime(t1, t2) {
-            const outM = parseTimeToMins(t1);
-            const inM = parseTimeToMins(t2);
-            if(outM === 0 && inM === 0) return 0;
+        /**
+         * 🚀 精準 ICAO Night Time 計算引擎 (利用 SunCalc 與航路積分)
+         * 太陽落於地平線下 6 度 (Civil Twilight) 為夜間判定標準。
+         */
+        function calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT) {
+            if(!dateStr || !outT || !inT || !depICAO || !arrICAO) return 0;
+            
+            const dep = AIRPORT_DB[depICAO.toUpperCase()];
+            const arr = AIRPORT_DB[arrICAO.toUpperCase()];
 
-            let min1 = outM; 
-            let min2 = inM;
-            if (min2 < min1) min2 += 24 * 60; 
+            const outM = parseTimeToMins(outT);
+            let inM = parseTimeToMins(inT);
+            
+            if(outM === 0 && inM === 0) return 0;
+            if(inM < outM) inM += 24 * 60; // 跨日處理
+
+            const totalMins = inM - outM;
+
+            // 如果機場不在資料庫中，退回傳統的簡單估算 (UTC 10~22)
+            if(!dep || !arr) {
+                console.warn(`[NightCalc] Airport Lat/Lon missing for ${depICAO} or ${arrICAO}. Using fallback.`);
+                let nightMinsFallback = 0;
+                for (let m = outM; m < inM; m++) {
+                    let modDay = m % (24 * 60);
+                    if (modDay >= 10 * 60 && modDay < 22 * 60) nightMinsFallback++;
+                }
+                return nightMinsFallback;
+            }
+
+            // 解析 Date 字串 (確保以 UTC 基準生成 Date 物件，避免本地時區干擾)
+            const [yy, mm, dd] = dateStr.split('-');
+            const utcDateBase = new Date(Date.UTC(yy, mm - 1, dd, 0, 0, 0));
 
             let nightMins = 0;
-            const nightStart = 10 * 60; 
-            const nightEnd = 22 * 60;   
-            
-            for (let m = min1; m < min2; m++) {
-                let currentMofD = m % (24 * 60);
-                if (currentMofD >= nightStart && currentMofD < nightEnd) {
+            const CIVIL_TWILIGHT_RAD = -6 * (Math.PI / 180); // -0.104719
+
+            // 處理跨越國際換日線 (IDL) 或太平洋的經度補償
+            let depLon = dep.lon;
+            let arrLon = arr.lon;
+            if (Math.abs(arrLon - depLon) > 180) {
+                if (depLon < 0) depLon += 360;
+                if (arrLon < 0) arrLon += 360;
+            }
+
+            // 積分迴圈：將總飛行時間切為 1 分鐘片段，動態檢查航機當下位置的太陽高度
+            for(let m = 0; m < totalMins; m++) {
+                // 當前分鐘絕對值 (相對於 UTC 00:00)
+                const currentMinAbsolute = outM + m;
+                
+                // 動態內插計算當下航機經緯度 (線性假定)
+                const fraction = m / totalMins;
+                const curLat = dep.lat + (arr.lat - dep.lat) * fraction;
+                
+                let curLon = depLon + (arrLon - depLon) * fraction;
+                if (curLon > 180) curLon -= 360; // 還原為標準經度
+
+                // 產生精確時間物件
+                const curTimeObj = new Date(utcDateBase.getTime() + currentMinAbsolute * 60000);
+
+                // 丟進天文引擎計算
+                const sunPos = SunCalc.getPosition(curTimeObj, curLat, curLon);
+
+                // 如果太陽中心點低於地平線下 6 度，計入 Night Time
+                if (sunPos.altitude <= CIVIL_TWILIGHT_RAD) {
                     nightMins++;
                 }
             }
@@ -898,6 +975,9 @@
         }
 
         function calculateTimes() {
+            const dateStr = document.getElementById('inp-date').value;
+            const depICAO = document.getElementById('inp-dep').value;
+            const arrICAO = document.getElementById('inp-arr').value;
             const outT = document.getElementById('inp-out').value;
             const offT = document.getElementById('inp-off').value;
             const onT = document.getElementById('inp-on').value;
@@ -908,7 +988,10 @@
                 const bTime = minsToStr(calcDuration(outT, inT));
                 document.getElementById('dash-block-time').textContent = bTime;
                 document.getElementById('dash-block-time-top').textContent = bTime;
-                document.getElementById('dash-night-time').textContent = minsToStr(calcNightTime(outT, inT));
+                
+                // 調用全新的精準算式
+                const calculatedNightMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
+                document.getElementById('dash-night-time').textContent = minsToStr(calculatedNightMins);
             } else {
                 document.getElementById('dash-block-time').textContent = "00:00";
                 document.getElementById('dash-block-time-top').textContent = "00:00";
@@ -963,9 +1046,6 @@
             document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
         }
 
-        // ==========================================
-        // 🚀 核心更新：支援自定義日期選單切換
-        // ==========================================
         function initTimeFilterDropdown() {
             const select = document.getElementById('stats-time-filter');
             select.innerHTML = ''; 
@@ -1143,9 +1223,6 @@
             renderChart(sortedLogs);
         }
 
-        // ==========================================
-        // 🚀 核心更新：圖表標籤顯示與水平捲動
-        // ==========================================
         function renderChart(logs) {
             const ctx = document.getElementById('flightChart').getContext('2d');
             const monthMap = {};
@@ -1157,7 +1234,6 @@
             });
             const sortedKeys = Object.keys(monthMap).sort();
             
-            // 擷取範圍內最近的 12 個月
             const displayKeys = sortedKeys.slice(-12);
             let labels = displayKeys.map(k => {
                 const [y, m] = k.split('-');
@@ -1166,7 +1242,6 @@
             let data = displayKeys.map(k => Math.round(monthMap[k] * 10) / 10);
             if(labels.length === 0) { labels = ['No Data']; data = [0]; }
             
-            // 動態計算 Canvas 寬度以實現水平捲動 (每個月給予最少 60px 寬度)
             const chartContainer = document.getElementById('chart-container');
             const minWidth = Math.max(labels.length * 60, chartContainer.parentElement.clientWidth - 32);
             chartContainer.style.width = `${minWidth}px`;
@@ -1182,18 +1257,15 @@
                         label: 'Flight Hours', data: data, borderColor: '#C2A370', backgroundColor: gradient,
                         borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#FFFFFF',
                         datalabels: {
-                            align: 'top',
-                            anchor: 'end',
-                            color: '#9A7B4F', // jx-gold-dark
-                            font: { weight: 'bold', size: 10 },
-                            offset: 4,
+                            align: 'top', anchor: 'end', color: '#9A7B4F',
+                            font: { weight: 'bold', size: 10 }, offset: 4,
                             formatter: function(value) { return value > 0 ? value : ''; }
                         }
                     }]
                 },
                 options: { 
                     responsive: true, maintainAspectRatio: false, 
-                    layout: { padding: { top: 20, right: 10, left: 10 } }, // 預留標籤顯示空間
+                    layout: { padding: { top: 20, right: 10, left: 10 } },
                     plugins: { legend: { display: false } },
                     scales: { 
                         x: { grid: { display: false }, ticks: { font: {size: 10} } }, 
@@ -1202,7 +1274,7 @@
                 }
             });
         }
-        
+
         function populateAircraftDropdowns() {
             const regSelect = document.getElementById('inp-reg');
             regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
@@ -1279,7 +1351,9 @@
                     const p1Match = String(l.pilot1).toLowerCase().includes(query);
                     const p2Match = String(l.pilot2).toLowerCase().includes(query);
                     const p3Match = String(l.pilot3).toLowerCase().includes(query);
-                    return fltMatch || p1Match || p2Match || p3Match;
+                    const depMatch = String(l.dep).toLowerCase().includes(query);
+                    const arrMatch = String(l.arr).toLowerCase().includes(query);
+                    return fltMatch || p1Match || p2Match || p3Match || depMatch || arrMatch;
                 });
             }
 
@@ -1304,12 +1378,11 @@
                     monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
                     monthPax += (Number(l.pax) || 0);
                 });
-                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
                 
                 logs.forEach(log => {
                     const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
                     
-                    // 🚀 核心更新：新增微縮版 Pilot 1 標籤
                     const pilotBadge = log.pilot1 ? `<span class="text-[10px] text-[var(--jx-gray)] truncate bg-[#F4F0EB] px-1.5 py-0.5 rounded shadow-sm max-w-[100px] flex-shrink border border-[var(--jx-divider)] ml-2">👨‍✈️ ${log.pilot1}</span>` : '';
 
                     groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')">
@@ -1417,18 +1490,23 @@
                 saveRouteMemory();
                 const outT = document.getElementById('inp-out').value; const offT = document.getElementById('inp-off').value;
                 const onT = document.getElementById('inp-on').value; const inT = document.getElementById('inp-in').value;
+                const dateStr = document.getElementById('inp-date').value;
+                const depICAO = document.getElementById('inp-dep').value.toUpperCase();
+                const arrICAO = document.getElementById('inp-arr').value.toUpperCase();
+
                 const chkTo = document.getElementById('chk-to').checked; const chkLdg = document.getElementById('chk-ldg').checked;
                 let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
                 if(chkTo && offT && offT.includes(':')) { const h = parseInt(offT.split(':')[0]); if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1; }
                 if(chkLdg && onT && onT.includes(':')) { const h = parseInt(onT.split(':')[0]); if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1; }
-                const nTimeMins = calcNightTime(outT, inT);
+                
+                // 呼叫全新的精確算式
+                const nTimeMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
 
                 payloadData = {
                     action: actionType, 
-                    // 🚀 核心更新：如果是在新增 (create)，則取得目前最大數值並+1
                     index: document.getElementById('inp-index').value || (actionType === 'create' ? generateNextIndex() : generateUUID()),
-                    date: document.getElementById('inp-date').value, filght_number: "JX" + document.getElementById('inp-flt').value, 
-                    airport_departure: document.getElementById('inp-dep').value.toUpperCase(), airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
+                    date: dateStr, filght_number: "JX" + document.getElementById('inp-flt').value, 
+                    airport_departure: depICAO, airport_arrival: arrICAO,
                     aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
                     total_block: minsToStr(calcDuration(outT, inT)), total_air: minsToStr(calcDuration(offT, onT)),
                     total_night: minsToStr(nTimeMins), duty: document.getElementById('inp-duty').value,
@@ -1436,7 +1514,7 @@
                     day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
                     pilot1: document.getElementById('inp-pilot1').value.trim() || '', pilot2: document.getElementById('inp-pilot2').value.trim() || '', pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
                     pilot4: 'Self', custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
-                    approach1_airport: document.getElementById('inp-arr').value.toUpperCase(), approach1_type: document.getElementById('inp-app').value,
+                    approach1_airport: arrICAO, approach1_type: document.getElementById('inp-app').value,
                     approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), fob_out: document.getElementById('inp-fob-out').value,
                     fob_off: document.getElementById('inp-fob-off').value, fob_on: document.getElementById('inp-fob-on').value, fob_in: document.getElementById('inp-fob-in').value
                 };
@@ -1488,9 +1566,6 @@
             document.getElementById('audit-modal').classList.remove('hidden');
         }
 
-        // ==========================================
-        // 📷 完整相機與 OCR 掃描解析引擎
-        // ==========================================
         async function openCamera() {
             const modal = document.getElementById('camera-modal');
             const video = document.getElementById('camera-stream');
