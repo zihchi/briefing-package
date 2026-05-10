@@ -6,6 +6,8 @@
     <title>Pilot Logbook - Starlux Ultimate FMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 新增 Chart.js DataLabels 套件以顯示數值 -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
@@ -439,17 +441,26 @@
 
     <div id="view-stats" class="hidden">
         <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
-            <div class="flex justify-between items-center">
-                <div class="relative">
-                    <select id="stats-time-filter" class="appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="renderStats()">
-                        <!-- Options generated dynamically -->
-                    </select>
-                    <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            <div class="flex justify-between items-start">
+                <div class="relative w-full max-w-[200px]">
+                    <div class="relative">
+                        <select id="stats-time-filter" class="w-full appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="handleStatsFilterChange()">
+                            <!-- Options generated dynamically -->
+                        </select>
+                        <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <!-- Custom Date Picker Wrapper -->
+                    <div id="custom-date-wrapper" class="hidden flex gap-2 mt-2">
+                        <input type="date" id="stats-start-date" class="border border-[var(--jx-divider)] rounded px-1.5 py-1 text-[11px] text-[var(--jx-dark)] w-1/2 shadow-sm bg-white" onchange="renderStats()">
+                        <input type="date" id="stats-end-date" class="border border-[var(--jx-divider)] rounded px-1.5 py-1 text-[11px] text-[var(--jx-dark)] w-1/2 shadow-sm bg-white" onchange="renderStats()">
+                    </div>
                 </div>
-                <h1 class="text-lg font-bold text-[var(--jx-dark)] ml-2">Captain Logbook</h1>
-                <button onclick="openCFModal()" class="flex items-center justify-center p-2 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] ml-auto" title="Carry Forward Settings">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                </button>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-lg font-bold text-[var(--jx-dark)] mt-1">Captain Logbook</h1>
+                    <button onclick="openCFModal()" class="flex items-center justify-center p-2 mt-0.5 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)]" title="Carry Forward Settings">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+                </div>
             </div>
         </header>
         <main class="max-w-md mx-auto mt-2">
@@ -460,11 +471,16 @@
             </div>
 
             <div class="horizontal-scroll" id="stats-cards-container"></div>
+            
             <div class="mt-6 px-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)]">
-                    <canvas id="flightChart" height="150"></canvas>
+                <!-- 圖表外部加上 overflow-x-auto 允許水平滑動 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)] overflow-x-auto overflow-y-hidden">
+                    <div id="chart-container" style="min-width: 100%; height: 160px; position: relative;">
+                        <canvas id="flightChart"></canvas>
+                    </div>
                 </div>
             </div>
+
             <div class="grid grid-cols-4 gap-y-6 gap-x-2 mt-8 px-2">
                 <div class="icon-stat">
                     <svg class="w-6 h-6 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -544,8 +560,6 @@
         // ==========================================
         // 🚀 使用者自定義：Carry Forward (前期累積) 🚀
         // ==========================================
-        // 請將您在此系統建立之前的紀錄填寫於下方。
-        // 未來每次載入網頁時，系統皆會以這裡的數字為基礎，往上疊加總計。
         const CF_CONFIG = {
             flights: 1796,         
             takeoffs: 1574,        
@@ -554,13 +568,15 @@
             nightTime: "461:49", 
             pax: 166213,           
             airports: 5,           
-            // 新增：前期累積的個別機型時數明細 (僅作展示，不影響已包含在內的 Total Time)
             previousAircraft: [
                 { type: "ATR", hours: "2566:42" },
                 { type: "CPL", hours: "260:36" }
             ]
         };
         // ==========================================
+
+        // 全域啟用 ChartDataLabels 外掛
+        Chart.register(ChartDataLabels);
 
         const GAS_URL = "https://script.google.com/macros/s/AKfycby1_5vXkHiBQ3Pg6DleneEYqjEcSnHEu5Q8vvAtgZkgc30IrH_15XNQ7DIUqwY0UWNy2g/exec"; 
 
@@ -593,6 +609,20 @@
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
+        }
+
+        // ==========================================
+        // 🚀 核心更新：根據現有資料生成升冪 Index
+        // ==========================================
+        function generateNextIndex() {
+            let maxIdx = 0;
+            flightLogs.forEach(l => {
+                const num = parseInt(l.index, 10);
+                if (!isNaN(num) && num > maxIdx) {
+                    maxIdx = num;
+                }
+            });
+            return maxIdx > 0 ? (maxIdx + 1).toString() : "1000";
         }
 
         function handleTimeInput(e, nextFieldId) {
@@ -775,7 +805,7 @@
                 flightLogs = (data.flights || []).filter(row => row.date).map(row => {
                     const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
                     return {
-                        index: row.index, date: safeDateString(row.date), 
+                        index: String(row.index), date: safeDateString(row.date), 
                         flt: String(row.filght_number).replace('JX',''), 
                         dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
                         reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
@@ -933,6 +963,9 @@
             document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
         }
 
+        // ==========================================
+        // 🚀 核心更新：支援自定義日期選單切換
+        // ==========================================
         function initTimeFilterDropdown() {
             const select = document.getElementById('stats-time-filter');
             select.innerHTML = ''; 
@@ -953,7 +986,19 @@
                 <option value="lastM">Last month (${lastMonthName})</option>
                 <option value="thisY">This year (${thisYear})</option>
                 <option value="lastY">Last year (${lastYear})</option>
+                <option value="custom">Select Dates...</option>
             `;
+        }
+
+        function handleStatsFilterChange() {
+            const filterVal = document.getElementById('stats-time-filter').value;
+            const customWrapper = document.getElementById('custom-date-wrapper');
+            if (filterVal === 'custom') {
+                customWrapper.classList.remove('hidden');
+            } else {
+                customWrapper.classList.add('hidden');
+            }
+            renderStats();
         }
 
         function filterLogsByTime(logs) {
@@ -974,6 +1019,14 @@
                         return logDate.getMonth() === lm && logDate.getFullYear() === ly;
                     case 'thisY': return logDate.getFullYear() === now.getFullYear();
                     case 'lastY': return logDate.getFullYear() === now.getFullYear() - 1;
+                    case 'custom':
+                        const startVal = document.getElementById('stats-start-date').value;
+                        const endVal = document.getElementById('stats-end-date').value;
+                        if (!startVal && !endVal) return true;
+                        const sDate = startVal ? new Date(startVal) : new Date('1900-01-01');
+                        const eDate = endVal ? new Date(endVal) : new Date('2100-01-01');
+                        eDate.setHours(23, 59, 59, 999);
+                        return logDate >= sDate && logDate <= eDate;
                     case 'career':
                     default: return true; 
                 }
@@ -1031,7 +1084,6 @@
                 dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
             });
 
-            // --- Carry Forward 邏輯 ---
             if (isCareer) {
                 tTot += cfData.flights || 0;
                 tTo += cfData.takeoffs || 0;
@@ -1045,7 +1097,6 @@
                 if((cfData.flights || cfData.totalMins) > 0) cfIndicator.classList.remove('hidden');
                 else cfIndicator.classList.add('hidden');
 
-                // 顯示自定義的前期機型時數 (僅 UI 呈現)
                 if (CF_CONFIG.previousAircraft && CF_CONFIG.previousAircraft.length > 0) {
                     document.getElementById('cf-prev-acft-title').classList.remove('hidden');
                     const prevAcftContainer = document.getElementById('stat-list-prev-acft');
@@ -1092,6 +1143,9 @@
             renderChart(sortedLogs);
         }
 
+        // ==========================================
+        // 🚀 核心更新：圖表標籤顯示與水平捲動
+        // ==========================================
         function renderChart(logs) {
             const ctx = document.getElementById('flightChart').getContext('2d');
             const monthMap = {};
@@ -1102,26 +1156,49 @@
                 monthMap[key] = (monthMap[key] || 0) + (l.totalMins / 60);
             });
             const sortedKeys = Object.keys(monthMap).sort();
-            const displayKeys = sortedKeys.slice(-6);
+            
+            // 擷取範圍內最近的 12 個月
+            const displayKeys = sortedKeys.slice(-12);
             let labels = displayKeys.map(k => {
                 const [y, m] = k.split('-');
                 return new Date(y, m-1).toLocaleString('en-US', { month: 'short' });
             });
             let data = displayKeys.map(k => Math.round(monthMap[k] * 10) / 10);
             if(labels.length === 0) { labels = ['No Data']; data = [0]; }
+            
+            // 動態計算 Canvas 寬度以實現水平捲動 (每個月給予最少 60px 寬度)
+            const chartContainer = document.getElementById('chart-container');
+            const minWidth = Math.max(labels.length * 60, chartContainer.parentElement.clientWidth - 32);
+            chartContainer.style.width = `${minWidth}px`;
+
             if(flightChartInst) flightChartInst.destroy();
             let gradient = ctx.createLinearGradient(0, 0, 0, 150);
             gradient.addColorStop(0, 'rgba(194, 163, 112, 0.4)'); 
             gradient.addColorStop(1, 'rgba(194, 163, 112, 0)');
+            
             flightChartInst = new Chart(ctx, {
                 type: 'line', data: {
                     labels: labels, datasets: [{
                         label: 'Flight Hours', data: data, borderColor: '#C2A370', backgroundColor: gradient,
-                        borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#FFFFFF'
+                        borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#FFFFFF',
+                        datalabels: {
+                            align: 'top',
+                            anchor: 'end',
+                            color: '#9A7B4F', // jx-gold-dark
+                            font: { weight: 'bold', size: 10 },
+                            offset: 4,
+                            formatter: function(value) { return value > 0 ? value : ''; }
+                        }
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false }, ticks: { font: {size: 10} } }, y: { display: false, min: 0 } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    layout: { padding: { top: 20, right: 10, left: 10 } }, // 預留標籤顯示空間
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { font: {size: 10} } }, 
+                        y: { display: false, min: 0, suggestedMax: Math.max(...data) * 1.2 } 
+                    }
                 }
             });
         }
@@ -1196,7 +1273,6 @@
 
             let validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
             
-            // 執行搜尋過濾
             if(query) {
                 validLogs = validLogs.filter(l => {
                     const fltMatch = String(l.flt).toLowerCase().includes(query);
@@ -1229,9 +1305,34 @@
                     monthPax += (Number(l.pax) || 0);
                 });
                 let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] sticky top-[72px] z-30 border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${monthPax}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                
                 logs.forEach(log => {
                     const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
-                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')"><div class="flex items-center gap-4 w-full"><div class="flex flex-col items-center justify-center w-10"><span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span><span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span></div><div class="flex-1"><div class="flex justify-between items-center mb-1"><span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span><span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)]">${blockTime}</span></div><div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium"><span>${log.dep} ✈ ${log.arr}</span><span>${log.reg || log.acft}</span></div></div></div></div>`;
+                    
+                    // 🚀 核心更新：新增微縮版 Pilot 1 標籤
+                    const pilotBadge = log.pilot1 ? `<span class="text-[10px] text-[var(--jx-gray)] truncate bg-[#F4F0EB] px-1.5 py-0.5 rounded shadow-sm max-w-[100px] flex-shrink border border-[var(--jx-divider)] ml-2">👨‍✈️ ${log.pilot1}</span>` : '';
+
+                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')">
+                        <div class="flex items-center gap-4 w-full">
+                            <div class="flex flex-col items-center justify-center w-10">
+                                <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
+                                <span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <div class="flex items-center truncate">
+                                        <span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span>
+                                        ${pilotBadge}
+                                    </div>
+                                    <span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)] flex-shrink-0 ml-2">${blockTime}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium">
+                                    <span>${log.dep} ✈ ${log.arr}</span>
+                                    <span>${log.reg || log.acft}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
                 });
                 groupHtml += `</div>`; finalHtml += groupHtml;
             }
@@ -1254,7 +1355,7 @@
         }
 
         function viewLog(index) {
-            const log = flightLogs.find(l => l.index === index);
+            const log = flightLogs.find(l => String(l.index) === String(index));
             if(!log) return;
             document.getElementById('inp-index').value = log.index;
             document.getElementById('inp-date').value = log.date; 
@@ -1281,7 +1382,6 @@
             if(log.fob_out || log.fob_off || log.fob_on || log.fob_in) document.getElementById('fuel-section').classList.remove('hidden');
             else document.getElementById('fuel-section').classList.add('hidden');
             
-            // 填充人員資料
             document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
             document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
             document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
@@ -1303,7 +1403,7 @@
             const index = document.getElementById('inp-index').value;
             if(!index) return;
             if(!confirm("Are you sure?")) return;
-            flightLogs = flightLogs.filter(l => l.index !== index);
+            flightLogs = flightLogs.filter(l => String(l.index) !== String(index));
             localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
             showToast("Deleted locally. Syncing...");
             cancelEntry();
@@ -1324,7 +1424,9 @@
                 const nTimeMins = calcNightTime(outT, inT);
 
                 payloadData = {
-                    action: actionType, index: document.getElementById('inp-index').value || generateUUID(),
+                    action: actionType, 
+                    // 🚀 核心更新：如果是在新增 (create)，則取得目前最大數值並+1
+                    index: document.getElementById('inp-index').value || (actionType === 'create' ? generateNextIndex() : generateUUID()),
                     date: document.getElementById('inp-date').value, filght_number: "JX" + document.getElementById('inp-flt').value, 
                     airport_departure: document.getElementById('inp-dep').value.toUpperCase(), airport_arrival: document.getElementById('inp-arr').value.toUpperCase(),
                     aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
@@ -1340,7 +1442,7 @@
                 };
 
                 const localLog = {
-                    index: payloadData.index, date: payloadData.date, flt: String(payloadData.filght_number).replace('JX',''),
+                    index: String(payloadData.index), date: payloadData.date, flt: String(payloadData.filght_number).replace('JX',''),
                     dep: payloadData.airport_departure, arr: payloadData.airport_arrival, reg: payloadData.aircraft, 
                     out: payloadData.time_blockout, off: payloadData.time_takeoff, on: payloadData.time_landing, in: payloadData.time_blockin,
                     totalMins: parseTimeToMins(payloadData.total_block), airMins: parseTimeToMins(payloadData.total_air), nightMins: parseTimeToMins(payloadData.total_night),
@@ -1353,7 +1455,7 @@
                 localLog.acft = acftData ? acftData.type : 'N/A';
 
                 if(actionType === 'update') {
-                    const idx = flightLogs.findIndex(l => l.index === payloadData.index);
+                    const idx = flightLogs.findIndex(l => String(l.index) === String(payloadData.index));
                     if(idx !== -1) flightLogs[idx] = localLog; cancelEntry();
                 } else { flightLogs.push(localLog); cancelEntry(); }
                 
