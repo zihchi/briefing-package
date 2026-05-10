@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <!-- 引入 SunCalc 天文計算引擎，用於精準計算 ICAO Night Time -->
+    <!-- SunCalc Astronomical Calculation Engine for precise ICAO Night Time -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
 
     <style>
@@ -35,7 +35,6 @@
         .jx-checkbox { width: 24px; height: 24px; accent-color: var(--jx-gold-dark); }
         .section-title { padding: 16px 16px 8px; font-size: 13px; color: #6E6E73; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .tab-bar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--jx-divider); padding-bottom: env(safe-area-inset-bottom, 16px); }
         .tab-btn { color: var(--jx-gray); transition: color 0.2s; }
         .tab-btn.active { color: var(--jx-gold-dark); }
         .horizontal-scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 0 16px; }
@@ -54,9 +53,16 @@
         body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea { pointer-events: none; opacity: 0.8; }
         body.view-mode select.ios-input { background-image: none; padding-right: 0; }
         body.view-mode #btn-scan-ocr, body.view-mode #btn-toggle-fuel { display: none; }
+
+        /* Desktop specific tweaks for the scrolling list */
+        @media (min-width: 768px) {
+            .stat-card { scroll-snap-align: none; min-width: 0; }
+            .horizontal-scroll { scroll-snap-type: none; overflow-x: visible; padding: 0; }
+            .ios-list { border-radius: 0.75rem; border: 1px solid var(--jx-divider); overflow: hidden; }
+        }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-24 md:pb-32">
 
     <!-- Sync Toast -->
     <div id="sync-toast">
@@ -93,7 +99,7 @@
                     <span class="font-bold">⚠️ 注意：為確保數據永久不遺失，本介面僅供「暫存預覽」。</span>
                     <span class="text-[var(--jx-gray)]">如需永久生效，請使用文字編輯器打開此 HTML 檔案，修改最上方的 <code>CF_CONFIG</code> 區塊。</span>
                 </div>
-                <div class="ios-list shadow-sm my-2 pointer-events-none opacity-80">
+                <div class="ios-list shadow-sm my-2 pointer-events-none opacity-80 md:rounded-none md:border-x-0">
                     <div class="ios-list-item bg-white">
                         <span class="text-[15px] font-medium">Total Flights</span>
                         <input type="number" id="cf-flights" class="ios-input !w-24" placeholder="0">
@@ -164,10 +170,10 @@
     </div>
 
     <!-- MAIN VIEWS -->
-    <div id="view-entry" class="block">
+    <div id="view-entry" class="hidden">
         <div id="edit-banner">Editing Mode</div>
         <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
-            <div class="flex justify-between items-start mb-2">
+            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start mb-2">
                 <div>
                     <p id="dash-date" class="text-sm text-[var(--jx-gold-dark)] font-semibold uppercase tracking-wider">May 8, 2026</p>
                     <h1 id="dash-flt" class="text-3xl font-bold tracking-wide mt-1">JX---</h1>
@@ -187,277 +193,299 @@
             </div>
         </header>
 
-        <main class="max-w-md mx-auto mt-2">
+        <main class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto mt-2 px-0 md:px-4">
             <input type="hidden" id="inp-index">
-
-            <!-- General Info -->
-            <div class="section-title">General Info</div>
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Date (UTC)</span>
-                    <input type="date" id="inp-date" class="ios-input" onchange="updateEntryDash()">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Flight Number</span>
-                    <div class="flex items-center w-3/5 justify-end">
-                        <span class="text-[var(--jx-gold-dark)] font-bold text-[17px] mr-1">JX</span>
-                        <input type="number" id="inp-flt" class="ios-input !w-auto !text-left flex-1 max-w-[80px]" placeholder="840" oninput="handleFltInput()" onblur="saveRouteMemory()">
-                    </div>
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Departure</span>
-                    <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="RCTP" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Arrival</span>
-                    <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="RJFF" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
-                </div>
-            </div>
-
-            <!-- Aircraft Database -->
-            <div class="section-title mt-2">Aircraft</div>
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Model / Type</span>
-                    <input type="text" id="inp-acft-select" class="ios-input font-bold" readonly placeholder="Auto-filled">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Registration</span>
-                    <select id="inp-reg" class="ios-input" onchange="handleRegistrationChange()">
-                        <option value="" disabled selected>Loading...</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="section-title mt-2 flex justify-between items-end">
-                <span>Time (UTC) & Fuel</span>
-                <div class="flex items-center gap-3">
-                    <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance</span>
-                    <button id="btn-scan-ocr" onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        Scan ACARS
-                    </button>
-                </div>
-            </div>
             
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item bg-white">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block Out</span>
-                    <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
-                </div>
-                <div class="ios-list-item bg-white">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Take Off</span>
-                    <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
-                </div>
-                <div class="ios-list-item bg-white">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Land On</span>
-                    <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
-                </div>
-                <div class="ios-list-item bg-white">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block In</span>
-                    <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
-                </div>
-                
-                <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
-                    <button id="btn-toggle-fuel" onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
-                        ⛽️ Toggle Fuel Info (FOB)
-                    </button>
-                    <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
-                        <div class="flex justify-between gap-4">
-                            <div class="w-1/2">
-                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Out) Tonnes</div>
-                                <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
+            <div class="md:grid md:grid-cols-2 md:gap-8">
+                <!-- Left Column for Desktop -->
+                <div class="space-y-4">
+                    <!-- General Info -->
+                    <div>
+                        <div class="section-title">General Info</div>
+                        <div class="ios-list shadow-sm">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Date (UTC)</span>
+                                <input type="date" id="inp-date" class="ios-input" onchange="updateEntryDash()">
                             </div>
-                            <div class="w-1/2">
-                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Off) Tonnes</div>
-                                <input type="number" step="0.1" id="inp-fob-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 14.8">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Flight Number</span>
+                                <div class="flex items-center w-3/5 justify-end">
+                                    <span class="text-[var(--jx-gold-dark)] font-bold text-[17px] mr-1">JX</span>
+                                    <input type="number" id="inp-flt" class="ios-input !w-auto !text-left flex-1 max-w-[80px]" placeholder="840" oninput="handleFltInput()" onblur="saveRouteMemory()">
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex justify-between gap-4">
-                            <div class="w-1/2">
-                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (On) Tonnes</div>
-                                <input type="number" step="0.1" id="inp-fob-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.5">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Departure</span>
+                                <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="RCTP" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
                             </div>
-                            <div class="w-1/2">
-                                <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (In) Tonnes</div>
-                                <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.2">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Arrival</span>
+                                <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="RJFF" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
                             </div>
                         </div>
                     </div>
+
+                    <!-- Aircraft Database -->
+                    <div>
+                        <div class="section-title md:mt-2">Aircraft</div>
+                        <div class="ios-list shadow-sm">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Model / Type</span>
+                                <input type="text" id="inp-acft-select" class="ios-input font-bold" readonly placeholder="Auto-filled">
+                            </div>
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Registration</span>
+                                <select id="inp-reg" class="ios-input" onchange="handleRegistrationChange()">
+                                    <option value="" disabled selected>Loading...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Crew Database -->
+                    <div>
+                        <div class="section-title md:mt-2">Flight Crew</div>
+                        <div class="ios-list shadow-sm">
+                            <!-- Pilot 1 -->
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
+                                <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
+                            </div>
+                            <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                                    <input type="text" id="inp-pilot1-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                                </div>
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                                    <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                                </div>
+                                <div class="w-full flex justify-end">
+                                    <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                                </div>
+                            </div>
+                            <!-- Pilot 2 -->
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
+                                <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
+                            </div>
+                            <div id="pilot2-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                                    <input type="text" id="inp-pilot2-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                                </div>
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                                    <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                                </div>
+                                <div class="w-full flex justify-end">
+                                    <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                                </div>
+                            </div>
+                            <!-- Pilot 3 -->
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
+                                <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
+                            </div>
+                            <div id="pilot3-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
+                                    <input type="text" id="inp-pilot3-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                                </div>
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
+                                    <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
+                                </div>
+                                <div class="w-full flex justify-end">
+                                    <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                                </div>
+                            </div>
+                            <!-- Self Duty -->
+                            <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
+                                <div class="flex flex-col">
+                                    <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
+                                    <span class="text-[12px] text-[var(--jx-gray)] font-medium">Duty</span>
+                                </div>
+                                <select id="inp-duty" class="ios-input !text-[var(--jx-gold-dark)] font-bold bg-transparent">
+                                    <option value="FO" selected>FO</option>
+                                    <option value="PIC">PIC</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
-                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
-                        <div id="dash-air-time" class="font-mono text-lg font-bold text-blue-500">00:00</div>
-                    </div>
-                    <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
-                        <div id="dash-block-time" class="font-mono text-lg font-bold text-red-500">00:00</div>
-                    </div>
-                    <div class="text-center w-1/3">
-                        <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
-                        <div id="dash-night-time" class="font-mono text-lg font-bold text-[var(--jx-gray)]">00:00</div>
-                    </div>
-                </div>
-            </div>
-            <!-- 修改了提示文字，標示已採用 ICAO 航線積分法 -->
-            <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 採 ICAO 標準精算：依據航線軌跡與太陽高度角 (-6°) 動態積分。</p>
+                <!-- Right Column for Desktop -->
+                <div class="space-y-4">
+                    <!-- Time & Fuel -->
+                    <div>
+                        <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
+                            <span>Time (UTC) & Fuel</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance</span>
+                                <button id="btn-scan-ocr" onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    Scan ACARS
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="ios-list shadow-sm">
+                            <div class="ios-list-item bg-white">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block Out</span>
+                                <input type="tel" id="inp-out" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-off')">
+                            </div>
+                            <div class="ios-list-item bg-white">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Take Off</span>
+                                <input type="tel" id="inp-off" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-on')">
+                            </div>
+                            <div class="ios-list-item bg-white">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Land On</span>
+                                <input type="tel" id="inp-on" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-in')">
+                            </div>
+                            <div class="ios-list-item bg-white">
+                                <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block In</span>
+                                <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                            </div>
+                            
+                            <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
+                                <button id="btn-toggle-fuel" onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
+                                    ⛽️ Toggle Fuel Info (FOB)
+                                </button>
+                                <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
+                                    <div class="flex justify-between gap-4">
+                                        <div class="w-1/2">
+                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Out) Tonnes</div>
+                                            <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
+                                        </div>
+                                        <div class="w-1/2">
+                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Off) Tonnes</div>
+                                            <input type="number" step="0.1" id="inp-fob-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 14.8">
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between gap-4">
+                                        <div class="w-1/2">
+                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (On) Tonnes</div>
+                                            <input type="number" step="0.1" id="inp-fob-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.5">
+                                        </div>
+                                        <div class="w-1/2">
+                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (In) Tonnes</div>
+                                            <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.2">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-            <div class="section-title mt-2 flex justify-between items-end">
-                <span>Operations (PF)</span>
-            </div>
-            <div class="ios-list shadow-sm">
-                <div class="ios-list-item flex-col items-start gap-2">
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[17px] font-medium">PF Takeoff Performed</span>
-                        <input type="checkbox" id="chk-to" class="jx-checkbox" onchange="evaluateOperations()">
+                            <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
+                                <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
+                                    <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
+                                    <div id="dash-air-time" class="font-mono text-lg font-bold text-blue-500">00:00</div>
+                                </div>
+                                <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
+                                    <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Block Time</div>
+                                    <div id="dash-block-time" class="font-mono text-lg font-bold text-red-500">00:00</div>
+                                </div>
+                                <div class="text-center w-1/3">
+                                    <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Night Time</div>
+                                    <div id="dash-night-time" class="font-mono text-lg font-bold text-[var(--jx-gray)]">00:00</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 採 ICAO 標準精算：依據航線軌跡與太陽高度角 (-6°) 動態積分。</p>
                     </div>
-                    <div id="to-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
-                </div>
-                <div class="ios-list-item flex-col items-start gap-2">
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[17px] font-medium">PF Landing Performed</span>
-                        <input type="checkbox" id="chk-ldg" class="jx-checkbox" onchange="evaluateOperations()">
-                    </div>
-                    <div id="ldg-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
-                </div>
-            </div>
 
-            <!-- Crew Database -->
-            <div class="section-title mt-2">Flight Crew</div>
-            <div class="ios-list shadow-sm">
-                <!-- Pilot 1 -->
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
-                    <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
-                </div>
-                <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                        <input type="text" id="inp-pilot1-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
+                    <!-- Operations (PF) -->
+                    <div>
+                        <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
+                            <span>Operations (PF)</span>
+                        </div>
+                        <div class="ios-list shadow-sm">
+                            <div class="ios-list-item flex-col items-start gap-2">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[17px] font-medium">PF Takeoff Performed</span>
+                                    <input type="checkbox" id="chk-to" class="jx-checkbox" onchange="evaluateOperations()">
+                                </div>
+                                <div id="to-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
+                            </div>
+                            <div class="ios-list-item flex-col items-start gap-2">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[17px] font-medium">PF Landing Performed</span>
+                                    <input type="checkbox" id="chk-ldg" class="jx-checkbox" onchange="evaluateOperations()">
+                                </div>
+                                <div id="ldg-result" class="text-sm font-semibold text-[var(--jx-gold-dark)] hidden"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                        <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                    </div>
-                    <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                    </div>
-                </div>
-                <!-- Pilot 2 -->
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
-                    <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
-                </div>
-                <div id="pilot2-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                        <input type="text" id="inp-pilot2-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
-                    </div>
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                        <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                    </div>
-                    <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                    </div>
-                </div>
-                <!-- Pilot 3 -->
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
-                    <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
-                </div>
-                <div id="pilot3-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                        <input type="text" id="inp-pilot3-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
-                    </div>
-                    <div class="flex justify-between w-full items-center">
-                        <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                        <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                    </div>
-                    <div class="w-full flex justify-end">
-                        <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                    </div>
-                </div>
-                <!-- Self Duty -->
-                <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
-                    <div class="flex flex-col">
-                        <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
-                        <span class="text-[12px] text-[var(--jx-gray)] font-medium">Duty</span>
-                    </div>
-                    <select id="inp-duty" class="ios-input !text-[var(--jx-gold-dark)] font-bold bg-transparent">
-                        <option value="FO" selected>FO</option>
-                        <option value="PIC">PIC</option>
-                    </select>
-                </div>
-            </div>
 
-            <!-- Remarks -->
-            <div class="section-title mt-2">Remarks & Approach</div>
-            <div class="ios-list shadow-sm mb-4">
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Passengers</span>
-                    <input type="number" id="inp-pax" class="ios-input" placeholder="153">
-                </div>
-                <div class="ios-list-item">
-                    <span class="text-[17px] font-medium">Approach</span>
-                    <div class="flex gap-2 items-center justify-end w-3/5">
-                        <select id="inp-app" class="ios-input !w-auto bg-transparent border-b border-[var(--jx-divider)] pb-1">
-                            <option value="ILS" selected>ILS</option>
-                            <option value="RNP">RNP</option>
-                            <option value="Visual">Visual</option>
-                            <option value="NPA">NPA</option>
-                            <option value="">N/A</option>
-                        </select>
-                        <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-[var(--jx-divider)] pb-1" placeholder="01R">
+                    <!-- Remarks & Approach -->
+                    <div>
+                        <div class="section-title mt-2 md:mt-0">Remarks & Approach</div>
+                        <div class="ios-list shadow-sm mb-4">
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Passengers</span>
+                                <input type="number" id="inp-pax" class="ios-input" placeholder="153">
+                            </div>
+                            <div class="ios-list-item">
+                                <span class="text-[17px] font-medium">Approach</span>
+                                <div class="flex gap-2 items-center justify-end w-3/5">
+                                    <select id="inp-app" class="ios-input !w-auto bg-transparent border-b border-[var(--jx-divider)] pb-1">
+                                        <option value="ILS" selected>ILS</option>
+                                        <option value="RNP">RNP</option>
+                                        <option value="Visual">Visual</option>
+                                        <option value="NPA">NPA</option>
+                                        <option value="">N/A</option>
+                                    </select>
+                                    <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-[var(--jx-divider)] pb-1" placeholder="01R">
+                                </div>
+                            </div>
+                            <div class="ios-list-item items-start">
+                                <span class="text-[17px] font-medium mt-2">Remarks</span>
+                                <textarea id="inp-remarks" class="ios-input h-16 pt-2 font-normal" placeholder="Tap to add notes..."></textarea>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="ios-list-item items-start">
-                    <span class="text-[17px] font-medium mt-2">Remarks</span>
-                    <textarea id="inp-remarks" class="ios-input h-16 pt-2 font-normal" placeholder="Tap to add notes..."></textarea>
-                </div>
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="p-4 pb-8" id="action-create">
-                <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg active:scale-95 transition-transform text-lg">Save Logbook Entry</button>
-            </div>
-            <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-view">
-                <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">Edit Entry (解鎖編輯)</button>
-                <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm active:scale-95 transition-transform">Back to Recent</button>
-            </div>
-            <div class="p-4 pb-8 flex flex-col gap-3 hidden" id="action-edit">
-                <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md active:scale-95 transition-transform text-lg">Save Changes</button>
-                <div class="flex gap-3">
-                    <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">Delete</button>
-                    <button onclick="cancelEntry()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm active:scale-95 transition-transform">Cancel</button>
+                    <!-- Action Buttons -->
+                    <div class="pb-8" id="action-create">
+                        <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg">Save Logbook Entry</button>
+                    </div>
+                    <div class="pb-8 flex flex-col gap-3 hidden" id="action-view">
+                        <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all text-lg">Edit Entry (解鎖編輯)</button>
+                        <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm hover:bg-gray-50 active:scale-95 transition-all">Back to Recent</button>
+                    </div>
+                    <div class="pb-8 flex flex-col gap-3 hidden" id="action-edit">
+                        <button onclick="queueAction('update')" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold tracking-wide py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all text-lg">Save Changes</button>
+                        <div class="flex gap-3">
+                            <button onclick="deleteLogEntry()" class="w-1/3 bg-white text-red-500 border border-red-200 font-semibold py-3 rounded-xl shadow-sm hover:bg-red-50 active:scale-95 transition-all">Delete</button>
+                            <button onclick="cancelEntry()" class="w-2/3 bg-white text-[var(--jx-dark)] border border-[var(--jx-divider)] font-semibold py-3 rounded-xl shadow-sm hover:bg-gray-50 active:scale-95 transition-all">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="view-recent" class="hidden min-h-screen bg-[var(--jx-bg)]">
+    <!-- Set default to block -->
+    <div id="view-recent" class="block min-h-screen bg-[var(--jx-bg)]">
         <!-- 搜尋框獨立固定在最上方 -->
         <div class="bg-[var(--jx-bg)] pt-12 pb-3 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
-            <div class="relative">
+            <div class="relative max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
                 <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight, Airport, or Pilot..." oninput="renderRecentFlights()">
             </div>
         </div>
         
         <!-- 標題部分，隨畫面滾動 -->
-        <header class="pt-6 pb-2 px-4" id="header-recent-title">
-            <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center">Recent Flights</h1>
-            <p class="text-center text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
+        <header class="pt-6 pb-2 px-4 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto" id="header-recent-title">
+            <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center md:text-left">Recent Flights</h1>
+            <p class="text-center md:text-left text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
         </header>
-        <main class="max-w-md mx-auto pb-12" id="recent-list-container"></main>
+        <main class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto pb-12" id="recent-list-container"></main>
     </div>
 
     <div id="view-stats" class="hidden">
-        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40">
-            <div class="flex justify-between items-start">
+        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] md:border-none shadow-sm md:shadow-none">
+            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start">
                 <div class="relative w-full max-w-[200px]">
                     <div class="relative">
                         <select id="stats-time-filter" class="w-full appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="handleStatsFilterChange()">
@@ -473,22 +501,22 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <h1 class="text-lg font-bold text-[var(--jx-dark)] mt-1">Captain Logbook</h1>
-                    <button onclick="openCFModal()" class="flex items-center justify-center p-2 mt-0.5 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)]" title="Carry Forward Settings">
+                    <button onclick="openCFModal()" class="flex items-center justify-center p-2 mt-0.5 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] bg-white shadow-sm md:shadow-none md:bg-transparent" title="Carry Forward Settings">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     </button>
                 </div>
             </div>
         </header>
-        <main class="max-w-md mx-auto mt-2">
+        <main class="mt-2">
             <!-- Indicator for Active CF -->
-            <div id="cf-indicator" class="hidden mx-4 mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm">
+            <div id="cf-indicator" class="hidden mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Carry Forward Data is Active (Career View)
             </div>
 
-            <div class="horizontal-scroll" id="stats-cards-container"></div>
+            <div class="horizontal-scroll md:grid md:grid-cols-3 md:gap-6 md:px-0 md:max-w-3xl lg:max-w-5xl mx-auto" id="stats-cards-container"></div>
             
-            <div class="mt-6 px-4">
+            <div class="mt-6 px-4 md:max-w-3xl lg:max-w-5xl mx-auto">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-[var(--jx-divider)] overflow-x-auto overflow-y-hidden">
                     <div id="chart-container" style="min-width: 100%; height: 160px; position: relative;">
                         <canvas id="flightChart"></canvas>
@@ -496,7 +524,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-y-6 gap-x-2 mt-8 px-2">
+            <div class="grid grid-cols-4 md:grid-cols-8 gap-y-6 gap-x-2 mt-8 px-2 md:max-w-3xl lg:max-w-5xl mx-auto">
                 <div class="icon-stat">
                     <svg class="w-6 h-6 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span class="text-[10px] text-[var(--jx-gray)] font-semibold">Flights</span>
@@ -534,28 +562,35 @@
                 </div>
             </div>
             
-            <div class="mt-8 px-4 mb-8">
-                <!-- 原有的機型與任務時數 -->
-                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Hours by Aircraft Type</div>
-                <div class="ios-list rounded-xl overflow-hidden" id="stat-list-acft"></div>
-                
-                <!-- 新增：前期累積獨立顯示區塊 (僅在 Career 模式顯示) -->
-                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 hidden" id="cf-prev-acft-title">Previous flight hours (included)</div>
-                <div class="ios-list rounded-xl overflow-hidden hidden" id="stat-list-prev-acft"></div>
+            <div class="mt-8 px-4 mb-8 md:max-w-3xl lg:max-w-5xl mx-auto">
+                <div class="md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-x-8 md:gap-y-0">
+                    <!-- Column 1 -->
+                    <div>
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 md:mt-0">Hours by Aircraft Type</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-acft"></div>
+                        
+                        <!-- 前期累積獨立顯示區塊 (僅在 Career 模式顯示) -->
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 hidden" id="cf-prev-acft-title">Previous flight hours (included)</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm hidden" id="stat-list-prev-acft"></div>
 
-                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
-                <div class="ios-list rounded-xl overflow-hidden" id="stat-list-duty"></div>
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-duty"></div>
+                    </div>
 
-                <!-- 新增：Top Pilots & Top Airports 排行榜 -->
-                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top Pilots Flown With</div>
-                <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
+                    <!-- Column 2 -->
+                    <div>
+                        <!-- Top Pilots & Top Airports 排行榜 -->
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 md:mt-0">Top Pilots Flown With</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
 
-                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top Destinations (Arrivals)</div>
-                <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-airports"></div>
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top Destinations (Arrivals)</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-airports"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-8 px-4 pb-12 flex justify-center">
-                <button onclick="runDataAudit()" class="text-sm font-semibold text-[var(--jx-gold-dark)] flex items-center gap-1.5 border border-[var(--jx-gold-dark)] px-5 py-2.5 rounded-full hover:bg-[#FDFBF7] active:scale-95 transition-all">
+                <button onclick="runDataAudit()" class="text-sm font-semibold text-[var(--jx-gold-dark)] flex items-center gap-1.5 border border-[var(--jx-gold-dark)] px-5 py-2.5 rounded-full hover:bg-[#FDFBF7] active:scale-95 transition-all bg-white shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     執行資料稽核 (Run Data Audit)
                 </button>
@@ -563,16 +598,17 @@
         </main>
     </div>
 
-    <nav class="tab-bar fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <button class="tab-btn active flex flex-col items-center w-1/3" onclick="switchTab('entry')">
+    <nav class="fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:w-auto md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:px-8 md:py-2 md:gap-12 md:border md:border-gray-200 md:shadow-xl md:pt-2">
+        <button class="tab-btn flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span class="text-[10px] font-semibold">Entry</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-1/3" onclick="switchTab('recent')">
+        <!-- Set Recent as active by default -->
+        <button class="tab-btn active flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('recent')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             <span class="text-[10px] font-semibold">Recent</span>
         </button>
-        <button class="tab-btn flex flex-col items-center w-1/3" onclick="switchTab('stats')">
+        <button class="tab-btn flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('stats')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             <span class="text-[10px] font-semibold">Stats</span>
         </button>
@@ -682,7 +718,7 @@
             }
             e.target.value = formatted;
             
-            if (document.getElementById('view-entry').classList.contains('block') && e.target.id.includes('inp-')) {
+            if (!document.getElementById('view-entry').classList.contains('hidden') && e.target.id.includes('inp-')) {
                 calculateTimes();
             }
 
@@ -727,10 +763,6 @@
             return diff;
         }
 
-        /**
-         * 🚀 精準 ICAO Night Time 計算引擎 (利用 SunCalc 與航路積分)
-         * 太陽落於地平線下 6 度 (Civil Twilight) 為夜間判定標準。
-         */
         function calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT) {
             if(!dateStr || !outT || !inT || !depICAO || !arrICAO) return 0;
             
@@ -745,7 +777,6 @@
 
             const totalMins = inM - outM;
 
-            // 如果機場不在資料庫中，退回傳統的簡單估算 (UTC 10~22)
             if(!dep || !arr) {
                 console.warn(`[NightCalc] Airport Lat/Lon missing for ${depICAO} or ${arrICAO}. Using fallback.`);
                 let nightMinsFallback = 0;
@@ -756,14 +787,12 @@
                 return nightMinsFallback;
             }
 
-            // 解析 Date 字串 (確保以 UTC 基準生成 Date 物件，避免本地時區干擾)
             const [yy, mm, dd] = dateStr.split('-');
             const utcDateBase = new Date(Date.UTC(yy, mm - 1, dd, 0, 0, 0));
 
             let nightMins = 0;
-            const CIVIL_TWILIGHT_RAD = -6 * (Math.PI / 180); // -0.104719
+            const CIVIL_TWILIGHT_RAD = -6 * (Math.PI / 180); 
 
-            // 處理跨越國際換日線 (IDL) 或太平洋的經度補償
             let depLon = dep.lon;
             let arrLon = arr.lon;
             if (Math.abs(arrLon - depLon) > 180) {
@@ -771,25 +800,19 @@
                 if (arrLon < 0) arrLon += 360;
             }
 
-            // 積分迴圈：將總飛行時間切為 1 分鐘片段，動態檢查航機當下位置的太陽高度
             for(let m = 0; m < totalMins; m++) {
-                // 當前分鐘絕對值 (相對於 UTC 00:00)
                 const currentMinAbsolute = outM + m;
                 
-                // 動態內插計算當下航機經緯度 (線性假定)
                 const fraction = m / totalMins;
                 const curLat = dep.lat + (arr.lat - dep.lat) * fraction;
                 
                 let curLon = depLon + (arrLon - depLon) * fraction;
-                if (curLon > 180) curLon -= 360; // 還原為標準經度
+                if (curLon > 180) curLon -= 360; 
 
-                // 產生精確時間物件
                 const curTimeObj = new Date(utcDateBase.getTime() + currentMinAbsolute * 60000);
 
-                // 丟進天文引擎計算
                 const sunPos = SunCalc.getPosition(curTimeObj, curLat, curLon);
 
-                // 如果太陽中心點低於地平線下 6 度，計入 Night Time
                 if (sunPos.altitude <= CIVIL_TWILIGHT_RAD) {
                     nightMins++;
                 }
@@ -947,6 +970,8 @@
             });
             ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            // Force block display context on element that needed it
+            document.getElementById(`view-${tabId}`).style.display = '';
 
             if (tabId === 'entry' && !bypassReset && document.getElementById('action-create').classList.contains('hidden')) {
                 cancelEntry(); 
@@ -1007,7 +1032,6 @@
                 document.getElementById('dash-block-time').textContent = bTime;
                 document.getElementById('dash-block-time-top').textContent = bTime;
                 
-                // 調用全新的精準算式
                 const calculatedNightMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
                 document.getElementById('dash-night-time').textContent = minsToStr(calculatedNightMins);
             } else {
@@ -1143,7 +1167,7 @@
             const sortedLogs = [...filteredLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
             
             const createCardHTML = (title, items, type) => {
-                let html = `<div class="stat-card"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
+                let html = `<div class="stat-card md:h-full md:min-w-0"><h3 class="text-sm font-bold text-[var(--jx-dark)] mb-2">${title}</h3>`;
                 if(items.length === 0) html += `<p class="text-xs text-[var(--jx-gray)]">No recent data.</p>`;
                 items.forEach(log => {
                     let d = new Date(log.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric'});
@@ -1182,9 +1206,7 @@
                 typeMins[acftType] = (typeMins[acftType] || 0) + (l.totalMins || 0);
                 dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
 
-                // 統計到達機場
                 if(l.arr) arrCounts[l.arr] = (arrCounts[l.arr] || 0) + 1;
-                // 統計共同飛行的飛行員
                 [l.pilot1, l.pilot2, l.pilot3].forEach(p => {
                     if (p && String(p).trim() !== '' && String(p).toLowerCase() !== 'self') {
                         pilotCounts[p] = (pilotCounts[p] || 0) + 1;
@@ -1233,7 +1255,6 @@
             document.getElementById('stat-tot-time').textContent = minsToStr(tMins);
             document.getElementById('stat-tot-night').textContent = minsToStr(tNight); 
             
-            // 處理載客率顯示 (除了 Career 以外)
             let paxText = tPax;
             if (!isCareer && tTot > 0) {
                 let lf = (((tPax / tTot) / 297) * 100).toFixed(1);
@@ -1256,7 +1277,6 @@
             };
             renderList(typeMins, 'stat-list-acft'); renderList(dutyMins, 'stat-list-duty');
             
-            // 渲染排行榜 (Top Pilots & Airports)
             let sortedPilots = Object.entries(pilotCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
             let sortedArr = Object.entries(arrCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
             
@@ -1282,7 +1302,7 @@
                     if (dataArr.length > 0) {
                         html += `
                             <div class="p-0 border-t border-[var(--jx-divider)] bg-[#FDFBF7]">
-                                <button onclick="showListModal('${title}', '${type}')" class="w-full py-3 text-[13px] font-bold text-[var(--jx-gold-dark)] active:bg-[#E8E4DF] transition-colors tracking-wide">
+                                <button onclick="showListModal('${title}', '${type}')" class="w-full py-3 text-[13px] font-bold text-[var(--jx-gold-dark)] hover:bg-[#E8E4DF] active:bg-[#DED8D0] transition-colors tracking-wide">
                                     Show All (${dataArr.length})
                                 </button>
                             </div>
@@ -1298,13 +1318,12 @@
             renderChart(sortedLogs);
         }
 
-        // 顯示排名列表 Modal 的函式
         function showListModal(title, type) {
             document.getElementById('list-modal-title').textContent = title;
             const content = document.getElementById('list-modal-content');
             let dataArr = type === 'pilots' ? window.currentSortedPilots : window.currentSortedAirports;
             
-            let html = '<div class="ios-list shadow-sm my-2">';
+            let html = '<div class="ios-list shadow-sm my-2 md:rounded-xl md:border-x-0">';
             dataArr.forEach((item, index) => {
                 let rankBadge = index < 3 ? `<span class="bg-[var(--jx-gold)] text-white text-[9px] px-1.5 py-0.5 rounded ml-2 shadow-sm">Top ${index+1}</span>` : '';
                 html += `
@@ -1478,18 +1497,17 @@
                     monthPax += (Number(l.pax) || 0);
                 });
                 
-                // 計算載客率 (平均每趟載客數 / 297)
                 let lf = logs.length > 0 ? (((monthPax / logs.length) / 297) * 100).toFixed(1) : 0;
                 let paxDisplay = `${monthPax} <span class="text-[9px] text-[var(--jx-gray)] font-normal ml-0.5">(${lf}%)</span>`;
 
-                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${paxDisplay}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)]">`;
+                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] md:rounded-t-xl md:mt-6 flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${paxDisplay}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)] md:bg-transparent md:border-none md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:p-4">`;
                 
                 logs.forEach(log => {
                     const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
                     
                     const pilotBadge = log.pilot1 ? `<span class="text-[10px] text-[var(--jx-gray)] truncate bg-[#F4F0EB] px-1.5 py-0.5 rounded shadow-sm max-w-[100px] flex-shrink border border-[var(--jx-divider)] ml-2">👨‍✈️ ${log.pilot1}</span>` : '';
 
-                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] cursor-pointer active:bg-gray-50 transition-colors" onclick="viewLog('${log.index}')">
+                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] md:border md:rounded-xl md:bg-white md:shadow-sm cursor-pointer active:bg-gray-50 hover:bg-gray-50 md:hover:shadow-md transition-all" onclick="viewLog('${log.index}')">
                         <div class="flex items-center gap-4 w-full">
                             <div class="flex flex-col items-center justify-center w-10">
                                 <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
@@ -1603,7 +1621,6 @@
                 if(chkTo && offT && offT.includes(':')) { const h = parseInt(offT.split(':')[0]); if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1; }
                 if(chkLdg && onT && onT.includes(':')) { const h = parseInt(onT.split(':')[0]); if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1; }
                 
-                // 呼叫全新的精確算式
                 const nTimeMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
 
                 payloadData = {
