@@ -582,41 +582,6 @@
 
                 let foundAny = false;
                 
-                // 將文字扁平化處理，減少換行造成的比對錯誤
-                const fullTextFlattened = text.replace(/\n/g, ' ');
-
-                // 1. 解析 FLT ID (捕捉 JX 或 FLT 後方的數字，利用 parseInt 過濾前導 0)
-                const fltMatch = fullTextFlattened.match(/(?:JX|FLT)[^\d]*([0-9OIlZS]+)/i);
-                if (fltMatch) {
-                     let numStr = fltMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
-                     let fltNum = parseInt(numStr, 10);
-                     if (!isNaN(fltNum)) {
-                         document.getElementById('inp-flt').value = fltNum;
-                         foundAny = true;
-                     }
-                }
-
-                // 2. 解析 Airports (鎖定 R, V, W, K 開頭的標準四碼 ICAO)
-                const airportRegex = /\b([RVKW][A-Z]{3})\b/g;
-                const airports = [...fullTextFlattened.matchAll(airportRegex)].map(m => m[1]);
-                const uniqueAirports = [...new Set(airports)];
-                if (uniqueAirports.length >= 2) {
-                    document.getElementById('inp-dep').value = uniqueAirports[0];
-                    document.getElementById('inp-arr').value = uniqueAirports[1];
-                    foundAny = true;
-                }
-
-                // 3. 解析 DATE
-                const dateMatch = fullTextFlattened.match(/(?:DATE|DT|DAT)[^\d]*([0-3]?[0-9OIlZS])[\s\-\.]*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/i);
-                if (dateMatch) {
-                    let dayStr = dateMatch[1].replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
-                    const d = new Date(`${dayStr} ${dateMatch[2]} ${new Date().getFullYear()}`);
-                    if (!isNaN(d)) {
-                        document.getElementById('inp-date').value = safeDateString(d);
-                        foundAny = true;
-                    }
-                }
-
                 // 4. 解析 OOOI & Fuel (逐行精準掃描，確保時間與油量互相綁定)
                 const lines = text.split('\n');
                 const extractEvent = (keyword) => {
@@ -629,7 +594,7 @@
                         timeVal = tMatch[1].replace(':', '').replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
                     }
 
-                    const fMatch = line.match(/(\d{1,3}[\.\,]\d{1,2})/);
+                    const fMatch = line.match(/(?:FOB|FUEL)?[^\d]*?(\d{1,3}[\.\,]\d{1,2})/);
                     let fuelVal = null;
                     if (fMatch) {
                         fuelVal = fMatch[1].replace(',', '.');
@@ -663,7 +628,7 @@
                     updateEntryDash();
                     showToast("掃描與資料萃取成功！ (Scan Success)");
                 } else {
-                    alert("未偵測到完整格式，請重新對準螢幕並避免反光。");
+                    alert("未偵測到完整 OOOI 格式，請重新對準螢幕並避免反光。");
                 }
                 closeCamera();
             } catch (err) {
