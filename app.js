@@ -570,7 +570,7 @@ function initAviationMap() {
             }
 
             // 🎯 更新：針對 Main Body 的「更淺灰色螢光筆」質感樣式（取消粗體）
-const highlightStyle = isMainBody ? 'background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
+const highlightStyle = isMainBody ? 'background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
 
             // 🛠️ 寬度溢出修正點：保留 word-break 並注入重點高亮
             htmlOutput += `
