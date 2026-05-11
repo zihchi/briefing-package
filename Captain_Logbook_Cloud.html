@@ -2,13 +2,13 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2C2C2E">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="JX Logbook">
-    <title>Pilot Logbook - Starlux Ultimate FMS</title>
+    <meta name="apple-mobile-web-app-title" content="Pilot Logbook">
+    <title>Pilot Logbook</title>
     
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -67,7 +67,8 @@
         }
     </style>
 </head>
-<body class="pb-24 md:pb-32">
+<!-- 加大 mobile 底部留白，避免內容被加高的導覽列遮擋 -->
+<body class="pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-32">
 
     <!-- Sync Toast -->
     <div id="sync-toast">
@@ -329,7 +330,7 @@
                             <div class="flex items-center gap-3">
                                 <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance</span>
                                 <button id="btn-scan-ocr" onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                     Scan ACARS
                                 </button>
                             </div>
@@ -505,7 +506,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <h1 class="text-lg font-bold text-[var(--jx-dark)] mt-1">Captain Logbook</h1>
+                    <h1 class="text-lg font-bold text-[var(--jx-dark)] mt-1">Pilot Logbook</h1>
                     <button onclick="openCFModal()" class="flex items-center justify-center p-2 mt-0.5 rounded-full hover:bg-[var(--jx-divider)] transition-colors text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] bg-white shadow-sm md:shadow-none md:bg-transparent" title="Carry Forward Settings">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     </button>
@@ -514,9 +515,9 @@
         </header>
         <main class="mt-2">
             <!-- Indicator for Active CF -->
-            <div id="cf-indicator" class="hidden mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm">
+            <div id="cf-indicator" onclick="toggleCF()" class="hidden mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Carry Forward Data is Active (Career View)
+                Carry Forward Included (Tap to exclude)
             </div>
 
             <div class="horizontal-scroll md:grid md:grid-cols-3 md:gap-6 md:px-0 md:max-w-3xl lg:max-w-5xl mx-auto" id="stats-cards-container"></div>
@@ -603,7 +604,8 @@
         </main>
     </div>
 
-    <nav class="fixed bottom-0 w-full flex justify-around items-center pt-2 z-50 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:w-auto md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:px-8 md:py-2 md:gap-12 md:border md:border-gray-200 md:shadow-xl md:pt-2">
+    <!-- 增加 env(safe-area-inset-bottom) 以避開 iPhone 底部白條 -->
+    <nav class="fixed bottom-0 w-full flex justify-around items-center pt-2 pb-[max(0.8rem,env(safe-area-inset-bottom))] z-50 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:w-auto md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:px-8 md:py-2 md:pb-2 md:gap-12 md:border md:border-gray-200 md:shadow-xl">
         <button class="tab-btn flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span class="text-[10px] font-semibold">Entry</span>
@@ -625,7 +627,7 @@
     <script>
         // 1. 動態生成 manifest.json
         const manifestData = {
-            "name": "JX Logbook Offline",
+            "name": "Pilot Logbook",
             "short_name": "Logbook",
             "start_url": ".",
             "display": "standalone",
@@ -783,6 +785,7 @@
         let dbAircrafts = [];
         let dbPilots = [];
         let cfData = {}; 
+        let isCfActive = true; // CF 資料預設為帶入
         
         let flightChartInst = null;
         let videoStream = null;
@@ -1265,6 +1268,12 @@
                 }
             });
         }
+        
+        // 切換 Carry Forward 資料是否計算
+        function toggleCF() {
+            isCfActive = !isCfActive;
+            renderStats();
+        }
 
         function renderStats() {
             const filterVal = document.getElementById('stats-time-filter').value;
@@ -1326,36 +1335,52 @@
             });
 
             if (isCareer) {
-                tTot += cfData.flights || 0;
-                tTo += cfData.takeoffs || 0;
-                tLdg += cfData.landings || 0;
-                tMins += cfData.totalMins || 0;
-                tNight += cfData.nightMins || 0;
-                tPax += cfData.pax || 0;
-                let totalAirports = aptSet.size + (cfData.airports || 0);
-                document.getElementById('stat-tot-apt').textContent = totalAirports;
-                
-                if((cfData.flights || cfData.totalMins) > 0) cfIndicator.classList.remove('hidden');
-                else cfIndicator.classList.add('hidden');
+                if((cfData.flights || cfData.totalMins) > 0) {
+                    cfIndicator.classList.remove('hidden');
+                    
+                    if (isCfActive) {
+                        cfIndicator.className = 'mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none';
+                        cfIndicator.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Carry Forward Included (Tap to exclude)`;
 
-                if (CF_CONFIG.previousAircraft && CF_CONFIG.previousAircraft.length > 0) {
-                    document.getElementById('cf-prev-acft-title').classList.remove('hidden');
-                    const prevAcftContainer = document.getElementById('stat-list-prev-acft');
-                    prevAcftContainer.classList.remove('hidden');
-                    let prevHtml = '';
-                    CF_CONFIG.previousAircraft.forEach(item => {
-                        prevHtml += `
-                            <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
-                                <span class="text-sm font-medium text-[var(--jx-gray)]">${item.type}</span>
-                                <span class="text-sm font-bold text-[var(--jx-dark)]">${item.hours}</span>
-                            </div>
-                        `;
-                    });
-                    prevAcftContainer.innerHTML = prevHtml;
+                        tTot += cfData.flights || 0;
+                        tTo += cfData.takeoffs || 0;
+                        tLdg += cfData.landings || 0;
+                        tMins += cfData.totalMins || 0;
+                        tNight += cfData.nightMins || 0;
+                        tPax += cfData.pax || 0;
+                        let totalAirports = aptSet.size + (cfData.airports || 0);
+                        document.getElementById('stat-tot-apt').textContent = totalAirports;
+
+                        if (CF_CONFIG.previousAircraft && CF_CONFIG.previousAircraft.length > 0) {
+                            document.getElementById('cf-prev-acft-title').classList.remove('hidden');
+                            const prevAcftContainer = document.getElementById('stat-list-prev-acft');
+                            prevAcftContainer.classList.remove('hidden');
+                            let prevHtml = '';
+                            CF_CONFIG.previousAircraft.forEach(item => {
+                                prevHtml += `
+                                    <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                                        <span class="text-sm font-medium text-[var(--jx-gray)]">${item.type}</span>
+                                        <span class="text-sm font-bold text-[var(--jx-dark)]">${item.hours}</span>
+                                    </div>
+                                `;
+                            });
+                            prevAcftContainer.innerHTML = prevHtml;
+                        }
+                    } else {
+                        // 當關閉時的樣式與文字
+                        cfIndicator.className = 'mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-gray-50 border border-[var(--jx-divider)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gray)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none';
+                        cfIndicator.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Carry Forward Excluded (Tap to include)`;
+
+                        document.getElementById('stat-tot-apt').textContent = aptSet.size;
+                        document.getElementById('cf-prev-acft-title').classList.add('hidden');
+                        document.getElementById('stat-list-prev-acft').classList.add('hidden');
+                    }
+                } else {
+                    cfIndicator.classList.add('hidden');
                 }
             } else {
-                document.getElementById('stat-tot-apt').textContent = aptSet.size;
                 cfIndicator.classList.add('hidden');
+                document.getElementById('stat-tot-apt').textContent = aptSet.size;
                 document.getElementById('cf-prev-acft-title').classList.add('hidden');
                 document.getElementById('stat-list-prev-acft').classList.add('hidden');
             }
