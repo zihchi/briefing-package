@@ -563,16 +563,21 @@ function initAviationMap() {
             const emojis = getWeatherEmojis(cleanLine);
             const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
 
+            let isMainBody = false;
             if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
                 prevailingVis = current.vis; prevailingCeil = current.ceil;
+                isMainBody = true;
             }
 
-            // 🛠️ 寬度溢出修正點：加入 word-break 確保長行文字會折行
+            // 🎯 新增：針對 Main Body 的「淺灰色螢光筆」質感樣式
+            const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
+
+            // 🛠️ 寬度溢出修正點：保留 word-break 並注入重點高亮
             htmlOutput += `
                 <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
                     <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
                     ${emojiHtml}
-                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word;">${cleanLine}</span>
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
                 </div>
             `;
         });
@@ -658,8 +663,8 @@ function initAviationMap() {
             const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
             const isMobile = window.innerWidth < 768;
             
-            // 手機版扣除安全邊距 (約40px)，強制讓彈出視窗比螢幕略小
-            const dynamicMaxWidth = isMobile ? (mapWidth - 40) : 500;
+            // 手機版扣除安全邊距 (加碼至 50px)；平板/電腦版放寬限制至地圖寬度的 70%
+            const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
             const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
             
             const popupOpts = { 
