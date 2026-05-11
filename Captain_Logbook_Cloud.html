@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2C2C2E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JX Logbook">
     <title>Pilot Logbook - Starlux Ultimate FMS</title>
     
     <!-- External Libraries -->
@@ -614,6 +619,107 @@
         </button>
     </nav>
 
+    <!-- ========================================== -->
+    <!-- 🚀 PWA 離線核心架構 (動態生成，維持單一檔案) 🚀 -->
+    <!-- ========================================== -->
+    <script>
+        // 1. 動態生成 manifest.json
+        const manifestData = {
+            "name": "JX Logbook Offline",
+            "short_name": "Logbook",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#F4F0EB",
+            "theme_color": "#2C2C2E",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23C2A370'/%3E%3Ctext x='50' y='65' font-size='50' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EJX%3C/text%3E%3C/svg%3E",
+                    "sizes": "192x192",
+                    "type": "image/svg+xml"
+                }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = manifestUrl;
+        document.head.appendChild(link);
+
+        // 2. 動態生成 Service Worker 程式碼
+        const swCode = `
+            const CACHE_NAME = 'jx-logbook-v1';
+            // 這些是被要求快取的重要外部 CDN
+            const urlsToCache = [
+                'https://cdn.tailwindcss.com',
+                'https://cdn.jsdelivr.net/npm/chart.js',
+                'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
+                'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js',
+                'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
+            ];
+
+            self.addEventListener('install', event => {
+                event.waitUntil(
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            console.log('Opened cache');
+                            // 不強求所有 CDN 第一次都成功，避免安裝失敗
+                            return Promise.allSettled(urlsToCache.map(url => cache.add(url)));
+                        })
+                );
+            });
+
+            self.addEventListener('fetch', event => {
+                // 如果是請求 Google Apps Script (雲端資料庫)，則採 Network Only (有網路才抓)
+                if (event.request.url.includes('script.google.com')) {
+                    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: "offline" }), { headers: { 'Content-Type': 'application/json' } })));
+                    return;
+                }
+
+                // 對於 CDN 和本地 HTML，採取 Cache-First (快取優先) 策略，保證飛機上瞬間載入
+                event.respondWith(
+                    caches.match(event.request)
+                        .then(response => {
+                            // 若快取有資料，立刻返回快取
+                            if (response) {
+                                // 背景偷偷去網路抓最新的更新快取 (Stale-While-Revalidate)
+                                fetch(event.request).then(res => {
+                                    if(res && res.status === 200) {
+                                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, res));
+                                    }
+                                }).catch(()=>console.log('Offline: Using cached version'));
+                                return response;
+                            }
+                            // 否則去網路抓
+                            return fetch(event.request).then(response => {
+                                if(!response || response.status !== 200 || response.type !== 'basic') return response;
+                                let responseToCache = response.clone();
+                                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+                                return response;
+                            }).catch(() => {
+                                console.log('Offline and not cached:', event.request.url);
+                            });
+                        }
+                    )
+                );
+            });
+        `;
+
+        // 3. 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl).then(registration => {
+                    console.log('PWA ServiceWorker 註冊成功，現已支援無網路環境開啟。');
+                }).catch(err => {
+                    console.log('ServiceWorker 註冊失敗: ', err);
+                });
+            });
+        }
+    </script>
+
+    <!-- 原本的應用程式邏輯碼 -->
     <script>
         // ==========================================
         // 🚀 使用者自定義：Carry Forward (前期累積) 🚀
@@ -904,11 +1010,16 @@
 
         async function fetchDataFromCloud() {
             if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
+            // 由於加了 PWA，即使沒網路 fetch 也會很快失敗或回傳快取
             if(flightLogs.length === 0) showToast("Fetching initial data...", true);
             
             try {
                 const response = await fetch(GAS_URL);
                 const data = await response.json(); 
+                if(data.error === "offline") {
+                    console.log("Currently offline, skipping cloud fetch");
+                    return;
+                }
                 
                 dbAircrafts = data.aircrafts || []; populateAircraftDropdowns();
                 localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
