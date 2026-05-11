@@ -651,9 +651,23 @@ function initAviationMap() {
         const marker = L.marker([airport.lat, airport.lng]).addTo(window.aviationMapInstance);
 
         marker.on('click', function() {
+            // 🛠️ 核心修正：動態取得地圖容器高度，防止 iPhone 直向裁切
+            const mapElement = document.getElementById('map');
+            const mapHeight = mapElement ? mapElement.clientHeight : window.innerHeight;
             const isMobile = window.innerWidth < 768;
+            
             const dynamicMaxWidth = isMobile ? window.innerWidth * 0.85 : 500;
-            const popupOpts = { maxWidth: dynamicMaxWidth, maxHeight: 450, autoPanPadding: [15, 15] };
+            
+            // 將最大高度限制在地圖實際高度的 80% 左右（或最大不超過 450）
+            // 這樣 Leaflet 就會啟動內部捲動條，而不會讓內容掉到地圖外面
+            const dynamicMaxHeight = isMobile ? Math.min(mapHeight * 0.8, 450) : 450;
+            
+            const popupOpts = { 
+                maxWidth: dynamicMaxWidth, 
+                maxHeight: dynamicMaxHeight, 
+                autoPanPadding: isMobile ? [10, 10] : [15, 15], // 手機版稍微縮小預留邊界換取空間
+                keepInView: true 
+            };
 
             if (!isDataReady) {
                 L.popup(popupOpts)
