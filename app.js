@@ -340,6 +340,7 @@ function fetchPopupAtis(icao) {
         const arrAgeBadge = calculatePopupAtisAge(data.arrival);
         const depAgeBadge = calculatePopupAtisAge(data.departure);
 
+        // 🛠️ 寬度溢出修正點：加入 word-break 確保文字會自動換行
         contentBox.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="background-color: #f8fafc; border-left: 4px solid #3c79ff; padding: 10px; border-radius: 6px;">
@@ -347,14 +348,14 @@ function fetchPopupAtis(icao) {
                         <span style="font-weight: bold; color: #3c79ff; font-size: 13px;">📥 ARRIVAL ATIS</span>
                         ${arrAgeBadge}
                     </div>
-                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.arrival || "無 Arrival 資料"}</div>
+                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.arrival || "無 Arrival 資料"}</div>
                 </div>
                 <div style="background-color: #f8fafc; border-left: 4px solid #e67e22; padding: 10px; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <span style="font-weight: bold; color: #e67e22; font-size: 13px;">🛫 DEPARTURE ATIS</span>
                         ${depAgeBadge}
                     </div>
-                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none;">${data.departure || "無 Departure 資料"}</div>
+                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.departure || "無 Departure 資料"}</div>
                 </div>
             </div>
         `;
@@ -566,11 +567,12 @@ function initAviationMap() {
                 prevailingVis = current.vis; prevailingCeil = current.ceil;
             }
 
+            // 🛠️ 寬度溢出修正點：加入 word-break 確保長行文字會折行
             htmlOutput += `
                 <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
                     <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
                     ${emojiHtml}
-                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle;">${cleanLine}</span>
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word;">${cleanLine}</span>
                 </div>
             `;
         });
@@ -651,21 +653,20 @@ function initAviationMap() {
         const marker = L.marker([airport.lat, airport.lng]).addTo(window.aviationMapInstance);
 
         marker.on('click', function() {
-            // 🛠️ 核心修正：動態取得地圖容器高度，防止 iPhone 直向裁切
+            // 🛠️ 核心修正：精準抓取容器寬度，解決橫向裁切問題
             const mapElement = document.getElementById('map');
-            const mapHeight = mapElement ? mapElement.clientHeight : window.innerHeight;
+            const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
             const isMobile = window.innerWidth < 768;
             
-            const dynamicMaxWidth = isMobile ? window.innerWidth * 0.85 : 500;
-            
-            // 將最大高度限制在地圖實際高度的 80% 左右（或最大不超過 450）
-            // 這樣 Leaflet 就會啟動內部捲動條，而不會讓內容掉到地圖外面
-            const dynamicMaxHeight = isMobile ? Math.min(mapHeight * 0.8, 450) : 450;
+            // 手機版扣除安全邊距 (約40px)，強制讓彈出視窗比螢幕略小
+            const dynamicMaxWidth = isMobile ? (mapWidth - 40) : 500;
+            const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
             
             const popupOpts = { 
                 maxWidth: dynamicMaxWidth, 
-                maxHeight: dynamicMaxHeight, 
-                autoPanPadding: isMobile ? [10, 10] : [15, 15], // 手機版稍微縮小預留邊界換取空間
+                minWidth: dynamicMinWidth,
+                maxHeight: 450, // 依要求：高度改回原本寫死的 450
+                autoPanPadding: [20, 20], // 加大平移邊緣防護緩衝
                 keepInView: true 
             };
 
@@ -695,6 +696,7 @@ function initAviationMap() {
             const metarEmojis = getWeatherEmojis(rawMetarText);
             const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
 
+            // 🛠️ 寬度溢出修正點：.raw-text 加入 word-wrap / word-break 確保長串氣象代碼不會破壞版面寬度
             L.popup(popupOpts)
             .setLatLng(marker.getLatLng())
             .setContent(`
@@ -709,7 +711,7 @@ function initAviationMap() {
                         </span>
                         <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
                     </div>
-                    <div class="raw-text border-${metarCat}">${rawMetarText || "目前無有效 METAR 報文"}</div>
+                    <div class="raw-text border-${metarCat}" style="white-space: pre-wrap; word-break: break-word;">${rawMetarText || "目前無有效 METAR 報文"}</div>
                 </div>
                 
                 <div class="data-block">
