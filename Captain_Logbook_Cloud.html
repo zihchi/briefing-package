@@ -11,12 +11,14 @@
     <title>Pilot Logbook</title>
     
     <!-- External Libraries -->
+    <!-- Tailwind 不加 defer，避免載入瞬間出現無樣式閃爍 (FOUC) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <!-- SunCalc Astronomical Calculation Engine for precise ICAO Night Time -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+    
+    <!-- 以下套件加上 defer，讓它們在背景下載，不阻擋畫面渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 
     <style>
         :root {
@@ -65,10 +67,20 @@
             .horizontal-scroll { scroll-snap-type: none; overflow-x: visible; padding: 0; }
             .ios-list { border-radius: 0.75rem; border: 1px solid var(--jx-divider); overflow: hidden; }
         }
+        
+        /* App Loader 樣式 */
+        #app-loader { position: fixed; inset: 0; background: var(--jx-bg); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
     </style>
 </head>
-<!-- 加大 mobile 底部留白，避免內容被加高的導覽列遮擋 -->
 <body class="pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-32">
+
+    <!-- App Initial Loading Screen -->
+    <div id="app-loader">
+        <div class="flex flex-col items-center gap-3">
+            <div class="spinner !w-10 !h-10 !border-4 !border-t-[var(--jx-gold-dark)] border-[rgba(194,163,112,0.3)]"></div>
+            <span class="text-[var(--jx-gold-dark)] font-bold text-sm tracking-widest uppercase">Initializing...</span>
+        </div>
+    </div>
 
     <!-- Sync Toast -->
     <div id="sync-toast">
@@ -650,9 +662,10 @@
 
         // 2. 動態生成 Service Worker 程式碼
         const swCode = `
-            const CACHE_NAME = 'jx-logbook-v1';
-            // 這些是被要求快取的重要外部 CDN
+            const CACHE_NAME = 'jx-logbook-v2'; // 版號提升，強制更新 Service Worker
+            // 這些是被要求快取的重要外部 CDN 以及主頁面
             const urlsToCache = [
+                './', // 新增此行：強制快取當前 HTML 頁面
                 'https://cdn.tailwindcss.com',
                 'https://cdn.jsdelivr.net/npm/chart.js',
                 'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
@@ -661,6 +674,7 @@
             ];
 
             self.addEventListener('install', event => {
+                self.skipWaiting(); // 強制立即接管
                 event.waitUntil(
                     caches.open(CACHE_NAME)
                         .then(cache => {
@@ -668,6 +682,21 @@
                             // 不強求所有 CDN 第一次都成功，避免安裝失敗
                             return Promise.allSettled(urlsToCache.map(url => cache.add(url)));
                         })
+                );
+            });
+
+            self.addEventListener('activate', event => {
+                // 清理舊版本的快取
+                event.waitUntil(
+                    caches.keys().then(cacheNames => {
+                        return Promise.all(
+                            cacheNames.map(cacheName => {
+                                if (cacheName !== CACHE_NAME) {
+                                    return caches.delete(cacheName);
+                                }
+                            })
+                        );
+                    })
                 );
             });
 
@@ -768,9 +797,6 @@
             // Europe
             'LFBO': { lat: 43.6291, lon:   1.3638 }
         };
-
-        // 全域啟用 ChartDataLabels 外掛
-        Chart.register(ChartDataLabels);
 
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzSlu8YhQUmRK_LID7P2xiXenLMiyskyQYcnuRadp16eUTtZB4YzNIR5oUjSp5qF7keug/exec"; 
 
@@ -959,6 +985,18 @@
         }
 
         window.onload = async () => {
+            // 確保 Chart.js 已經透過 defer 載入完成後，再註冊外掛
+            if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+                Chart.register(ChartDataLabels);
+            }
+
+            // [新增] 隱藏全螢幕載入動畫
+            const loader = document.getElementById('app-loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 400);
+            }
+
             cfData = {
                 flights: parseInt(CF_CONFIG.flights) || 0,
                 takeoffs: parseInt(CF_CONFIG.takeoffs) || 0,
