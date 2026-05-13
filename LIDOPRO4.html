@@ -539,7 +539,7 @@
                             </span>
                             <div class="flex items-center gap-3">
                                 <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-100 text-[9px] md:text-[10px] px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
-                                    🔗 打開連結
+                                    🔗 前往預測
                                 </a>
                                 <button onclick="clearImage('turbli')" class="text-indigo-300 hover:text-white transition-colors no-print" title="Clear Image">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -804,30 +804,69 @@
             });
 
             // 稍微等待 DOM 重繪
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 300));
 
             try {
                 // 呼叫 html2canvas
                 const canvas = await html2canvas(target, {
-                    scale: 2, // 使用高解析度 2 倍縮放
+                    scale: window.devicePixelRatio > 1 ? 2 : 1, // 適應視網膜螢幕，但限制最高為 2 避免記憶體過載
                     useCORS: true, // 允許跨來源圖片 (避免 Taint Canvas)
                     backgroundColor: '#f4ece4', // 填入同底色
-                    logging: false // 關閉主控台雜訊
+                    logging: false, // 關閉主控台雜訊
+                    allowTaint: false,
+                    windowWidth: target.scrollWidth, // 確保抓到完整寬度
+                    windowHeight: target.scrollHeight // 確保抓到完整高度
                 });
 
-                // 產生影像並觸發下載
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                const link = document.createElement('a');
-                
                 // 動態決定檔名
                 const flightNo = document.getElementById('out-flight-no').innerText || 'Flight';
                 const dateText = document.getElementById('out-utc-date').innerText || 'Briefing';
-                link.download = `Briefing_${flightNo}_${dateText}.jpg`;
-                
-                link.href = imgData;
-                link.click();
-                
-                showToast('✅ 簡報截圖已成功產生並下載！');
+                const fileName = `Briefing_${flightNo}_${dateText}.jpg`;
+
+                // 【修正 iOS 下載問題】: 將 Canvas 轉換為 Blob
+                canvas.toBlob((blob) => {
+                    if (blob === null) {
+                        showToast('❌ 產生圖片失敗，可能是記憶體不足', true);
+                        return;
+                    }
+
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    // 檢查是否為 iOS 設備 (iOS 13+ 包含 iPadOS，有時直接下載會失效)
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+                    if (isIOS && !window.navigator.standalone) {
+                         // 在 iOS PWA (standalone) 環境外，有時直接下載會失敗，
+                         // 提供一個備用方案：將圖片開在新分頁，讓使用者長按儲存。
+                         // 但我們還是先嘗試標準下載，因為較新的 Safari 有改善。
+                         try {
+                            const link = document.createElement('a');
+                            link.href = blobUrl;
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                         } catch (e) {
+                             // 如果標準下載失敗，備案是打開新視窗
+                             window.open(blobUrl, '_blank');
+                             showToast('✅ 圖片已產生！請長按圖片進行「儲存」', false, 5000);
+                         }
+                    } else {
+                        // 非 iOS 設備或 PWA 環境，使用標準 Blob 下載
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+
+                    // 釋放記憶體
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                    showToast('✅ 簡報截圖已成功產生！');
+                    
+                }, 'image/jpeg', 0.85); // 使用 0.85 壓縮率，平衡畫質與檔案大小
+
             } catch (err) {
                 console.error(err);
                 showToast('❌ 截圖發生異常，請檢查瀏覽器設定或重新整理', true);
