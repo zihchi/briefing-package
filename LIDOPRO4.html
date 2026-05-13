@@ -10,6 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="Briefing Pro">
     <title>個人專屬 - 航班擷取與簡報系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html2canvas 實現無中斷全頁截圖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
@@ -111,6 +113,7 @@
         </div>
     </div>
 
+    <!-- -->
     <!-- 主程式戰情室 -->
     <div id="main-app" class="w-full max-w-[1600px] mx-auto transition-opacity duration-500 hidden flex flex-col p-3 md:p-6 pb-12">
         
@@ -122,8 +125,9 @@
                     Briefing Pro
                 </h1>
             </div>
-            <div class="flex gap-3 items-center w-full sm:w-auto">
-                <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm">🧹 歸零清理</button>
+            <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                <button onclick="takeScreenshot()" class="flex-1 sm:flex-none text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-emerald-200">📸 一鍵截圖</button>
+                <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-red-100">🧹 歸零清理</button>
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
         </div>
@@ -163,6 +167,7 @@
                 <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
             </div>
 
+            <!-- -->
             <!-- 【右側簡報畫布】 (Pro Edition Dashboard) -->
             <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
                 
@@ -190,7 +195,7 @@
                             </div>
                         </div>
 
-                        <!-- Bottom Body: 3 Vertical Cards (DEP, CRZ, ARR) -->
+                        <!-- Bottom Body: 3 Vertical Cards (DEP, ARR, CRZ) -> Swapped based on request -->
                         <div class="p-3 md:p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                             
                             <!-- Departure Card -->
@@ -209,7 +214,23 @@
                                 </div>
                             </div>
 
-                            <!-- Center Info (ETE & CRZ & ETD) -->
+                            <!-- Arrival Card (Moved here based on Request #1) -->
+                            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
+                                <div class="flex justify-between items-start mb-2 pl-2">
+                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Arrival</div>
+                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-arr-utc">UTC</span>
+                                </div>
+                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-arr">----</div>
+                                <div class="mt-auto pl-2">
+                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
+                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
+                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-sta">--:--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Center Info (ETE & CRZ & ETD) (Moved here based on Request #1) -->
                             <div class="bg-[#344155] rounded-xl shadow-md border border-[#232e3d] p-4 flex flex-col h-full text-center">
                                 <div class="flex flex-col items-center justify-center flex-grow">
                                     <span class="data-font font-black text-3xl xl:text-4xl text-[#f6ca6b] leading-none mb-3 drop-shadow-sm" id="out-ete-center">--:--</span>
@@ -224,22 +245,6 @@
                                     <div class="bg-[#1e293b]/60 border border-[#475569]/50 rounded-lg p-2.5 flex flex-col justify-center items-center">
                                         <span class="text-[9px] font-bold text-[#eab308] mb-0.5 tracking-wider uppercase">ETD</span>
                                         <span class="data-font font-black text-sm md:text-base text-[#fde047] tracking-wide" id="out-etd">--:--</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Arrival Card -->
-                            <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
-                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
-                                <div class="flex justify-between items-start mb-2 pl-2">
-                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Arrival</div>
-                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-arr-utc">UTC</span>
-                                </div>
-                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-arr">----</div>
-                                <div class="mt-auto pl-2">
-                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
-                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
-                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-sta">--:--</span>
                                     </div>
                                 </div>
                             </div>
@@ -300,6 +305,7 @@
                     </div>
                 </div>
 
+                <!-- -->
                 <!-- ROW 2: MEL Text Block (Flexible full width row) -->
                 <div class="w-full border border-[#e8dfd5] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                     <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
@@ -402,6 +408,7 @@
                     </div>
                 </div>
 
+                <!-- -->
                 <!-- ROW 5: AVIATION WEATHER -->
                 <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white">
                     <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
@@ -532,7 +539,7 @@
                             </span>
                             <div class="flex items-center gap-3">
                                 <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-100 text-[9px] md:text-[10px] px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
-                                    🔗 前往預測
+                                    🔗 打開連結
                                 </a>
                                 <button onclick="clearImage('turbli')" class="text-indigo-300 hover:text-white transition-colors no-print" title="Clear Image">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -565,6 +572,7 @@
                         </div>
                     </div>
 
+                    <!-- -->
                     <!-- ROW 7: NOTAM 智慧擷取與分類 -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3">
                         <div class="bg-gradient-to-r from-stone-700 to-stone-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
@@ -572,9 +580,17 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 NOTAM 智慧擷取與分類 (Airports / FIR)
                             </span>
-                            <button onclick="parseNotams()" class="text-stone-300 hover:text-white transition-colors no-print" title="重新解析 NOTAM">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            </button>
+                            <!-- 新增的獨立複製按鈕 -->
+                            <div class="flex items-center gap-2">
+                                <button onclick="copyRawNotam()" class="text-stone-300 hover:text-white transition-colors no-print" title="複製原始 NOTAM">
+                                    <svg class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                                <button onclick="parseNotams()" class="text-stone-300 hover:text-white transition-colors no-print" title="重新解析 NOTAM">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="p-4 md:p-5 bg-[#fbf9f6] flex flex-col gap-4">
                             <textarea id="raw-notam-input" class="w-full p-3 bg-white border border-stone-300 rounded-xl text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none focus:ring-2 focus:ring-[#8b5a2b]/50 resize-y min-h-[80px]" placeholder="若系統有抓取到 NOTAM，將自動帶入並分類。您也可以手動貼上 NOTAM 報文至此處，點擊右上角重整按鈕進行解析..." oninput="debouncedParseNotams()"></textarea>
@@ -592,6 +608,7 @@
 
     </div>
 
+    <!-- -->
     <!-- 腳本整合 -->
     <script>
         // ==========================================
@@ -753,6 +770,78 @@
             showToast('已斷開連線，憑證清除並鎖定');
         });
 
+        // ==========================================
+        // 全版面高解析度一鍵截圖功能
+        // ==========================================
+        async function takeScreenshot() {
+            showToast('📸 正在擷取高畫質簡報中，這可能需要幾秒鐘的時間...', false, 5000);
+            const target = document.getElementById('dashboard-content');
+
+            // 1. 為了不漏訊，暫時擴展所有具有限制高度或滾動條的元件
+            const mels = target.querySelectorAll('.mel-scroll');
+            const textareas = target.querySelectorAll('textarea');
+            const originalStyles = []; // 用來存儲復原所需的舊樣式
+
+            // 處理 MEL 視窗等自訂滾動區域
+            mels.forEach(el => {
+                originalStyles.push({ el, maxH: el.style.maxHeight, overflow: el.style.overflow });
+                el.style.maxHeight = 'none';
+                el.style.overflow = 'visible';
+            });
+
+            // 處理 Textarea 展開 (特別是 NOTAM 輸入框)
+            textareas.forEach(el => {
+                originalStyles.push({ el, height: el.style.height, overflow: el.style.overflow });
+                el.style.height = el.scrollHeight + 5 + 'px'; 
+                el.style.overflow = 'hidden';
+            });
+
+            // 隱藏列印不需要的元件，確保畫面乾淨
+            const noPrintEls = target.querySelectorAll('.no-print');
+            noPrintEls.forEach(el => {
+                originalStyles.push({ el, display: el.style.display });
+                el.style.display = 'none';
+            });
+
+            // 稍微等待 DOM 重繪
+            await new Promise(r => setTimeout(r, 200));
+
+            try {
+                // 呼叫 html2canvas
+                const canvas = await html2canvas(target, {
+                    scale: 2, // 使用高解析度 2 倍縮放
+                    useCORS: true, // 允許跨來源圖片 (避免 Taint Canvas)
+                    backgroundColor: '#f4ece4', // 填入同底色
+                    logging: false // 關閉主控台雜訊
+                });
+
+                // 產生影像並觸發下載
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const link = document.createElement('a');
+                
+                // 動態決定檔名
+                const flightNo = document.getElementById('out-flight-no').innerText || 'Flight';
+                const dateText = document.getElementById('out-utc-date').innerText || 'Briefing';
+                link.download = `Briefing_${flightNo}_${dateText}.jpg`;
+                
+                link.href = imgData;
+                link.click();
+                
+                showToast('✅ 簡報截圖已成功產生並下載！');
+            } catch (err) {
+                console.error(err);
+                showToast('❌ 截圖發生異常，請檢查瀏覽器設定或重新整理', true);
+            } finally {
+                // 2. 將畫面恢復為原本的使用者互動狀態
+                originalStyles.forEach(item => {
+                    if (item.maxH !== undefined) item.el.style.maxHeight = item.maxH;
+                    if (item.height !== undefined) item.el.style.height = item.height;
+                    if (item.overflow !== undefined) item.el.style.overflow = item.overflow;
+                    if (item.display !== undefined) item.el.style.display = item.display;
+                });
+            }
+        }
+
         function formatAviationTime(ms) {
             if (!ms) return 'N/A';
             const d = new Date(ms);
@@ -782,6 +871,12 @@
         function debouncedParseNotams() {
             clearTimeout(parseNotamTimer);
             parseNotamTimer = setTimeout(parseNotams, 500);
+        }
+
+        function copyRawNotam() {
+            const text = document.getElementById('raw-notam-input').value;
+            if (!text.trim()) return showToastMessage('❌ 沒有可以複製的 NOTAM 內容');
+            copyNotamData(text, '完整原始');
         }
 
         function parseNotams() {
@@ -1863,7 +1958,7 @@
         }
 
         // ==========================================
-        // 【全新升級】開源天氣：支援動態預報擷取邏輯
+        // 開源天氣：支援動態預報擷取邏輯
         // ==========================================
         async function fetchSimpleWeather(icao, isArrival = false, baseDate = null, targetZulu = null, depZulu = null) {
             const container = document.getElementById(`awc-simple-wx-${icao}`);
