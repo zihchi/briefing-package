@@ -390,21 +390,22 @@ function renderFIDS() {
     });
 
     const filteredData = processedData.filter(f => {
-        // 🔍 搜尋優先邏輯
+        // 🔍 搜尋優先邏輯 (全域攔截)
         if (fidsState.searchQuery) {
-            // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的檢查
+            // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的日期/時間檢查
             return f.FlightNumber.includes(fidsState.searchQuery);
         }
 
-        // ✈️ 航空公司過濾邏輯更新
+        // --- 修正：航空公司過濾邏輯 ---
+        // 如果選擇的是特定的三家國籍航空組合
         if (fidsState.airline === 'NATIONAL') {
-            // 選擇 "JX+CI+BR" 時，套用白名單過濾
             if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
-        } else if (fidsState.airline !== 'ALL') {
-            // 選擇單一航空 "JX" 或 "CI" 或 "BR" 時
-            if (f.AirlineID !== fidsState.airline) return false;
+        } 
+        // 如果選擇的不是 ALL 且也不是特定組合，則過濾單一航空公司
+        else if (fidsState.airline !== 'ALL') {
+             if (f.AirlineID !== fidsState.airline) return false;
         }
-        // 👉 若 fidsState.airline === 'ALL'，則不執行阻擋，允許所有航空公司通過！
+        // 👉 如果是 'ALL'，則上述兩個 if 都不會觸發，代表不阻擋任何航空公司！
 
         // 📅 日期過濾
         let passDate = true;
