@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- PWA 支援核心 Meta Tags -->
     <meta name="theme-color" content="#4a3627">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -88,20 +89,6 @@
 
         @media print {
             .no-print { display: none !important; }
-            
-            /* 強制列印時保留背景色與精緻排版，並鎖定為平板寬度避免變成手機單排畫面 */
-            body { 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-                background-color: #f4ece4 !important;
-                min-width: 1200px !important; 
-            }
-            .mel-scroll { max-height: none !important; overflow: visible !important; }
-            #dashboard-content { box-shadow: none !important; }
-            
-            /* 避免區塊在列印時被跨頁切斷 */
-            div { page-break-inside: avoid; break-inside: avoid; }
-            @page { size: auto; margin: 5mm; }
         }
     </style>
 </head>
@@ -132,7 +119,6 @@
                 </h1>
             </div>
             <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
-                <button onclick="window.print()" class="flex-1 sm:flex-none text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-indigo-200">📄 匯出 PDF / 標示</button>
                 <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-red-100">🧹 歸零清理</button>
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
@@ -156,6 +142,7 @@
                 <div class="flex flex-col h-48 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden relative">
                     <div class="bg-orange-100/50 px-4 py-2 border-b border-orange-200/60 flex justify-between items-center z-10">
                         <span class="font-bold text-[#b35900] text-xs tracking-widest flex items-center gap-1">📦 手動補充 (PAX/MEL/BAY)</span>
+                        <button onclick="copyRawInput2()" class="text-[10px] font-bold text-[#b35900] bg-[#b35900]/10 hover:bg-[#b35900] hover:text-white px-2.5 py-1 rounded transition-colors border border-[#b35900]/30 no-print shadow-sm">📋 複製</button>
                     </div>
                     <div class="relative flex-grow flex p-2">
                         <div id="rawInput2-placeholder" class="absolute inset-3 flex flex-col items-center justify-center border-2 border-dashed border-orange-300/60 rounded-xl bg-orange-50/80 z-10 transition-all">
@@ -443,7 +430,7 @@
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mx-auto">
                         <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 SigWX With Route
                             </span>
                             <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
@@ -678,11 +665,11 @@
         let currentDepUTC = '', currentArrUTC = '';
         let currentIcaosToFetch = [], currentDateUTC = '----';
         let runwayMap = {};
-        window.parsedNotamGroups = {}; 
         
         // 隱藏 FIDS UI 但保留資料結構用於背景覆蓋
         let fidsFlightData = { departures: [], arrivals: [] };
 
+        // Toast Messages
         function showToast(msg, isError = false, duration = 3000) {
             toast.textContent = msg;
             toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-300 shadow-2xl z-[500] px-6 py-3 rounded-full text-white font-bold tracking-wide border ${isError ? 'bg-red-600 border-red-400' : 'bg-[#4a3627] border-[#8b5a2b]/30'} scale-100 opacity-100 no-print`;
@@ -1283,6 +1270,7 @@
             if (savedInput1 || savedInput2) parseData();
             if (savedNotam) parseNotams();
 
+            // 在背景初始化並抓取 TDX 資料 (無 UI)
             fetchFIDSDataSilent(); 
         });
 
@@ -1352,6 +1340,16 @@
             } catch (err) {
                 showToastMessage('❌ 貼上失敗，請點擊「輸入」手動貼上');
             }
+        }
+
+        function copyRawInput2() {
+            const el = document.getElementById('rawInput2');
+            if (!el.value.trim()) return showToastMessage('❌ 沒有可以複製的內容');
+            
+            el.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            showToastMessage('✅ 已複製手動補充資料');
         }
 
         function focusRawInput2() {
@@ -1731,7 +1729,7 @@
                 });
             }
 
-            // TDX 停機坪智慧判斷與覆蓋邏輯
+            // 🎯 TDX 停機坪智慧判斷與覆蓋邏輯
             let targetAirline = valFlight !== '----' ? valFlight.replace(/[0-9]/g, '').trim() : '';
             let targetFlightNum = valFlight !== '----' ? valFlight.replace(/[^0-9]/g, '').trim() : '';
 
@@ -1739,7 +1737,7 @@
                 const findBestFidsMatch = (fidsArray, tAirline, tNum) => {
                     let matches = fidsArray.filter(f => f.AirlineID === tAirline && parseInt(f.FlightNumber, 10) === parseInt(tNum, 10));
                     if (matches.length === 0) return null;
-                    if (matches.length === 1) return matches[0]; 
+                    if (matches.length === 1) return matches[0];
                     
                     const todayStr = getTaiwanDateString(0);
                     let todayMatch = matches.find(f => f.FlightDate === todayStr);
@@ -2056,7 +2054,6 @@
             } catch (error) { syncStatus.innerText = "ERROR"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-red-500 text-white shadow font-bold tracking-widest"; }
         }
 
-        // 背景靜默抓取 TDX 資料 (供機坪覆蓋使用)
         async function fetchFIDSDataSilent() {
             try {
                 const response = await fetch(FIDS_GAS_URL);
