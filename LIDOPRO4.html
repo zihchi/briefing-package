@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- PWA 支援核心 Meta Tags -->
     <meta name="theme-color" content="#4a3627">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -89,47 +88,21 @@
 
         @media print {
             .no-print { display: none !important; }
+            
+            /* 強制列印時保留背景色與精緻排版，並鎖定為平板寬度避免變成手機單排畫面 */
+            body { 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+                background-color: #f4ece4 !important;
+                min-width: 1200px !important; 
+            }
+            .mel-scroll { max-height: none !important; overflow: visible !important; }
+            #dashboard-content { box-shadow: none !important; }
+            
+            /* 避免區塊在列印時被跨頁切斷 */
+            div { page-break-inside: avoid; break-inside: avoid; }
+            @page { size: auto; margin: 5mm; }
         }
-
-        .fids-control-panel {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-            margin-bottom: 0.5rem;
-        }
-        .fids-mode-btn { background: transparent !important; color: #64748b !important; }
-        .fids-mode-btn.active { background: #ffffff !important; color: #2563eb !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; font-weight: 800 !important;}
-        .fids-date-btn { background: transparent !important; border-color: #cbd5e1 !important; color: #64748b !important; }
-        .fids-date-btn.active { background: #2563eb !important; color: #ffffff !important; border-color: #2563eb !important; }
-        .fids-filter-label { background: #ffffff; border-color: #e2e8f0; color: #475569; }
-        
-        input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a !important; border-color: #eab308 !important; color: #854d0e !important; }
-        input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca !important; border-color: #f43f5e !important; color: #9f1239 !important; }
-        input[name="fids-airline"][value="BR"]:checked + .fids-filter-label { background: #bbf7d0 !important; border-color: #22c55e !important; color: #166534 !important; }
-        input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #e2e8f0 !important; border-color: #64748b !important; color: #334155 !important; }
-        
-        input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe !important; border-color: #3b82f6 !important; color: #1e3a8a !important; }
-
-        .fids-btn-refresh {
-            background: transparent !important; border: 2px solid #3c79ff !important;
-            border-radius: 6px !important; padding: 4px 12px !important;
-            font-size: 0.9em !important; color: #3c79ff !important;
-            font-weight: bold !important; cursor: pointer !important;
-            transition: background-color 0.2s, color 0.2s, transform 0.1s !important;
-            display: inline-flex !important; align-items: center !important; gap: 6px !important; margin: 0 !important;
-        }
-        .fids-btn-refresh:hover { background-color: rgba(60,121,255,0.1) !important; color: #2c5edc !important; }
-        .fids-btn-refresh:active { transform: scale(0.95) !important; }
-        .fids-btn-refresh:disabled { border-color: #94a3b8 !important; color: #94a3b8 !important; cursor: not-allowed; transform: none !important; }
-
-        .fids-list-row { transition: background-color 0.15s ease-in-out; }
-        .fids-list-row:hover { background-color: #f8fafc; }
-        .fids-list-row:active { background-color: #f1f5f9; }
-
-        .fids-status-tag { font-size: 0.65rem; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: #f1f5f9; color: #64748b; margin-left: 6px; border: 1px solid #e2e8f0; white-space: nowrap;}
-        @keyframes fids-spin { 100% { transform: rotate(360deg); } }
-        .fids-animate-spin-fast { animation: fids-spin 0.8s linear infinite; display: inline-block;}
     </style>
 </head>
 <body class="text-stone-800 min-h-screen pt-safe pb-safe antialiased relative">
@@ -159,6 +132,7 @@
                 </h1>
             </div>
             <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                <button onclick="window.print()" class="flex-1 sm:flex-none text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-indigo-200">📄 匯出 PDF / 標示</button>
                 <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-red-100">🧹 歸零清理</button>
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
@@ -469,7 +443,7 @@
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mx-auto">
                         <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 SigWX With Route
                             </span>
                             <button onclick="clearImage('sigwx')" class="text-teal-300 hover:text-white transition-colors no-print" title="Clear Images">
@@ -709,7 +683,6 @@
         // 隱藏 FIDS UI 但保留資料結構用於背景覆蓋
         let fidsFlightData = { departures: [], arrivals: [] };
 
-        // Toast Messages
         function showToast(msg, isError = false, duration = 3000) {
             toast.textContent = msg;
             toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-300 shadow-2xl z-[500] px-6 py-3 rounded-full text-white font-bold tracking-wide border ${isError ? 'bg-red-600 border-red-400' : 'bg-[#4a3627] border-[#8b5a2b]/30'} scale-100 opacity-100 no-print`;
@@ -1310,7 +1283,6 @@
             if (savedInput1 || savedInput2) parseData();
             if (savedNotam) parseNotams();
 
-            // 在背景初始化並抓取 TDX 資料 (無 UI)
             fetchFIDSDataSilent(); 
         });
 
@@ -1759,23 +1731,20 @@
                 });
             }
 
-            // 🎯 TDX 停機坪智慧判斷與覆蓋邏輯
+            // TDX 停機坪智慧判斷與覆蓋邏輯
             let targetAirline = valFlight !== '----' ? valFlight.replace(/[0-9]/g, '').trim() : '';
             let targetFlightNum = valFlight !== '----' ? valFlight.replace(/[^0-9]/g, '').trim() : '';
 
             if (targetAirline && targetFlightNum && fidsFlightData) {
-                // 幫助函數：處理跨日航班並忽略航班號前導零(如 0805 vs 805)
                 const findBestFidsMatch = (fidsArray, tAirline, tNum) => {
                     let matches = fidsArray.filter(f => f.AirlineID === tAirline && parseInt(f.FlightNumber, 10) === parseInt(tNum, 10));
                     if (matches.length === 0) return null;
-                    if (matches.length === 1) return matches[0]; // 只有一筆直接回傳
+                    if (matches.length === 1) return matches[0]; 
                     
-                    // 若有多筆 (例如包含昨日與今日)，優先選取「今日」的航班
                     const todayStr = getTaiwanDateString(0);
                     let todayMatch = matches.find(f => f.FlightDate === todayStr);
                     if (todayMatch) return todayMatch;
                     
-                    // 若無今日資料，則回傳陣列中最新的一筆
                     return matches[matches.length - 1];
                 };
 
@@ -2099,7 +2068,6 @@
                 fidsFlightData.departures = Array.isArray(data.departures) ? data.departures : [];
                 fidsFlightData.arrivals = Array.isArray(data.arrivals) ? data.arrivals : [];
                 
-                // 資料抓取完畢後，若畫面已有航班資料，觸發重新解析以套用新的停機坪
                 if (document.getElementById('rawInput').value) {
                     debouncedParseData();
                 }
