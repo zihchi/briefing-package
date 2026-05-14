@@ -23,7 +23,9 @@
     input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a !important; border-color: #eab308 !important; color: #854d0e !important; }
     input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca !important; border-color: #f43f5e !important; color: #9f1239 !important; }
     input[name="fids-airline"][value="BR"]:checked + .fids-filter-label { background: #bbf7d0 !important; border-color: #22c55e !important; color: #166534 !important; }
-    input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #e2e8f0 !important; border-color: #64748b !important; color: #334155 !important; }
+    input[name="fids-airline"][value="NATIONAL"]:checked + .fids-filter-label { background: #e2e8f0 !important; border-color: #64748b !important; color: #334155 !important; }
+    /* 🌟 新增：真正的 ALL 全部航班樣式 (深色突顯) */
+    input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #1e293b !important; border-color: #0f172a !important; color: #f8fafc !important; }
 
     /* 時段過濾標籤狀態 (選中時變色) */
     input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe !important; border-color: #3b82f6 !important; color: #1e3a8a !important; }
@@ -103,8 +105,13 @@
                 <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
                 <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
 
+                <!-- 🌟 將原本的 ALL 改名為 NATIONAL -->
+                <input type="radio" id="fids-filter-national" name="fids-airline" value="NATIONAL" class="hidden">
+                <label for="fids-filter-national" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR</label>
+
+                <!-- 🌟 新增：真正解鎖全部航班的 ALL 選項 -->
                 <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
-                <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR</label>
+                <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">ALL 全部</label>
             </div>
 
             <!-- 時間過濾 (移除 !bg-white 以釋放預設顏色) -->
@@ -130,9 +137,8 @@
         </div>
     </div>
 
-    <!-- 狀態與表格區 (修正了隱藏容器占用外距的問題) -->
+    <!-- 狀態與表格區 -->
     <div class="max-w-5xl mx-auto">
-        <!-- 注意：把 mb-3 移到內部的狀態方塊，避免隱藏時仍有空白 -->
         <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
             <div class="text-3xl mb-3 animate-pulse">📡</div>
             <div class="font-bold text-blue-600">正在與塔台建立數據鏈路...</div>
@@ -165,7 +171,7 @@
 </div>
 <script>
 // ==========================================
-// ✈️ 戰術儀表板核心邏輯 (隔離全域變數版)
+// ✈️ 戰術儀表板核心邏輯
 // ==========================================
 const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
 
@@ -175,18 +181,16 @@ let fidsState = {
     date: 'today',
     airline: 'JX',    
     time: 'NOW2',
-    searchQuery: '' // 👈 新增：用於儲存航班搜尋關鍵字
+    searchQuery: ''
 };
 const fidsAllowedAirlines = ['JX', 'CI', 'BR'];
 
 // 用來儲存動態抓取的 DOM 元素
 let fidsUI = {};
 
-// ✅ 這是給 app.js 呼叫的專屬喚醒函數
 function initFIDS() {
     console.log("✈️ FIDS 戰術看板系統已喚醒");
 
-    // 必須在這裡抓取 DOM，確保抓到的是最新嵌入首頁的 HTML 元素
     fidsUI = {
         list: document.getElementById('fids-flight-list'),
         loading: document.getElementById('fids-msg-loading'),
@@ -203,21 +207,20 @@ function initFIDS() {
         thTime: document.getElementById('fids-th-time'),
         thBelt: document.getElementById('fids-th-belt'),
         thDesk: document.getElementById('fids-th-desk'),
-        searchInput: document.getElementById('fids-search-input') // 👈 新增：綁定搜尋框
+        searchInput: document.getElementById('fids-search-input')
     };
 
-    // 👈 新增：航班搜尋框監聽器
     fidsUI.searchInput.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
+        const val = e.target.value.trim().toUpperCase(); // 轉大寫較好搜
         fidsState.searchQuery = val;
 
         if (val !== '') {
-            // 自動切換後台狀態為全域搜尋 (ALL)
+            // 自動切換後台狀態為全域搜尋 (解鎖 ALL)
             fidsState.airline = 'ALL';
             fidsState.date = 'all';
             fidsState.time = 'ALL';
 
-            // 同步更新前台 UI 視覺，讓過濾器顯示在 ALL
+            // 同步更新前台 UI 視覺，讓過濾器顯示在真正的 ALL 全部
             document.getElementById('fids-filter-all').checked = true;
             document.getElementById('fids-time-all').checked = true;
             
@@ -225,10 +228,9 @@ function initFIDS() {
             document.getElementById('fids-btn-alldate').classList.add('active');
         }
         
-        renderFIDS(); // 重新渲染畫面
+        renderFIDS();
     });
 
-    // 重新綁定事件
     fidsUI.modeBtns.forEach(btn => {
         btn.onclick = (e) => {
             fidsUI.modeBtns.forEach(b => b.classList.remove('active'));
@@ -268,8 +270,6 @@ function initFIDS() {
     });
 
     fidsUI.btnRefresh.onclick = fetchFIDSData;
-    
-    // 啟動時自動抓取資料
     fetchFIDSData();
 }
 
@@ -326,15 +326,13 @@ function getTaiwanDateString(offsetDays = 0) {
 function renderFIDS() {
     fidsUI.loading.classList.add('hidden');
     
-    // 👈 新增：動態調整表頭以適應混合顯示模式
     if (fidsState.searchQuery) {
         fidsUI.thBelt.innerText = 'Status / Belt';
         fidsUI.thDesk.innerText = '航廈 / 櫃檯 Desk';
-        fidsUI.modeBtns.forEach(b => b.classList.remove('active')); // 移除單一模式的視覺焦點
+        fidsUI.modeBtns.forEach(b => b.classList.remove('active')); 
     } else {
         fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
         fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
-        // 恢復模式按鈕的 active 狀態
         fidsUI.modeBtns.forEach(b => {
             if (b.dataset.mode === fidsState.mode) b.classList.add('active');
         });
@@ -345,10 +343,8 @@ function renderFIDS() {
     else if (fidsState.date === 'today') targetDateStr = getTaiwanDateString(0);
     else if (fidsState.date === 'tomorrow') targetDateStr = getTaiwanDateString(1);
 
-    // 👈 修改：全域攔截時，同時合併離場與到場航班陣列
     let targetArray = [];
     if (fidsState.searchQuery) {
-        // 分別注入 _type 標籤後合併，讓系統知道誰是誰
         const deps = fidsFlightData.departures.map(f => ({...f, _type: 'D'}));
         const arrs = fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
         targetArray = [...deps, ...arrs];
@@ -365,7 +361,6 @@ function renderFIDS() {
     }
 
     const processedData = targetArray.map(f => {
-        // 👈 修改：改用 f._type 判斷，確保混合陣列中的每一筆資料都能正確解析時間與屬性
         let rawTime = f._type === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
         if (!rawTime) {
             rawTime = f._type === 'D' ? f.EstimatedDepartureTime : f.EstimatedArrivalTime;
@@ -395,23 +390,29 @@ function renderFIDS() {
     });
 
     const filteredData = processedData.filter(f => {
-        // 確保不脫離允許的航空公司白名單 (JX, CI, BR)
-        if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
-
-        // 搜尋優先邏輯 (全域攔截)
+        // 🔍 搜尋優先邏輯
         if (fidsState.searchQuery) {
-            // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的日期/時間檢查
+            // 只要航班號碼包含輸入的字串，就直接放行，跳過後面的檢查
             return f.FlightNumber.includes(fidsState.searchQuery);
         }
 
-        // --- 以下為原本的過濾邏輯 ---
-        if (fidsState.airline !== 'ALL' && f.AirlineID !== fidsState.airline) return false;
+        // ✈️ 航空公司過濾邏輯更新
+        if (fidsState.airline === 'NATIONAL') {
+            // 選擇 "JX+CI+BR" 時，套用白名單過濾
+            if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
+        } else if (fidsState.airline !== 'ALL') {
+            // 選擇單一航空 "JX" 或 "CI" 或 "BR" 時
+            if (f.AirlineID !== fidsState.airline) return false;
+        }
+        // 👉 若 fidsState.airline === 'ALL'，則不執行阻擋，允許所有航空公司通過！
 
+        // 📅 日期過濾
         let passDate = true;
         if (fidsState.date !== 'all') {
             passDate = (f._dateStr === targetDateStr);
         }
 
+        // ⏱️ 時間過濾
         let passTime = true;
         if (fidsState.time === 'NOW2') {
             const nowMs = Date.now();
@@ -461,7 +462,6 @@ function renderFIDS() {
 
     const blocksHTML = filteredData.map(f => {
         const flightNo = f.AirlineID + f.FlightNumber;
-        // 👈 修改：顯示與排版邏輯改依據個別航班的 _type 進行渲染
         const iataCode = f._type === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
         const timeStr = f._rawTime ? f._rawTime.substring(11, 16) : '—';
         const terminal = f.Terminal ? `T${f.Terminal}` : '—';
@@ -472,12 +472,12 @@ function renderFIDS() {
         let statusRemark = f._type === 'D' ? (f.DepartureRemark || '') : (f.ArrivalRemark || '');
         const beltValue = f._type === 'D' ? (statusRemark || '—') : belt;
 
+        // 預設其他航空公司字體顏色為深灰，三大國籍航空保留特殊顏色
         let airlineColorClass = 'text-slate-800';
         if (f.AirlineID === 'JX') airlineColorClass = 'text-[#A67C00]';
         else if (f.AirlineID === 'CI') airlineColorClass = 'text-[#C0392B]';
         else if (f.AirlineID === 'BR') airlineColorClass = 'text-[#0F7A4D]';
 
-        // 👈 新增：若是全域搜尋狀態，在航點旁標示該航班是離場或到場，避免混淆
         const typeBadge = fidsState.searchQuery 
             ? (f._type === 'D' 
                 ? `<span class="ml-2 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 shadow-sm font-black tracking-widest uppercase">Dep</span>` 
