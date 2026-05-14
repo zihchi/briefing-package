@@ -531,7 +531,7 @@
                             </span>
                             <div class="flex items-center gap-3">
                                 <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-100 text-[9px] md:text-[10px] px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
-                                    🔗 前往預測
+                                    🔗 連結
                                 </a>
                                 <button onclick="clearImage('turbli')" class="text-indigo-300 hover:text-white transition-colors no-print" title="Clear Image">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -585,94 +585,6 @@
                             
                             <div id="notam-buttons-container" class="flex flex-wrap gap-2 md:gap-3">
                                 <div class="text-stone-400 text-[11px] md:text-sm font-bold w-full text-center py-4">請先擷取航班或手動貼上 NOTAM 資料</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3 no-print">
-                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            TDX 桃園機場即時航班戰術雷達
-                        </div>
-                        <div class="p-4 md:p-5 bg-white text-slate-800">
-                            <!-- 控制面板 -->
-                            <div class="fids-control-panel p-3 md:p-4 text-slate-800 border-none shadow-none">
-                                <div class="max-w-5xl mx-auto">
-                                    <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-2 md:gap-4">
-                                        <h1 class="text-lg md:text-xl font-black tracking-tight flex items-center gap-2 m-0 p-0 text-[#2563eb]">
-                                            <span>✈️</span> RCTP 即時動態
-                                        </h1>
-                                        <input type="text" id="fids-search-input" placeholder="🔍 搜尋航班號 (例: 805)" class="border-2 border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:outline-none transition-all w-full sm:w-48 flex-1 sm:flex-none">
-                                        <button id="fids-btn-refresh" class="fids-btn-refresh shrink-0">
-                                            <span id="fids-icon-refresh">🔄</span> 立即更新
-                                        </button>
-                                    </div>
-                                    <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-3 md:gap-4">
-                                        <div class="flex items-center bg-slate-200 rounded-xl p-1 shrink-0 w-full sm:w-auto">
-                                            <button class="fids-mode-btn active flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="D">離場 (DEP)</button>
-                                            <button class="fids-mode-btn flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="A">到場 (ARR)</button>
-                                        </div>
-                                        <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto scrollbar-hide shrink-0 pb-1 w-full sm:w-auto snap-x">
-                                            <button id="fids-btn-yesterday" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">昨日</button>
-                                            <button id="fids-btn-today" class="fids-date-btn active snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">今日</button>
-                                            <button id="fids-btn-tomorrow" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">明日</button>
-                                            <button id="fids-btn-alldate" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !border-purple-300 !text-purple-700 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">ALL 日期</button>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x">
-                                        <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
-                                        <label for="fids-filter-jx" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX 星宇</label>
-                                        <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
-                                        <label for="fids-filter-ci" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">CI 華航</label>
-                                        <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
-                                        <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
-                                        <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
-                                        <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR</label>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 mt-1 md:mt-2 scrollbar-hide snap-x">
-                                        <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
-                                        <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">±1hr 即時</label>
-                                        <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
-                                        <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
-                                        <input type="radio" id="fids-time-0612" name="fids-time" value="06-12" class="hidden">
-                                        <label for="fids-time-0612" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">06-12</label>
-                                        <input type="radio" id="fids-time-1218" name="fids-time" value="12-18" class="hidden">
-                                        <label for="fids-time-1218" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">12-18</label>
-                                        <input type="radio" id="fids-time-1824" name="fids-time" value="18-24" class="hidden">
-                                        <label for="fids-time-1824" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">18-24</label>
-                                        <input type="radio" id="fids-time-all" name="fids-time" value="ALL" class="hidden">
-                                        <label for="fids-time-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">ALL 全日</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="max-w-5xl mx-auto">
-                                <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
-                                    <div class="text-3xl mb-3 animate-pulse">📡</div>
-                                    <div class="font-bold text-blue-600">正在與塔台建立數據鏈路...</div>
-                                    <div class="text-sm text-slate-400 mt-1">Acquiring TDX Data Link</div>
-                                </div>
-                                <div id="fids-msg-empty" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
-                                    <div class="text-3xl mb-3">📭</div>
-                                    <div class="font-bold text-slate-600">目前設定的條件下無航班。</div>
-                                    <div id="fids-empty-diag" class="mt-4 px-4"></div>
-                                </div>
-                                <div id="fids-msg-error" class="hidden text-center py-12 px-4 bg-red-50 rounded-xl border border-red-200 mb-3">
-                                    <div class="text-3xl mb-3">⚠️</div>
-                                    <div id="fids-error-text" class="text-red-600">資料鏈路異常</div>
-                                </div>
-                                <div class="bg-white sm:rounded-xl shadow-sm border-t sm:border border-slate-200 overflow-x-auto">
-                                    <div class="min-w-[800px]">
-                                        <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
-                                            <div class="w-[12%]">Flight</div>
-                                            <div class="w-[12%]">Route</div>
-                                            <div class="w-[8%] text-center">Gate</div>
-                                            <div class="w-[18%] text-center" id="fids-th-time">Time</div>
-                                            <div class="w-[28%] text-center" id="fids-th-belt">Belt</div>
-                                            <div class="w-[22%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
-                                        </div>
-                                        <div id="fids-flight-list" class="flex flex-col pb-2"></div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -789,10 +701,8 @@
         let runwayMap = {};
         window.parsedNotamGroups = {}; 
         
+        // 隱藏 FIDS UI 但保留資料結構用於背景覆蓋
         let fidsFlightData = { departures: [], arrivals: [] };
-        let fidsState = { mode: 'D', date: 'today', airline: 'JX', time: 'NOW2', searchQuery: '' };
-        const fidsAllowedAirlines = ['JX', 'CI', 'BR'];
-        let fidsUI = {};
 
         // Toast Messages
         function showToast(msg, isError = false, duration = 3000) {
@@ -1395,7 +1305,8 @@
             if (savedInput1 || savedInput2) parseData();
             if (savedNotam) parseNotams();
 
-            initFIDS(); // Initialize FIDS on load
+            // 在背景初始化並抓取 TDX 資料 (無 UI)
+            fetchFIDSDataSilent(); 
         });
 
         window.addEventListener('online', checkNetworkStatus);
@@ -2171,93 +2082,8 @@
             } catch (error) { syncStatus.innerText = "ERROR"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-red-500 text-white shadow font-bold tracking-widest"; }
         }
 
-        function initFIDS() {
-            console.log("✈️ FIDS 戰術看板系統已喚醒");
-
-            fidsUI = {
-                list: document.getElementById('fids-flight-list'),
-                loading: document.getElementById('fids-msg-loading'),
-                empty: document.getElementById('fids-msg-empty'),
-                emptyDiag: document.getElementById('fids-empty-diag'),
-                error: document.getElementById('fids-msg-error'),
-                errorText: document.getElementById('fids-error-text'),
-                btnRefresh: document.getElementById('fids-btn-refresh'),
-                iconRefresh: document.getElementById('fids-icon-refresh'),
-                modeBtns: document.querySelectorAll('.fids-mode-btn'),
-                dateBtns: document.querySelectorAll('.fids-date-btn'),
-                airlineRadios: document.querySelectorAll('input[name="fids-airline"]'),
-                timeRadios: document.querySelectorAll('input[name="fids-time"]'),
-                thTime: document.getElementById('fids-th-time'),
-                thBelt: document.getElementById('fids-th-belt'),
-                thDesk: document.getElementById('fids-th-desk'),
-                searchInput: document.getElementById('fids-search-input')
-            };
-
-            fidsUI.searchInput.addEventListener('input', (e) => {
-                const val = e.target.value.trim();
-                fidsState.searchQuery = val;
-
-                if (val !== '') {
-                    fidsState.airline = 'ALL';
-                    fidsState.date = 'all';
-                    fidsState.time = 'ALL';
-
-                    document.getElementById('fids-filter-all').checked = true;
-                    document.getElementById('fids-time-all').checked = true;
-                    
-                    fidsUI.dateBtns.forEach(b => b.classList.remove('active'));
-                    document.getElementById('fids-btn-alldate').classList.add('active');
-                }
-                
-                renderFIDS(); 
-            });
-
-            fidsUI.modeBtns.forEach(btn => {
-                btn.onclick = (e) => {
-                    fidsUI.modeBtns.forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    fidsState.mode = e.target.dataset.mode;
-                    
-                    fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
-                    fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
-                    renderFIDS();
-                };
-            });
-
-            fidsUI.dateBtns.forEach(btn => {
-                btn.onclick = (e) => {
-                    fidsUI.dateBtns.forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    if (e.target.id === 'fids-btn-yesterday') fidsState.date = 'yesterday';
-                    else if (e.target.id === 'fids-btn-today') fidsState.date = 'today';
-                    else if (e.target.id === 'fids-btn-tomorrow') fidsState.date = 'tomorrow';
-                    else if (e.target.id === 'fids-btn-alldate') fidsState.date = 'all';
-                    renderFIDS();
-                };
-            });
-
-            fidsUI.airlineRadios.forEach(radio => {
-                radio.onchange = (e) => { fidsState.airline = e.target.value; renderFIDS(); };
-            });
-
-            fidsUI.timeRadios.forEach(radio => {
-                radio.onchange = (e) => { fidsState.time = e.target.value; renderFIDS(); };
-            });
-
-            fidsUI.btnRefresh.onclick = fetchFIDSData;
-            
-            fetchFIDSData();
-        }
-
-        async function fetchFIDSData() {
-            fidsUI.list.innerHTML = '';
-            fidsUI.error.classList.add('hidden');
-            fidsUI.empty.classList.add('hidden');
-            fidsUI.loading.classList.remove('hidden');
-            
-            fidsUI.btnRefresh.disabled = true;
-            fidsUI.iconRefresh.classList.add('fids-animate-spin-fast');
-
+        // 背景靜默抓取 TDX 資料 (供機坪覆蓋使用)
+        async function fetchFIDSDataSilent() {
             try {
                 const response = await fetch(FIDS_GAS_URL);
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
@@ -2268,17 +2094,12 @@
                 fidsFlightData.departures = Array.isArray(data.departures) ? data.departures : [];
                 fidsFlightData.arrivals = Array.isArray(data.arrivals) ? data.arrivals : [];
                 
-                renderFIDS();
-                debouncedParseData(); // 🔄 觸發主資料更新，應用 TDX 的停機坪資料
-
+                // 資料抓取完畢後，若畫面已有航班資料，觸發重新解析以套用新的停機坪
+                if (document.getElementById('rawInput').value) {
+                    debouncedParseData();
+                }
             } catch (err) {
-                console.error("Data Link Error:", err);
-                fidsUI.loading.classList.add('hidden');
-                fidsUI.error.classList.remove('hidden');
-                fidsUI.errorText.innerHTML = `<div class="font-bold">資料鏈路異常</div><div class="text-sm mt-1">${err.message}</div>`;
-            } finally {
-                fidsUI.iconRefresh.classList.remove('fids-animate-spin-fast');
-                setTimeout(() => { fidsUI.btnRefresh.disabled = false; }, 5000);
+                console.error("Background TDX Data Link Error:", err);
             }
         }
 
@@ -2290,174 +2111,6 @@
             const month = parts.find(p => p.type === 'month').value;
             const day = parts.find(p => p.type === 'day').value;
             return `${year}-${month}-${day}`;
-        }
-
-        function renderFIDS() {
-            fidsUI.loading.classList.add('hidden');
-            
-            if (fidsState.searchQuery) {
-                fidsUI.thBelt.innerText = 'Status / Belt';
-                fidsUI.thDesk.innerText = '航廈 / 櫃檯 Desk';
-                fidsUI.modeBtns.forEach(b => b.classList.remove('active'));
-            } else {
-                fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
-                fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
-                fidsUI.modeBtns.forEach(b => {
-                    if (b.dataset.mode === fidsState.mode) b.classList.add('active');
-                });
-            }
-
-            let targetDateStr = '';
-            if (fidsState.date === 'yesterday') targetDateStr = getTaiwanDateString(-1);
-            else if (fidsState.date === 'today') targetDateStr = getTaiwanDateString(0);
-            else if (fidsState.date === 'tomorrow') targetDateStr = getTaiwanDateString(1);
-
-            let targetArray = [];
-            if (fidsState.searchQuery) {
-                const deps = fidsFlightData.departures.map(f => ({...f, _type: 'D'}));
-                const arrs = fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
-                targetArray = [...deps, ...arrs];
-            } else {
-                targetArray = fidsState.mode === 'D' 
-                    ? fidsFlightData.departures.map(f => ({...f, _type: 'D'})) 
-                    : fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
-            }
-
-            if (!Array.isArray(targetArray) || targetArray.length === 0) {
-                fidsUI.list.innerHTML = '';
-                fidsUI.empty.classList.remove('hidden');
-                return;
-            }
-
-            const processedData = targetArray.map(f => {
-                let rawTime = f._type === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
-                if (!rawTime) {
-                    rawTime = f._type === 'D' ? f.EstimatedDepartureTime : f.EstimatedArrivalTime;
-                }
-                
-                let flightDateStr = f.FlightDate || "";
-                let flightHour = -1;
-                let flightTimeMs = 0;
-                
-                if (rawTime) {
-                    flightDateStr = rawTime.split('T')[0];
-                    const timePart = rawTime.split('T')[1];
-                    if (timePart) flightHour = parseInt(timePart.split(':')[0], 10);
-                    
-                    let isoStr = rawTime;
-                    if(!isoStr.includes('+') && !isoStr.includes('Z')) isoStr += "+08:00";
-                    flightTimeMs = new Date(isoStr).getTime();
-                }
-                
-                return { ...f, _rawTime: rawTime, _dateStr: flightDateStr, _hour: flightHour, _timeMs: flightTimeMs };
-            });
-
-            const filteredData = processedData.filter(f => {
-                if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
-
-                if (fidsState.searchQuery) {
-                    return f.FlightNumber.includes(fidsState.searchQuery);
-                }
-
-                if (fidsState.airline !== 'ALL' && f.AirlineID !== fidsState.airline) return false;
-
-                let passDate = true;
-                if (fidsState.date !== 'all') { passDate = (f._dateStr === targetDateStr); }
-
-                let passTime = true;
-                if (fidsState.time === 'NOW2') {
-                    const nowMs = Date.now();
-                    const windowMs = 1 * 60 * 60 * 1000; 
-                    if (f._timeMs > 0) {
-                        if (f._timeMs >= nowMs - windowMs && f._timeMs <= nowMs + windowMs) { passDate = true; } 
-                        else { passTime = false; }
-                    } else { passTime = false; }
-                } else if (fidsState.time !== 'ALL') {
-                     if (fidsState.time === '00-06' && !(f._hour >= 0 && f._hour < 6)) passTime = false;
-                     if (fidsState.time === '06-12' && !(f._hour >= 6 && f._hour < 12)) passTime = false;
-                     if (fidsState.time === '12-18' && !(f._hour >= 12 && f._hour < 18)) passTime = false;
-                     if (fidsState.time === '18-24' && !(f._hour >= 18 && f._hour < 24)) passTime = false;
-                }
-
-                return passDate && passTime;
-            });
-
-            filteredData.sort((a, b) => a._timeMs - b._timeMs);
-
-            if (filteredData.length === 0) {
-                fidsUI.list.innerHTML = '';
-                if (targetArray.length > 0) {
-                    const firstDate = processedData[0]?._dateStr || '未知';
-                    const lastDate = processedData[processedData.length - 1]?._dateStr || '未知';
-                    fidsUI.emptyDiag.innerHTML = `
-                        <div class="text-sm text-slate-500 mt-2">雷達掃描 ${targetArray.length} 架次，但皆不符合目前設定。</div>
-                        <div class="text-xs text-left bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4 text-slate-600">
-                            <b class="text-blue-700">🔧 航管診斷資訊</b><br>
-                            儀表板尋找日期：${fidsState.date === 'all' ? '全部日期' : targetDateStr}<br>
-                            塔台回傳資料區間：${firstDate} 至 ${lastDate}<br>
-                        </div>
-                    `;
-                } else {
-                    fidsUI.emptyDiag.innerHTML = `<div class="text-sm text-slate-500 mt-2">塔台目前未回傳任何航班資訊。</div>`;
-                }
-                fidsUI.empty.classList.remove('hidden');
-                return;
-            }
-
-            fidsUI.empty.classList.add('hidden');
-
-            const blocksHTML = filteredData.map(f => {
-                const flightNo = f.AirlineID + f.FlightNumber;
-                const iataCode = f._type === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
-                const timeStr = f._rawTime ? f._rawTime.substring(11, 16) : '—';
-                const terminal = f.Terminal ? `T${f.Terminal}` : '—';
-                const gate = f.Gate || '—';
-                const desk = f.CheckCounter || '—';
-                const belt = f.BaggageClaim || '—';
-                
-                let statusRemark = f._type === 'D' ? (f.DepartureRemark || '') : (f.ArrivalRemark || '');
-                const beltValue = f._type === 'D' ? (statusRemark || '—') : belt;
-
-                let airlineColorClass = 'text-slate-800';
-                if (f.AirlineID === 'JX') airlineColorClass = 'text-[#A67C00]';
-                else if (f.AirlineID === 'CI') airlineColorClass = 'text-[#C0392B]';
-                else if (f.AirlineID === 'BR') airlineColorClass = 'text-[#0F7A4D]';
-
-                const typeBadge = fidsState.searchQuery 
-                    ? (f._type === 'D' 
-                        ? `<span class="ml-2 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 shadow-sm font-black tracking-widest uppercase">Dep</span>` 
-                        : `<span class="ml-2 text-[0.6rem] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 shadow-sm font-black tracking-widest uppercase">Arr</span>`)
-                    : '';
-
-                return `
-                    <div class="fids-list-row flex items-center px-6 py-3 border-b border-slate-100">
-                        <div class="w-[12%] flex items-center">
-                            <span class="font-bold text-[1.15rem] tracking-wide ${airlineColorClass}">${flightNo}</span>
-                        </div>
-                        <div class="w-[12%] flex items-center pr-2">
-                            <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
-                            ${typeBadge}
-                        </div>
-                        <div class="w-[8%] flex justify-center items-center">
-                            <span class="font-black text-red-600 text-[1.25rem]">${gate}</span>
-                        </div>
-                        <div class="w-[18%] flex justify-center items-center">
-                            <span class="font-mono font-bold text-teal-700 text-[1.2rem]">${timeStr}</span>
-                        </div>
-                        <div class="w-[28%] flex justify-center items-center">
-                            <span class="font-bold text-slate-600 text-[1.1rem]">${beltValue}</span>
-                        </div>
-                        <div class="w-[22%] flex justify-end items-center">
-                            <span class="font-medium text-slate-500 text-[1rem]">
-                                ${terminal} ${f._type === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
-                            </span>
-                            ${statusRemark && f._type === 'A' ? `<span class="fids-status-tag hidden sm:inline-block">${statusRemark}</span>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            fidsUI.list.innerHTML = blocksHTML;
         }
     </script>
 </body>
