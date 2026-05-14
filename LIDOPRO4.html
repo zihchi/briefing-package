@@ -10,24 +10,17 @@
     <meta name="apple-mobile-web-app-title" content="Briefing Pro">
     <title>個人專屬 - 航班擷取與簡報系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 html2canvas 實現無中斷全頁截圖 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
-        /* iOS/iPadOS 防護機制：防止邊緣誤觸、拖曳、與意外的分割畫面 */
         html, body {
             -webkit-user-drag: none;
-            -webkit-touch-callout: none; /* 禁用全域長按選單 */
-            overscroll-behavior-x: none; /* 禁用左右滑動的邊緣彈性效果 */
+            -webkit-touch-callout: none;
+            overscroll-behavior-x: none;
         }
 
-        /* 絕對禁止拖曳網頁中的連結、圖片與圖示，杜絕產生拖曳網址的現象 */
-        a, img, svg {
-            -webkit-user-drag: none !important;
-        }
-
-        /* 確保輸入框可以正常長按複製/貼上與點擊，不受全域禁用影響 */
+        a, img, svg { -webkit-user-drag: none !important; }
         input, textarea {
             -webkit-touch-callout: default;
             -webkit-user-select: auto;
@@ -40,7 +33,6 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* Safe Area Padding Utilities for Modern iOS Devices */
         .pt-safe { padding-top: max(env(safe-area-inset-top), 1.5rem); }
         .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 3rem); }
 
@@ -93,15 +85,53 @@
         @media print {
             .no-print { display: none !important; }
         }
+
+        .fids-control-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            margin-bottom: 0.5rem;
+        }
+        .fids-mode-btn { background: transparent !important; color: #64748b !important; }
+        .fids-mode-btn.active { background: #ffffff !important; color: #2563eb !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; font-weight: 800 !important;}
+        .fids-date-btn { background: transparent !important; border-color: #cbd5e1 !important; color: #64748b !important; }
+        .fids-date-btn.active { background: #2563eb !important; color: #ffffff !important; border-color: #2563eb !important; }
+        .fids-filter-label { background: #ffffff; border-color: #e2e8f0; color: #475569; }
+        
+        input[name="fids-airline"][value="JX"]:checked + .fids-filter-label { background: #fef08a !important; border-color: #eab308 !important; color: #854d0e !important; }
+        input[name="fids-airline"][value="CI"]:checked + .fids-filter-label { background: #fecaca !important; border-color: #f43f5e !important; color: #9f1239 !important; }
+        input[name="fids-airline"][value="BR"]:checked + .fids-filter-label { background: #bbf7d0 !important; border-color: #22c55e !important; color: #166534 !important; }
+        input[name="fids-airline"][value="ALL"]:checked + .fids-filter-label { background: #e2e8f0 !important; border-color: #64748b !important; color: #334155 !important; }
+        
+        input[name="fids-time"]:checked + .fids-filter-label { background: #dbeafe !important; border-color: #3b82f6 !important; color: #1e3a8a !important; }
+
+        .fids-btn-refresh {
+            background: transparent !important; border: 2px solid #3c79ff !important;
+            border-radius: 6px !important; padding: 4px 12px !important;
+            font-size: 0.9em !important; color: #3c79ff !important;
+            font-weight: bold !important; cursor: pointer !important;
+            transition: background-color 0.2s, color 0.2s, transform 0.1s !important;
+            display: inline-flex !important; align-items: center !important; gap: 6px !important; margin: 0 !important;
+        }
+        .fids-btn-refresh:hover { background-color: rgba(60,121,255,0.1) !important; color: #2c5edc !important; }
+        .fids-btn-refresh:active { transform: scale(0.95) !important; }
+        .fids-btn-refresh:disabled { border-color: #94a3b8 !important; color: #94a3b8 !important; cursor: not-allowed; transform: none !important; }
+
+        .fids-list-row { transition: background-color 0.15s ease-in-out; }
+        .fids-list-row:hover { background-color: #f8fafc; }
+        .fids-list-row:active { background-color: #f1f5f9; }
+
+        .fids-status-tag { font-size: 0.65rem; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: #f1f5f9; color: #64748b; margin-left: 6px; border: 1px solid #e2e8f0; white-space: nowrap;}
+        @keyframes fids-spin { 100% { transform: rotate(360deg); } }
+        .fids-animate-spin-fast { animation: fids-spin 0.8s linear infinite; display: inline-block;}
     </style>
 </head>
 <body class="text-stone-800 min-h-screen pt-safe pb-safe antialiased relative">
 
-    <!-- 訊息提示 -->
     <div id="toast" class="fixed top-5 right-5 transform transition-transform translate-x-full opacity-0 bg-[#4a3627] text-white px-6 py-3 rounded-xl shadow-2xl z-[500] font-bold tracking-wide border border-[#8b5a2b]/30 no-print">訊息提示</div>
     <div id="offline-banner" class="fixed top-0 left-0 w-full hidden no-print">⚠️ 目前處於離線模式。顯示資料為系統最後一次快取紀錄。</div>
 
-    <!-- 登入與鎖定畫面 -->
     <div id="login-wrapper" class="flex flex-col min-h-screen items-center justify-start pt-[15vh] p-4 relative no-print overflow-y-auto">
         <div id="lido-login-screen" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-xl text-center transition-opacity duration-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-[#8b5a2b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -113,11 +143,9 @@
         </div>
     </div>
 
-    <!-- -->
-    <!-- 主程式戰情室 -->
     <div id="main-app" class="w-full max-w-[1600px] mx-auto transition-opacity duration-500 hidden flex flex-col p-3 md:p-6 pb-12">
         
-        <!-- 頂部 Header -->
+        <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-stone-300 pb-4 gap-4 no-print">
             <div class="flex items-center gap-3">
                 <h1 class="text-xl md:text-2xl font-black text-[#4a3627] tracking-wide flex items-center">
@@ -126,16 +154,13 @@
                 </h1>
             </div>
             <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
-                <button onclick="takeScreenshot()" class="flex-1 sm:flex-none text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-emerald-200">📸 一鍵截圖</button>
                 <button onclick="clearData()" class="flex-1 sm:flex-none text-sm text-red-600 bg-red-50 hover:bg-red-100 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-red-100">🧹 歸零清理</button>
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
         </div>
          
-        <!-- 彈性雙欄排版 (左側控制台 / 右側簡報區) -->
         <div class="flex flex-col xl:flex-row gap-6 items-start">
-            
-             <!-- 【左側控制台】 -->
+             <!-- Sidebar Controls -->
             <div class="w-full xl:w-[340px] shrink-0 flex flex-col gap-4 xl:sticky xl:top-6 z-40 no-print">
                 <div class="flex flex-col gap-3 p-4 md:p-5 bg-white rounded-2xl border border-stone-200 shadow-sm">
                     <label class="text-sm font-bold text-stone-600 tracking-wide flex items-center gap-1.5"><span>🎯</span> 目標航班鎖定</label>
@@ -167,16 +192,10 @@
                 <textarea id="rawInput" class="hidden" oninput="debouncedParseData()"></textarea>
             </div>
 
-            <!-- -->
-            <!-- 【右側簡報畫布】 (Pro Edition Dashboard) -->
             <div id="dashboard-content" class="w-full bg-[#f4ece4] flex flex-col gap-4 md:gap-5 pb-6 px-4 pt-4 md:px-6 md:pt-6 rounded-3xl shadow-xl border border-stone-200 relative">
                 
-                <!-- ROW 1: Flight Info & Payload (Symmetrically aligned for iPad Landscape) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 items-stretch h-full">
-                    
-                    <!-- Flight Info Card (Left: 2/3 width on LG+) - Redesigned to match requested aesthetics -->
                     <div class="lg:col-span-2 w-full flex flex-col border border-stone-300 rounded-2xl overflow-hidden shadow-sm bg-[#fbf9f6] h-full">
-                        <!-- Top Header: Flight, Date, OFP, EFB -->
                         <div class="bg-[#785b42] p-4 md:p-5 flex justify-between items-start text-white">
                             <div class="flex flex-col gap-1.5 z-10">
                                 <span id="out-utc-date" class="bg-white/20 text-white/90 px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max">----</span>
@@ -195,10 +214,7 @@
                             </div>
                         </div>
 
-                        <!-- Bottom Body: 3 Vertical Cards (DEP, ARR, CRZ) -> Swapped based on request -->
                         <div class="p-3 md:p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                            
-                            <!-- Departure Card -->
                             <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
                                 <div class="flex justify-between items-start mb-2 pl-2">
@@ -214,7 +230,6 @@
                                 </div>
                             </div>
 
-                            <!-- Arrival Card (Moved here based on Request #1) -->
                             <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
                                 <div class="flex justify-between items-start mb-2 pl-2">
@@ -230,7 +245,6 @@
                                 </div>
                             </div>
 
-                            <!-- Center Info (ETE & CRZ & ETD) (Moved here based on Request #1) -->
                             <div class="bg-[#344155] rounded-xl shadow-md border border-[#232e3d] p-4 flex flex-col h-full text-center">
                                 <div class="flex flex-col items-center justify-center flex-grow">
                                     <span class="data-font font-black text-3xl xl:text-4xl text-[#f6ca6b] leading-none mb-3 drop-shadow-sm" id="out-ete-center">--:--</span>
@@ -248,18 +262,15 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
-                    <!-- Payload & Cabin Card (Right: 1/3 width on LG+, highly compact) -->
                     <div class="lg:col-span-1 w-full border border-[#d4c3b3] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col h-full">
                         <div class="bg-[#4a3627] p-2.5 text-center">
                             <div class="text-2xl font-black data-font tracking-widest text-white" id="out-reg">----</div>
                         </div>
                         
                         <div class="flex-grow flex flex-col justify-evenly p-3 lg:p-4 gap-2 bg-white">
-                            <!-- PAX -->
                             <div class="text-center mb-1">
                                 <div class="text-[9px] text-stone-500 font-bold tracking-wider mb-0.5">TOTAL PAX</div>
                                 <div class="flex items-baseline justify-center gap-1.5">
@@ -270,7 +281,6 @@
                             
                             <div class="w-full h-px bg-stone-100"></div>
 
-                            <!-- CARGO & FCST -->
                             <div class="flex justify-between items-center px-1">
                                 <div class="text-[9px] text-stone-400 font-bold tracking-wider">CARGO(KG)</div>
                                 <div class="data-font font-bold text-md text-stone-700" id="out-cargo">----</div>
@@ -282,7 +292,6 @@
                             
                             <div class="w-full h-px bg-stone-100"></div>
                             
-                            <!-- WATER -->
                             <div class="text-center bg-blue-50/50 rounded-lg py-1.5">
                                 <div class="text-[9px] text-blue-400 font-bold tracking-wider">WATER</div>
                                 <div class="data-font font-black text-xl text-blue-600" id="out-water">--%</div>
@@ -290,13 +299,12 @@
                             
                             <div class="w-full h-px bg-stone-100"></div>
                             
-                            <!-- BAYS -->
                             <div class="grid grid-cols-2 gap-2 mt-1">
-                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50">
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50 relative">
                                     <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">DEP BAY</span>
                                     <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-dep-bay">--</span>
                                 </div>
-                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50">
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50 relative">
                                     <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">ARR BAY</span>
                                     <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-arr-bay">--</span>
                                 </div>
@@ -305,8 +313,6 @@
                     </div>
                 </div>
 
-                <!-- -->
-                <!-- ROW 2: MEL Text Block (Flexible full width row) -->
                 <div class="w-full border border-[#e8dfd5] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                     <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                         <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
@@ -316,7 +322,6 @@
                     </div>
                 </div>
 
-                <!-- ROW 3: MEL Image Block -->
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                         <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
@@ -343,13 +348,10 @@
                     </div>
                 </div>
 
-                <!-- ROW 4: Weights & Fuel Distribution (3-Column Layout specifically optimized for iPad Pro Landscape) -->
                 <div class="w-full flex flex-col border border-[#d4c3b3] rounded-2xl overflow-hidden shadow-sm bg-white">
                     <div class="bg-[#b37a4c] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5">Weights & Fuel Distribution</div>
-                    <!-- 強制啟用 lg:grid-cols-3 三欄網格，創造充裕呼吸空間 -->
                     <div class="p-4 lg:p-6 bg-[#fdfaf6] grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
                         
-                        <!-- Left Box: TOW & LDW & Total -->
                         <div class="flex flex-col gap-4 justify-between h-full">
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center h-[90px]">
@@ -370,7 +372,6 @@
                             </div>
                         </div>
 
-                        <!-- Middle Box: Div Fuel & Spare Fuel -->
                         <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm flex flex-col justify-between h-full">
                             <div class="flex justify-between items-start mb-6">
                                 <div class="flex flex-col gap-1">
@@ -393,7 +394,6 @@
                             </div>
                         </div>
 
-                        <!-- Right Box: Additions breakdown -->
                         <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
                             <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-wxx"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-wxx">--</span></div></div>
                             <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-opn"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-opn">--</span></div></div>
@@ -408,8 +408,6 @@
                     </div>
                 </div>
 
-                <!-- -->
-                <!-- ROW 5: AVIATION WEATHER -->
                 <div class="flex flex-col border border-stone-200 rounded-2xl overflow-hidden shadow-lg bg-white">
                     <div class="bg-gradient-to-r from-[#3b4c59] to-[#2c3e50] p-4 flex justify-between items-center text-white">
                         <div>
@@ -438,10 +436,8 @@
                     </div>
                 </div>
 
-                <!-- ROW 6: VERTICAL PROFILE, WNI, ATC & EDTO -->
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
                     
-                    <!-- Vertical Flight Profile -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                         <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
@@ -465,7 +461,6 @@
                         </div>
                     </div>
 
-                    <!-- SigWX With Route -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mx-auto">
                         <div class="bg-gradient-to-r from-teal-600 to-teal-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
@@ -488,7 +483,6 @@
                         </div>
                     </div>
 
-                    <!-- ATC 報文保留區 -->
                     <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
                         <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
                             <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
@@ -500,7 +494,6 @@
                         <textarea id="atc-display" readonly class="w-full flex-grow p-4 bg-stone-50 text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none resize-none leading-relaxed" placeholder="ATC 報文將獨立顯示於此供複製..."></textarea>
                     </div>
                     
-                    <!-- WNI Image Area with MAX SHEAR -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
                         <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
@@ -530,7 +523,6 @@
                         </div>
                     </div>
 
-                    <!-- Turbli Image Area -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
                         <div class="bg-gradient-to-r from-indigo-700 to-indigo-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
@@ -559,7 +551,6 @@
                         </div>
                     </div>
 
-                    <!-- EDTO Coordinates -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
                         <div class="bg-[#2c3e50] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -572,15 +563,12 @@
                         </div>
                     </div>
 
-                    <!-- -->
-                    <!-- ROW 7: NOTAM 智慧擷取與分類 -->
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3">
                         <div class="bg-gradient-to-r from-stone-700 to-stone-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 NOTAM 智慧擷取與分類 (Airports / FIR)
                             </span>
-                            <!-- 新增的獨立複製按鈕 -->
                             <div class="flex items-center gap-2">
                                 <button onclick="copyRawNotam()" class="text-stone-300 hover:text-white transition-colors no-print" title="複製原始 NOTAM">
                                     <svg class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -601,6 +589,94 @@
                         </div>
                     </div>
 
+                    <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3 no-print">
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            TDX 桃園機場即時航班戰術雷達
+                        </div>
+                        <div class="p-4 md:p-5 bg-white text-slate-800">
+                            <!-- 控制面板 -->
+                            <div class="fids-control-panel p-3 md:p-4 text-slate-800 border-none shadow-none">
+                                <div class="max-w-5xl mx-auto">
+                                    <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-2 md:gap-4">
+                                        <h1 class="text-lg md:text-xl font-black tracking-tight flex items-center gap-2 m-0 p-0 text-[#2563eb]">
+                                            <span>✈️</span> RCTP 即時動態
+                                        </h1>
+                                        <input type="text" id="fids-search-input" placeholder="🔍 搜尋航班號 (例: 805)" class="border-2 border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:outline-none transition-all w-full sm:w-48 flex-1 sm:flex-none">
+                                        <button id="fids-btn-refresh" class="fids-btn-refresh shrink-0">
+                                            <span id="fids-icon-refresh">🔄</span> 立即更新
+                                        </button>
+                                    </div>
+                                    <div class="flex flex-wrap justify-between items-center mb-3 md:mb-4 gap-3 md:gap-4">
+                                        <div class="flex items-center bg-slate-200 rounded-xl p-1 shrink-0 w-full sm:w-auto">
+                                            <button class="fids-mode-btn active flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="D">離場 (DEP)</button>
+                                            <button class="fids-mode-btn flex-1 sm:flex-none !m-0 !px-4 md:!px-5 !min-h-[40px] md:!min-h-[36px] flex items-center justify-center !border-none !rounded-lg !text-sm md:!text-[0.95rem] !font-bold whitespace-nowrap transition-all" data-mode="A">到場 (ARR)</button>
+                                        </div>
+                                        <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto scrollbar-hide shrink-0 pb-1 w-full sm:w-auto snap-x">
+                                            <button id="fids-btn-yesterday" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">昨日</button>
+                                            <button id="fids-btn-today" class="fids-date-btn active snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">今日</button>
+                                            <button id="fids-btn-tomorrow" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">明日</button>
+                                            <button id="fids-btn-alldate" class="fids-date-btn snap-start !m-0 !px-3 md:!px-4 !min-h-[40px] flex items-center justify-center !border-2 !border-purple-300 !text-purple-700 !rounded-xl !text-xs md:!text-sm !font-bold whitespace-nowrap transition-all">ALL 日期</button>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 md:gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                                        <input type="radio" id="fids-filter-jx" name="fids-airline" value="JX" class="hidden" checked>
+                                        <label for="fids-filter-jx" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX 星宇</label>
+                                        <input type="radio" id="fids-filter-ci" name="fids-airline" value="CI" class="hidden">
+                                        <label for="fids-filter-ci" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">CI 華航</label>
+                                        <input type="radio" id="fids-filter-br" name="fids-airline" value="BR" class="hidden">
+                                        <label for="fids-filter-br" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">BR 長榮</label>
+                                        <input type="radio" id="fids-filter-all" name="fids-airline" value="ALL" class="hidden">
+                                        <label for="fids-filter-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-4 md:!px-5 !min-h-[44px] md:!min-h-[40px] flex items-center justify-center !rounded-full !border-2 !text-xs md:!text-sm !font-bold transition-all shadow-sm">JX+CI+BR</label>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 md:gap-2 overflow-x-auto pb-1 mt-1 md:mt-2 scrollbar-hide snap-x">
+                                        <input type="radio" id="fids-time-now2" name="fids-time" value="NOW2" class="hidden" checked>
+                                        <label for="fids-time-now2" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">±1hr 即時</label>
+                                        <input type="radio" id="fids-time-0006" name="fids-time" value="00-06" class="hidden">
+                                        <label for="fids-time-0006" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">00-06</label>
+                                        <input type="radio" id="fids-time-0612" name="fids-time" value="06-12" class="hidden">
+                                        <label for="fids-time-0612" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">06-12</label>
+                                        <input type="radio" id="fids-time-1218" name="fids-time" value="12-18" class="hidden">
+                                        <label for="fids-time-1218" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">12-18</label>
+                                        <input type="radio" id="fids-time-1824" name="fids-time" value="18-24" class="hidden">
+                                        <label for="fids-time-1824" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">18-24</label>
+                                        <input type="radio" id="fids-time-all" name="fids-time" value="ALL" class="hidden">
+                                        <label for="fids-time-all" class="fids-filter-label snap-start cursor-pointer select-none whitespace-nowrap !m-0 !px-3 md:!px-4 !min-h-[36px] flex items-center justify-center !rounded-full !border-2 !text-[0.75rem] md:!text-[0.85rem] !font-bold transition-all shadow-sm">ALL 全日</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="max-w-5xl mx-auto">
+                                <div id="fids-msg-loading" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
+                                    <div class="text-3xl mb-3 animate-pulse">📡</div>
+                                    <div class="font-bold text-blue-600">正在與塔台建立數據鏈路...</div>
+                                    <div class="text-sm text-slate-400 mt-1">Acquiring TDX Data Link</div>
+                                </div>
+                                <div id="fids-msg-empty" class="hidden text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200 mb-3">
+                                    <div class="text-3xl mb-3">📭</div>
+                                    <div class="font-bold text-slate-600">目前設定的條件下無航班。</div>
+                                    <div id="fids-empty-diag" class="mt-4 px-4"></div>
+                                </div>
+                                <div id="fids-msg-error" class="hidden text-center py-12 px-4 bg-red-50 rounded-xl border border-red-200 mb-3">
+                                    <div class="text-3xl mb-3">⚠️</div>
+                                    <div id="fids-error-text" class="text-red-600">資料鏈路異常</div>
+                                </div>
+                                <div class="bg-white sm:rounded-xl shadow-sm border-t sm:border border-slate-200 overflow-x-auto">
+                                    <div class="min-w-[800px]">
+                                        <div class="flex items-center px-6 py-3 bg-slate-50 border-b-2 border-slate-200 text-[0.75rem] font-bold text-slate-400 uppercase tracking-wider rounded-t-xl">
+                                            <div class="w-[12%]">Flight</div>
+                                            <div class="w-[12%]">Route</div>
+                                            <div class="w-[8%] text-center">Gate</div>
+                                            <div class="w-[18%] text-center" id="fids-th-time">Time</div>
+                                            <div class="w-[28%] text-center" id="fids-th-belt">Belt</div>
+                                            <div class="w-[22%] text-right" id="fids-th-desk">航廈 / 櫃檯 Desk</div>
+                                        </div>
+                                        <div id="fids-flight-list" class="flex flex-col pb-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -608,12 +684,7 @@
 
     </div>
 
-    <!-- -->
-    <!-- 腳本整合 -->
     <script>
-        // ==========================================
-        // PWA 與離線支援模組 (Single-File Architecture)
-        // ==========================================
         (function initPWA() {
             const manifest = {
                 "name": "Flight Briefing Pro",
@@ -660,10 +731,9 @@
             }
         })();
 
-        // ==========================================
-        // 變數與核心功能
-        // ==========================================
+        // Variables
         const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLGUt7oKbBMpcwGFkFiDWp1mMlrQiP1UND07XyWB4LTXYjq-WSkUf_zmzoAGwyLIfaTA/exec'; 
+        const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
         
@@ -708,7 +778,6 @@
             'RJBB': {lat: 34.4273, lon: 135.2440}, 'ROAH': {lat: 26.1958, lon: 127.6458}
         };
 
-        // UI 元件
         const lidoLoginScreen = document.getElementById('lido-login-screen');
         const mainApp = document.getElementById('main-app');
         const loginWrapper = document.getElementById('login-wrapper');
@@ -719,8 +788,13 @@
         let currentIcaosToFetch = [], currentDateUTC = '----';
         let runwayMap = {};
         window.parsedNotamGroups = {}; 
+        
+        let fidsFlightData = { departures: [], arrivals: [] };
+        let fidsState = { mode: 'D', date: 'today', airline: 'JX', time: 'NOW2', searchQuery: '' };
+        const fidsAllowedAirlines = ['JX', 'CI', 'BR'];
+        let fidsUI = {};
 
-        // Toast 訊息提示
+        // Toast Messages
         function showToast(msg, isError = false, duration = 3000) {
             toast.textContent = msg;
             toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 transition-all duration-300 shadow-2xl z-[500] px-6 py-3 rounded-full text-white font-bold tracking-wide border ${isError ? 'bg-red-600 border-red-400' : 'bg-[#4a3627] border-[#8b5a2b]/30'} scale-100 opacity-100 no-print`;
@@ -731,20 +805,11 @@
         }
         function showToastMessage(msg) { showToast(msg, false, 4000); }
 
-        // Keyboard submission for login
         document.getElementById('lido-pass').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('lido-pass').blur();
-                document.getElementById('lido-connect-btn').click();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); document.getElementById('lido-connect-btn').click(); }
         });
-
         document.getElementById('lido-user').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('lido-pass').focus();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lido-pass').focus(); }
         });
 
         document.getElementById('lido-connect-btn').addEventListener('click', () => {
@@ -770,117 +835,7 @@
             showToast('已斷開連線，憑證清除並鎖定');
         });
 
-        // ==========================================
-        // 全版面高解析度一鍵截圖功能
-        // ==========================================
-        async function takeScreenshot() {
-            showToast('📸 正在擷取高畫質簡報中，這可能需要幾秒鐘的時間...', false, 5000);
-            const target = document.getElementById('dashboard-content');
-
-            // 1. 為了不漏訊，暫時擴展所有具有限制高度或滾動條的元件
-            const mels = target.querySelectorAll('.mel-scroll');
-            const textareas = target.querySelectorAll('textarea');
-            const originalStyles = []; // 用來存儲復原所需的舊樣式
-
-            // 處理 MEL 視窗等自訂滾動區域
-            mels.forEach(el => {
-                originalStyles.push({ el, maxH: el.style.maxHeight, overflow: el.style.overflow });
-                el.style.maxHeight = 'none';
-                el.style.overflow = 'visible';
-            });
-
-            // 處理 Textarea 展開 (特別是 NOTAM 輸入框)
-            textareas.forEach(el => {
-                originalStyles.push({ el, height: el.style.height, overflow: el.style.overflow });
-                el.style.height = el.scrollHeight + 5 + 'px'; 
-                el.style.overflow = 'hidden';
-            });
-
-            // 隱藏列印不需要的元件，確保畫面乾淨
-            const noPrintEls = target.querySelectorAll('.no-print');
-            noPrintEls.forEach(el => {
-                originalStyles.push({ el, display: el.style.display });
-                el.style.display = 'none';
-            });
-
-            // 稍微等待 DOM 重繪
-            await new Promise(r => setTimeout(r, 300));
-
-            try {
-                // 呼叫 html2canvas
-                const canvas = await html2canvas(target, {
-                    scale: window.devicePixelRatio > 1 ? 2 : 1, // 適應視網膜螢幕，但限制最高為 2 避免記憶體過載
-                    useCORS: true, // 允許跨來源圖片 (避免 Taint Canvas)
-                    backgroundColor: '#f4ece4', // 填入同底色
-                    logging: false, // 關閉主控台雜訊
-                    allowTaint: false,
-                    windowWidth: target.scrollWidth, // 確保抓到完整寬度
-                    windowHeight: target.scrollHeight // 確保抓到完整高度
-                });
-
-                // 動態決定檔名
-                const flightNo = document.getElementById('out-flight-no').innerText || 'Flight';
-                const dateText = document.getElementById('out-utc-date').innerText || 'Briefing';
-                const fileName = `Briefing_${flightNo}_${dateText}.jpg`;
-
-                // 【修正 iOS 下載問題】: 將 Canvas 轉換為 Blob
-                canvas.toBlob((blob) => {
-                    if (blob === null) {
-                        showToast('❌ 產生圖片失敗，可能是記憶體不足', true);
-                        return;
-                    }
-
-                    const blobUrl = URL.createObjectURL(blob);
-
-                    // 檢查是否為 iOS 設備 (iOS 13+ 包含 iPadOS，有時直接下載會失效)
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-                    if (isIOS && !window.navigator.standalone) {
-                         // 在 iOS PWA (standalone) 環境外，有時直接下載會失敗，
-                         // 提供一個備用方案：將圖片開在新分頁，讓使用者長按儲存。
-                         // 但我們還是先嘗試標準下載，因為較新的 Safari 有改善。
-                         try {
-                            const link = document.createElement('a');
-                            link.href = blobUrl;
-                            link.download = fileName;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                         } catch (e) {
-                             // 如果標準下載失敗，備案是打開新視窗
-                             window.open(blobUrl, '_blank');
-                             showToast('✅ 圖片已產生！請長按圖片進行「儲存」', false, 5000);
-                         }
-                    } else {
-                        // 非 iOS 設備或 PWA 環境，使用標準 Blob 下載
-                        const link = document.createElement('a');
-                        link.href = blobUrl;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }
-
-                    // 釋放記憶體
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-                    showToast('✅ 簡報截圖已成功產生！');
-                    
-                }, 'image/jpeg', 0.85); // 使用 0.85 壓縮率，平衡畫質與檔案大小
-
-            } catch (err) {
-                console.error(err);
-                showToast('❌ 截圖發生異常，請檢查瀏覽器設定或重新整理', true);
-            } finally {
-                // 2. 將畫面恢復為原本的使用者互動狀態
-                originalStyles.forEach(item => {
-                    if (item.maxH !== undefined) item.el.style.maxHeight = item.maxH;
-                    if (item.height !== undefined) item.el.style.height = item.height;
-                    if (item.overflow !== undefined) item.el.style.overflow = item.overflow;
-                    if (item.display !== undefined) item.el.style.display = item.display;
-                });
-            }
-        }
-
+        // Utils
         function formatAviationTime(ms) {
             if (!ms) return 'N/A';
             const d = new Date(ms);
@@ -903,9 +858,6 @@
             return null;
         }
 
-        // ==========================================
-        // NOTAM 解析與按鈕生成邏輯
-        // ==========================================
         let parseNotamTimer;
         function debouncedParseNotams() {
             clearTimeout(parseNotamTimer);
@@ -938,11 +890,8 @@
             let isAirportSection = false;
 
             const airportCategories = [
-                'DEPARTURE AIRPORT',
-                'DESTINATION AIRPORT',
-                'DESTINATION ALTERNATE(S)',
-                'ENROUTE AIRPORT(S)',
-                'SUITABLE ENROUTE AIRPORT(S)'
+                'DEPARTURE AIRPORT', 'DESTINATION AIRPORT', 'DESTINATION ALTERNATE(S)',
+                'ENROUTE AIRPORT(S)', 'SUITABLE ENROUTE AIRPORT(S)'
             ];
 
             const areaMappings = {
@@ -955,23 +904,13 @@
             function saveBlock() {
                 if (currentBlock.length > 0) {
                     if (isAirportSection && currentSubCategory) {
-                        parsedAirports.push({
-                            title: currentSubCategory,
-                            text: currentBlock.join('\n') + '\n'
-                        });
+                        parsedAirports.push({ title: currentSubCategory, text: currentBlock.join('\n') + '\n' });
                     } else if (!isAirportSection && currentMajorCategory) {
                         let normCat = currentMajorCategory.replace(/\s+/g, ' ');
                         let displayTitle = areaMappings[normCat] || normCat;
-                        
                         let existingArea = parsedAreas.find(a => a.title === displayTitle);
-                        if (existingArea) {
-                            existingArea.text += currentBlock.join('\n') + '\n';
-                        } else {
-                            parsedAreas.push({
-                                title: displayTitle,
-                                text: currentBlock.join('\n') + '\n'
-                            });
-                        }
+                        if (existingArea) existingArea.text += currentBlock.join('\n') + '\n';
+                        else parsedAreas.push({ title: displayTitle, text: currentBlock.join('\n') + '\n' });
                     }
                     currentBlock = [];
                 }
@@ -988,20 +927,14 @@
                         if (lines[j].trim()) catName += lines[j].trim() + " ";
                         j++;
                     }
-
                     if (j < lines.length && /^={5,}$/.test(lines[j].trim())) {
                         saveBlock(); 
-
                         currentMajorCategory = catName.trim().toUpperCase();
                         currentSubCategory = null;
                         isAirportSection = airportCategories.includes(currentMajorCategory);
-
                         if (!isAirportSection) {
-                            for (let k = i; k <= j; k++) {
-                                currentBlock.push(lines[k]);
-                            }
+                            for (let k = i; k <= j; k++) currentBlock.push(lines[k]);
                         }
-                        
                         i = j; 
                         continue;
                     }
@@ -1010,23 +943,16 @@
                 if (isAirportSection && i + 1 < lines.length && /^-{5,}$/.test(lines[i+1].trim())) {
                     if (!line.startsWith(' ') && line.trim().length > 0) {
                         saveBlock(); 
-
                         const titleParts = cl.split(/\s{2,}|\s+\//);
                         currentSubCategory = titleParts[0].trim(); 
                         currentBlock = [line]; 
                         continue;
                     }
                 }
-
-                if (isAirportSection && currentSubCategory) {
-                    currentBlock.push(line);
-                } else if (!isAirportSection && currentMajorCategory) {
-                    currentBlock.push(line);
-                }
+                if (isAirportSection && currentSubCategory) currentBlock.push(line);
+                else if (!isAirportSection && currentMajorCategory) currentBlock.push(line);
             }
-            
             saveBlock(); 
-            
             container.innerHTML = '';
             
             const copyAllBtn = document.createElement('button');
@@ -1076,24 +1002,18 @@
             if (!text) return;
             const tempTextarea = document.createElement('textarea');
             tempTextarea.value = text.trim();
-            tempTextarea.style.position = 'fixed';
-            tempTextarea.style.top = '0';
+            tempTextarea.style.position = 'fixed'; tempTextarea.style.top = '0';
             document.body.appendChild(tempTextarea);
             tempTextarea.select();
-            
             try {
                 document.execCommand('copy');
                 showToastMessage(`✅ 已成功複製 ${title} NOTAM`);
             } catch (err) {
                 showToastMessage('❌ 複製失敗，請手動框選複製');
             }
-            
             document.body.removeChild(tempTextarea);
         }
 
-        // ==========================================
-        // 核心擷取邏輯 (Fetch API)
-        // ==========================================
         const fetchBtn = document.getElementById('fetch-data-btn');
         fetchBtn.addEventListener('click', async () => {
             let targetRaw = document.getElementById('target-flight').value.trim();
@@ -1124,7 +1044,7 @@
                 try {
                     responseData = JSON.parse(textResponse);
                 } catch (parseError) {
-                    throw new Error('伺服器回傳了無效的格式 (HTML)。可能是查無此航班資料，或 GAS 伺服器內部發生錯誤。');
+                    throw new Error('伺服器回傳了無效的格式。可能是查無此航班資料，或伺服器內部發生錯誤。');
                 }
 
                 if (responseData.status === 'success') {
@@ -1237,9 +1157,7 @@
                     let efbVer = 'N/A';
                     if (rawTexts['CREWINFO']) {
                         const efbMatches = [...rawTexts['CREWINFO'].matchAll(/EFB VER\.?\s*SJX-IOS-(R\d{3,4})/ig)];
-                        if (efbMatches.length > 0) {
-                            efbVer = efbMatches[efbMatches.length - 1][1]; 
-                        }
+                        if (efbMatches.length > 0) efbVer = efbMatches[efbMatches.length - 1][1]; 
                     }
 
                     let cruiseAltStr = 'N/A', wc = 'N/A', mxsh = 'N/A';
@@ -1312,7 +1230,6 @@
                         spareFuelCalc = (fw_addWxx.w + fw_addOpn.w + fw_addAtc.w + fw_addDev.w + fw_cont.w + fw_crit.w + fw_tank.w + fw_extra.w).toString();
 
                         const formatFuelVal = (fw) => fw.t ? `${fw.w} / ${fw.t.replace('.', ':')}` : `${fw.w}`;
-
                         const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
 
                         let bof1 = 0, bof2 = 0, bof3 = 0;
@@ -1378,7 +1295,7 @@
                     document.getElementById('rawInput').value = rawBlock;
                     
                     if (rawTexts['VERTPROF'] && rawTexts['VERTPROF'].startsWith('data:image')) {
-                        showImage(rawTexts['VERTPROF'], 'profile', true); // explicit true to avoid double saving if not needed, though the routine will handle it
+                        showImage(rawTexts['VERTPROF'], 'profile', true);
                     }
 
                     Object.keys(rawTexts).forEach(key => {
@@ -1397,7 +1314,6 @@
 
                     debouncedParseData();
                     parseNotams();
-                    
                     showToast('資料完美縫合！儀表板已更新。');
                 } else {
                     showToast(`擷取失敗：${responseData.message}`, true);
@@ -1418,10 +1334,7 @@
             showToast('已複製 ATC 報文');
         });
 
-        // ==========================================
-        // Pro Dashboard 邏輯 (解析、氣象、呈現)
-        // ==========================================
-       function clearData(silent = false) {
+        function clearData(silent = false) {
             document.getElementById('rawInput').value = '';
             document.getElementById('rawInput2').value = '';
             document.getElementById('atc-display').value = '';
@@ -1481,6 +1394,8 @@
             checkNetworkStatus();
             if (savedInput1 || savedInput2) parseData();
             if (savedNotam) parseNotams();
+
+            initFIDS(); // Initialize FIDS on load
         });
 
         window.addEventListener('online', checkNetworkStatus);
@@ -1528,9 +1443,7 @@
                     if (imageTypes.length > 0) {
                         const blob = await clipboardItem.getType(imageTypes[0]);
                         const reader = new FileReader();
-                        reader.onload = function(e) {
-                            showImage(e.target.result, prefix);
-                        };
+                        reader.onload = function(e) { showImage(e.target.result, prefix); };
                         reader.readAsDataURL(blob);
                         return;
                     }
@@ -1577,15 +1490,12 @@
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    showImage(e.target.result, prefix);
-                };
+                reader.onload = function(e) { showImage(e.target.result, prefix); };
                 reader.readAsDataURL(file);
             }
             event.target.value = '';
         }
 
-        // 高效圖像壓縮與快取機制 (修復 Safari QuotaExceededError)
         function showImage(dataUrl, prefix, skipSave = false) {
             document.getElementById(`${prefix}-placeholder`).classList.add('hidden');
             
@@ -1605,7 +1515,6 @@
                                 localStorage.setItem('dispatch_sigwx_image', JSON.stringify(saved));
                             }
                         } catch (e) {
-                            console.warn('Storage quota exceeded', e);
                             showToast('設備儲存空間不足，部分圖片可能無法保留', true);
                         }
                     }
@@ -1615,18 +1524,13 @@
                         img.src = finalUrl; 
                         img.classList.remove('hidden');
                         if (!skipSave) {
-                            try {
-                                localStorage.setItem(`dispatch_${prefix}_image`, finalUrl);
-                            } catch (e) {
-                                console.warn('Storage quota exceeded', e);
-                                showToast('設備儲存空間不足，部分圖片可能無法保留', true);
-                            }
+                            try { localStorage.setItem(`dispatch_${prefix}_image`, finalUrl); } 
+                            catch (e) { showToast('設備儲存空間不足，部分圖片可能無法保留', true); }
                         }
                     }
                 }
             };
 
-            // 如果是新上傳或貼上的圖片，自動進行等比例壓縮編碼至 JPEG
             if (!skipSave && dataUrl.startsWith('data:image/')) {
                 const img = new Image();
                 img.onload = function() {
@@ -1637,19 +1541,13 @@
                     const MAX_HEIGHT = 2000;
                     if (width > MAX_WIDTH || height > MAX_HEIGHT) {
                         const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
-                        width *= ratio;
-                        height *= ratio;
+                        width *= ratio; height *= ratio;
                     }
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
-                    
-                    // 填充白底，防範 PNG 透明圖檔變黑
                     ctx.fillStyle = "white";
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // 利用 JPEG 0.82 轉換，能將動輒 4~5MB 的圖幅壓縮到 200KB 左右
                     const compressedUrl = canvas.toDataURL('image/jpeg', 0.82);
                     applyAndSave(compressedUrl);
                 };
@@ -1665,10 +1563,7 @@
                 document.querySelectorAll('.sigwx-img-item').forEach(el => el.remove());
             } else {
                 const img = document.getElementById(`${prefix}-image`);
-                if (img) {
-                    img.src = ''; 
-                    img.classList.add('hidden');
-                }
+                if (img) { img.src = ''; img.classList.add('hidden'); }
             }
             document.getElementById(`${prefix}-placeholder`).classList.remove('hidden');
         }
@@ -1867,15 +1762,9 @@
             }
             
             if (altnHtml) {
-                if(altnContainer) {
-                    altnContainer.innerHTML = altnHtml;
-                    altnContainer.classList.remove('hidden');
-                }
+                if(altnContainer) { altnContainer.innerHTML = altnHtml; altnContainer.classList.remove('hidden'); }
             } else {
-                if(altnContainer) {
-                    altnContainer.innerHTML = '';
-                    altnContainer.classList.add('hidden');
-                }
+                if(altnContainer) { altnContainer.innerHTML = ''; altnContainer.classList.add('hidden'); }
             }
 
             const eteVal = extractData(rawText, 'ETE');
@@ -1953,6 +1842,32 @@
                     }
                 });
             }
+
+            // 🎯 TDX 停機坪智慧判斷與覆蓋邏輯
+            let targetAirline = valFlight !== '----' ? valFlight.replace(/[0-9]/g, '').trim() : '';
+            let targetFlightNum = valFlight !== '----' ? valFlight.replace(/[^0-9]/g, '').trim() : '';
+
+            if (targetAirline && targetFlightNum && fidsFlightData) {
+                if (currentDepICAO === 'RCTP' || currentDepICAO === 'TPE') {
+                    const tdxDep = fidsFlightData.departures.find(f => f.AirlineID === targetAirline && f.FlightNumber === targetFlightNum);
+                    if (tdxDep && tdxDep.Gate) {
+                        if (depBay !== '--' && depBay !== tdxDep.Gate) {
+                            showToastMessage(`⚠️ 桃園出發機坪衝突：手動(${depBay})，TDX(${tdxDep.Gate})。已自動套用 TDX 資訊。`);
+                        }
+                        depBay = tdxDep.Gate;
+                    }
+                }
+                if (currentArrICAO === 'RCTP' || currentArrICAO === 'TPE') {
+                    const tdxArr = fidsFlightData.arrivals.find(f => f.AirlineID === targetAirline && f.FlightNumber === targetFlightNum);
+                    if (tdxArr && tdxArr.Gate) {
+                        if (arrBay !== '--' && arrBay !== tdxArr.Gate) {
+                            showToastMessage(`⚠️ 桃園抵達機坪衝突：手動(${arrBay})，TDX(${tdxArr.Gate})。已自動套用 TDX 資訊。`);
+                        }
+                        arrBay = tdxArr.Gate;
+                    }
+                }
+            }
+
             if (document.getElementById('out-pld-dep-bay')) document.getElementById('out-pld-dep-bay').textContent = depBay; 
             if (document.getElementById('out-pld-arr-bay')) document.getElementById('out-pld-arr-bay').textContent = arrBay;
 
@@ -1996,9 +1911,6 @@
             if(currentIcaosToFetch.length > 0) fetchAllWeather(currentIcaosToFetch);
         }
 
-        // ==========================================
-        // 開源天氣：支援動態預報擷取邏輯
-        // ==========================================
         async function fetchSimpleWeather(icao, isArrival = false, baseDate = null, targetZulu = null, depZulu = null) {
             const container = document.getElementById(`awc-simple-wx-${icao}`);
             const descEl = document.getElementById(`awc-wx-desc-${icao}`);
@@ -2242,6 +2154,295 @@
                 else if (metarResult.status === 'rejected' || tafResult.status === 'rejected') { syncStatus.innerText = "DEGRADED"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-amber-500 text-white shadow font-bold tracking-widest"; } 
                 else { syncStatus.innerText = "SYNCED"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-white shadow font-bold tracking-widest"; }
             } catch (error) { syncStatus.innerText = "ERROR"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-red-500 text-white shadow font-bold tracking-widest"; }
+        }
+
+        function initFIDS() {
+            console.log("✈️ FIDS 戰術看板系統已喚醒");
+
+            fidsUI = {
+                list: document.getElementById('fids-flight-list'),
+                loading: document.getElementById('fids-msg-loading'),
+                empty: document.getElementById('fids-msg-empty'),
+                emptyDiag: document.getElementById('fids-empty-diag'),
+                error: document.getElementById('fids-msg-error'),
+                errorText: document.getElementById('fids-error-text'),
+                btnRefresh: document.getElementById('fids-btn-refresh'),
+                iconRefresh: document.getElementById('fids-icon-refresh'),
+                modeBtns: document.querySelectorAll('.fids-mode-btn'),
+                dateBtns: document.querySelectorAll('.fids-date-btn'),
+                airlineRadios: document.querySelectorAll('input[name="fids-airline"]'),
+                timeRadios: document.querySelectorAll('input[name="fids-time"]'),
+                thTime: document.getElementById('fids-th-time'),
+                thBelt: document.getElementById('fids-th-belt'),
+                thDesk: document.getElementById('fids-th-desk'),
+                searchInput: document.getElementById('fids-search-input')
+            };
+
+            fidsUI.searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                fidsState.searchQuery = val;
+
+                if (val !== '') {
+                    fidsState.airline = 'ALL';
+                    fidsState.date = 'all';
+                    fidsState.time = 'ALL';
+
+                    document.getElementById('fids-filter-all').checked = true;
+                    document.getElementById('fids-time-all').checked = true;
+                    
+                    fidsUI.dateBtns.forEach(b => b.classList.remove('active'));
+                    document.getElementById('fids-btn-alldate').classList.add('active');
+                }
+                
+                renderFIDS(); 
+            });
+
+            fidsUI.modeBtns.forEach(btn => {
+                btn.onclick = (e) => {
+                    fidsUI.modeBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    fidsState.mode = e.target.dataset.mode;
+                    
+                    fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
+                    fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
+                    renderFIDS();
+                };
+            });
+
+            fidsUI.dateBtns.forEach(btn => {
+                btn.onclick = (e) => {
+                    fidsUI.dateBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    if (e.target.id === 'fids-btn-yesterday') fidsState.date = 'yesterday';
+                    else if (e.target.id === 'fids-btn-today') fidsState.date = 'today';
+                    else if (e.target.id === 'fids-btn-tomorrow') fidsState.date = 'tomorrow';
+                    else if (e.target.id === 'fids-btn-alldate') fidsState.date = 'all';
+                    renderFIDS();
+                };
+            });
+
+            fidsUI.airlineRadios.forEach(radio => {
+                radio.onchange = (e) => { fidsState.airline = e.target.value; renderFIDS(); };
+            });
+
+            fidsUI.timeRadios.forEach(radio => {
+                radio.onchange = (e) => { fidsState.time = e.target.value; renderFIDS(); };
+            });
+
+            fidsUI.btnRefresh.onclick = fetchFIDSData;
+            
+            fetchFIDSData();
+        }
+
+        async function fetchFIDSData() {
+            fidsUI.list.innerHTML = '';
+            fidsUI.error.classList.add('hidden');
+            fidsUI.empty.classList.add('hidden');
+            fidsUI.loading.classList.remove('hidden');
+            
+            fidsUI.btnRefresh.disabled = true;
+            fidsUI.iconRefresh.classList.add('fids-animate-spin-fast');
+
+            try {
+                const response = await fetch(FIDS_GAS_URL);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.detail || "GAS 內部處理錯誤");
+
+                fidsFlightData.departures = Array.isArray(data.departures) ? data.departures : [];
+                fidsFlightData.arrivals = Array.isArray(data.arrivals) ? data.arrivals : [];
+                
+                renderFIDS();
+                debouncedParseData(); // 🔄 觸發主資料更新，應用 TDX 的停機坪資料
+
+            } catch (err) {
+                console.error("Data Link Error:", err);
+                fidsUI.loading.classList.add('hidden');
+                fidsUI.error.classList.remove('hidden');
+                fidsUI.errorText.innerHTML = `<div class="font-bold">資料鏈路異常</div><div class="text-sm mt-1">${err.message}</div>`;
+            } finally {
+                fidsUI.iconRefresh.classList.remove('fids-animate-spin-fast');
+                setTimeout(() => { fidsUI.btnRefresh.disabled = false; }, 5000);
+            }
+        }
+
+        function getTaiwanDateString(offsetDays = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays); 
+            const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+            const year = parts.find(p => p.type === 'year').value;
+            const month = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            return `${year}-${month}-${day}`;
+        }
+
+        function renderFIDS() {
+            fidsUI.loading.classList.add('hidden');
+            
+            if (fidsState.searchQuery) {
+                fidsUI.thBelt.innerText = 'Status / Belt';
+                fidsUI.thDesk.innerText = '航廈 / 櫃檯 Desk';
+                fidsUI.modeBtns.forEach(b => b.classList.remove('active'));
+            } else {
+                fidsUI.thBelt.innerText = fidsState.mode === 'D' ? 'Status' : 'Belt';
+                fidsUI.thDesk.innerText = fidsState.mode === 'D' ? '航廈 / 櫃檯 Desk' : '航廈 Term';
+                fidsUI.modeBtns.forEach(b => {
+                    if (b.dataset.mode === fidsState.mode) b.classList.add('active');
+                });
+            }
+
+            let targetDateStr = '';
+            if (fidsState.date === 'yesterday') targetDateStr = getTaiwanDateString(-1);
+            else if (fidsState.date === 'today') targetDateStr = getTaiwanDateString(0);
+            else if (fidsState.date === 'tomorrow') targetDateStr = getTaiwanDateString(1);
+
+            let targetArray = [];
+            if (fidsState.searchQuery) {
+                const deps = fidsFlightData.departures.map(f => ({...f, _type: 'D'}));
+                const arrs = fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
+                targetArray = [...deps, ...arrs];
+            } else {
+                targetArray = fidsState.mode === 'D' 
+                    ? fidsFlightData.departures.map(f => ({...f, _type: 'D'})) 
+                    : fidsFlightData.arrivals.map(f => ({...f, _type: 'A'}));
+            }
+
+            if (!Array.isArray(targetArray) || targetArray.length === 0) {
+                fidsUI.list.innerHTML = '';
+                fidsUI.empty.classList.remove('hidden');
+                return;
+            }
+
+            const processedData = targetArray.map(f => {
+                let rawTime = f._type === 'D' ? f.ScheduleDepartureTime : f.ScheduleArrivalTime;
+                if (!rawTime) {
+                    rawTime = f._type === 'D' ? f.EstimatedDepartureTime : f.EstimatedArrivalTime;
+                }
+                
+                let flightDateStr = f.FlightDate || "";
+                let flightHour = -1;
+                let flightTimeMs = 0;
+                
+                if (rawTime) {
+                    flightDateStr = rawTime.split('T')[0];
+                    const timePart = rawTime.split('T')[1];
+                    if (timePart) flightHour = parseInt(timePart.split(':')[0], 10);
+                    
+                    let isoStr = rawTime;
+                    if(!isoStr.includes('+') && !isoStr.includes('Z')) isoStr += "+08:00";
+                    flightTimeMs = new Date(isoStr).getTime();
+                }
+                
+                return { ...f, _rawTime: rawTime, _dateStr: flightDateStr, _hour: flightHour, _timeMs: flightTimeMs };
+            });
+
+            const filteredData = processedData.filter(f => {
+                if (!fidsAllowedAirlines.includes(f.AirlineID)) return false;
+
+                if (fidsState.searchQuery) {
+                    return f.FlightNumber.includes(fidsState.searchQuery);
+                }
+
+                if (fidsState.airline !== 'ALL' && f.AirlineID !== fidsState.airline) return false;
+
+                let passDate = true;
+                if (fidsState.date !== 'all') { passDate = (f._dateStr === targetDateStr); }
+
+                let passTime = true;
+                if (fidsState.time === 'NOW2') {
+                    const nowMs = Date.now();
+                    const windowMs = 1 * 60 * 60 * 1000; 
+                    if (f._timeMs > 0) {
+                        if (f._timeMs >= nowMs - windowMs && f._timeMs <= nowMs + windowMs) { passDate = true; } 
+                        else { passTime = false; }
+                    } else { passTime = false; }
+                } else if (fidsState.time !== 'ALL') {
+                     if (fidsState.time === '00-06' && !(f._hour >= 0 && f._hour < 6)) passTime = false;
+                     if (fidsState.time === '06-12' && !(f._hour >= 6 && f._hour < 12)) passTime = false;
+                     if (fidsState.time === '12-18' && !(f._hour >= 12 && f._hour < 18)) passTime = false;
+                     if (fidsState.time === '18-24' && !(f._hour >= 18 && f._hour < 24)) passTime = false;
+                }
+
+                return passDate && passTime;
+            });
+
+            filteredData.sort((a, b) => a._timeMs - b._timeMs);
+
+            if (filteredData.length === 0) {
+                fidsUI.list.innerHTML = '';
+                if (targetArray.length > 0) {
+                    const firstDate = processedData[0]?._dateStr || '未知';
+                    const lastDate = processedData[processedData.length - 1]?._dateStr || '未知';
+                    fidsUI.emptyDiag.innerHTML = `
+                        <div class="text-sm text-slate-500 mt-2">雷達掃描 ${targetArray.length} 架次，但皆不符合目前設定。</div>
+                        <div class="text-xs text-left bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4 text-slate-600">
+                            <b class="text-blue-700">🔧 航管診斷資訊</b><br>
+                            儀表板尋找日期：${fidsState.date === 'all' ? '全部日期' : targetDateStr}<br>
+                            塔台回傳資料區間：${firstDate} 至 ${lastDate}<br>
+                        </div>
+                    `;
+                } else {
+                    fidsUI.emptyDiag.innerHTML = `<div class="text-sm text-slate-500 mt-2">塔台目前未回傳任何航班資訊。</div>`;
+                }
+                fidsUI.empty.classList.remove('hidden');
+                return;
+            }
+
+            fidsUI.empty.classList.add('hidden');
+
+            const blocksHTML = filteredData.map(f => {
+                const flightNo = f.AirlineID + f.FlightNumber;
+                const iataCode = f._type === 'D' ? f.ArrivalAirportID : f.DepartureAirportID;
+                const timeStr = f._rawTime ? f._rawTime.substring(11, 16) : '—';
+                const terminal = f.Terminal ? `T${f.Terminal}` : '—';
+                const gate = f.Gate || '—';
+                const desk = f.CheckCounter || '—';
+                const belt = f.BaggageClaim || '—';
+                
+                let statusRemark = f._type === 'D' ? (f.DepartureRemark || '') : (f.ArrivalRemark || '');
+                const beltValue = f._type === 'D' ? (statusRemark || '—') : belt;
+
+                let airlineColorClass = 'text-slate-800';
+                if (f.AirlineID === 'JX') airlineColorClass = 'text-[#A67C00]';
+                else if (f.AirlineID === 'CI') airlineColorClass = 'text-[#C0392B]';
+                else if (f.AirlineID === 'BR') airlineColorClass = 'text-[#0F7A4D]';
+
+                const typeBadge = fidsState.searchQuery 
+                    ? (f._type === 'D' 
+                        ? `<span class="ml-2 text-[0.6rem] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 shadow-sm font-black tracking-widest uppercase">Dep</span>` 
+                        : `<span class="ml-2 text-[0.6rem] bg-green-100 text-green-700 px-1.5 py-0.5 rounded border border-green-200 shadow-sm font-black tracking-widest uppercase">Arr</span>`)
+                    : '';
+
+                return `
+                    <div class="fids-list-row flex items-center px-6 py-3 border-b border-slate-100">
+                        <div class="w-[12%] flex items-center">
+                            <span class="font-bold text-[1.15rem] tracking-wide ${airlineColorClass}">${flightNo}</span>
+                        </div>
+                        <div class="w-[12%] flex items-center pr-2">
+                            <span class="font-bold text-slate-700 text-[1.15rem] tracking-wider">${iataCode}</span>
+                            ${typeBadge}
+                        </div>
+                        <div class="w-[8%] flex justify-center items-center">
+                            <span class="font-black text-red-600 text-[1.25rem]">${gate}</span>
+                        </div>
+                        <div class="w-[18%] flex justify-center items-center">
+                            <span class="font-mono font-bold text-teal-700 text-[1.2rem]">${timeStr}</span>
+                        </div>
+                        <div class="w-[28%] flex justify-center items-center">
+                            <span class="font-bold text-slate-600 text-[1.1rem]">${beltValue}</span>
+                        </div>
+                        <div class="w-[22%] flex justify-end items-center">
+                            <span class="font-medium text-slate-500 text-[1rem]">
+                                ${terminal} ${f._type === 'D' ? `<span class="mx-1 text-slate-300">|</span> ${desk}` : ''}
+                            </span>
+                            ${statusRemark && f._type === 'A' ? `<span class="fids-status-tag hidden sm:inline-block">${statusRemark}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            fidsUI.list.innerHTML = blocksHTML;
         }
     </script>
 </body>
