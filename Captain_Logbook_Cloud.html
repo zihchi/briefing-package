@@ -224,16 +224,16 @@
                                 <span class="text-[17px] font-medium">Flight Number</span>
                                 <div class="flex items-center w-3/5 justify-end">
                                     <span class="text-[var(--jx-gold-dark)] font-bold text-[17px] mr-1">JX</span>
-                                    <input type="number" id="inp-flt" class="ios-input !w-auto !text-left flex-1 max-w-[80px]" placeholder="840" oninput="handleFltInput()" onblur="saveRouteMemory()">
+                                    <input type="number" id="inp-flt" class="ios-input !w-auto !text-left flex-1 max-w-[80px]" placeholder="航班號碼" oninput="handleFltInput()" onblur="saveRouteMemory()">
                                 </div>
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Departure</span>
-                                <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="RCTP" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
+                                <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="出發地ICAO" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Arrival</span>
-                                <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="RJFF" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
+                                <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="目的地ICAO" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory()">
                             </div>
                         </div>
                     </div>
@@ -434,7 +434,7 @@
                         <div class="ios-list shadow-sm mb-4">
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Passengers</span>
-                                <input type="number" id="inp-pax" class="ios-input" placeholder="153">
+                                <input type="number" id="inp-pax" class="ios-input" placeholder="旅客數量">
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Approach</span>
@@ -446,7 +446,7 @@
                                         <option value="NPA">NPA</option>
                                         <option value="">N/A</option>
                                     </select>
-                                    <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-[var(--jx-divider)] pb-1" placeholder="01R">
+                                    <input type="text" id="inp-rwy" class="ios-input !w-16 uppercase text-center border-b border-[var(--jx-divider)] pb-1" placeholder="跑道">
                                 </div>
                             </div>
                             <div class="ios-list-item items-start">
