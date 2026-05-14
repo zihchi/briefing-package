@@ -11,10 +11,7 @@
     <title>Pilot Logbook</title>
     
     <!-- External Libraries -->
-    <!-- Tailwind 不加 defer，避免載入瞬間出現無樣式閃爍 (FOUC) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 以下套件加上 defer，讓它們在背景下載，不阻擋畫面渲染 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" defer></script>
@@ -42,6 +39,7 @@
         .jx-checkbox { width: 24px; height: 24px; accent-color: var(--jx-gold-dark); }
         .section-title { padding: 16px 16px 8px; font-size: 13px; color: #6E6E73; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
         .tab-btn { color: var(--jx-gray); transition: color 0.2s; }
         .tab-btn.active { color: var(--jx-gold-dark); }
         .horizontal-scroll { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 0 16px; }
@@ -49,26 +47,24 @@
         .stat-card { scroll-snap-align: center; min-width: 80%; background: var(--jx-card); border: 1px solid var(--jx-divider); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .icon-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         
-        #sync-toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #sync-toast { position: fixed; top: env(safe-area-inset-top, 20px); left: 50%; transform: translateX(-50%); background: var(--jx-dark); color: var(--jx-gold); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity 0.3s; margin-top: 10px;}
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
+        #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: calc(env(safe-area-inset-top) + 6px) 0 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
         #edit-banner.show { display: block; }
 
         body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea { pointer-events: none; opacity: 0.8; }
         body.view-mode select.ios-input { background-image: none; padding-right: 0; }
         body.view-mode #btn-scan-ocr, body.view-mode #btn-toggle-fuel { display: none; }
 
-        /* Desktop specific tweaks for the scrolling list */
         @media (min-width: 768px) {
             .stat-card { scroll-snap-align: none; min-width: 0; }
             .horizontal-scroll { scroll-snap-type: none; overflow-x: visible; padding: 0; }
             .ios-list { border-radius: 0.75rem; border: 1px solid var(--jx-divider); overflow: hidden; }
         }
         
-        /* App Loader 樣式 */
         #app-loader { position: fixed; inset: 0; background: var(--jx-bg); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
     </style>
 </head>
@@ -88,7 +84,6 @@
         <span id="sync-toast-text">Syncing...</span>
     </div>
 
-    <!-- Datalist -->
     <datalist id="pilot-datalist"></datalist>
 
     <!-- Data Audit Modal -->
@@ -167,21 +162,21 @@
         </div>
     </div>
 
-    <!-- Camera Modal -->
+    <!-- Camera Modal (OCR) -->
     <div id="camera-modal" class="hidden fixed inset-0 bg-black z-[110] flex flex-col justify-center items-center">
-        <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10">
+        <div class="absolute top-0 w-full p-4 flex justify-between items-center bg-black/60 z-10 pt-[max(1rem,env(safe-area-inset-top))]">
             <span class="text-[var(--jx-gold)] font-bold text-sm tracking-widest">ACARS OCR SCANNER</span>
-            <button onclick="closeCamera()" class="text-white text-2xl font-bold leading-none">&times;</button>
+            <button onclick="closeCamera()" class="text-white text-3xl font-bold leading-none">&times;</button>
         </div>
         <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline muted></video>
         <canvas id="camera-canvas" class="hidden"></canvas>
-        <div class="absolute w-[90%] h-1/2 border-2 border-[var(--jx-gold)] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
-            <div class="text-[var(--jx-gold)] text-xs mb-2 bg-black/50 px-2 py-1 rounded tracking-wide">Align OOOI/FOB Text Here</div>
-            <div class="w-full border-t border-[var(--jx-gold)] opacity-30"></div>
+        <div class="absolute w-[90%] h-1/2 border-2 border-[#34C759] rounded-lg pointer-events-none box-border flex flex-col items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+            <div class="text-[#34C759] text-xs mb-2 bg-black/80 px-3 py-1.5 rounded tracking-wide font-bold">請將「綠色字體」區塊完整放入框內</div>
+            <div class="w-full border-t border-[#34C759] opacity-30"></div>
         </div>
-        <div class="absolute bottom-10 w-full flex flex-col items-center gap-4 z-20">
-            <p id="ocr-status" class="text-white text-xs bg-black/70 px-4 py-2 rounded-full hidden font-mono tracking-wide">Initializing...</p>
-            <button onclick="captureAndScan()" class="w-16 h-16 bg-white rounded-full border-4 border-[var(--jx-gold)] active:scale-95 transition-transform flex items-center justify-center">
+        <div class="absolute bottom-10 w-full flex flex-col items-center gap-4 z-20 pb-[env(safe-area-inset-bottom)]">
+            <p id="ocr-status" class="text-white text-xs bg-black/80 px-4 py-2 rounded-full hidden font-mono tracking-wide">Initializing...</p>
+            <button onclick="captureAndScan()" class="w-16 h-16 bg-white rounded-full border-4 border-[var(--jx-gold)] active:scale-95 transition-transform flex items-center justify-center shadow-xl">
                 <div class="w-12 h-12 bg-white rounded-full border border-gray-200"></div>
             </button>
         </div>
@@ -190,10 +185,11 @@
     <!-- MAIN VIEWS -->
     <div id="view-entry" class="hidden">
         <div id="edit-banner">Editing Mode</div>
-        <header class="bg-white pt-10 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
-            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start mb-2">
+        <!-- Fix Top Padding for iOS Notch -->
+        <header class="bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
+            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start mb-2 mt-2">
                 <div>
-                    <p id="dash-date" class="text-sm text-[var(--jx-gold-dark)] font-semibold uppercase tracking-wider">May 8, 2026</p>
+                    <p id="dash-date" class="text-sm text-[var(--jx-gold-dark)] font-semibold uppercase tracking-wider">May 14, 2026</p>
                     <h1 id="dash-flt" class="text-3xl font-bold tracking-wide mt-1">JX---</h1>
                 </div>
                 <div class="text-center">
@@ -215,9 +211,8 @@
             <input type="hidden" id="inp-index">
             
             <div class="md:grid md:grid-cols-2 md:gap-8">
-                <!-- Left Column for Desktop -->
+                <!-- Left Column -->
                 <div class="space-y-4">
-                    <!-- General Info -->
                     <div>
                         <div class="section-title">General Info</div>
                         <div class="ios-list shadow-sm">
@@ -243,7 +238,6 @@
                         </div>
                     </div>
 
-                    <!-- Aircraft Database -->
                     <div>
                         <div class="section-title md:mt-2">Aircraft</div>
                         <div class="ios-list shadow-sm">
@@ -260,7 +254,6 @@
                         </div>
                     </div>
 
-                    <!-- Crew Database -->
                     <div>
                         <div class="section-title md:mt-2">Flight Crew</div>
                         <div class="ios-list shadow-sm">
@@ -333,7 +326,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column for Desktop -->
+                <!-- Right Column -->
                 <div class="space-y-4">
                     <!-- Time & Fuel -->
                     <div>
@@ -341,8 +334,8 @@
                             <span>Time (UTC) & Fuel</span>
                             <div class="flex items-center gap-3">
                                 <span class="text-[10px] font-normal lowercase text-[var(--jx-gray)]">Auto-advance</span>
-                                <button id="btn-scan-ocr" onclick="openCamera()" class="text-[10px] text-[var(--jx-gold-dark)] border border-[var(--jx-gold-dark)] px-2 py-0.5 rounded flex items-center gap-1 active:bg-[#FDFBF7] font-semibold transition-colors shadow-sm bg-white">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <button id="btn-scan-ocr" onclick="openCamera()" class="text-[11px] text-[#34C759] border border-[#34C759] px-2 py-0.5 rounded flex items-center gap-1 hover:bg-[#F2FBF4] active:scale-95 font-bold transition-all shadow-sm bg-white">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                     Scan ACARS
                                 </button>
                             </div>
@@ -374,21 +367,21 @@
                                     <div class="flex justify-between gap-4">
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Out) Tonnes</div>
-                                            <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
+                                            <input type="number" step="0.1" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 24.3">
                                         </div>
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (Off) Tonnes</div>
-                                            <input type="number" step="0.1" id="inp-fob-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 14.8">
+                                            <input type="number" step="0.1" id="inp-fob-off" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 24.2">
                                         </div>
                                     </div>
                                     <div class="flex justify-between gap-4">
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (On) Tonnes</div>
-                                            <input type="number" step="0.1" id="inp-fob-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.5">
+                                            <input type="number" step="0.1" id="inp-fob-on" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
                                         </div>
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">FOB (In) Tonnes</div>
-                                            <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 5.2">
+                                            <input type="number" step="0.1" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2">
                                         </div>
                                     </div>
                                 </div>
@@ -465,7 +458,8 @@
 
                     <!-- Action Buttons -->
                     <div class="pb-8" id="action-create">
-                        <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg">Save Logbook Entry</button>
+                        <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg mb-3">Save Logbook Entry</button>
+                        <button onclick="cancelEntry()" class="w-full bg-white text-[var(--jx-gray)] border border-[var(--jx-divider)] font-semibold py-3.5 rounded-xl shadow-sm hover:bg-gray-50 active:scale-95 transition-all text-sm">Clear Form (清空)</button>
                     </div>
                     <div class="pb-8 flex flex-col gap-3 hidden" id="action-view">
                         <button onclick="enableEditMode()" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all text-lg">Edit Entry (解鎖編輯)</button>
@@ -486,10 +480,15 @@
     <!-- Set default to block -->
     <div id="view-recent" class="block min-h-screen bg-[var(--jx-bg)]">
         <!-- 搜尋框獨立固定在最上方 -->
-        <div class="bg-[var(--jx-bg)] pt-12 pb-3 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
-            <div class="relative max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
-                <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight, Airport, or Pilot..." oninput="renderRecentFlights()">
+        <div class="bg-[var(--jx-bg)] pt-[max(1rem,env(safe-area-inset-top))] pb-3 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
+            <div class="relative max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex gap-2 items-center mt-2">
+                <div class="relative flex-1">
+                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight, Airport, or Pilot..." oninput="renderRecentFlights()">
+                </div>
+                <button onclick="manualRefreshCloud()" class="bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] p-2.5 rounded-xl shadow-sm active:bg-gray-100 transition-all flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
             </div>
         </div>
         
@@ -502,8 +501,8 @@
     </div>
 
     <div id="view-stats" class="hidden">
-        <header class="bg-[var(--jx-bg)] pt-12 pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] md:border-none shadow-sm md:shadow-none">
-            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start">
+        <header class="bg-[var(--jx-bg)] pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] md:border-none shadow-sm md:shadow-none">
+            <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start mt-2">
                 <div class="relative w-full max-w-[200px]">
                     <div class="relative">
                         <select id="stats-time-filter" class="w-full appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="handleStatsFilterChange()">
@@ -634,7 +633,7 @@
     </nav>
 
     <!-- ========================================== -->
-    <!-- 🚀 PWA 離線核心架構 (動態生成，維持單一檔案) 🚀 -->
+    <!-- 🚀 PWA 離線核心架構 🚀 -->
     <!-- ========================================== -->
     <script>
         // 1. 動態生成 manifest.json
@@ -663,9 +662,8 @@
         // 2. 動態生成 Service Worker 程式碼
         const swCode = `
             const CACHE_NAME = 'jx-logbook-v2'; // 版號提升，強制更新 Service Worker
-            // 這些是被要求快取的重要外部 CDN 以及主頁面
             const urlsToCache = [
-                './', // 新增此行：強制快取當前 HTML 頁面
+                './', 
                 'https://cdn.tailwindcss.com',
                 'https://cdn.jsdelivr.net/npm/chart.js',
                 'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
@@ -679,14 +677,12 @@
                     caches.open(CACHE_NAME)
                         .then(cache => {
                             console.log('Opened cache');
-                            // 不強求所有 CDN 第一次都成功，避免安裝失敗
                             return Promise.allSettled(urlsToCache.map(url => cache.add(url)));
                         })
                 );
             });
 
             self.addEventListener('activate', event => {
-                // 清理舊版本的快取
                 event.waitUntil(
                     caches.keys().then(cacheNames => {
                         return Promise.all(
@@ -701,19 +697,15 @@
             });
 
             self.addEventListener('fetch', event => {
-                // 如果是請求 Google Apps Script (雲端資料庫)，則採 Network Only (有網路才抓)
                 if (event.request.url.includes('script.google.com')) {
                     event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: "offline" }), { headers: { 'Content-Type': 'application/json' } })));
                     return;
                 }
 
-                // 對於 CDN 和本地 HTML，採取 Cache-First (快取優先) 策略，保證飛機上瞬間載入
                 event.respondWith(
                     caches.match(event.request)
                         .then(response => {
-                            // 若快取有資料，立刻返回快取
                             if (response) {
-                                // 背景偷偷去網路抓最新的更新快取 (Stale-While-Revalidate)
                                 fetch(event.request).then(res => {
                                     if(res && res.status === 200) {
                                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, res));
@@ -721,7 +713,6 @@
                                 }).catch(()=>console.log('Offline: Using cached version'));
                                 return response;
                             }
-                            // 否則去網路抓
                             return fetch(event.request).then(response => {
                                 if(!response || response.status !== 200 || response.type !== 'basic') return response;
                                 let responseToCache = response.clone();
@@ -742,7 +733,7 @@
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
                 const swUrl = URL.createObjectURL(swBlob);
                 navigator.serviceWorker.register(swUrl).then(registration => {
-                    console.log('PWA ServiceWorker 註冊成功，現已支援無網路環境開啟。');
+                    console.log('PWA ServiceWorker 註冊成功');
                 }).catch(err => {
                     console.log('ServiceWorker 註冊失敗: ', err);
                 });
@@ -750,7 +741,6 @@
         }
     </script>
 
-    <!-- 原本的應用程式邏輯碼 -->
     <script>
         // ==========================================
         // 🚀 使用者自定義：Carry Forward (前期累積) 🚀
@@ -770,9 +760,6 @@
         };
         // ==========================================
 
-        // ==========================================
-        // 🌐 建立機場坐標資料庫 (Lat/Lon) 供計算 Night Time 使用
-        // ==========================================
         const AIRPORT_DB = {
             // Taiwan
             'RCTP': { lat: 25.0777, lon: 121.2328 }, 'RCKH': { lat: 22.5771, lon: 120.3500 }, 'RCSS': { lat: 25.0697, lon: 121.5520 }, 'RCMQ': { lat: 24.2646, lon: 120.6200 },
@@ -811,7 +798,7 @@
         let dbAircrafts = [];
         let dbPilots = [];
         let cfData = {}; 
-        let isCfActive = true; // CF 資料預設為帶入
+        let isCfActive = true; 
         
         let flightChartInst = null;
         let videoStream = null;
@@ -836,9 +823,7 @@
             let maxIdx = 0;
             flightLogs.forEach(l => {
                 const num = parseInt(l.index, 10);
-                if (!isNaN(num) && num > maxIdx) {
-                    maxIdx = num;
-                }
+                if (!isNaN(num) && num > maxIdx) maxIdx = num;
             });
             return maxIdx > 0 ? (maxIdx + 1).toString() : "1000";
         }
@@ -900,20 +885,16 @@
 
         function calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT) {
             if(!dateStr || !outT || !inT || !depICAO || !arrICAO) return 0;
-            
             const dep = AIRPORT_DB[depICAO.toUpperCase()];
             const arr = AIRPORT_DB[arrICAO.toUpperCase()];
-
             const outM = parseTimeToMins(outT);
             let inM = parseTimeToMins(inT);
             
             if(outM === 0 && inM === 0) return 0;
-            if(inM < outM) inM += 24 * 60; // 跨日處理
+            if(inM < outM) inM += 24 * 60; 
 
             const totalMins = inM - outM;
-
             if(!dep || !arr) {
-                console.warn(`[NightCalc] Airport Lat/Lon missing for ${depICAO} or ${arrICAO}. Using fallback.`);
                 let nightMinsFallback = 0;
                 for (let m = outM; m < inM; m++) {
                     let modDay = m % (24 * 60);
@@ -924,12 +905,10 @@
 
             const [yy, mm, dd] = dateStr.split('-');
             const utcDateBase = new Date(Date.UTC(yy, mm - 1, dd, 0, 0, 0));
-
             let nightMins = 0;
             const CIVIL_TWILIGHT_RAD = -6 * (Math.PI / 180); 
 
-            let depLon = dep.lon;
-            let arrLon = arr.lon;
+            let depLon = dep.lon; let arrLon = arr.lon;
             if (Math.abs(arrLon - depLon) > 180) {
                 if (depLon < 0) depLon += 360;
                 if (arrLon < 0) arrLon += 360;
@@ -937,7 +916,6 @@
 
             for(let m = 0; m < totalMins; m++) {
                 const currentMinAbsolute = outM + m;
-                
                 const fraction = m / totalMins;
                 const curLat = dep.lat + (arr.lat - dep.lat) * fraction;
                 
@@ -945,12 +923,8 @@
                 if (curLon > 180) curLon -= 360; 
 
                 const curTimeObj = new Date(utcDateBase.getTime() + currentMinAbsolute * 60000);
-
                 const sunPos = SunCalc.getPosition(curTimeObj, curLat, curLon);
-
-                if (sunPos.altitude <= CIVIL_TWILIGHT_RAD) {
-                    nightMins++;
-                }
+                if (sunPos.altitude <= CIVIL_TWILIGHT_RAD) nightMins++;
             }
             return nightMins;
         }
@@ -985,12 +959,10 @@
         }
 
         window.onload = async () => {
-            // 確保 Chart.js 已經透過 defer 載入完成後，再註冊外掛
             if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
                 Chart.register(ChartDataLabels);
             }
 
-            // [新增] 隱藏全螢幕載入動畫
             const loader = document.getElementById('app-loader');
             if(loader) {
                 loader.style.opacity = '0';
@@ -1042,16 +1014,33 @@
                         body: new URLSearchParams(item),
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                     });
+                    
+                    // 成功送出後，標記本機紀錄為已同步 (移除 pending)
+                    let logToUpdate = flightLogs.find(l => String(l.index) === String(item.index));
+                    if (logToUpdate && logToUpdate.syncStatus) {
+                        delete logToUpdate.syncStatus;
+                        localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
+                    }
                 } catch (err) { remainingQueue.push(item); }
             }
             localStorage.setItem(SYNC_QUEUE, JSON.stringify(remainingQueue));
-            if (remainingQueue.length === 0) showToast("All offline data synced!");
+            if (remainingQueue.length === 0) {
+                showToast("All offline data synced!");
+                if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
+            }
             else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
+        }
+
+        function manualRefreshCloud() {
+            const btn = document.querySelector('button[onclick="manualRefreshCloud()"] svg');
+            if(btn) btn.classList.add('animate-spin');
+            fetchDataFromCloud().finally(() => {
+                if(btn) btn.classList.remove('animate-spin');
+            });
         }
 
         async function fetchDataFromCloud() {
             if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
-            // 由於加了 PWA，即使沒網路 fetch 也會很快失敗或回傳快取
             if(flightLogs.length === 0) showToast("Fetching initial data...", true);
             
             try {
@@ -1059,6 +1048,7 @@
                 const data = await response.json(); 
                 if(data.error === "offline") {
                     console.log("Currently offline, skipping cloud fetch");
+                    showToast("Offline. Using local data.");
                     return;
                 }
                 
@@ -1072,6 +1062,7 @@
                 populatePilotDropdown();
                 localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
 
+                // 從雲端抓回來的都是已同步資料
                 flightLogs = (data.flights || []).filter(row => row.date).map(row => {
                     const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
                     return {
@@ -1092,12 +1083,39 @@
                     };
                 });
                 
+                // 保留正在離線佇列中的 pending 資料
+                let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
+                queue.forEach(qItem => {
+                    if (qItem.action === 'create' || qItem.action === 'update') {
+                        let existingIdx = flightLogs.findIndex(l => String(l.index) === String(qItem.index));
+                        let localLog = {
+                            index: String(qItem.index), date: qItem.date, flt: String(qItem.filght_number).replace('JX',''),
+                            dep: qItem.airport_departure, arr: qItem.airport_arrival, reg: qItem.aircraft,
+                            out: qItem.time_blockout, off: qItem.time_takeoff, on: qItem.time_landing, in: qItem.time_blockin,
+                            totalMins: parseTimeToMins(qItem.total_block), airMins: parseTimeToMins(qItem.total_air), nightMins: parseTimeToMins(qItem.total_night),
+                            day_to: qItem.day_takeoff, night_to: qItem.night_takeoff, day_ldg: qItem.day_landing, night_ldg: qItem.night_landing,
+                            duty: qItem.duty, pax: qItem.passenger, app: qItem.approach1_type, rwy: qItem.approach1_runway,
+                            pilot1: qItem.pilot1, pilot2: qItem.pilot2, pilot3: qItem.pilot3,
+                            fob_out: qItem.fob_out, fob_off: qItem.fob_off, fob_on: qItem.fob_on, fob_in: qItem.fob_in,
+                            syncStatus: 'pending' // 標記為尚未成功上傳
+                        };
+                        const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
+                        localLog.acft = acftData ? acftData.type : 'N/A';
+
+                        if(existingIdx !== -1) flightLogs[existingIdx] = localLog;
+                        else flightLogs.push(localLog);
+                    }
+                });
+
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
                 document.getElementById('sync-toast').classList.remove('show');
                 
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                 if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
-            } catch (err) { console.error("Cloud fetch failed (Offline):", err); }
+            } catch (err) { 
+                console.error("Cloud fetch failed (Offline):", err); 
+                showToast("Offline. Using cached data.");
+            }
         }
 
         function openCFModal() {
@@ -1122,7 +1140,6 @@
             });
             ['entry', 'recent', 'stats'].forEach(id => document.getElementById(`view-${id}`).classList.add('hidden'));
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
-            // Force block display context on element that needed it
             document.getElementById(`view-${tabId}`).style.display = '';
 
             if (tabId === 'entry' && !bypassReset && document.getElementById('action-create').classList.contains('hidden')) {
@@ -1307,7 +1324,6 @@
             });
         }
         
-        // 切換 Carry Forward 資料是否計算
         function toggleCF() {
             isCfActive = !isCfActive;
             renderStats();
@@ -1405,7 +1421,6 @@
                             prevAcftContainer.innerHTML = prevHtml;
                         }
                     } else {
-                        // 當關閉時的樣式與文字
                         cfIndicator.className = 'mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-gray-50 border border-[var(--jx-divider)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gray)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none';
                         cfIndicator.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Carry Forward Excluded (Tap to include)`;
 
@@ -1680,6 +1695,7 @@
                     const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
                     
                     const pilotBadge = log.pilot1 ? `<span class="text-[10px] text-[var(--jx-gray)] truncate bg-[#F4F0EB] px-1.5 py-0.5 rounded shadow-sm max-w-[100px] flex-shrink border border-[var(--jx-divider)] ml-2">👨‍✈️ ${log.pilot1}</span>` : '';
+                    const pendingBadge = log.syncStatus === 'pending' ? `<span class="bg-yellow-100 text-yellow-700 border border-yellow-200 text-[9px] px-1.5 py-0.5 rounded ml-2 font-bold shadow-sm flex items-center gap-1"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Pending</span>` : '';
 
                     groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] md:border md:rounded-xl md:bg-white md:shadow-sm cursor-pointer active:bg-gray-50 hover:bg-gray-50 md:hover:shadow-md transition-all" onclick="viewLog('${log.index}')">
                         <div class="flex items-center gap-4 w-full">
@@ -1692,6 +1708,7 @@
                                     <div class="flex items-center truncate">
                                         <span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span>
                                         ${pilotBadge}
+                                        ${pendingBadge}
                                     </div>
                                     <span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)] flex-shrink-0 ml-2">${blockTime}</span>
                                 </div>
@@ -1710,6 +1727,9 @@
 
         function cancelEntry() {
             document.getElementById('inp-index').value = '';
+            document.getElementById('inp-flt').value = ''; 
+            document.getElementById('inp-dep').value = ''; document.getElementById('inp-arr').value = '';
+            document.getElementById('inp-reg').value = ''; document.getElementById('inp-acft-select').value = '';
             document.getElementById('inp-out').value = ''; document.getElementById('inp-in').value = '';
             document.getElementById('inp-off').value = ''; document.getElementById('inp-on').value = '';
             document.getElementById('chk-to').checked = false; document.getElementById('chk-ldg').checked = false;
@@ -1720,7 +1740,7 @@
             document.getElementById('inp-pilot1').value = ''; document.getElementById('inp-pilot2').value = ''; document.getElementById('inp-pilot3').value = '';
             document.getElementById('dash-block-time').textContent = '00:00'; document.getElementById('dash-block-time-top').textContent = '00:00';
             document.getElementById('dash-air-time').textContent = '00:00'; document.getElementById('dash-night-time').textContent = '00:00';
-            setFormMode('create'); evaluateOperations();
+            setFormMode('create'); evaluateOperations(); updateEntryDash();
         }
 
         function viewLog(index) {
@@ -1787,8 +1807,22 @@
                 const outT = document.getElementById('inp-out').value; const offT = document.getElementById('inp-off').value;
                 const onT = document.getElementById('inp-on').value; const inT = document.getElementById('inp-in').value;
                 const dateStr = document.getElementById('inp-date').value;
+                const fltInput = document.getElementById('inp-flt').value.trim();
                 const depICAO = document.getElementById('inp-dep').value.toUpperCase();
                 const arrICAO = document.getElementById('inp-arr').value.toUpperCase();
+
+                // 檢查重複航班防呆機制 (限 Create 模式)
+                if (actionType === 'create' && dateStr && fltInput) {
+                    const duplicate = flightLogs.find(l => l.date === dateStr && String(l.flt) === String(fltInput));
+                    if (duplicate) {
+                        if (confirm(`⚠️ 警告：系統中已經存在 ${dateStr} 航班號碼 JX${fltInput} 的紀錄。\n\n您要「更新 (Update)」原本的紀錄嗎？\n(取消則返回編輯)`)) {
+                            actionType = 'update';
+                            document.getElementById('inp-index').value = duplicate.index;
+                        } else {
+                            return; // 使用者選擇取消，中斷存檔
+                        }
+                    }
+                }
 
                 const chkTo = document.getElementById('chk-to').checked; const chkLdg = document.getElementById('chk-ldg').checked;
                 let dayTo = 0, nightTo = 0, dayLdg = 0, nightLdg = 0;
@@ -1800,7 +1834,7 @@
                 payloadData = {
                     action: actionType, 
                     index: document.getElementById('inp-index').value || (actionType === 'create' ? generateNextIndex() : generateUUID()),
-                    date: dateStr, filght_number: "JX" + document.getElementById('inp-flt').value, 
+                    date: dateStr, filght_number: "JX" + fltInput, 
                     airport_departure: depICAO, airport_arrival: arrICAO,
                     aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
                     total_block: minsToStr(calcDuration(outT, inT)), total_air: minsToStr(calcDuration(offT, onT)),
@@ -1822,18 +1856,23 @@
                     day_to: payloadData.day_takeoff, night_to: payloadData.night_takeoff, day_ldg: payloadData.day_landing, night_ldg: payloadData.night_landing,
                     duty: payloadData.duty, pax: payloadData.passenger, app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
                     pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3,
-                    fob_out: payloadData.fob_out, fob_off: payloadData.fob_off, fob_on: payloadData.fob_on, fob_in: payloadData.fob_in
+                    fob_out: payloadData.fob_out, fob_off: payloadData.fob_off, fob_on: payloadData.fob_on, fob_in: payloadData.fob_in,
+                    syncStatus: 'pending' // 標記為尚未成功上傳
                 };
                 const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
                 localLog.acft = acftData ? acftData.type : 'N/A';
 
                 if(actionType === 'update') {
                     const idx = flightLogs.findIndex(l => String(l.index) === String(payloadData.index));
-                    if(idx !== -1) flightLogs[idx] = localLog; cancelEntry();
-                } else { flightLogs.push(localLog); cancelEntry(); }
+                    if(idx !== -1) flightLogs[idx] = localLog; 
+                    cancelEntry();
+                } else { 
+                    flightLogs.push(localLog); 
+                    cancelEntry(); 
+                }
                 
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-                showToast("Saved offline instantly!");
+                showToast("Saved offline instantly! (Pending Sync)");
             }
 
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
@@ -1888,6 +1927,19 @@
             }
         }
 
+        // 輔助函數：解析 OCR 抓到的日數推算完整的 YYYY-MM-DD
+        function resolveDateFromDay(dayStr) {
+            const targetDay = parseInt(dayStr, 10);
+            if(isNaN(targetDay)) return null;
+            const now = new Date();
+            let d = new Date(now.getFullYear(), now.getMonth(), targetDay);
+            // 如果輸入的日期大於今天很多（例如今天2號，螢幕寫30號），代表是上個月的航班
+            if (d.getTime() > now.getTime() + (2 * 24 * 60 * 60 * 1000)) {
+                d = new Date(now.getFullYear(), now.getMonth() - 1, targetDay);
+            }
+            return safeDateString(d);
+        }
+
         async function captureAndScan() {
             const video = document.getElementById('camera-stream');
             const canvas = document.getElementById('camera-canvas');
@@ -1895,72 +1947,106 @@
 
             if (!videoStream) return;
 
+            // 1. 抓取原圖
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // 2. 影像預處理：專門針對機上螢幕的綠字特徵做極端對比強化 (Binarization)
+            // 將偏綠色/高亮度的像素變為純黑 (Tesseract 喜歡白底黑字)，背景變為純白
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for(let i = 0; i < data.length; i += 4) {
+                let r = data[i], g = data[i+1], b = data[i+2];
+                // 判斷條件：綠色通道高於閾值，且綠色明顯大於紅與藍 (螢幕字體特徵)
+                if (g > 100 && g > r + 15 && g > b + 15) {
+                    data[i] = data[i+1] = data[i+2] = 0; // 字體變黑色
+                } else {
+                    data[i] = data[i+1] = data[i+2] = 255; // 背景變白色
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+
             status.classList.remove('hidden');
-            status.textContent = "Analyzing image... (Analyzing...)";
+            status.textContent = "Analyzing structure... (100% Target)";
 
             try {
                 if (typeof Tesseract === 'undefined') throw new Error("OCR Library not loaded.");
 
+                // 使用處理後的黑白對比圖片進行辨識
                 const result = await Tesseract.recognize(
                     canvas.toDataURL('image/jpeg'),
                     'eng',
-                    { logger: m => { if (m.status === 'recognizing text') status.textContent = `Scanning OOOI: ${Math.round(m.progress * 100)}%`; } }
+                    { logger: m => { if (m.status === 'recognizing text') status.textContent = `Scanning FLT LOG: ${Math.round(m.progress * 100)}%`; } }
                 );
 
                 const text = result.data.text.toUpperCase();
-                console.log("Raw OCR Text:\n", text);
+                console.log("Raw Binarized OCR Text:\n", text);
 
-                let foundAny = false;
-                const lines = text.split('\n');
+                // --- 針對固定排版的強效解析邏輯 ---
+                let foundItems = 0;
 
-                const parseLineForTimeAndFuel = (line) => {
-                    if (!line) return { time: null, fuel: null };
-                    let cleanLine = line.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
-                    
-                    const tMatch = cleanLine.match(/\b([0-2]\d[:\.]?[0-5]\d)\b/);
-                    let timeVal = tMatch ? tMatch[1].replace(/[:\.]/g, '') : null;
-                    if (timeVal && timeVal.length === 4) timeVal = timeVal.substring(0,2) + ':' + timeVal.substring(2,4);
-
-                    const fMatch = line.match(/(\d{1,3}[\.,]\d{1,2})/);
-                    let fuelVal = fMatch ? fMatch[1].replace(',', '.') : null;
-
-                    return { time: timeVal, fuel: fuelVal };
-                };
-
-                const getLineByRegex = (regex) => lines.find(l => regex.test(l));
-
-                const outData = parseLineForTimeAndFuel(getLineByRegex(/OUT|0UT/i));
-                const offData = parseLineForTimeAndFuel(getLineByRegex(/OFF|0FF/i));
-                const onData  = parseLineForTimeAndFuel(getLineByRegex(/\bON\b|0N/i));
-                const inData  = parseLineForTimeAndFuel(getLineByRegex(/\bIN\b|1N/i));
-
-                if(outData.time) { document.getElementById('inp-out').value = outData.time; foundAny = true; }
-                if(offData.time) { document.getElementById('inp-off').value = offData.time; foundAny = true; }
-                if(onData.time)  { document.getElementById('inp-on').value  = onData.time; foundAny = true; }
-                if(inData.time)  { document.getElementById('inp-in').value  = inData.time; foundAny = true; }
-
-                let showFuel = false;
-                if(outData.fuel) { document.getElementById('inp-fob-out').value = outData.fuel; showFuel = true; }
-                if(offData.fuel) { document.getElementById('inp-fob-off').value = offData.fuel; showFuel = true; }
-                if(onData.fuel)  { document.getElementById('inp-fob-on').value  = onData.fuel; showFuel = true; }
-                if(inData.fuel)  { document.getElementById('inp-fob-in').value  = inData.fuel; showFuel = true; }
-
-                if (showFuel) {
-                    document.getElementById('fuel-section').classList.remove('hidden');
-                    foundAny = true;
+                // 1. 抓航班與日期 (e.g., JX0846/13) -> 允許中間有空白或被誤判為 O, 0 等
+                const fltDateMatch = text.match(/JX\s*[Oo0]?(\d{3,4})\s*[\/I\|1]\s*(\d{1,2})/i);
+                if (fltDateMatch) {
+                    const fltNum = fltDateMatch[1];
+                    const dayNum = fltDateMatch[2];
+                    document.getElementById('inp-flt').value = fltNum; // JX0846 提取出 846, JX1234 提取出 1234
+                    const parsedDate = resolveDateFromDay(dayNum);
+                    if (parsedDate) document.getElementById('inp-date').value = parsedDate;
+                    foundItems++;
                 }
 
-                if (foundAny) {
+                // 2. 抓起降機場 (e.g., RCTP/RJFT) -> 排除標題字眼 DEPT/DEST
+                // 找連續 4 個字母 / 4 個字母
+                const routeMatches = [...text.matchAll(/([A-Z]{4})\s*[\/I\|1]\s*([A-Z]{4})/g)];
+                for (let match of routeMatches) {
+                    if (match[1] !== 'DEPT' && match[2] !== 'DEST') {
+                        document.getElementById('inp-dep').value = match[1];
+                        document.getElementById('inp-arr').value = match[2];
+                        foundItems++;
+                        break;
+                    }
+                }
+
+                // 3. 抓取 OOOI 與 FOB (固定 8 組資料)
+                // 尋找符合 `00:00` (時間) 及 `000.0` (油量) 格式的所有字串
+                // 為了防呆 OCR 把 0 看成 O，先清理常見數字區域的字母
+                const numText = text.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Zz]/g, '2').replace(/[Ss]/g, '5');
+                
+                const timeRegex = /\b[0-2]\d[:\.][0-5]\d\b/g;
+                const fuelRegex = /\b\d{2,3}[\.,]\d\b/g;
+
+                const times = [...numText.matchAll(timeRegex)].map(m => m[0].replace('.', ':'));
+                const fuels = [...numText.matchAll(fuelRegex)].map(m => m[0].replace(',', '.'));
+
+                // 根據圖三排版順序，通常會抓到 6 個時間 (OUT, OFF, ON, IN, FLIGHT, BLOCK) 
+                // 以及 4 個油量 (OUT, OFF, ON, IN)
+                if (times.length >= 4) {
+                    document.getElementById('inp-out').value = times[0];
+                    document.getElementById('inp-off').value = times[1];
+                    document.getElementById('inp-on').value  = times[2];
+                    document.getElementById('inp-in').value  = times[3];
+                    foundItems++;
+                }
+
+                if (fuels.length >= 4) {
+                    document.getElementById('inp-fob-out').value = fuels[0];
+                    document.getElementById('inp-fob-off').value = fuels[1];
+                    document.getElementById('inp-fob-on').value  = fuels[2];
+                    document.getElementById('inp-fob-in').value  = fuels[3];
+                    document.getElementById('fuel-section').classList.remove('hidden');
+                    foundItems++;
+                }
+
+                if (foundItems > 0) {
                     calculateTimes();
                     updateEntryDash();
-                    showToast("OOOI 掃描與解析成功！ (Scan Success)");
+                    if(foundItems >= 4) showToast("🎉 完美掃描！全資料解析成功 (Perfect Scan)");
+                    else showToast("✅ 部分掃描成功，請檢查遺漏欄位");
                 } else {
-                    alert("未偵測到完整的 OOOI 與 FOB 格式，請重新對準螢幕並避免反光。");
+                    alert("⚠️ 無法解析！請確保螢幕清晰、沒有強烈反光，並且「綠色字體區塊」都在框線內。");
                 }
                 closeCamera();
             } catch (err) {
