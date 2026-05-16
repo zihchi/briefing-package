@@ -123,7 +123,7 @@
                 <button id="lock-again-btn" class="flex-1 sm:flex-none text-sm text-stone-600 bg-stone-100 hover:bg-stone-200 font-bold py-2.5 px-4 rounded-xl transition-colors shadow-sm border border-stone-200">🔒 登出系統</button>
             </div>
         </div>
-         
+
         <div class="flex flex-col xl:flex-row gap-6 items-start">
              <!-- Sidebar Controls -->
             <div class="w-full xl:w-[340px] shrink-0 flex flex-col gap-4 xl:sticky xl:top-6 z-40 no-print">
@@ -164,7 +164,10 @@
                     <div class="lg:col-span-2 w-full flex flex-col border border-stone-300 rounded-2xl overflow-hidden shadow-sm bg-[#fbf9f6] h-full">
                         <div class="bg-[#785b42] p-4 md:p-5 flex justify-between items-start text-white">
                             <div class="flex flex-col gap-1.5 z-10">
-                                <span id="out-utc-date" class="bg-white/20 text-white/90 px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max">----</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="out-utc-date" class="bg-white/20 text-white/90 px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max">---- (UTC)</span>
+                                    <span id="out-local-date" class="bg-[#8b5a2b]/50 text-white px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max hidden">---- (Local)</span>
+                                </div>
                                 <div class="text-4xl lg:text-5xl font-black data-font tracking-widest leading-none mt-1" id="out-flight-no">----</div>
                             </div>
 
@@ -361,6 +364,7 @@
                         </div>
 
                         <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm h-full flex flex-col justify-between">
+                            <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">DEST HOLD</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-dest-hold"></span><span class="data-font text-sm font-bold text-stone-700" id="out-dest-hold">--</span></div></div>
                             <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD WXX</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-wxx"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-wxx">--</span></div></div>
                             <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD OPN</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-opn"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-opn">--</span></div></div>
                             <div class="flex justify-between items-center"><span class="text-[10px] text-stone-500 font-bold tracking-wider">ADD ATC</span><div class="text-right"><span class="text-[9px] text-stone-400 font-bold mr-1.5" id="time-add-atc"></span><span class="data-font text-sm font-bold text-stone-700" id="out-add-atc">--</span></div></div>
@@ -461,16 +465,18 @@
                     </div>
                     
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full">
-                        <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
-                            <span class="flex items-center gap-1.5">
+                        <div class="bg-gradient-to-r from-blue-700 to-blue-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center relative">
+                            <div class="flex-1 flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 WNI 氣象剖面資訊
-                            </span>
-                            <div class="flex items-center gap-3">
+                            </div>
+                            <div class="flex-1 flex justify-center">
                                 <span class="bg-red-500/90 border border-red-400 px-2 py-0.5 rounded shadow-sm flex items-center gap-1.5 text-white">
                                     <span class="text-[9px] font-bold opacity-80 tracking-wider">MAX SHEAR</span>
                                     <span class="data-font text-xs font-black" id="out-mxsh">---</span>
                                 </span>
+                            </div>
+                            <div class="flex-1 flex items-center justify-end gap-3">
                                 <button onclick="clearImage('wni')" class="text-blue-300 hover:text-white transition-colors no-print" title="Clear Image">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
@@ -535,19 +541,9 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 NOTAM 智慧擷取與分類 (Airports / FIR)
                             </span>
-                            <div class="flex items-center gap-2">
-                                <button onclick="copyRawNotam()" class="text-stone-300 hover:text-white transition-colors no-print" title="複製原始 NOTAM">
-                                    <svg class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                                <button onclick="parseNotams()" class="text-stone-300 hover:text-white transition-colors no-print" title="重新解析 NOTAM">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                </button>
-                            </div>
                         </div>
                         <div class="p-4 md:p-5 bg-[#fbf9f6] flex flex-col gap-4">
-                            <textarea id="raw-notam-input" class="w-full p-3 bg-white border border-stone-300 rounded-xl text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none focus:ring-2 focus:ring-[#8b5a2b]/50 resize-y min-h-[80px]" placeholder="若系統有抓取到 NOTAM，將自動帶入並分類。您也可以手動貼上 NOTAM 報文至此處，點擊右上角重整按鈕進行解析..." oninput="debouncedParseNotams()"></textarea>
+                            <textarea id="raw-notam-input" class="w-full p-3 bg-white border border-stone-300 rounded-xl text-stone-700 font-mono text-[10px] md:text-xs focus:outline-none focus:ring-2 focus:ring-[#8b5a2b]/50 resize-y min-h-[80px]" placeholder="若系統有抓取到 NOTAM，將自動帶入並分類。您也可以手動貼上 NOTAM 報文至此處進行解析..." oninput="debouncedParseNotams()"></textarea>
                             
                             <div id="notam-buttons-container" class="flex flex-wrap gap-2 md:gap-3">
                                 <div class="text-stone-400 text-[11px] md:text-sm font-bold w-full text-center py-4">請先擷取航班或手動貼上 NOTAM 資料</div>
@@ -666,7 +662,6 @@
         let currentIcaosToFetch = [], currentDateUTC = '----';
         let runwayMap = {};
         
-        // 隱藏 FIDS UI 但保留資料結構用於背景覆蓋
         let fidsFlightData = { departures: [], arrivals: [] };
 
         // Toast Messages
@@ -737,12 +732,6 @@
         function debouncedParseNotams() {
             clearTimeout(parseNotamTimer);
             parseNotamTimer = setTimeout(parseNotams, 500);
-        }
-
-        function copyRawNotam() {
-            const text = document.getElementById('raw-notam-input').value;
-            if (!text.trim()) return showToastMessage('❌ 沒有可以複製的 NOTAM 內容');
-            copyNotamData(text, '完整原始');
         }
 
         function parseNotams() {
@@ -1095,6 +1084,7 @@
                         if (fw_altn.t || fw_frf.t) t_divFuel = ` / ${fw_altn.t || '00.00'}+${fw_frf.t || '00.00'}`;
 
                         const fw_addWxx = getFuelExtended('ADD WXX');
+                        const fw_destHold = getFuelExtended('DEST HOLD');
                         const fw_addOpn = getFuelExtended('ADD OPN');
                         const fw_addAtc = getFuelExtended('ADD ATC');
                         const fw_addDev = getFuelExtended('ADD DEV');
@@ -1125,6 +1115,7 @@
                         perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
                         perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
                         perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
+                        perfBlock += `DEST HOLD: ${formatFuelVal(fw_destHold)}\n`;
                         perfBlock += `ADD OPN: ${formatFuelVal(fw_addOpn)}\n`;
                         perfBlock += `ADD ATC: ${formatFuelVal(fw_addAtc)}\n`;
                         perfBlock += `ADD DEV: ${formatFuelVal(fw_addDev)}\n`;
@@ -1497,6 +1488,30 @@
             } catch (e) { return 'UTC'; }
         }
 
+        function calcLocalDate(utcDateStr, zuluStr, icao) {
+            if (!utcDateStr || utcDateStr === '----' || !zuluStr || !icao) return null;
+            const hh = parseInt(zuluStr.substring(0, 2), 10);
+            const mm = parseInt(zuluStr.substring(2, 4), 10);
+            const parts = utcDateStr.split('-');
+            if(parts.length !== 3) return null;
+
+            const months = {JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11};
+            const monIdx = isNaN(parts[1]) ? months[parts[1].toUpperCase()] : parseInt(parts[1], 10) - 1;
+
+            const d = new Date(Date.UTC(parseInt(parts[0], 10), monIdx, parseInt(parts[2], 10), hh, mm));
+            const tz = tzMapping[icao];
+            if (!tz) return utcDateStr; 
+
+            const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+            const formattedParts = formatter.formatToParts(d);
+            const yr = formattedParts.find(p=>p.type==='year').value;
+            const mo = formattedParts.find(p=>p.type==='month').value;
+            const dy = formattedParts.find(p=>p.type==='day').value;
+            const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+            return `${yr}-${monthNames[parseInt(mo,10)-1]}-${dy}`;
+        }
+
         function formatTurbliDate(dateStr) {
             if (!dateStr || dateStr === '----') return '';
             const months = {JAN:'01', FEB:'02', MAR:'03', APR:'04', MAY:'05', JUN:'06', JUL:'07', AUG:'08', SEP:'09', OCT:'10', NOV:'11', DEC:'12'};
@@ -1547,8 +1562,24 @@
 
             let dateMatch = rawText.match(/\b(\d{4}-[A-Z]{3}-\d{2}|\d{2}[A-Z]{3}\d{2,4}|\d{2}-[A-Z]{3}-\d{4})\b/i);
             currentDateUTC = dateMatch ? dateMatch[0].toUpperCase() : (extractData(rawText, '日期') !== 'N/A' ? extractData(rawText, '日期') : '----');
-            document.getElementById('out-utc-date').textContent = currentDateUTC;
+            document.getElementById('out-utc-date').textContent = currentDateUTC + ' (UTC)';
             document.getElementById('wx-utc-date').textContent = currentDateUTC;
+
+            const stdStr = extractData(rawText, 'STD'), staStr = extractData(rawText, 'STA');
+            currentDepUTC = extractZuluOnly(stdStr); currentArrUTC = extractZuluOnly(staStr);
+
+            const elLocalDate = document.getElementById('out-local-date');
+            if (currentDateUTC !== '----' && currentDepUTC !== '') {
+                const lclDateStr = calcLocalDate(currentDateUTC, currentDepUTC, currentDepICAO);
+                if (lclDateStr) {
+                    elLocalDate.textContent = lclDateStr + ' (LCL)';
+                    elLocalDate.classList.remove('hidden');
+                } else {
+                    elLocalDate.classList.add('hidden');
+                }
+            } else {
+                elLocalDate.classList.add('hidden');
+            }
 
             const mapping = [
                 { id: 'out-flight-no', key: 'Flight number' }, { id: 'out-reg', key: '機號' },
@@ -1569,6 +1600,7 @@
 
             const fuelItems = [
                 { id: 'out-add-wxx', timeId: 'time-add-wxx', key: 'ADD WXX' },
+                { id: 'out-dest-hold', timeId: 'time-dest-hold', key: 'DEST HOLD' },
                 { id: 'out-add-opn', timeId: 'time-add-opn', key: 'ADD OPN' },
                 { id: 'out-add-atc', timeId: 'time-add-atc', key: 'ADD ATC' },
                 { id: 'out-add-dev', timeId: 'time-add-dev', key: 'ADD DEV' },
@@ -1680,8 +1712,6 @@
                 turbliLink.classList.remove('hidden');
             } else { turbliLink.classList.add('hidden'); }
 
-            const stdStr = extractData(rawText, 'STD'), staStr = extractData(rawText, 'STA');
-            currentDepUTC = extractZuluOnly(stdStr); currentArrUTC = extractZuluOnly(staStr);
             document.getElementById('out-std').textContent = convertToZuluLocalStr(stdStr, currentDepICAO);
             document.getElementById('out-etd').textContent = convertToZuluLocalStr(extractData(rawText, 'ETD'), currentDepICAO);
             document.getElementById('out-sta').textContent = convertToZuluLocalStr(staStr, currentArrICAO);
@@ -1729,15 +1759,51 @@
                 });
             }
 
-            // 🎯 TDX 停機坪智慧判斷與覆蓋邏輯
             let targetAirline = valFlight !== '----' ? valFlight.replace(/[0-9]/g, '').trim() : '';
             let targetFlightNum = valFlight !== '----' ? valFlight.replace(/[^0-9]/g, '').trim() : '';
 
             if (targetAirline && targetFlightNum && fidsFlightData) {
-                const findBestFidsMatch = (fidsArray, tAirline, tNum) => {
+                const depLocalDateObj = calcLocalDate(currentDateUTC, currentDepUTC, currentDepICAO);
+                
+                let arrLocalDateObj = null;
+                if (currentDateUTC !== '----' && currentArrUTC !== '' && currentDepUTC !== '') {
+                    const stdHH = parseInt(currentDepUTC.substring(0, 2), 10);
+                    const staHH = parseInt(currentArrUTC.substring(0, 2), 10);
+                    const parts = currentDateUTC.split('-');
+                    const months = {JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11};
+                    const monIdx = isNaN(parts[1]) ? months[parts[1].toUpperCase()] : parseInt(parts[1], 10) - 1;
+                    const d = new Date(Date.UTC(parseInt(parts[0], 10), monIdx, parseInt(parts[2], 10), staHH, parseInt(currentArrUTC.substring(2,4), 10)));
+
+                    if (staHH < stdHH) d.setUTCDate(d.getUTCDate() + 1);
+
+                    const tzArr = tzMapping[currentArrICAO];
+                    if(tzArr) {
+                         const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tzArr, year: 'numeric', month: '2-digit', day: '2-digit' });
+                         const fp = formatter.formatToParts(d);
+                         arrLocalDateObj = `${fp.find(p=>p.type==='year').value}-${fp.find(p=>p.type==='month').value}-${fp.find(p=>p.type==='day').value}`;
+                    }
+                }
+                
+                function toFidsDateStr(dStr) {
+                    if(!dStr) return null;
+                    const p = dStr.split('-');
+                    if(p.length!==3) return dStr;
+                    const months = {JAN:'01', FEB:'02', MAR:'03', APR:'04', MAY:'05', JUN:'06', JUL:'07', AUG:'08', SEP:'09', OCT:'10', NOV:'11', DEC:'12'};
+                    return `${p[0]}-${months[p[1]] || p[1]}-${p[2]}`;
+                }
+
+                const depFidsDate = toFidsDateStr(depLocalDateObj);
+                const arrFidsDate = arrLocalDateObj; 
+
+                const findBestFidsMatch = (fidsArray, tAirline, tNum, targetDateStr) => {
                     let matches = fidsArray.filter(f => f.AirlineID === tAirline && parseInt(f.FlightNumber, 10) === parseInt(tNum, 10));
                     if (matches.length === 0) return null;
                     if (matches.length === 1) return matches[0];
+                    
+                    if (targetDateStr) {
+                        let exactMatch = matches.find(f => f.FlightDate && f.FlightDate.includes(targetDateStr));
+                        if (exactMatch) return exactMatch;
+                    }
                     
                     const todayStr = getTaiwanDateString(0);
                     let todayMatch = matches.find(f => f.FlightDate === todayStr);
@@ -1747,7 +1813,7 @@
                 };
 
                 if (currentDepICAO === 'RCTP' || currentDepICAO === 'TPE') {
-                    const tdxDep = findBestFidsMatch(fidsFlightData.departures, targetAirline, targetFlightNum);
+                    const tdxDep = findBestFidsMatch(fidsFlightData.departures, targetAirline, targetFlightNum, depFidsDate);
                     if (tdxDep && tdxDep.Gate) {
                         if (depBay !== '--' && depBay !== tdxDep.Gate) {
                             showToastMessage(`⚠️ 桃園出發機坪衝突：手動(${depBay})，TDX(${tdxDep.Gate})。已自動套用 TDX 資訊。`);
@@ -1756,7 +1822,7 @@
                     }
                 }
                 if (currentArrICAO === 'RCTP' || currentArrICAO === 'TPE') {
-                    const tdxArr = findBestFidsMatch(fidsFlightData.arrivals, targetAirline, targetFlightNum);
+                    const tdxArr = findBestFidsMatch(fidsFlightData.arrivals, targetAirline, targetFlightNum, arrFidsDate);
                     if (tdxArr && tdxArr.Gate) {
                         if (arrBay !== '--' && arrBay !== tdxArr.Gate) {
                             showToastMessage(`⚠️ 桃園抵達機坪衝突：手動(${arrBay})，TDX(${tdxArr.Gate})。已自動套用 TDX 資訊。`);
