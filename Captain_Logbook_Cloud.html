@@ -164,7 +164,6 @@
     <!-- MAIN VIEWS -->
     <div id="view-entry" class="hidden">
         <div id="edit-banner">Editing Mode</div>
-        <!-- Fix Top Padding for iOS Notch -->
         <header class="bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
             <div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-start mb-2 mt-2">
                 <div>
@@ -204,7 +203,7 @@
                         <div class="ios-list shadow-sm">
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Date (UTC)</span>
-                                <input type="date" id="inp-date" class="ios-input" onchange="updateEntryDash(); calculateTimes('auto');">
+                                <input type="date" id="inp-date" class="ios-input" onchange="updateEntryDash(); calculateTimes();">
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Flight Number</span>
@@ -215,11 +214,11 @@
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Departure</span>
-                                <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="出發地ICAO" maxlength="4" oninput="updateEntryDash(); calculateTimes('auto');" onblur="saveRouteMemory()">
+                                <input type="text" id="inp-dep" class="ios-input uppercase" placeholder="出發地ICAO" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory(); calculateTimes();">
                             </div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium">Arrival</span>
-                                <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="目的地ICAO" maxlength="4" oninput="updateEntryDash(); calculateTimes('auto');" onblur="saveRouteMemory()">
+                                <input type="text" id="inp-arr" class="ios-input uppercase" placeholder="目的地ICAO" maxlength="4" oninput="updateEntryDash()" onblur="saveRouteMemory(); calculateTimes();">
                             </div>
                         </div>
                     </div>
@@ -245,7 +244,6 @@
                     <div>
                         <div class="section-title md:mt-2">Flight Crew</div>
                         <div class="ios-list shadow-sm">
-                            <!-- Pilot 1 -->
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
                                 <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
@@ -263,7 +261,6 @@
                                     <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                                 </div>
                             </div>
-                            <!-- Pilot 2 -->
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
                                 <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
@@ -281,7 +278,6 @@
                                     <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                                 </div>
                             </div>
-                            <!-- Pilot 3 -->
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
                                 <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
@@ -299,7 +295,6 @@
                                     <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
                                 </div>
                             </div>
-                            <!-- Self Duty -->
                             <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
                                 <div class="flex flex-col">
                                     <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
@@ -316,7 +311,7 @@
                     <!-- Time & Fuel -->
                     <div>
                         <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
-                            <span>Time (UTC) & Fuel</span>
+                            <span>Time (UTC)</span>
                         </div>
                         
                         <div class="ios-list shadow-sm">
@@ -334,12 +329,14 @@
                             </div>
                             <div class="ios-list-item bg-white">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Block In</span>
-                                <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, 'inp-night')">
+                                <input type="tel" id="inp-in" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
                             </div>
-                            <!-- 新增：Night Time 手動覆蓋欄位 -->
                             <div class="ios-list-item bg-white border-t-2 border-[var(--jx-divider)]">
-                                <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Night Time</span>
-                                <input type="tel" id="inp-night" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)]" placeholder="00:00" maxlength="5" oninput="handleTimeInput(event, null)">
+                                <div class="flex flex-col">
+                                    <span class="text-[17px] font-medium text-[var(--jx-gray)] uppercase tracking-wider">Night Time</span>
+                                    <span class="text-[10px] text-gray-400 font-medium">Auto-calculated / Editable</span>
+                                </div>
+                                <input type="tel" id="inp-night" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)] shadow-inner" placeholder="00:00" maxlength="5" oninput="handleNightInput(event)">
                             </div>
                             
                             <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
@@ -348,16 +345,16 @@
                                 </button>
                                 <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
                                     <div class="flex justify-between gap-4">
-                                        <!-- 修改為僅保留 Block Out & Block In Fuel -->
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">Block Out Fuel (t)</div>
-                                            <input type="tel" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="ex: 24.3" oninput="handleFuelInput(event, 'inp-fob-in')">
+                                            <input type="text" inputmode="numeric" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 24.3" oninput="handleFuelInput(event, 'inp-fob-in')">
                                         </div>
                                         <div class="w-1/2">
                                             <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">Block In Fuel (t)</div>
-                                            <input type="tel" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="ex: 15.2" oninput="handleFuelInput(event, null)">
+                                            <input type="text" inputmode="numeric" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2" oninput="handleFuelInput(event, null)">
                                         </div>
                                     </div>
+                                    <p class="text-[10px] text-[var(--jx-gray)] text-center w-full">Shortcut: Type 3 digits directly (e.g., 243 → 24.3)</p>
                                 </div>
                             </div>
 
@@ -376,7 +373,6 @@
                                 </div>
                             </div>
                         </div>
-                        <p class="text-[10px] text-[var(--jx-gray)] mt-1 mb-2 px-4 text-right leading-tight">* Night Time 自動採 ICAO 標準精算 (太陽高度角 <-6°)。可手動點擊欄位覆蓋修改。</p>
                     </div>
 
                     <!-- Operations (PF) -->
@@ -450,9 +446,7 @@
         </main>
     </div>
 
-    <!-- Set default to block -->
     <div id="view-recent" class="block min-h-screen bg-[var(--jx-bg)]">
-        <!-- 搜尋框獨立固定在最上方 -->
         <div class="bg-[var(--jx-bg)] pt-[max(1rem,env(safe-area-inset-top))] pb-3 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
             <div class="relative max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex gap-2 items-center mt-2">
                 <div class="relative flex-1">
@@ -465,7 +459,6 @@
             </div>
         </div>
         
-        <!-- 標題部分，隨畫面滾動 -->
         <header class="pt-6 pb-2 px-4 max-w-md md:max-w-3xl lg:max-w-5xl mx-auto" id="header-recent-title">
             <h1 class="text-2xl font-bold text-[var(--jx-dark)] text-center md:text-left">Recent Flights</h1>
             <p class="text-center md:text-left text-xs text-[var(--jx-gray)] mt-1">Tap any flight to view details.</p>
@@ -483,7 +476,6 @@
                         </select>
                         <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <!-- Custom Date Picker Wrapper -->
                     <div id="custom-date-wrapper" class="hidden flex gap-2 mt-2">
                         <input type="date" id="stats-start-date" class="border border-[var(--jx-divider)] rounded px-1.5 py-1 text-[11px] text-[var(--jx-dark)] w-1/2 shadow-sm bg-white" onchange="renderStats()">
                         <input type="date" id="stats-end-date" class="border border-[var(--jx-divider)] rounded px-1.5 py-1 text-[11px] text-[var(--jx-dark)] w-1/2 shadow-sm bg-white" onchange="renderStats()">
@@ -559,7 +551,6 @@
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 md:mt-0">Hours by Aircraft Type</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-acft"></div>
                         
-                        <!-- 前期累積獨立顯示區塊 (僅在 Career 模式顯示) -->
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 hidden" id="cf-prev-acft-title">Previous flight hours (included)</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm hidden" id="stat-list-prev-acft"></div>
 
@@ -569,7 +560,6 @@
 
                     <!-- Column 2 -->
                     <div>
-                        <!-- Top Pilots & Top Airports 排行榜 -->
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 md:mt-0">Top Pilots Flown With</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
 
@@ -588,13 +578,11 @@
         </main>
     </div>
 
-    <!-- 增加 env(safe-area-inset-bottom) 以避開 iPhone 底部白條 -->
     <nav class="fixed bottom-0 w-full flex justify-around items-center pt-2 pb-[max(0.8rem,env(safe-area-inset-bottom))] z-50 bg-white/95 backdrop-blur-md shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:w-auto md:bottom-8 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:px-8 md:py-2 md:pb-2 md:gap-12 md:border md:border-gray-200 md:shadow-xl">
         <button class="tab-btn flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('entry')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             <span class="text-[10px] font-semibold">Entry</span>
         </button>
-        <!-- Set Recent as active by default -->
         <button class="tab-btn active flex flex-col items-center w-1/3 md:w-auto" onclick="switchTab('recent')">
             <svg class="w-6 h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             <span class="text-[10px] font-semibold">Recent</span>
@@ -609,11 +597,10 @@
     <!-- 🚀 PWA 離線核心架構 🚀 -->
     <!-- ========================================== -->
     <script>
-        // 1. 動態生成 manifest.json
         const manifestData = {
             "name": "Pilot Logbook",
             "short_name": "Logbook",
-            "start_url": ".",
+            "start_url": "./",
             "display": "standalone",
             "background_color": "#F4F0EB",
             "theme_color": "#2C2C2E",
@@ -626,97 +613,86 @@
             ]
         };
         const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-        const manifestUrl = URL.createObjectURL(manifestBlob);
         const link = document.createElement('link');
         link.rel = 'manifest';
-        link.href = manifestUrl;
+        link.href = URL.createObjectURL(manifestBlob);
         document.head.appendChild(link);
 
-        // 2. 動態生成 Service Worker 程式碼
-        const swCode = `
-            const CACHE_NAME = 'jx-logbook-v2.1'; // 升級快取版號
-            const urlsToCache = [
-                './', 
-                'https://cdn.tailwindcss.com',
-                'https://cdn.jsdelivr.net/npm/chart.js',
-                'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
-                'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js'
-            ];
+        // 使用安全的字串相加，完全避免 Template Literals (反引號) 帶來的 Syntax Error
+        const swCode = "const CACHE_NAME = 'jx-logbook-v2.5';\n" +
+        "const urlsToCache = [\n" +
+        "    './',\n" +
+        "    './index.html',\n" +
+        "    'https://cdn.tailwindcss.com',\n" +
+        "    'https://cdn.jsdelivr.net/npm/chart.js',\n" +
+        "    'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',\n" +
+        "    'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js'\n" +
+        "];\n" +
+        "\n" +
+        "self.addEventListener('install', event => {\n" +
+        "    self.skipWaiting();\n" +
+        "    event.waitUntil(\n" +
+        "        caches.open(CACHE_NAME).then(cache => {\n" +
+        "            return Promise.allSettled(urlsToCache.map(url => cache.add(url)));\n" +
+        "        })\n" +
+        "    );\n" +
+        "});\n" +
+        "\n" +
+        "self.addEventListener('activate', event => {\n" +
+        "    self.clients.claim();\n" +
+        "    event.waitUntil(\n" +
+        "        caches.keys().then(cacheNames => {\n" +
+        "            return Promise.all(\n" +
+        "                cacheNames.map(cacheName => {\n" +
+        "                    if (cacheName !== CACHE_NAME) {\n" +
+        "                        return caches.delete(cacheName);\n" +
+        "                    }\n" +
+        "                })\n" +
+        "            );\n" +
+        "        })\n" +
+        "    );\n" +
+        "});\n" +
+        "\n" +
+        "self.addEventListener('fetch', event => {\n" +
+        "    if (event.request.url.includes('script.google.com')) {\n" +
+        "        event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })));\n" +
+        "        return;\n" +
+        "    }\n" +
+        "\n" +
+        "    if (event.request.mode === 'navigate') {\n" +
+        "        event.respondWith(\n" +
+        "            fetch(event.request).catch(() => {\n" +
+        "                return caches.match('./').then(res => res || caches.match('./index.html'));\n" +
+        "            })\n" +
+        "        );\n" +
+        "        return;\n" +
+        "    }\n" +
+        "\n" +
+        "    event.respondWith(\n" +
+        "        caches.match(event.request).then(cachedResponse => {\n" +
+        "            const fetchPromise = fetch(event.request).then(networkResponse => {\n" +
+        "                if(networkResponse && networkResponse.status === 200) {\n" +
+        "                    const responseToCache = networkResponse.clone();\n" +
+        "                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));\n" +
+        "                }\n" +
+        "                return networkResponse;\n" +
+        "            }).catch(() => {});\n" +
+        "            return cachedResponse || fetchPromise;\n" +
+        "        })\n" +
+        "    );\n" +
+        "});";
 
-            self.addEventListener('install', event => {
-                self.skipWaiting();
-                event.waitUntil(
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            console.log('Opened cache');
-                            return Promise.allSettled(urlsToCache.map(url => cache.add(url)));
-                        })
-                );
-            });
-
-            self.addEventListener('activate', event => {
-                event.waitUntil(
-                    caches.keys().then(cacheNames => {
-                        return Promise.all(
-                            cacheNames.map(cacheName => {
-                                if (cacheName !== CACHE_NAME) {
-                                    return caches.delete(cacheName);
-                                }
-                            })
-                        );
-                    })
-                );
-            });
-
-            self.addEventListener('fetch', event => {
-                if (event.request.url.includes('script.google.com')) {
-                    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: "offline" }), { headers: { 'Content-Type': 'application/json' } })));
-                    return;
-                }
-
-                event.respondWith(
-                    caches.match(event.request)
-                        .then(response => {
-                            if (response) {
-                                fetch(event.request).then(res => {
-                                    if(res && res.status === 200) {
-                                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, res));
-                                    }
-                                }).catch(()=>console.log('Offline: Using cached version'));
-                                return response;
-                            }
-                            return fetch(event.request).then(response => {
-                                if(!response || response.status !== 200 || response.type !== 'basic') return response;
-                                let responseToCache = response.clone();
-                                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
-                                return response;
-                            }).catch(() => {
-                                console.log('Offline and not cached:', event.request.url);
-                            });
-                        }
-                    )
-                );
-            });
-        `;
-
-        // 3. 註冊 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(swBlob);
-                navigator.serviceWorker.register(swUrl).then(registration => {
-                    console.log('PWA ServiceWorker 註冊成功');
-                }).catch(err => {
-                    console.log('ServiceWorker 註冊失敗: ', err);
-                });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(registration => {
+                    console.log('PWA ServiceWorker 註冊成功 v2.5');
+                }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
     </script>
 
     <script>
-        // ==========================================
-        // 🚀 使用者自定義：Carry Forward (前期累積) 🚀
-        // ==========================================
         const CF_CONFIG = {
             flights: 1796,         
             takeoffs: 1574,        
@@ -730,30 +706,22 @@
                 { type: "CPL", hours: "260:36" }
             ]
         };
-        // ==========================================
 
         const AIRPORT_DB = {
-            // Taiwan
             'RCTP': { lat: 25.0777, lon: 121.2328 }, 'RCKH': { lat: 22.5771, lon: 120.3500 }, 'RCSS': { lat: 25.0697, lon: 121.5520 }, 'RCMQ': { lat: 24.2646, lon: 120.6200 },
-            // HK / Macau
             'VMMC': { lat: 22.1496, lon: 113.5910 }, 'VHHH': { lat: 22.3089, lon: 113.9140 },
-            // Japan
             'RJAA': { lat: 35.7647, lon: 140.3860 }, 'RJTT': { lat: 35.5522, lon: 139.7790 }, 'RJBB': { lat: 34.4272, lon: 135.2440 }, 'RJGG': { lat: 34.8583, lon: 136.8050 }, 
             'RJFT': { lat: 32.8372, lon: 130.8580 }, 'RJFF': { lat: 33.5858, lon: 130.4500 }, 'ROAH': { lat: 26.1958, lon: 127.6460 }, 'RJSS': { lat: 38.1397, lon: 140.9170 }, 
             'RJCC': { lat: 42.7752, lon: 141.6920 }, 'RJCH': { lat: 41.7700, lon: 140.8180 }, 'RJFU': { lat: 32.9169, lon: 129.9130 }, 'RJOA': { lat: 34.4361, lon: 132.9190 }, 
             'RJSN': { lat: 37.9558, lon: 139.1160 }, 'RJFK': { lat: 31.8033, lon: 130.7180 },
-            // USA
             'KSFO': { lat: 37.6188, lon: -122.375 }, 'KLAX': { lat: 33.9425, lon: -118.408 }, 'KSEA': { lat: 47.4490, lon: -122.309 }, 'KOAK': { lat: 37.7214, lon: -122.221 }, 
             'KSMF': { lat: 38.6953, lon: -121.591 }, 'KONT': { lat: 34.0558, lon: -117.550 }, 'KPDX': { lat: 45.5886, lon: -122.597 }, 'PANC': { lat: 61.1744, lon: -149.996 }, 
             'PMDY': { lat: 28.2014, lon: -177.380 }, 'PHNL': { lat: 21.3186, lon: -157.922 }, 'KPHX': { lat: 33.4343, lon: -112.012 },
-            // Philippines / Vietnam
             'RPLL': { lat: 14.5086, lon: 121.0190 }, 'RPVM': { lat: 10.3075, lon: 123.9790 }, 'RPLC': { lat: 15.1858, lon: 120.5590 },
             'VVNB': { lat: 21.2212, lon: 105.8070 }, 'VVTS': { lat: 10.8188, lon: 106.6660 }, 'VVDN': { lat: 16.0439, lon: 108.1990 }, 'VVCR': { lat: 11.9981, lon: 109.2190 }, 'VVPQ': { lat: 10.1664, lon: 103.9960 },
-            // Thailand / SE Asia
             'VTBS': { lat: 13.6811, lon: 100.7470 }, 'VTBD': { lat: 13.9125, lon: 100.6060 }, 'VTSG': { lat:  8.1132, lon:  98.3169 }, 'VTCC': { lat: 18.7668, lon:  98.9626 },
             'WMKK': { lat:  2.7456, lon: 101.7090 }, 'WMKP': { lat:  5.2971, lon: 100.2760 }, 'WSSS': { lat:  1.3644, lon: 103.9910 },
             'WIII': { lat: -6.1256, lon: 106.6550 }, 'WADD': { lat: -8.7481, lon: 115.1670 }, 
-            // Europe
             'LFBO': { lat: 43.6291, lon:   1.3638 }
         };
 
@@ -771,7 +739,6 @@
         let dbPilots = [];
         let cfData = {}; 
         let isCfActive = true; 
-        
         let flightChartInst = null;
 
         function setDateToUTCNow() {
@@ -815,9 +782,13 @@
             }
             e.target.value = formatted;
             
+            // 每次修改 Block 時間，就解除手動 Night Time 的鎖定
+            if (e.target.id === 'inp-out' || e.target.id === 'inp-in') {
+                delete document.getElementById('inp-night').dataset.manual;
+            }
+            
             if (!document.getElementById('view-entry').classList.contains('hidden') && e.target.id.includes('inp-')) {
-                // 如果是手動輸入夜間時間，標記為手動模式
-                calculateTimes(e.target.id === 'inp-night' ? 'manual-night' : 'auto');
+                calculateTimes();
             }
 
             if (formatted.length === 5 && nextFieldId) {
@@ -826,20 +797,27 @@
             }
         }
 
-        // 新增的 Fuel Input 格式化邏輯 (支援自動轉換三碼為 xx.x)
-        function handleFuelInput(e, nextFieldId) {
+        function handleNightInput(e) {
             let raw = e.target.value.replace(/\D/g, '');
-            if (raw.length > 3) raw = raw.substring(0, 3);
-            
+            if (raw.length > 4) raw = raw.substring(0, 4);
             let formatted = raw;
-            if (raw.length === 3) {
-                formatted = raw.substring(0, 2) + '.' + raw.substring(2);
-            }
+            if (raw.length >= 3) formatted = raw.substring(0, 2) + ':' + raw.substring(2);
+            
             e.target.value = formatted;
+            document.getElementById('inp-night').dataset.manual = 'true';
+            document.getElementById('dash-night-time').textContent = formatted || "00:00";
+        }
 
-            if (raw.length === 3 && nextFieldId) {
-                const nextField = document.getElementById(nextFieldId);
-                if(nextField) nextField.focus();
+        function handleFuelInput(e, nextId) {
+            let val = e.target.value;
+            // 當偵測到嚴格的 3 碼數字（無任何小數點）時，自動補小數點並跳轉
+            if (/^\d{3}$/.test(val)) {
+                e.target.value = val.substring(0, 2) + '.' + val.substring(2, 3);
+                // 僅在用戶"輸入"時跳轉，避免在"刪除"時誤觸發
+                if (nextId && (!e.inputType || !e.inputType.includes('delete'))) {
+                    const nextField = document.getElementById(nextId);
+                    if (nextField) nextField.focus();
+                }
             }
         }
 
@@ -847,7 +825,6 @@
             if (!val) return '';
             let s = String(val).trim();
             if (s.includes('1899') || s.includes('1900') || s.toLowerCase().includes('總和')) return '';
-            
             if (s.includes('T') && s.includes('Z')) {
                 const dt = new Date(s);
                 if (!isNaN(dt)) return `${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
@@ -858,7 +835,6 @@
             }
             if (s.length === 4 && !isNaN(parseInt(s))) return `${s.substring(0,2)}:${s.substring(2,4)}`;
             if (s.length === 3 && !isNaN(parseInt(s))) return `0${s.substring(0,1)}:${s.substring(1,3)}`;
-            
             return s;
         }
 
@@ -879,38 +855,30 @@
         }
 
         function calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT) {
-            if(!dateStr || !outT || !inT || !depICAO || !arrICAO) return 0;
-            const dep = AIRPORT_DB[depICAO.toUpperCase()];
-            const arr = AIRPORT_DB[arrICAO.toUpperCase()];
-            const outM = parseTimeToMins(outT);
-            let inM = parseTimeToMins(inT);
-            
-            if(outM === 0 && inM === 0) return 0;
-            if(inM < outM) inM += 24 * 60; 
-
-            const totalMins = inM - outM;
-            let nightMins = 0;
-
-            // 定義強健的 Fallback 演算法
-            const fallbackNightCalculation = () => {
-                let fbMins = 0;
-                for (let i = 0; i < totalMins; i++) {
-                    let currentMinAbsolute = outM + i;
-                    let modDay = currentMinAbsolute % (24 * 60);
-                    // UTC 10:00 - 22:00 (台灣時間 18:00 - 隔日 06:00) 認定為夜間
-                    if (modDay >= 10 * 60 && modDay < 22 * 60) fbMins++;
-                }
-                return fbMins;
-            };
-
-            if(!dep || !arr) return fallbackNightCalculation();
-
             try {
-                // 檢查函式庫是否成功掛載
-                if (typeof SunCalc === 'undefined') throw new Error("SunCalc library is missing.");
+                if(!dateStr || !outT || !inT || !depICAO || !arrICAO) return 0;
+                const dep = AIRPORT_DB[depICAO.toUpperCase()];
+                const arr = AIRPORT_DB[arrICAO.toUpperCase()];
+                const outM = parseTimeToMins(outT);
+                let inM = parseTimeToMins(inT);
+                
+                if(outM === 0 && inM === 0) return 0;
+                if(inM < outM) inM += 24 * 60; 
+
+                const totalMins = inM - outM;
+                if(!dep || !arr || typeof SunCalc === 'undefined') {
+                    // 防呆/離線備用：直接視 10:00Z 到 22:00Z 為晚間時段
+                    let nightMinsFallback = 0;
+                    for (let m = outM; m < inM; m++) {
+                        let modDay = m % (24 * 60);
+                        if (modDay >= 10 * 60 && modDay < 22 * 60) nightMinsFallback++;
+                    }
+                    return nightMinsFallback;
+                }
 
                 const [yy, mm, dd] = dateStr.split('-');
                 const utcDateBase = new Date(Date.UTC(yy, mm - 1, dd, 0, 0, 0));
+                let nightMins = 0;
                 const CIVIL_TWILIGHT_RAD = -6 * (Math.PI / 180); 
 
                 let depLon = dep.lon; let arrLon = arr.lon;
@@ -932,9 +900,17 @@
                     if (sunPos.altitude <= CIVIL_TWILIGHT_RAD) nightMins++;
                 }
                 return nightMins;
-            } catch (e) {
-                console.warn("SunCalc failed, using robust fallback night calculation.", e);
-                return fallbackNightCalculation();
+            } catch (error) {
+                console.warn("Night calc error, using fallback.", error);
+                const outM = parseTimeToMins(outT);
+                let inM = parseTimeToMins(inT);
+                if(inM < outM) inM += 24 * 60; 
+                let nightFallback = 0;
+                for (let m = outM; m < inM; m++) {
+                    let modDay = m % (24 * 60);
+                    if (modDay >= 10 * 60 && modDay < 22 * 60) nightFallback++;
+                }
+                return nightFallback;
             }
         }
 
@@ -989,7 +965,6 @@
             };
 
             setDateToUTCNow();
-            
             initTimeFilterDropdown();
             loadLocalCache();
             await processSyncQueue();
@@ -1056,7 +1031,6 @@
                 const response = await fetch(GAS_URL);
                 const data = await response.json(); 
                 if(data.error === "offline") {
-                    console.log("Currently offline, skipping cloud fetch");
                     showToast("Offline. Using local data.");
                     return;
                 }
@@ -1120,7 +1094,6 @@
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                 if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
             } catch (err) { 
-                console.error("Cloud fetch failed (Offline):", err); 
                 showToast("Offline. Using cached data.");
             }
         }
@@ -1181,7 +1154,6 @@
                 document.getElementById('inp-arr').value = routeMemory[fltNum].arr;
             }
             updateEntryDash();
-            calculateTimes('auto');
         }
 
         function saveRouteMemory() {
@@ -1194,7 +1166,7 @@
             }
         }
 
-        function calculateTimes(source) {
+        function calculateTimes() {
             const dateStr = document.getElementById('inp-date').value;
             const depICAO = document.getElementById('inp-dep').value;
             const arrICAO = document.getElementById('inp-arr').value;
@@ -1209,26 +1181,21 @@
                 document.getElementById('dash-block-time').textContent = bTime;
                 document.getElementById('dash-block-time-top').textContent = bTime;
                 
-                // 如果不是手動編輯夜間欄位，則自動精算
-                if (source !== 'manual-night') {
-                    const calculatedNightMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
-                    const nightStr = minsToStr(calculatedNightMins);
-                    document.getElementById('inp-night').value = nightStr;
-                    document.getElementById('dash-night-time').textContent = nightStr;
+                const calculatedNightMins = calcNightTimePrecision(dateStr, depICAO, arrICAO, outT, inT);
+                const nightInput = document.getElementById('inp-night');
+                
+                // 只有在未手動修改時，才自動覆寫 Night Time
+                if (nightInput.dataset.manual !== 'true') {
+                    const formattedNight = minsToStr(calculatedNightMins);
+                    nightInput.value = formattedNight;
+                    document.getElementById('dash-night-time').textContent = formattedNight;
                 } else {
-                    // 若是手動輸入，確保 dashboard 直接反射輸入框值
-                    document.getElementById('dash-night-time').textContent = document.getElementById('inp-night').value || "00:00";
+                    document.getElementById('dash-night-time').textContent = nightInput.value || "00:00";
                 }
             } else {
                 document.getElementById('dash-block-time').textContent = "00:00";
                 document.getElementById('dash-block-time-top').textContent = "00:00";
-                
-                if (source !== 'manual-night') {
-                    document.getElementById('inp-night').value = "";
-                    document.getElementById('dash-night-time').textContent = "00:00";
-                } else {
-                    document.getElementById('dash-night-time').textContent = document.getElementById('inp-night').value || "00:00";
-                }
+                document.getElementById('dash-night-time').textContent = "00:00";
             }
             
             if (isValidTime(offT) && isValidTime(onT)) {
@@ -1751,13 +1718,15 @@
             document.getElementById('inp-dep').value = ''; 
             document.getElementById('inp-arr').value = '';
             document.getElementById('inp-reg').value = ''; 
-            
             document.getElementById('inp-out').value = ''; 
             document.getElementById('inp-in').value = '';
             document.getElementById('inp-off').value = ''; 
             document.getElementById('inp-on').value = '';
-            document.getElementById('inp-night').value = ''; // 新增：清空夜間覆蓋值
             
+            // 重置 Night Time 的數值與手動狀態
+            document.getElementById('inp-night').value = '';
+            delete document.getElementById('inp-night').dataset.manual;
+
             document.getElementById('chk-to').checked = false; 
             document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
@@ -1765,6 +1734,7 @@
             document.getElementById('inp-app').value = 'ILS'; 
             document.getElementById('inp-rwy').value = ''; 
             
+            // Fuel
             document.getElementById('inp-fob-out').value = ''; 
             document.getElementById('inp-fob-in').value = '';
             document.getElementById('fuel-section').classList.add('hidden');
@@ -1780,7 +1750,6 @@
             document.getElementById('dash-night-time').textContent = '00:00';
             
             setDateToUTCNow(); 
-            
             setFormMode('create'); 
             evaluateOperations(); 
             updateEntryDash();
@@ -1801,7 +1770,9 @@
             document.getElementById('inp-on').value  = normalizeTimeDisplay(log.on);
             document.getElementById('inp-in').value  = normalizeTimeDisplay(log.in);
             
-            document.getElementById('inp-night').value = minsToStr(log.nightMins || 0); // 載入存檔的晚間飛行時間
+            // 寫入 Night Time，設定為手動狀態避免自動重新計算覆蓋
+            document.getElementById('inp-night').value = minsToStr(log.nightMins);
+            document.getElementById('inp-night').dataset.manual = 'true';
 
             document.getElementById('chk-to').checked = (Number(log.day_to) >= 1 || Number(log.night_to) >= 1);
             document.getElementById('chk-ldg').checked = (Number(log.day_ldg) >= 1 || Number(log.night_ldg) >= 1);
@@ -1813,6 +1784,7 @@
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
             
+            // Fuel
             document.getElementById('inp-fob-out').value = log.fob_out || '';
             document.getElementById('inp-fob-in').value = log.fob_in || '';
             if(log.fob_out || log.fob_in) document.getElementById('fuel-section').classList.remove('hidden');
@@ -1827,8 +1799,7 @@
             
             setFormMode('view'); 
             updateEntryDash(); 
-            // 在 viewMode 下算時間，傳入 'manual-night' 避免覆寫本來就存好的晚間時間
-            calculateTimes('manual-night');
+            calculateTimes();
 
             switchTab('entry', true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1876,6 +1847,8 @@
                 if(chkTo && offT && offT.includes(':')) { const h = parseInt(offT.split(':')[0]); if(!(h >= 10 && h < 22)) dayTo = 1; else nightTo = 1; }
                 if(chkLdg && onT && onT.includes(':')) { const h = parseInt(onT.split(':')[0]); if(!(h >= 10 && h < 22)) dayLdg = 1; else nightLdg = 1; }
                 
+                const nTimeMins = parseTimeToMins(document.getElementById('inp-night').value);
+
                 payloadData = {
                     action: actionType, 
                     index: document.getElementById('inp-index').value || (actionType === 'create' ? generateNextIndex() : generateUUID()),
@@ -1883,14 +1856,14 @@
                     airport_departure: depICAO, airport_arrival: arrICAO,
                     aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
                     total_block: minsToStr(calcDuration(outT, inT)), total_air: minsToStr(calcDuration(offT, onT)),
-                    total_night: document.getElementById('inp-night').value || "00:00", duty: document.getElementById('inp-duty').value,
+                    total_night: minsToStr(nTimeMins), duty: document.getElementById('inp-duty').value,
                     passenger: parseInt(document.getElementById('inp-pax').value) || 0,
                     day_takeoff: dayTo, day_landing: dayLdg, night_takeoff: nightTo, night_landing: nightLdg,
                     pilot1: document.getElementById('inp-pilot1').value.trim() || '', pilot2: document.getElementById('inp-pilot2').value.trim() || '', pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
                     pilot4: 'Self', custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
                     approach1_airport: arrICAO, approach1_type: document.getElementById('inp-app').value,
-                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), 
-                    fob_out: document.getElementById('inp-fob-out').value, fob_off: '', fob_on: '', fob_in: document.getElementById('inp-fob-in').value
+                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), fob_out: document.getElementById('inp-fob-out').value,
+                    fob_off: '', fob_on: '', fob_in: document.getElementById('inp-fob-in').value
                 };
 
                 const localLog = {
@@ -1902,10 +1875,10 @@
                     duty: payloadData.duty, pax: payloadData.passenger, app: payloadData.approach1_type, rwy: payloadData.approach1_runway,
                     pilot1: payloadData.pilot1, pilot2: payloadData.pilot2, pilot3: payloadData.pilot3,
                     fob_out: payloadData.fob_out, fob_in: payloadData.fob_in,
-                    syncStatus: 'pending' 
+                    syncStatus: 'pending'
                 };
                 const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
-                localLog.acft = acftData ? acftData.type : 'A339'; 
+                localLog.acft = acftData ? acftData.type : 'A339';
 
                 if(actionType === 'update') {
                     const idx = flightLogs.findIndex(l => String(l.index) === String(payloadData.index));
