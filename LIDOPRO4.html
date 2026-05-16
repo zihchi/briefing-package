@@ -972,7 +972,8 @@
                         const altnSection = rawTexts['OFP'].match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
                         if (altnSection) {
                             [...altnSection[0].matchAll(/^([A-Z]{4})\b/gm)].forEach(m => {
-                                if (m[1] !== 'TIME' && m[1] !== dep && m[1] !== dest) addAirport(destAltnSet, m[1]);
+                                // 修正1: 允許將出發地當作備降機場，移除 m[1] !== dep 的條件
+                                if (m[1] !== 'TIME' && m[1] !== dest) addAirport(destAltnSet, m[1]);
                             });
                         }
                     }
@@ -1020,8 +1021,13 @@
 
                     let efbVer = 'N/A';
                     if (rawTexts['CREWINFO']) {
-                        const efbMatches = [...rawTexts['CREWINFO'].matchAll(/EFB VER\.?\s*SJX-IOS-(R\d{3,4})/ig)];
-                        if (efbMatches.length > 0) efbVer = efbMatches[efbMatches.length - 1][1]; 
+                        // 修正2: 取代原本抓最後一筆的方法，改抓所有版本並取最大值
+                        const efbMatches = [...rawTexts['CREWINFO'].matchAll(/SJX-IOS-(R\d{3,4})/ig)];
+                        if (efbMatches.length > 0) {
+                            const versions = efbMatches.map(m => parseInt(m[1].replace('R', ''), 10));
+                            const maxVer = Math.max(...versions);
+                            efbVer = 'R' + maxVer;
+                        }
                     }
 
                     let cruiseAltStr = 'N/A', wc = 'N/A', mxsh = 'N/A';
@@ -1084,7 +1090,7 @@
                         if (fw_altn.t || fw_frf.t) t_divFuel = ` / ${fw_altn.t || '00.00'}+${fw_frf.t || '00.00'}`;
 
                         const fw_addWxx = getFuelExtended('ADD WXX');
-                        const fw_destHold = getFuelExtended('DEST HOLD');
+                        const fw_destHold = getFuelExtended('(?:DEST\\s+)?HOLD'); // 增加容錯率
                         const fw_addOpn = getFuelExtended('ADD OPN');
                         const fw_addAtc = getFuelExtended('ADD ATC');
                         const fw_addDev = getFuelExtended('ADD DEV');
@@ -1097,17 +1103,22 @@
                         const formatFuelVal = (fw) => fw.t ? `${fw.w} / ${fw.t.replace('.', ':')}` : `${fw.w}`;
                         const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
 
+                        // 修正1: 縮小 BOF 搜尋範圍至 ALTERNATES 區塊
+                        let bofSearchArea = ofpText;
+                        const bofSectionMatch = ofpText.match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
+                        if (bofSectionMatch) bofSearchArea = bofSectionMatch[0];
+
                         let bof1 = 0, bof2 = 0, bof3 = 0;
                         if (destAltnAirports.length > 0) {
-                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[0] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            const m = bofSearchArea.match(new RegExp('^\\s*' + destAltnAirports[0] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
                             if (m) bof1 = parseInt(m[1], 10);
                         }
                         if (destAltnAirports.length > 1) {
-                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[1] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            const m = bofSearchArea.match(new RegExp('^\\s*' + destAltnAirports[1] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
                             if (m) bof2 = parseInt(m[1], 10);
                         }
                         if (destAltnAirports.length > 2) {
-                            const m = ofpText.match(new RegExp('^\\s*' + destAltnAirports[2] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
+                            const m = bofSearchArea.match(new RegExp('^\\s*' + destAltnAirports[2] + '\\s+(?:\\S+\\s+){6}(\\d+)', 'm'));
                             if (m) bof3 = parseInt(m[1], 10);
                         }
 
