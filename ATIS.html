@@ -88,7 +88,7 @@
       <h2 style="margin: 0; font-size: 1.5em; color: #333; display: flex; align-items: center; gap: 8px;">
         📻 D-ATIS & 🌍 航空氣象
       </h2>
-      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: NOAA AWC / VATSIM Backup (Extreme Speed)</div>
+      <div style="font-size: 0.9em; color: #888; margin-top: 4px;">Source: NOAA AWC</div>
     </div>
     
     <button class="app-header-btn" onclick="typeof closePanel === 'function' ? closePanel() : document.getElementById('content-display').style.display='none';" title="關閉面板">
@@ -205,7 +205,7 @@
     </div>
   </div>
 
-  <!-- 過去 24 小時 METAR 區塊 (新增功能) -->
+  <!-- 過去 24 小時 METAR 區塊 -->
   <div class="app-card atis-sub-card" style="margin-top: 15px;">
     <div class="app-section-title atis-title-bar" style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
@@ -371,57 +371,72 @@
   }
 
   // ==========================================
-  // 3. 極速平行競速 API 擷取邏輯 (四層防線並行)
+  // 3. 循序備援 API 擷取邏輯 (紳士且穩健版)
   // ==========================================
   async function fetchAWCData(type, icao) {
     const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json`;
-    const textUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}`;
 
-    // 建立 6 秒全域死線，超時即無情斬斷
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    // 共用的 fetch 執行器，負責設定 Timeout
+    const executeFetch = async (targetUrl, timeoutMs, isText = false) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(targetUrl, { signal: controller.signal });
+            clearTimeout(id);
+            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+            return isText ? await res.text() : await res.json();
+        } catch (err) {
+            clearTimeout(id);
+            throw err;
+        }
+    };
 
-    const fetchJSON = async (url) => {
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+    // 提取 JSON 資料的 Helper 函數
+    const extractData = (data) => {
         if (!data || data.length === 0) throw new Error('Data Empty');
         return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw);
     };
 
-    const fetchText = async (url) => {
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = await res.text();
-        if (!text || text.trim() === '' || text.includes('<html>')) throw new Error('Invalid Text');
-        return text.trim();
-    };
-
-    const racers = [
-        fetchJSON(cleanUrl), 
-        fetchText(textUrl),  
-        fetchJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`), 
-        fetchText(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`) 
-    ];
-
-    if (type === 'metar') {
-        const fetchVatsim = async () => {
-            const res = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { signal: controller.signal });
-            if (!res.ok) throw new Error('VATSIM fail');
-            const text = await res.text();
-            if (!text || text.length < 10) throw new Error('Invalid VATSIM');
-            return text.trim();
-        };
-        racers.push(fetchVatsim());
-    }
-
+    // 📍 階段一：官方主鏈路 (給予 4.5 秒耐心等待)
     try {
-        const result = await Promise.any(racers);
-        clearTimeout(timeoutId);
-        return result;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        throw new Error(`所有 ${type.toUpperCase()} 備援通道皆無法取得資料`);
+        const data = await executeFetch(cleanUrl, 4500);
+        return extractData(data);
+    } catch (errorA) {
+        console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
+        
+        // 📍 階段二：備援防線 A (CodeTabs 代理, 5.5 秒)
+        try {
+            const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
+            const dataA = await executeFetch(proxyA, 5500);
+            return extractData(dataA);
+        } catch (errorB) {
+            console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至防線 B...`);
+            
+            // 📍 階段三：備援防線 B (AllOrigins 代理, 6 秒)
+            try {
+                const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+                const dataB = await executeFetch(proxyB, 6000);
+                return extractData(dataB);
+            } catch (errorC) {
+                console.warn(`[系統 B 失效] ${type.toUpperCase()} 備援 B 受阻。`);
+                
+                // 📍 階段四：VATSIM 終極防線 (僅限抓取 METAR 時觸發)
+                if (type === 'metar') {
+                    console.warn(`[啟動終極防線] 嘗試從 VATSIM 抓取 ${icao} METAR...`);
+                    try {
+                        const vatsimUrl = `https://metar.vatsim.net/metar.php?id=${icao}`;
+                        const textData = await executeFetch(vatsimUrl, 5000, true);
+                        if (!textData || textData.length < 10) throw new Error('Invalid VATSIM Data');
+                        return textData.trim();
+                    } catch (errorVatsim) {
+                        console.error(`[全面失效] VATSIM 也無法救援 ${icao}。`);
+                        throw new Error(`所有 ${type.toUpperCase()} 備援通道皆無法取得資料`);
+                    }
+                } else {
+                    throw new Error(`所有 ${type.toUpperCase()} 備援通道皆無法取得資料`);
+                }
+            }
+        }
     }
   }
 
@@ -574,32 +589,37 @@
     try {
         const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
         
-        // 建立 8 秒全域死線，防止無止盡等待
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-        const fetchJSON = async (url) => {
-            const res = await fetch(url, { signal: controller.signal });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            if (!Array.isArray(data)) throw new Error('Data format error');
-            return data;
+        // 歷史氣象同樣套用循序備援機制
+        const executeFetch = async (targetUrl, timeoutMs) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(targetUrl, { signal: controller.signal });
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
         };
-
-        // 平行競速：主鏈路與多重備援 Proxy 同時起跑
-        const racers = [
-            fetchJSON(cleanUrl),
-            fetchJSON(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`),
-            fetchJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`)
-        ];
 
         let data;
         try {
-            data = await Promise.any(racers);
-            clearTimeout(timeoutId);
-        } catch (raceError) {
-            clearTimeout(timeoutId);
-            throw new Error("備援通道皆失效");
+            // 📍 階段一：官方主鏈路 (4.5秒)
+            data = await executeFetch(cleanUrl, 4500);
+        } catch (errorA) {
+            console.warn("[歷史氣象] 官方主鏈路失效，啟動備援系統 A...");
+            try {
+                // 📍 階段二：備援防線 A (5.5秒)
+                const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
+                data = await executeFetch(proxyA, 5500);
+            } catch (errorB) {
+                console.warn("[歷史氣象] 系統 A 失效，切換至最後防線 B...");
+                // 📍 階段三：最後防線 B (6秒)
+                const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+                data = await executeFetch(proxyB, 6000);
+            }
         }
         
         if (!data || data.length === 0) {
