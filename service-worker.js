@@ -1,10 +1,9 @@
 // 每次發布新版本或新增檔案時，請務必推進此版號
-const CACHE_NAME = 'briefing-v15'; 
+const CACHE_NAME = 'briefing-v16'; 
 const urlsToCache = [
   './',
   './index.html',
   './app.js',
-  './ATIS.html',
   './FDP.html',
   './FIDS.html',
   './Turbli_Widget.html',
