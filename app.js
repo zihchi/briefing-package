@@ -674,6 +674,7 @@ function initAviationMap() {
     let isDataReady = false;
     airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
 
+    // 🌍 全域共用：具備多重備援防線的資料擷取器
     const fetchBulkWeatherFast = async (icaoList, type) => {
         const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
 
@@ -781,7 +782,7 @@ function initAviationMap() {
             }, 2000);
         };
 
-        // 🌟 核心升級：注入自訂 ICAO 搜尋介面
+        // 🌟 核心升級：注入自訂 ICAO 搜尋介面 (位置已互換)
         let searchContainer = document.getElementById('custom-icao-search-container');
         if (!searchContainer) {
             searchContainer = document.createElement('div');
@@ -789,17 +790,17 @@ function initAviationMap() {
             searchContainer.style.display = 'inline-flex';
             searchContainer.style.alignItems = 'center';
             searchContainer.style.gap = '8px';
-            searchContainer.style.marginLeft = '15px';
+            searchContainer.style.marginRight = '15px'; // 添加右側間距，因為要插在「更新按鈕」左邊
             searchContainer.style.flexWrap = 'wrap';
 
             searchContainer.innerHTML = `
-                <input type="text" id="custom-icao-input" placeholder="查詢其他機場 (例: KLAX)" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 180px; text-transform: uppercase; font-weight: bold; outline: none;">
+                <input type="text" id="custom-icao-input" placeholder="查詢機場 (例: KLAX)" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 150px; text-transform: uppercase; font-weight: bold; outline: none;">
                 <button id="btn-search-icao" style="padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 搜尋機場</button>
             `;
 
-            // 將搜尋組件插入到更新按鈕的後方
+            // 🎯 修改重點：將搜尋組件插入到「手動更新按鈕」的前方，達成位置互換
             if (refreshBtn.parentNode) {
-                refreshBtn.parentNode.insertBefore(searchContainer, refreshBtn.nextSibling);
+                refreshBtn.parentNode.insertBefore(searchContainer, refreshBtn);
             }
 
             // 綁定自訂搜尋事件
@@ -821,25 +822,34 @@ function initAviationMap() {
                 btn.style.opacity = "0.7";
 
                 try {
-                    // 1. 索取機場座標 (Station Info)
-                    const stationRes = await fetch(`https://aviationweather.gov/api/data/stationinfo?ids=${icao}&format=json`);
-                    if(!stationRes.ok) throw new Error("API 異常");
-                    const stationData = await stationRes.json();
-
-                    if(!stationData || stationData.length === 0) {
-                        throw new Error("查無此機場");
-                    }
-
-                    const station = stationData[0];
-                    const lat = station.lat;
-                    const lon = station.lon;
-                    const siteName = station.site || "Custom Station";
-
-                    // 2. 獲取該機場氣象資料
-                    const [metarData, tafData] = await Promise.all([
+                    // 🎯 修正重點：不再使用舊的 stationinfo，改為使用 airport API 並納入強大的備援機制
+                    const [airportData, metarData, tafData] = await Promise.all([
+                        fetchBulkWeatherFast(icao, 'airport'),
                         fetchBulkWeatherFast(icao, 'metar'),
                         fetchBulkWeatherFast(icao, 'taf')
                     ]);
+
+                    let lat, lon, siteName;
+
+                    // 依序從各種回應中挖掘該機場的經緯度座標與名稱
+                    if (airportData.length > 0) {
+                        lat = airportData[0].lat;
+                        lon = airportData[0].lon;
+                        siteName = airportData[0].id || icao; // AWC airport 端點通常返回 id
+                    } else if (metarData.length > 0 && metarData[0].lat !== undefined) {
+                        lat = metarData[0].lat;
+                        lon = metarData[0].lon;
+                        siteName = metarData[0].name || icao;
+                    } else if (tafData.length > 0 && tafData[0].lat !== undefined) {
+                        lat = tafData[0].lat;
+                        lon = tafData[0].lon;
+                        siteName = tafData[0].name || icao;
+                    }
+
+                    // 如果三條通道都挖不到座標，宣告失敗
+                    if (lat === undefined || lon === undefined) {
+                        throw new Error("查無此機場或氣象座標資訊");
+                    }
 
                     let rawMetarText = "";
                     let rawTafText = "";
@@ -863,7 +873,7 @@ function initAviationMap() {
                     const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
                     const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
 
-                    // 5. 綁定 Popup 面板 (共用新的 buildAirportPopupHtml 邏輯)
+                    // 5. 綁定 Popup 面板
                     const popupHtml = buildAirportPopupHtml({ icao: icao, name: siteName }, rawMetarText, rawTafText);
 
                     customMarker.bindPopup(popupHtml, {
@@ -933,7 +943,6 @@ function initAviationMap() {
             const rawMetarText = weatherCache[airport.icao].metar;
             const rawTafText = weatherCache[airport.icao].taf;
             
-            // 使用重構後的 HTML 產生器 (同時包含歷史 METAR 的框架)
             const popupHtml = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
 
             L.popup(popupOpts)
