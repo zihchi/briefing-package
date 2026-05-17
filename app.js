@@ -632,9 +632,8 @@ function initAviationMap() {
 
     const airports = [
         { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
-        { icao: 'RCSS', name: '臺北松山機場', lat: 25.0043, lng: 122.2451 },
+        { icao: 'RCSS', name: '臺北松山機場', lat: 27.0388, lng: 121.2010 },
         { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
-        { icao: 'RCMQ', name: '臺中清泉崗機場', lat: 24.2646, lng: 120.6200 },
         { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
         { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
         { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
@@ -794,7 +793,7 @@ function initAviationMap() {
             searchContainer.style.flexWrap = 'wrap';
 
             searchContainer.innerHTML = `
-                <input type="text" id="custom-icao-input" placeholder="查詢機場 (例: KLAX)" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 150px; text-transform: uppercase; font-weight: bold; outline: none;">
+                <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 150px; text-transform: uppercase; font-weight: bold; outline: none;">
                 <button id="btn-search-icao" style="padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 搜尋機場</button>
             `;
 
