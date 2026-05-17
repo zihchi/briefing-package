@@ -1,5 +1,6 @@
 // ==========================================
 // 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版 + 雙引擎解析架構
+// 🆕 升級版：支援自訂 ICAO 地圖查詢 + 24H 歷史氣象紀錄整合
 // ==========================================
 
 // ------------------------------------------
@@ -75,11 +76,151 @@ let altimetryRows = [
   { id: 'eo', label: 'EO ACC', altitude: '', isCustom: false }
 ];
 
+// ==========================================
+// 🌍 全域共用：氣象特徵與解析工具 (Global Weather Tools)
+// ==========================================
+function getWeatherEmojis(text) {
+  if (!text) return '';
+  let emojis = [];
+  const tokens = text.split(/\s+/);
+  
+  let hasTSWS = false; let hasRA = false; let hasSN = false; let hasGust = false;
+  const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
+  const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
+  const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
+
+  for (let token of tokens) {
+      if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
+      if (raRegex.test(token)) hasRA = true;
+      if (snRegex.test(token)) hasSN = true;
+      if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
+  }
+  if (hasTSWS) emojis.push('🚨');
+  if (hasRA) emojis.push('☔️');
+  if (hasSN) emojis.push('☃️');
+  if (hasGust) emojis.push('⚠️');
+
+  return emojis.join(' ');
+}
+
+function parseWeatherElements(text, prevVis, prevCeil) {
+  let vis = prevVis; let ceil = prevCeil;
+  if (/\b(CAVOK|SKC|CLR|NSC)\b/.test(text)) {
+      if (/\bCAVOK\b/.test(text)) vis = 10;
+      ceil = 99999;
+  }
+  const metricMatch = text.match(/(?:\s|^)([0-9]{4})(?:NDV)?(?:\s|$)/);
+  if (metricMatch) {
+      const meters = parseInt(metricMatch[1], 10);
+      vis = meters === 9999 ? 10 : meters / 1609.34;
+  }
+  const smMatch = text.match(/(?:\s|^)(P|M)?(\d+)?\s?(\d+\/\d+)?SM(?:\s|$)/);
+  if (smMatch) {
+      let val = 0;
+      if (smMatch[2]) val += parseInt(smMatch[2], 10);
+      if (smMatch[3]) {
+          const [num, den] = smMatch[3].split('/');
+          val += parseInt(num, 10) / parseInt(den, 10);
+      }
+      if (val === 0 && smMatch[1] === 'M') val = 0.25;
+      if (val === 0 && smMatch[1] === 'P') val = 6.0;
+      vis = val;
+  }
+  const cloudMatches = text.match(/(BKN|OVC|VV)(\d{3})/g);
+  if (cloudMatches) {
+      const bases = cloudMatches.map(c => parseInt(c.slice(3, 6), 10) * 100);
+      ceil = Math.min(...bases);
+  }
+  return { vis, ceil };
+}
+
+function getFlightCategory(vis, ceil) {
+  if (ceil < 500 || vis < 1) return "lifr";
+  if (ceil < 1000 || vis < 3) return "ifr";
+  if (ceil <= 3000 || vis <= 5) return "mvfr";
+  return "vfr";
+}
+
+function calculateReportAge(rawText) {
+  if (!rawText) return "";
+  const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
+  if (!match) return "";
+
+  const repDay = parseInt(match[1], 10);
+  const repHour = parseInt(match[2], 10);
+  const repMin = parseInt(match[3], 10);
+
+  const now = new Date();
+  const currDay = now.getUTCDate();
+  let targetMonth = now.getUTCMonth();
+  let targetYear = now.getUTCFullYear();
+
+  if (repDay > currDay + 5) {
+      targetMonth -= 1;
+      if (targetMonth < 0) {
+          targetMonth = 11;
+          targetYear -= 1;
+      }
+  }
+
+  const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
+  const diffMs = now.getTime() - reportDate.getTime();
+  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMins < 60) return `(已發佈 ${diffMins} 分鐘)`;
+  else {
+      const h = Math.floor(diffMins / 60);
+      const m = diffMins % 60;
+      return `(已發佈 ${h} 小時 ${m} 分鐘)`;
+  }
+}
+
+function formatColorTAF(rawTaf) {
+  if (!rawTaf) return `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: 'Courier New', monospace; font-size: 13.5px; color: #2c3e50;">目前無有效或無法載入 TAF 報文</div>`;
+  
+  const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+  const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
+  const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
+  const lines = markedTaf.split('|||');
+
+  let prevailingVis = 999; let prevailingCeil = 99999;
+  let htmlOutput = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left;">`;
+
+  lines.forEach((line, index) => {
+      const cleanLine = line.trim();
+      if (!cleanLine) return;
+
+      let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
+      const cat = getFlightCategory(current.vis, current.ceil);
+      const color = catColors[cat] || catColors['unk'];
+      const catLabel = cat.toUpperCase();
+      
+      const emojis = getWeatherEmojis(cleanLine);
+      const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
+
+      let isMainBody = false;
+      if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
+          prevailingVis = current.vis; prevailingCeil = current.ceil;
+          isMainBody = true;
+      }
+
+      const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
+
+      htmlOutput += `
+          <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
+              <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
+              ${emojiHtml}
+              <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
+          </div>
+      `;
+  });
+  htmlOutput += `</div>`;
+  return htmlOutput;
+}
+
 // ------------------------------------------
 // 🚀 面板切換與生命週期管理
 // ------------------------------------------
-
-// 🧹 記憶體釋放邏輯 (防護機制)
 function cleanUpPanel() {
     if (typeof notamMapInstance !== 'undefined' && notamMapInstance !== null) {
         notamMapInstance.remove();
@@ -93,7 +234,6 @@ function cleanUpPanel() {
     oldScripts.forEach(script => script.remove());
 }
 
-// 負責無縫切換頁面與喚醒 JS 邏輯的核心引擎
 function loadPage(pageUrl) {
     const displayArea = document.getElementById('content-display');
     cleanUpPanel(); 
@@ -161,17 +301,11 @@ function setupChecklist(listId) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // 1. 初始化 Checklist
     setupChecklist("briefingChecklist1");
     setupChecklist("personalChecklist");
-    
-    // 2. 初始化 Turbli 航班選單
     initFlightSelect();
-
-    // 3. 初始化 NOAA 氣象儀表板
     initAviationMap();
 
-    // 4. 綁定 Turbli 查詢按鈕
     const turbliBtn = document.getElementById("turbliBtn");
     if(turbliBtn) {
         turbliBtn.addEventListener("click", function () {
@@ -179,21 +313,14 @@ document.addEventListener("DOMContentLoaded", function () {
             if (url) window.open(url, "_blank");
         });
     }
-
     console.log("✈️ 簡報箱主核心系統已全面整合上線 (Core Engine Online)");
 });
 
-// ==========================================
-// 🔄 UI 小工具：重新整理 iframe (Windy 地圖用)
-// ==========================================
 function refreshIframe(id) {
     const iframe = document.getElementById(id);
     if (iframe) iframe.src = iframe.src;
 }
 
-// ==========================================
-// 🛫 首頁模組一：Turbli 航班亂流查詢
-// ==========================================
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
   const dateSelectEl = document.getElementById("dateSelect");
@@ -252,35 +379,6 @@ function initFlightSelect() {
 // ==========================================
 // 🌍 首頁模組二：NOAA AWC 航空氣象儀表板
 // ==========================================
-function getWeatherEmojis(text) {
-  if (!text) return '';
-  let emojis = [];
-  const tokens = text.split(/\s+/);
-  
-  let hasTSWS = false;
-  let hasRA = false;
-  let hasSN = false;
-  let hasGust = false;
-
-  const tsRegex = /^[+-]?(?:VC)?TS(?:RA|SN|GR|GS|DZ|PL)?$|^RETS$/;
-  const raRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ)?RA$|^RERA$/;
-  const snRegex = /^[+-]?(?:VC)?(?:SH|TS|FZ|BL|DR|MI)?SN$|^RESN$/;
-
-  for (let token of tokens) {
-      if (token === 'WS' || /^WS\d{3}\//.test(token) || tsRegex.test(token)) hasTSWS = true;
-      if (raRegex.test(token)) hasRA = true;
-      if (snRegex.test(token)) hasSN = true;
-      if (/G\d{2,}/.test(token) && (token.includes('KT') || token.includes('MPS') || token.includes('KMH'))) hasGust = true;
-  }
-
-  if (hasTSWS) emojis.push('🚨');
-  if (hasRA) emojis.push('☔️');
-  if (hasSN) emojis.push('☃️');
-  if (hasGust) emojis.push('⚠️');
-
-  return emojis.join(' ');
-}
-
 function calculatePopupAtisAge(rawText) {
     if (!rawText || rawText.includes("無資料") || rawText.includes("失敗")) return "";
     const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
@@ -312,8 +410,9 @@ function calculatePopupAtisAge(rawText) {
     }
 }
 
-function fetchPopupAtis(icao) {
+window.fetchPopupAtis = function(icao) {
     const container = document.getElementById(`popup-atis-container-${icao}`);
+    if (!container) return;
     const contentBox = document.getElementById(`popup-atis-content-${icao}`);
     const btn = container.querySelector('button');
 
@@ -340,7 +439,6 @@ function fetchPopupAtis(icao) {
         const arrAgeBadge = calculatePopupAtisAge(data.arrival);
         const depAgeBadge = calculatePopupAtisAge(data.departure);
 
-        // 🛠️ 寬度溢出修正點：加入 word-break 確保文字會自動換行
         contentBox.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="background-color: #f8fafc; border-left: 4px solid #3c79ff; padding: 10px; border-radius: 6px;">
@@ -365,7 +463,157 @@ function fetchPopupAtis(icao) {
         btn.disabled = false;
         btn.style.opacity = "1";
       });
+};
+
+// ------------------------------------------
+// ✈️ 地圖彈出視窗(Popup) 組件產生器 (抽象化以供重複使用)
+// ------------------------------------------
+function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
+    const metarState = parseWeatherElements(rawMetarText, 999, 99999);
+    const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
+    const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
+
+    const metarAgeStr = calculateReportAge(rawMetarText);
+    const tafAgeStr = calculateReportAge(rawTafText);
+    const coloredTafHtml = formatColorTAF(rawTafText);
+
+    const metarEmojis = getWeatherEmojis(rawMetarText);
+    const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
+
+    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+    const badgeColor = catColors[metarCat] || catColors['unk'];
+
+    return `
+    <div class="weather-popup">
+        <div class="airport-title">${airport.name} (${airport.icao})</div>
+        
+        <div class="data-block">
+            <div class="section-title">
+                <span style="display:inline-flex; align-items:center;">
+                    METAR (即時天氣)
+                    ${rawMetarText ? `<span class="badge" style="background-color: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px; font-weight: bold;">${displayCat}</span>${metarEmojiHtml}` : ''}
+                </span>
+                <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
+            </div>
+            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px;">${rawMetarText || "目前無有效 METAR 報文"}</div>
+        </div>
+        
+        <div class="data-block" style="margin-top: 15px;">
+            <div class="section-title">
+                <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
+                <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${tafAgeStr}</span>
+            </div>
+            ${coloredTafHtml}
+        </div>
+
+        <div class="data-block" id="popup-atis-container-${airport.icao}" style="border-bottom: none; margin-top: 15px;">
+            <button class="btn-outline" style="width: 100%; margin: 0; padding: 8px; border: 1px solid #3c79ff; color: #3c79ff; border-radius: 6px; background: #ebf5ff; cursor: pointer; font-weight: bold; transition: 0.2s;" onclick="fetchPopupAtis('${airport.icao}')">
+                📻 獲取 ${airport.icao} 即時 D-ATIS
+            </button>
+            <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;"></div>
+        </div>
+
+        <!-- NEW: 歷史氣象 (過去 24 小時) -->
+        <div class="data-block" style="border-bottom: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #8e44ad; font-size: 13.5px; font-weight: bold;">🕒 歷史氣象 (過去 24 小時)</span>
+                <button class="btn-outline" style="border: none; background-color: #8e44ad; color: white; padding: 5px 12px; font-size: 12px; margin: 0; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="fetchHistoryMetarPopup('${airport.icao}')">
+                    載入紀錄
+                </button>
+            </div>
+            <div id="history-metar-container-${airport.icao}" class="custom-scrollbar" style="max-height: 250px; overflow-y: auto; display: none; padding-right: 5px; margin-top: 10px;">
+                <div style="text-align: center; color: #94a3b8; font-size: 0.9em; padding: 10px;">資料載入中...</div>
+            </div>
+        </div>
+    </div>
+    `;
 }
+
+// ------------------------------------------
+// 🕒 獲取 24H 歷史氣象紀錄
+// ------------------------------------------
+window.fetchHistoryMetarPopup = async function(icao) {
+    const container = document.getElementById(`history-metar-container-${icao}`);
+    if (!container) return;
+
+    container.style.display = 'block';
+    container.innerHTML = `<div style="text-align: center; color: #8e44ad; font-size: 0.9em; padding: 20px;">🔄 正在獲取 ${icao} 過去 24 小時紀錄...</div>`;
+
+    try {
+        const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
+
+        const executeFetch = async (url, ms) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), ms);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
+        };
+
+        let data;
+        try {
+            data = await executeFetch(cleanUrl, 4500); // 官方主鏈路
+        } catch (errorA) {
+            try {
+                data = await executeFetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 5500); // 備援 A
+            } catch (errorB) {
+                data = await executeFetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 6000); // 備援 B
+            }
+        }
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 0.9em; padding: 20px;">❌ 找不到 ${icao} 的歷史紀錄</div>`;
+            return;
+        }
+
+        let html = `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+        data.forEach(item => {
+            const rawText = item.rawOb || item.raw;
+            const current = parseWeatherElements(rawText, 999, 99999);
+            const cat = getFlightCategory(current.vis, current.ceil);
+            const catLabel = cat.toUpperCase();
+            
+            const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+            const color = catColors[cat] || catColors['unk'];
+            
+            const emojis = getWeatherEmojis(rawText);
+            const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
+            
+            // 處理時間格式 (支援 UNIX Timestamp 與 ISO String)
+            let dateObj;
+            if (typeof item.obsTime === 'number') {
+                dateObj = new Date(item.obsTime * 1000);
+            } else {
+                dateObj = new Date(item.obsTime);
+            }
+            const timeStr = item.obsTime ? dateObj.toISOString().replace('T', ' ').substring(0, 16) + 'Z' : '';
+
+            html += `
+                <div style="background-color: #f8fafc; border-left: 4px solid ${color}; padding: 10px; border-radius: 6px;">
+                    <div style="margin-bottom: 4px; font-size: 11px; color: #64748b; font-weight: bold;">
+                        <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${catLabel}</span>
+                        ${emojiHtml}
+                        <span style="font-family: 'Courier New', monospace;">${timeStr}</span>
+                    </div>
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #2c3e50; word-break: break-word;">
+                        ${rawText}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (err) {
+        console.warn("歷史氣象讀取失敗:", err);
+        container.innerHTML = `<div style="text-align: center; color: #ef4444; font-size: 0.9em; padding: 20px;">❌ 歷史資料讀取失敗<br><span style="font-size: 0.8em; color: #94a3b8;">請檢查網路狀態</span></div>`;
+    }
+};
 
 function initAviationMap() {
     const mapContainer = document.getElementById('map');
@@ -448,14 +696,12 @@ function initAviationMap() {
             return Array.isArray(data) ? data : [];
         } catch (errorA) {
             console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
-            
             try {
                 const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
                 const dataA = await executeFetch(proxyA, 5500);
                 return Array.isArray(dataA) ? dataA : [];
             } catch (errorB) {
                 console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
-                
                 try {
                     const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
                     const dataB = await executeFetch(proxyB, 6000);
@@ -466,123 +712,6 @@ function initAviationMap() {
                 }
             }
         }
-    };
-
-    const calculateReportAge = (rawText) => {
-        if (!rawText) return "";
-        const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
-        if (!match) return "";
-
-        const repDay = parseInt(match[1], 10);
-        const repHour = parseInt(match[2], 10);
-        const repMin = parseInt(match[3], 10);
-
-        const now = new Date();
-        const currDay = now.getUTCDate();
-        let targetMonth = now.getUTCMonth();
-        let targetYear = now.getUTCFullYear();
-
-        if (repDay > currDay + 5) {
-            targetMonth -= 1;
-            if (targetMonth < 0) {
-                targetMonth = 11;
-                targetYear -= 1;
-            }
-        }
-
-        const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
-        const diffMs = now.getTime() - reportDate.getTime();
-        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-
-        if (diffMins < 60) return `(已發佈 ${diffMins} 分鐘)`;
-        else {
-            const h = Math.floor(diffMins / 60);
-            const m = diffMins % 60;
-            return `(已發佈 ${h} 小時 ${m} 分鐘)`;
-        }
-    };
-
-    const parseWeatherElements = (text, prevVis, prevCeil) => {
-        let vis = prevVis; let ceil = prevCeil;
-        if (/\b(CAVOK|SKC|CLR|NSC)\b/.test(text)) {
-            if (/\bCAVOK\b/.test(text)) vis = 10;
-            ceil = 99999;
-        }
-        const metricMatch = text.match(/(?:\s|^)([0-9]{4})(?:NDV)?(?:\s|$)/);
-        if (metricMatch) {
-            const meters = parseInt(metricMatch[1], 10);
-            vis = meters === 9999 ? 10 : meters / 1609.34;
-        }
-        const smMatch = text.match(/(?:\s|^)(P|M)?(\d+)?\s?(\d+\/\d+)?SM(?:\s|$)/);
-        if (smMatch) {
-            let val = 0;
-            if (smMatch[2]) val += parseInt(smMatch[2], 10);
-            if (smMatch[3]) {
-                const [num, den] = smMatch[3].split('/');
-                val += parseInt(num, 10) / parseInt(den, 10);
-            }
-            if (val === 0 && smMatch[1] === 'M') val = 0.25;
-            if (val === 0 && smMatch[1] === 'P') val = 6.0;
-            vis = val;
-        }
-        const cloudMatches = text.match(/(BKN|OVC|VV)(\d{3})/g);
-        if (cloudMatches) {
-            const bases = cloudMatches.map(c => parseInt(c.slice(3, 6), 10) * 100);
-            ceil = Math.min(...bases);
-        }
-        return { vis, ceil };
-    };
-
-    const getFlightCategory = (vis, ceil) => {
-        if (ceil < 500 || vis < 1) return "lifr";
-        if (ceil < 1000 || vis < 3) return "ifr";
-        if (ceil <= 3000 || vis <= 5) return "mvfr";
-        return "vfr";
-    };
-
-    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
-
-    const formatColorTAF = (rawTaf) => {
-        if (!rawTaf) return "目前無有效或無法載入 TAF 報文";
-        const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
-        const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
-        const lines = markedTaf.split('|||');
-
-        let prevailingVis = 999; let prevailingCeil = 99999;
-        let htmlOutput = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left;">`;
-
-        lines.forEach((line, index) => {
-            const cleanLine = line.trim();
-            if (!cleanLine) return;
-
-            let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
-            const cat = getFlightCategory(current.vis, current.ceil);
-            const color = catColors[cat];
-            const catLabel = cat.toUpperCase();
-            
-            const emojis = getWeatherEmojis(cleanLine);
-            const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
-
-            let isMainBody = false;
-            if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
-                prevailingVis = current.vis; prevailingCeil = current.ceil;
-                isMainBody = true;
-            }
-
-            // 🎯 更新：針對 Main Body 的「灰色螢光筆」質感樣式（取消粗體）
-const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
-
-            // 🛠️ 寬度溢出修正點：保留 word-break 並注入重點高亮
-            htmlOutput += `
-                <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
-                    <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
-                    ${emojiHtml}
-                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
-                </div>
-            `;
-        });
-        htmlOutput += `</div>`;
-        return htmlOutput;
     };
 
     const bootSequence = async () => {
@@ -619,7 +748,6 @@ const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px
                 statusIndicator.classList.add('status-loaded');
                 statusIndicator.style.backgroundColor = ""; 
             }
-
         } catch (error) {
             console.error("同步程序中斷：", error.message);
             isDataReady = false; 
@@ -652,26 +780,141 @@ const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px
                 refreshBtn.innerText = "手動更新氣象";
             }, 2000);
         };
+
+        // 🌟 核心升級：注入自訂 ICAO 搜尋介面
+        let searchContainer = document.getElementById('custom-icao-search-container');
+        if (!searchContainer) {
+            searchContainer = document.createElement('div');
+            searchContainer.id = 'custom-icao-search-container';
+            searchContainer.style.display = 'inline-flex';
+            searchContainer.style.alignItems = 'center';
+            searchContainer.style.gap = '8px';
+            searchContainer.style.marginLeft = '15px';
+            searchContainer.style.flexWrap = 'wrap';
+
+            searchContainer.innerHTML = `
+                <input type="text" id="custom-icao-input" placeholder="查詢其他機場 (例: KLAX)" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 180px; text-transform: uppercase; font-weight: bold; outline: none;">
+                <button id="btn-search-icao" style="padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 搜尋機場</button>
+            `;
+
+            // 將搜尋組件插入到更新按鈕的後方
+            if (refreshBtn.parentNode) {
+                refreshBtn.parentNode.insertBefore(searchContainer, refreshBtn.nextSibling);
+            }
+
+            // 綁定自訂搜尋事件
+            document.getElementById('btn-search-icao').addEventListener('click', async function() {
+                const inputEl = document.getElementById('custom-icao-input');
+                let icao = inputEl.value.trim().toUpperCase();
+                const btn = this;
+
+                if(icao.length !== 4) {
+                    const origText = btn.innerText;
+                    btn.innerText = "⚠️ 請輸入四碼";
+                    btn.style.background = "#e74c3c";
+                    setTimeout(() => { btn.innerText = origText; btn.style.background = "#8e44ad"; }, 2000);
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerText = "⏳ 尋找中...";
+                btn.style.opacity = "0.7";
+
+                try {
+                    // 1. 索取機場座標 (Station Info)
+                    const stationRes = await fetch(`https://aviationweather.gov/api/data/stationinfo?ids=${icao}&format=json`);
+                    if(!stationRes.ok) throw new Error("API 異常");
+                    const stationData = await stationRes.json();
+
+                    if(!stationData || stationData.length === 0) {
+                        throw new Error("查無此機場");
+                    }
+
+                    const station = stationData[0];
+                    const lat = station.lat;
+                    const lon = station.lon;
+                    const siteName = station.site || "Custom Station";
+
+                    // 2. 獲取該機場氣象資料
+                    const [metarData, tafData] = await Promise.all([
+                        fetchBulkWeatherFast(icao, 'metar'),
+                        fetchBulkWeatherFast(icao, 'taf')
+                    ]);
+
+                    let rawMetarText = "";
+                    let rawTafText = "";
+                    if (metarData.length > 0) rawMetarText = metarData[0].rawOb || metarData[0].raw;
+                    if (tafData.length > 0) rawTafText = tafData[0].rawTAF || tafData[0].raw;
+
+                    // 3. 建立自定義🌟座標標記
+                    const customIcon = L.divIcon({
+                        html: '<div style="font-size:26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); line-height: 1; transform: translate(-5px, -15px);">🌟</div>',
+                        className: 'custom-icao-icon',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+
+                    const customMarker = L.marker([lat, lon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
+
+                    // 4. 動態計算邊界防護與寬度
+                    const mapElement = document.getElementById('map');
+                    const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
+                    const isMobile = window.innerWidth < 768;
+                    const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
+                    const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
+
+                    // 5. 綁定 Popup 面板 (共用新的 buildAirportPopupHtml 邏輯)
+                    const popupHtml = buildAirportPopupHtml({ icao: icao, name: siteName }, rawMetarText, rawTafText);
+
+                    customMarker.bindPopup(popupHtml, {
+                        maxWidth: dynamicMaxWidth,
+                        minWidth: dynamicMinWidth,
+                        maxHeight: 450,
+                        autoPanPadding: [20, 20],
+                        keepInView: true
+                    }).openPopup();
+
+                    // 平移過去
+                    window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
+
+                    // 恢復按鈕狀態
+                    btn.disabled = false;
+                    btn.innerText = "🔍 搜尋機場";
+                    btn.style.opacity = "1";
+                    inputEl.value = ""; 
+
+                } catch (err) {
+                    console.error("自訂機場搜尋失敗:", err);
+                    btn.innerText = "❌ 查無資料";
+                    btn.style.background = "#e74c3c";
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerText = "🔍 搜尋機場";
+                        btn.style.background = "#8e44ad";
+                        btn.style.opacity = "1";
+                    }, 2500);
+                }
+            });
+        }
     }
 
+    // 將預載機場加入地圖
     airports.forEach(airport => {
         const marker = L.marker([airport.lat, airport.lng]).addTo(window.aviationMapInstance);
 
         marker.on('click', function() {
-            // 🛠️ 核心修正：精準抓取容器寬度，解決橫向裁切問題
             const mapElement = document.getElementById('map');
             const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
             const isMobile = window.innerWidth < 768;
             
-            // 手機版扣除安全邊距 (加碼至 50px)；平板/電腦版放寬限制至地圖寬度的 70%
             const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
             const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
             
             const popupOpts = { 
                 maxWidth: dynamicMaxWidth, 
                 minWidth: dynamicMinWidth,
-                maxHeight: 450, // 依要求：高度改回原本寫死的 450
-                autoPanPadding: [20, 20], // 加大平移邊緣防護緩衝
+                maxHeight: 450,
+                autoPanPadding: [20, 20], 
                 keepInView: true 
             };
 
@@ -690,52 +933,13 @@ const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px
             const rawMetarText = weatherCache[airport.icao].metar;
             const rawTafText = weatherCache[airport.icao].taf;
             
-            const metarState = parseWeatherElements(rawMetarText, 999, 99999);
-            const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
-            const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
+            // 使用重構後的 HTML 產生器 (同時包含歷史 METAR 的框架)
+            const popupHtml = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
 
-            const metarAgeStr = calculateReportAge(rawMetarText);
-            const tafAgeStr = calculateReportAge(rawTafText);
-            const coloredTafHtml = formatColorTAF(rawTafText);
-
-            const metarEmojis = getWeatherEmojis(rawMetarText);
-            const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
-
-            // 🛠️ 寬度溢出修正點：.raw-text 加入 word-wrap / word-break 確保長串氣象代碼不會破壞版面寬度
             L.popup(popupOpts)
-            .setLatLng(marker.getLatLng())
-            .setContent(`
-            <div class="weather-popup">
-                <div class="airport-title">${airport.name} (${airport.icao})</div>
-                
-                <div class="data-block">
-                    <div class="section-title">
-                        <span style="display:inline-flex; align-items:center;">
-                            METAR (即時天氣)
-                            ${rawMetarText ? `<span class="badge bg-${metarCat}">${displayCat}</span>${metarEmojiHtml}` : ''}
-                        </span>
-                        <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
-                    </div>
-                    <div class="raw-text border-${metarCat}" style="white-space: pre-wrap; word-break: break-word;">${rawMetarText || "目前無有效 METAR 報文"}</div>
-                </div>
-                
-                <div class="data-block">
-                    <div class="section-title">
-                        <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
-                        <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${tafAgeStr}</span>
-                    </div>
-                    ${coloredTafHtml}
-                </div>
-
-                <div class="data-block" id="popup-atis-container-${airport.icao}" style="border-bottom: none; margin-top: 15px;">
-                    <button class="btn-outline" style="width: 100%; margin: 0;" onclick="fetchPopupAtis('${airport.icao}')">
-                        📻 獲取 ${airport.icao} 即時 D-ATIS
-                    </button>
-                    <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;">
-                        </div>
-                </div>
-            </div>
-            `).openOn(window.aviationMapInstance);
+                .setLatLng(marker.getLatLng())
+                .setContent(popupHtml)
+                .openOn(window.aviationMapInstance);
         });
     });
 
@@ -1038,24 +1242,12 @@ function setAltApproach(type, index) {
         notesBox.classList.remove('active');
       }
   }
-
   recalculateAltimetryValues();
 }
 
-function updateAltimetry() {
-  recalculateAltimetryValues();
-}
-
-function handleAltRowChange(id, value) {
-  const row = altimetryRows.find(r => r.id === id);
-  if(row) row.altitude = value;
-  recalculateAltimetryValues();
-}
-
-function handleAltLabelChange(id, value) {
-  const row = altimetryRows.find(r => r.id === id);
-  if(row) row.label = value;
-}
+function updateAltimetry() { recalculateAltimetryValues(); }
+function handleAltRowChange(id, value) { const row = altimetryRows.find(r => r.id === id); if(row) row.altitude = value; recalculateAltimetryValues(); }
+function handleAltLabelChange(id, value) { const row = altimetryRows.find(r => r.id === id); if(row) row.label = value; }
 
 function addAltCustomRow() {
   const newId = `custom-${Date.now()}`;
@@ -1146,7 +1338,6 @@ function renderAltimetryRows() {
 
     container.appendChild(rowDiv);
   });
-
   recalculateAltimetryValues();
 }
 
@@ -1174,7 +1365,7 @@ function resetAltimetryCalculator() {
 }
 
 // ==========================================
-// 📡 NOTAM Radar 核心邏輯 (極速雙引擎版 - 無副面板)
+// 📡 NOTAM Radar 核心邏輯 (極速雙引擎版)
 // ==========================================
 function initNotamRadar() {
     if (notamMapInstance !== null) {
@@ -1245,12 +1436,8 @@ function smartToDec(val) {
     return NaN;
 }
 
-// 🌐 [雙引擎架構] 核心指揮官：負責調度主引擎與備援引擎
 function parseCoordinates(text) {
-    // 🟢 啟動主發動機：使用原有的強大邏輯
     let results = parseCoordinatesLegacy(text);
-
-    // 🟠 啟動備援發動機：若主引擎未抓到座標，無縫切換特徵萃取邏輯
     if (results.length === 0) {
         console.log("⚠️ 標準解析未命中，啟動深度特徵萃取備援系統 (Dual-Engine Engaged)...");
         results = parseCoordinatesAdvanced(text);
@@ -1258,7 +1445,6 @@ function parseCoordinates(text) {
     return results;
 }
 
-// 🛡️ 引擎一：您原版的經典邏輯 (處理 95% 標準情況)
 function parseCoordinatesLegacy(text) {
     const cleanText = text.replace(/[\t\r\n]+/g, " ");
     let results = [];
@@ -1283,22 +1469,16 @@ function parseCoordinatesLegacy(text) {
     return results;
 }
 
-// 🚀 引擎二：終極優化版邏輯 (專治各種不服與奇葩格式)
 function parseCoordinatesAdvanced(text) {
-    // 暴力壓縮：掃除無用符號
     let cleanText = text.toUpperCase().replace(/[°'"’”/\\,-]/g, " ");
-    
-    // 處理方向顛倒的特例
-    // [修正] 將 \s 改為 [ \t]，避免跨行吞噬下一個段落的數字 (例如 "E \n 2.")
     cleanText = cleanText.replace(/\b([NSEW])[ \t]*([\d][\d \t.]+)\b/g, "$2$1");
 
-    // [修正] 將 \s 改為 [ \t]，確保擷取不跨行
     const coordRegex = /(?:\b|^)([\d]{2}[\d \t.]+)([NSEW])\b/g;
     let match;
     let tokens = [];
 
     while ((match = coordRegex.exec(cleanText)) !== null) {
-        let numStr = match[1].replace(/[ \t]+/g, ""); // 僅移除同行空格
+        let numStr = match[1].replace(/[ \t]+/g, "");
         let dir = match[2];
         if (numStr.length < 4 && !numStr.includes('.')) continue;
         tokens.push({ numStr, dir });
@@ -1317,7 +1497,6 @@ function parseCoordinatesAdvanced(text) {
             let parts = numStr.split('.');
             let main = parts[0];
             let fraction = parts[1] ? "." + parts[1] : "";
-
             let d = 0, m = 0, s = 0;
 
             if (main.length === 4 || main.length === 5) {
@@ -1348,7 +1527,6 @@ function parseCoordinatesAdvanced(text) {
             }
         }
     });
-
     return results;
 }
 
