@@ -1,11 +1,14 @@
 // ==========================================
 // 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版 + 雙引擎解析架構
-// 🆕 升級版：支援自訂 ICAO 地圖查詢 + 24H 歷史氣象紀錄整合
+// 🆕 升級版：支援自訂 ICAO 地圖查詢 + 24H 歷史氣象紀錄整合 + 等寬字體強制渲染
 // ==========================================
 
 // ------------------------------------------
 // 🌐 全域變數與系統資料庫 (Global State)
 // ------------------------------------------
+
+// 🎯 核心升級：定義航空標準等寬字體堆疊，確保所有氣象與 NOTAM 報文完美對齊
+const MONOSPACE_FONT = "font-family: ui-monospace, 'SF Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;";
 
 let notamMapInstance = null;
 let notamActiveLayers = [];
@@ -176,7 +179,7 @@ function calculateReportAge(rawText) {
 }
 
 function formatColorTAF(rawTaf) {
-  if (!rawTaf) return `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; font-family: 'Courier New', monospace; font-size: 13.5px; color: #2c3e50;">目前無有效或無法載入 TAF 報文</div>`;
+  if (!rawTaf) return `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; ${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50;">目前無有效或無法載入 TAF 報文</div>`;
   
   const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
   const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
@@ -210,7 +213,7 @@ function formatColorTAF(rawTaf) {
           <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
               <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
               ${emojiHtml}
-              <span style="font-family: 'Courier New', Courier, monospace; font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
+              <span style="${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
           </div>
       `;
   });
@@ -446,14 +449,14 @@ window.fetchPopupAtis = function(icao) {
                         <span style="font-weight: bold; color: #3c79ff; font-size: 13px;">📥 ARRIVAL ATIS</span>
                         ${arrAgeBadge}
                     </div>
-                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.arrival || "無 Arrival 資料"}</div>
+                    <div class="raw-text" style="${MONOSPACE_FONT} font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.arrival || "無 Arrival 資料"}</div>
                 </div>
                 <div style="background-color: #f8fafc; border-left: 4px solid #e67e22; padding: 10px; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <span style="font-weight: bold; color: #e67e22; font-size: 13px;">🛫 DEPARTURE ATIS</span>
                         ${depAgeBadge}
                     </div>
-                    <div class="raw-text" style="font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.departure || "無 Departure 資料"}</div>
+                    <div class="raw-text" style="${MONOSPACE_FONT} font-size: 12.5px; padding: 0; background: transparent; border: none; white-space: pre-wrap; word-break: break-word;">${data.departure || "無 Departure 資料"}</div>
                 </div>
             </div>
         `;
@@ -495,7 +498,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
                 </span>
                 <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
             </div>
-            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px;">${rawMetarText || "目前無有效 METAR 報文"}</div>
+            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; ${MONOSPACE_FONT} font-size: 13px;">${rawMetarText || "目前無有效 METAR 報文"}</div>
         </div>
         
         <div class="data-block" style="margin-top: 15px;">
@@ -599,9 +602,9 @@ window.fetchHistoryMetarPopup = async function(icao) {
                     <div style="margin-bottom: 4px; font-size: 11px; color: #64748b; font-weight: bold;">
                         <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${catLabel}</span>
                         ${emojiHtml}
-                        <span style="font-family: 'Courier New', monospace;">${timeStr}</span>
+                        <span style="${MONOSPACE_FONT}">${timeStr}</span>
                     </div>
-                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #2c3e50; word-break: break-word;">
+                    <div style="${MONOSPACE_FONT} font-size: 13px; color: #2c3e50; word-break: break-word;">
                         ${rawText}
                     </div>
                 </div>
