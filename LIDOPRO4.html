@@ -224,7 +224,8 @@
                                         <span class="data-font font-bold text-[10px] text-white bg-[#1e293b] border border-[#475569] px-1.5 py-0.5 rounded shadow-inner" id="out-wc">---</span>
                                     </div>
                                 </div>
-                                <div class="mt-auto pt-3 w-full">
+                                <!-- 修改 ETD 區塊，加入 id 供動態隱藏 -->
+                                <div id="etd-container" class="mt-auto pt-3 w-full">
                                     <div class="bg-[#1e293b]/60 border border-[#475569]/50 rounded-lg p-2.5 flex flex-col justify-center items-center">
                                         <span class="text-[9px] font-bold text-[#eab308] mb-0.5 tracking-wider uppercase">ETD</span>
                                         <span class="data-font font-black text-sm md:text-base text-[#fde047] tracking-wide" id="out-etd">--:--</span>
@@ -972,7 +973,6 @@
                         const altnSection = rawTexts['OFP'].match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
                         if (altnSection) {
                             [...altnSection[0].matchAll(/^([A-Z]{4})\b/gm)].forEach(m => {
-                                // 修正1: 允許將出發地當作備降機場，移除 m[1] !== dep 的條件
                                 if (m[1] !== 'TIME' && m[1] !== dest) addAirport(destAltnSet, m[1]);
                             });
                         }
@@ -1021,7 +1021,6 @@
 
                     let efbVer = 'N/A';
                     if (rawTexts['CREWINFO']) {
-                        // 修正2: 取代原本抓最後一筆的方法，改抓所有版本並取最大值
                         const efbMatches = [...rawTexts['CREWINFO'].matchAll(/SJX-IOS-(R\d{3,4})/ig)];
                         if (efbMatches.length > 0) {
                             const versions = efbMatches.map(m => parseInt(m[1].replace('R', ''), 10));
@@ -1103,7 +1102,6 @@
                         const formatFuelVal = (fw) => fw.t ? `${fw.w} / ${fw.t.replace('.', ':')}` : `${fw.w}`;
                         const altnLabel = alt1Rwy !== 'N/A' ? `ALTN ${alt1Rwy}` : 'ALTN';
 
-                        // 修正1: 縮小 BOF 搜尋範圍至 ALTERNATES 區塊
                         let bofSearchArea = ofpText;
                         const bofSectionMatch = ofpText.match(/ALTERNATES[\s\S]+?(?=NAVIGATION LOG|EDTO SUMMARY)/);
                         if (bofSectionMatch) bofSearchArea = bofSectionMatch[0];
@@ -1576,8 +1574,11 @@
             document.getElementById('out-utc-date').textContent = currentDateUTC + ' (UTC)';
             document.getElementById('wx-utc-date').textContent = currentDateUTC;
 
-            const stdStr = extractData(rawText, 'STD'), staStr = extractData(rawText, 'STA');
-            currentDepUTC = extractZuluOnly(stdStr); currentArrUTC = extractZuluOnly(staStr);
+            const rawStd = extractData(rawText, 'STD');
+            const rawSta = extractData(rawText, 'STA');
+            const rawEtd = extractData(rawText, 'ETD');
+            currentDepUTC = extractZuluOnly(rawStd); 
+            currentArrUTC = extractZuluOnly(rawSta);
 
             const elLocalDate = document.getElementById('out-local-date');
             if (currentDateUTC !== '----' && currentDepUTC !== '') {
@@ -1608,6 +1609,17 @@
                     el.textContent = (val === 'N/A' || val === '') ? '----' : (item.key === 'Flight number' ? valFlight : val);
                 }
             });
+
+            const etdContainer = document.getElementById('etd-container');
+            if (rawEtd === 'N/A' || rawEtd === '' || rawEtd === rawStd) {
+                if (etdContainer) etdContainer.classList.add('hidden');
+            } else {
+                if (etdContainer) etdContainer.classList.remove('hidden');
+                document.getElementById('out-etd').textContent = convertToZuluLocalStr(rawEtd, currentDepICAO);
+            }
+
+            document.getElementById('out-std').textContent = convertToZuluLocalStr(rawStd, currentDepICAO);
+            document.getElementById('out-sta').textContent = convertToZuluLocalStr(rawSta, currentArrICAO);
 
             const fuelItems = [
                 { id: 'out-add-wxx', timeId: 'time-add-wxx', key: 'ADD WXX' },
@@ -1722,10 +1734,6 @@
                 turbliLink.href = `https://turbli.com/${airportMap[currentDepICAO]||currentDepICAO}/${airportMap[currentArrICAO]||currentArrICAO}/${tDate}/${tFlight}/`;
                 turbliLink.classList.remove('hidden');
             } else { turbliLink.classList.add('hidden'); }
-
-            document.getElementById('out-std').textContent = convertToZuluLocalStr(stdStr, currentDepICAO);
-            document.getElementById('out-etd').textContent = convertToZuluLocalStr(extractData(rawText, 'ETD'), currentDepICAO);
-            document.getElementById('out-sta').textContent = convertToZuluLocalStr(staStr, currentArrICAO);
 
             const paxMatch = rawText2.match(/PAX\s*:\s*(\d+)\/(\d+)/i);
             if (paxMatch) {
@@ -2083,8 +2091,16 @@
                 const cleanLine = line.trim(); if (!cleanLine) return;
                 let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
                 const cat = getFlightCategory(current.vis, current.ceil), color = catColors[cat], emojis = getWeatherEmojis(cleanLine);
-                if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) { prevailingVis = current.vis; prevailingCeil = current.ceil; }
-                htmlOutput += `<div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;"><span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '6px'}; vertical-align: middle;">${cat.toUpperCase()}</span>${emojis ? `<span style="font-size: 14px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : ''}<span class="data-font" style="font-size: 13px; color: #2c3e50; vertical-align: middle;">${cleanLine}</span></div>`;
+                
+                let isMainBody = false;
+                if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) { 
+                    prevailingVis = current.vis; prevailingCeil = current.ceil; 
+                    isMainBody = true;
+                }
+                
+                const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-weight: normal;' : 'font-weight: normal;';
+
+                htmlOutput += `<div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;"><span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '6px'}; vertical-align: middle;">${cat.toUpperCase()}</span>${emojis ? `<span style="font-size: 14px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : ''}<span class="data-font" style="font-size: 13px; color: #2c3e50; vertical-align: middle; line-height: 1.8; ${highlightStyle}">${cleanLine}</span></div>`;
             });
             return htmlOutput + `</div>`;
         }
