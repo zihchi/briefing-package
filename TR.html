@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>航機延誤報告產生器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 針對 iOS 的滑順優化 */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* 隱藏捲軸但保持可捲動 (更像原生 App) */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* 專屬動畫與觸覺回饋視覺 */
+        .fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-15px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* 確保 iOS 點擊輸入框時不會擅自放大畫面 (關鍵：font-size >= 16px) */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen pb-safe">
+
+    <!-- 頂部導覽列風格 (針對瀏海/動態島優化空間) -->
+    <div class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 pt-safe">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
+            <h1 class="text-xl font-bold text-gray-800 tracking-wide">✈️ 航機狀態報告</h1>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
+        
+        <!-- 動態航班列表容器 -->
+        <div id="flightList" class="space-y-4">
+            <!-- 初始會由 JS 載入第一個航班區塊 -->
+        </div>
+
+        <!-- 浮動感操作按鈕區 (針對大螢幕單手操作優化) -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <button id="addFlightBtn" class="active:scale-[0.98] transition-transform flex flex-col justify-center items-center bg-white text-blue-600 font-semibold py-4 px-2 border-2 border-blue-100 rounded-2xl shadow-sm hover:border-blue-300">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <span class="text-sm">新增一腿</span>
+            </button>
+            <button id="generateBtn" class="active:scale-[0.98] transition-transform flex flex-col justify-center items-center bg-blue-600 text-white font-semibold py-4 px-2 rounded-2xl shadow-md hover:bg-blue-700 md:col-span-1 col-span-2">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span class="text-sm">產生報告</span>
+            </button>
+            <button id="clearBtn" class="active:scale-[0.98] transition-transform flex flex-col justify-center items-center bg-red-50 text-red-600 font-semibold py-4 px-2 border-2 border-red-100 rounded-2xl shadow-sm hover:border-red-200">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span class="text-sm">全部清除</span>
+            </button>
+        </div>
+
+        <hr class="border-gray-200 my-2">
+
+        <!-- 常用語句快速複製區 (移至最終報告上方) -->
+        <div class="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-100 backdrop-blur-sm">
+            <h2 class="text-sm font-bold text-indigo-800 mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                常用語句 (點擊複製，可貼至詳細狀況)
+            </h2>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="copyPhrase(this, '因氣流不佳及時間因素,航程中未回收垃圾')" class="active:scale-[0.95] transition-transform bg-white text-indigo-700 text-[15px] font-medium py-2 px-4 rounded-xl border border-indigo-200 shadow-sm whitespace-nowrap">
+                    氣流不佳未收垃圾
+                </button>
+                <!-- 未來可繼續新增 -->
+            </div>
+        </div>
+
+        <!-- 最終輸出與編輯區 -->
+        <div class="bg-white p-5 md:p-6 rounded-3xl shadow-lg border border-gray-100">
+            <label for="outputText" class="block text-base font-bold text-gray-800 mb-3">📋 最終報告</label>
+            <!-- iPhone 17 Pro 螢幕大，增加 rows 讓可視範圍更廣 -->
+            <textarea id="outputText" rows="8" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:ring-0 focus:border-blue-400 bg-gray-50 text-gray-700 leading-relaxed resize-y transition-colors" placeholder="報告內容將顯示於此..."></textarea>
+            
+            <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span id="copyFeedback" class="text-green-600 text-sm font-bold opacity-0 transition-opacity duration-300 w-full sm:w-auto text-center">✨ 已成功複製至剪貼簿！</span>
+                <button id="copyBtn" class="active:scale-[0.98] transition-transform w-full sm:w-auto bg-gray-800 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:bg-gray-900 flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    一鍵複製報告
+                </button>
+            </div>
+        </div>
+        
+        <!-- 底部留白，避免被 iPhone home indicator 遮擋 -->
+        <div class="h-8"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const flightList = document.getElementById('flightList');
+            const addFlightBtn = document.getElementById('addFlightBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const outputText = document.getElementById('outputText');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyFeedback = document.getElementById('copyFeedback');
+
+            let flightCount = 0;
+
+            // 定義 4 種柔和的背景主題顏色，用於區分不同航班
+            const themeColors = [
+                'bg-white border-gray-200',          // 白
+                'bg-blue-50/60 border-blue-200',     // 淡藍
+                'bg-emerald-50/60 border-emerald-200', // 淡綠
+                'bg-orange-50/60 border-orange-200'  // 淡橘
+            ];
+
+            // 新增一個航班輸入區塊
+            function addFlightBlock() {
+                flightCount++;
+                const blockId = `flight-block-${Date.now()}`;
+                
+                // 根據 flightCount 輪流套用顏色
+                const currentTheme = themeColors[(flightCount - 1) % themeColors.length];
+                
+                const blockHTML = `
+                    <div id="${blockId}" class="flight-item ${currentTheme} p-5 rounded-3xl shadow-sm border-2 fade-in relative transition-all duration-300">
+                        
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-800 text-white font-bold text-sm">
+                                ${flightCount}
+                            </span>
+                            ${flightCount > 1 ? `<button type="button" class="p-2 text-gray-400 hover:text-red-500 transition-colors active:scale-90" onclick="document.getElementById('${blockId}').remove()" title="刪除此航班">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>` : '<div></div>'}
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- 航班號碼 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1.5 ml-1">班機號碼</label>
+                                <div class="flex rounded-xl shadow-sm overflow-hidden border-2 border-gray-200 bg-white focus-within:border-blue-400 transition-colors">
+                                    <span class="inline-flex items-center px-4 bg-gray-100 text-gray-600 font-bold border-r border-gray-200">
+                                        AE
+                                    </span>
+                                    <input type="text" inputmode="numeric" class="flight-num flex-1 block w-full border-none focus:ring-0 p-3" placeholder="例如: 342">
+                                </div>
+                            </div>
+
+                            <!-- 報告主題 -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1.5 ml-1">報告主題 (選填)</label>
+                                <select class="report-subject block w-full pl-4 pr-10 py-3 border-2 border-gray-200 bg-white focus:outline-none focus:border-blue-400 rounded-xl transition-colors appearance-none" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.8rem auto;" onchange="handleSubjectChange(this)">
+                                    <option value="" selected>無特定原因 / 下方詳述</option>
+                                    <option value="因來機晚到延誤">來機晚到延誤</option>
+                                    <option value="change_aircraft">換飛機延誤</option>
+                                    <option value="因機務問題延誤">機務問題延誤</option>
+                                    <option value="因旅客問題">旅客問題</option>
+                                    <option value="因氣流不佳及時間限制航程中未發飲料，於落地離機前機邊發放">氣流不佳未發飲料(機邊發放)</option>
+                                </select>
+                                <input type="text" class="change-aircraft-input mt-2 block w-full rounded-xl border-2 border-gray-200 focus:border-blue-400 p-3 bg-white hidden transition-colors" placeholder="ex. 等待台中15:35落地">
+                            </div>
+                        </div>
+
+                        <!-- 詳細狀況 -->
+                        <div class="mt-4">
+                            <label class="block text-sm font-bold text-gray-700 mb-1.5 ml-1">詳細狀況</label>
+                            <textarea class="details-input block w-full rounded-xl border-2 border-gray-200 focus:border-blue-400 p-3 bg-white transition-colors" rows="2" placeholder="請輸入需要補充的內容，或貼上上方常用語句..."></textarea>
+                        </div>
+                        
+                        <!-- 結尾用語 -->
+                        <div class="mt-4 p-4 bg-black/5 rounded-2xl">
+                            <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">結尾用語</label>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <select class="suffix-select block w-full sm:w-1/2 pl-4 pr-10 py-3 border-2 border-gray-200 bg-white focus:outline-none focus:border-blue-400 rounded-xl transition-colors appearance-none" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.8rem auto;" onchange="toggleCustomInput(this, '.custom-suffix')">
+                                    <option value="已廣播致歉，航程中無客怨。" selected>已廣播致歉，航程中無客怨。</option>
+                                    <option value="">無 (不加結尾)</option>
+                                    <option value="custom">✍️ 自行輸入結尾...</option>
+                                </select>
+                                <input type="text" class="custom-suffix block w-full sm:w-1/2 rounded-xl border-2 border-gray-200 focus:border-blue-400 p-3 bg-white hidden transition-colors" placeholder="請輸入自訂結尾">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                flightList.insertAdjacentHTML('beforeend', blockHTML);
+                
+                // 在 iOS 上新增後稍微捲動，讓使用者知道新增成功
+                if (flightCount > 1) {
+                    setTimeout(() => {
+                        const newBlock = document.getElementById(blockId);
+                        newBlock.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                }
+            }
+
+            // 處理報告主題選單變更
+            window.handleSubjectChange = function(selectElement) {
+                const changeAircraftInput = selectElement.parentElement.querySelector('.change-aircraft-input');
+                if (selectElement.value === 'change_aircraft') {
+                    changeAircraftInput.classList.remove('hidden');
+                    // 稍微延遲 focus 避免 iOS 鍵盤彈出太突兀
+                    setTimeout(() => changeAircraftInput.focus(), 50);
+                } else {
+                    changeAircraftInput.classList.add('hidden');
+                }
+            };
+
+            // 控制自訂輸入框的顯示與隱藏 
+            window.toggleCustomInput = function(selectElement, targetClass) {
+                const customInput = selectElement.parentElement.querySelector(targetClass);
+                if (selectElement.value === 'custom') {
+                    customInput.classList.remove('hidden');
+                    setTimeout(() => customInput.focus(), 50);
+                } else {
+                    customInput.classList.add('hidden');
+                }
+            };
+
+            // 清除全部資料
+            function clearAll() {
+                // 使用原生的 prompt 震動視覺感
+                if (confirm('確定要清除所有航班資料與綜合報告嗎？\n(此操作無法復原)')) {
+                    flightList.innerHTML = '';
+                    flightCount = 0;
+                    outputText.value = '';
+                    addFlightBlock(); 
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+
+            // 產生最終文字
+            function generateReport() {
+                const items = document.querySelectorAll('.flight-item');
+                let finalReport = "";
+
+                items.forEach(item => {
+                    const numInput = item.querySelector('.flight-num').value.trim();
+                    const subjectSelect = item.querySelector('.report-subject').value;
+                    const caInput = item.querySelector('.change-aircraft-input').value.trim();
+                    const detailsInput = item.querySelector('.details-input').value.trim();
+                    const suffixSelect = item.querySelector('.suffix-select').value;
+                    const customSuffix = item.querySelector('.custom-suffix').value.trim();
+
+                    if (!numInput) return; 
+
+                    let subjectText = "";
+                    if (subjectSelect === 'change_aircraft') {
+                        subjectText = `因換飛機${caInput}延誤`;
+                    } else if (subjectSelect) {
+                        subjectText = subjectSelect;
+                    }
+
+                    let suffixText = "";
+                    if (suffixSelect === 'custom') {
+                        suffixText = customSuffix;
+                    } else if (suffixSelect) {
+                        suffixText = suffixSelect;
+                    }
+
+                    let parts = [`AE${numInput}`];
+                    if (subjectText) parts.push(subjectText);
+                    if (detailsInput) parts.push(detailsInput);
+                    
+                    let line = parts.join('，');
+                    
+                    if (suffixText) {
+                        line += `，${suffixText}\n`;
+                    } else {
+                        line += `。\n`;
+                    }
+
+                    finalReport += line;
+                });
+
+                outputText.value = finalReport;
+                
+                if(finalReport.trim() !== "") {
+                    // 平滑捲動到報告區
+                    outputText.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // 視覺回饋
+                    outputText.classList.add('ring-4', 'ring-blue-300', 'bg-blue-50');
+                    setTimeout(() => {
+                        outputText.classList.remove('ring-4', 'ring-blue-300', 'bg-blue-50');
+                    }, 600);
+                }
+            }
+
+            // 複製到剪貼簿功能
+            function copyToClipboard() {
+                if (!outputText.value.trim()) return;
+
+                outputText.select();
+                outputText.setSelectionRange(0, 99999); 
+
+                try {
+                    document.execCommand('copy');
+                    
+                    copyFeedback.style.opacity = '1';
+                    setTimeout(() => {
+                        copyFeedback.style.opacity = '0';
+                    }, 2500);
+                    
+                    window.getSelection().removeAllRanges();
+                } catch (err) {
+                    alert('複製失敗，請手動全選複製。');
+                }
+            }
+
+            // 常用語句複製功能 (針對 iOS 優化)
+            window.copyPhrase = function(btn, text) {
+                // 為了避免 iframe 權限限制，全面使用 execCommand
+                const tempInput = document.createElement('input');
+                tempInput.value = text;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                tempInput.setSelectionRange(0, 99999); /* For mobile devices */
+
+                try {
+                    document.execCommand('copy');
+                    showSuccess();
+                } catch (err) {
+                    alert('複製失敗');
+                }
+                document.body.removeChild(tempInput);
+
+                function showSuccess() {
+                    const originalText = btn.innerText;
+                    btn.innerText = '✨ 已複製';
+                    btn.classList.replace('text-indigo-700', 'text-green-700');
+                    btn.classList.replace('border-indigo-200', 'border-green-300');
+                    // 觸覺回饋視覺
+                    btn.style.transform = 'scale(1.05)';
+                    
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.classList.replace('text-green-700', 'text-indigo-700');
+                        btn.classList.replace('border-green-300', 'border-indigo-200');
+                        btn.style.transform = 'scale(1)';
+                    }, 1200);
+                }
+            };
+
+            // 綁定事件
+            addFlightBtn.addEventListener('click', addFlightBlock);
+            generateBtn.addEventListener('click', generateReport);
+            clearBtn.addEventListener('click', clearAll);
+            copyBtn.addEventListener('click', copyToClipboard);
+
+            // 初始載入
+            addFlightBlock();
+        });
+    </script>
+</body>
+</html>
