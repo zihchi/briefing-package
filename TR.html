@@ -80,11 +80,14 @@
             </h2>
             <div class="flex flex-wrap gap-2">
                 <button onclick="copyPhrase(this, '因氣流不佳及時間因素,航程中未回收垃圾，')" class="active:scale-[0.95] transition-transform bg-white text-indigo-700 text-[15px] font-medium py-2 px-4 rounded-xl border border-indigo-200 shadow-sm whitespace-nowrap">
-                    氣流不佳未收垃圾
+                    未收垃圾
                 </button>
                 <button onclick="copyPhrase(this, 'Assign F2協助廣播（起飛、降落、飲料服務)')" class="active:scale-[0.95] transition-transform bg-white text-indigo-700 text-[15px] font-medium py-2 px-4 rounded-xl border border-indigo-200 shadow-sm whitespace-nowrap">
                     Assign F2協助廣播
                 </button>
+                <button onclick="copyPhrase(this, '因氣流不佳及時間限制航程中未發飲料，於落地離機前機邊發放，')" class="active:scale-[0.95] transition-transform bg-white text-indigo-700 text-[15px] font-medium py-2 px-4 rounded-xl border border-indigo-200 shadow-sm whitespace-nowrap">
+                    未發飲料
+                </button>      
                 <!-- 未來可繼續新增 -->
             </div>
         </div>
@@ -168,8 +171,8 @@
                                     <option value="因來機晚到延誤">來機晚到延誤</option>
                                     <option value="change_aircraft">換飛機延誤</option>
                                     <option value="因機務問題延誤">機務問題延誤</option>
-                                    <option value="因旅客問題">旅客問題</option>
-                                    <option value="因氣流不佳及時間限制航程中未發飲料，於落地離機前機邊發放">氣流不佳未發飲料(機邊發放)</option>
+                                    <option value="因無外接電源車，使用Hotel mode延誤">Hotel Mode延誤</option>
+                                    <option value="因旅客問題">旅客問題</option>                                    
                                 </select>
                                 <input type="text" class="change-aircraft-input mt-2 block w-full rounded-xl border-2 border-gray-200 focus:border-blue-400 p-3 bg-white hidden transition-colors" placeholder="ex. 等待台中15:35落地">
                             </div>
