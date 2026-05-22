@@ -1,5 +1,5 @@
 // 每次發布新版本或新增檔案時，請務必推進此版號
-const CACHE_NAME = 'briefing-v16'; 
+const CACHE_NAME = 'briefing-v17'; 
 const urlsToCache = [
   './',
   './index.html',
@@ -17,7 +17,11 @@ const urlsToCache = [
   './manifest.json',    // 確保 PWA 核心設定能離線讀取
   './icon-192.png',     // 確保離線時圖示正常顯示
   './icon-512.png',
-  './SwapDutyForm.pdf'
+  './SwapDutyForm.pdf',
+  // 👇 必須強制登機的外部 CDN 資源
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 // 1. 安裝階段：快取檔案 + 強制插隊跳過等待
@@ -59,30 +63,46 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 3. 攔截請求：【Network First 網路優先策略 + 強化離線配對】
+// 3. 攔截請求：【快取優先，背景更新 (Stale-While-Revalidate)】
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // ⚠️ 排除清單：外部氣象 API 與動態圖層，絕對不能拿舊快取來騙自己，一律放行讓瀏覽器原生處理
+  if (url.hostname.includes('aviationweather.gov') ||
+      url.hostname.includes('windy.com') ||
+      url.hostname.includes('script.google.com') ||
+      url.hostname.includes('basemaps.cartocdn.com')) {
+      return; 
+  }
+
   event.respondWith(
-    // 步驟 A: 優先嘗試從伺服器抓取最新的檔案
-    fetch(event.request)
-      .then(response => {
-        // 動態快取：連線成功時，順手將最新檔案寫入快取
-        // 關鍵修正：加入 response.type === 'cors' 允許快取外部 CDN (如 Tailwind, Lucide)
-        if (response && response.status === 200 && (response.type === 'basic' || response.type === 'cors')) {
-          const responseToCache = response.clone();
+    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+      // 策略：如果快取裡有，立刻顯示給使用者 (達成 100% 離線秒開，不受弱網干擾)
+      if (cachedResponse) {
+        // 背景默默去抓新版更新快取
+        fetch(event.request).then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, networkResponse.clone());
+            });
+          }
+        }).catch(() => { /* 斷網時背景更新失敗，安靜忽略 */ });
+
+        return cachedResponse;
+      }
+
+      // 如果快取真的沒有，才去網路抓 (通常是第一次載入，或是忘記加進清單的檔案)
+      return fetch(event.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
           caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
+            cache.put(event.request, networkResponse.clone());
           });
         }
-        return response; 
-      })
-      .catch(() => {
-        // 步驟 B: 如果飛機上沒網路 (fetch 失敗)，退而求其次從快取拿資料
-        console.log('📡 處於離線狀態，載入快取檔案:', event.request.url);
-        
-        // 加入 { ignoreSearch: true } 
-        // 確保帶有參數的請求 (如 app.js?v=2.0) 依然能精準配對到快取中的原始檔案
-        return caches.match(event.request, { ignoreSearch: true });
-      })
+        return networkResponse;
+      }).catch(() => {
+          console.log('📡 徹底斷網，且無快取可用:', event.request.url);
+      });
+    })
   );
 });
 
