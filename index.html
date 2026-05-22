@@ -437,51 +437,47 @@
 <script src="app.js?v=2.0"></script>
 <script>
   if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-      console.log('✅ ServiceWorker 註冊成功');
-
-      // 📡 監聽是否有新的 Service Worker 正在背景下載安裝
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        
-        newWorker.addEventListener('statechange', () => {
-          // 當新版本已經安裝完畢，並且接管了 (activated)
-          if (newWorker.state === 'activated') {
-            console.log('🔄 系統偵測到新版本，執行強制戰術重新整理！');
-            // 可選：您可以在這裡跳出一個彈窗說「有新版本，即將重新載入」
-            window.location.reload(); // 強制刷新畫面，載入最新 UI
-          }
-        });
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+        console.log('✅ ServiceWorker 註冊成功');
+      }).catch((err) => {
+        console.error('ServiceWorker 註冊失敗:', err);
       });
 
-    }).catch((err) => {
-      console.error('ServiceWorker 註冊失敗:', err);
-    });
-    // ---------------- 以下為這次新增的區塊 ----------------
-
-    // 📡 1. 主動向 Service Worker 請求目前的版號
-    navigator.serviceWorker.ready.then(registration => {
-      if (registration.active) {
-        registration.active.postMessage('GET_VERSION');
-      }
-    });
-
-    // 📡 2. 接收 Service Worker 傳回的版號，並更新到畫面上
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data && event.data.type === 'VERSION_REPORT') {
-        const versionEl = document.getElementById('sys-version');
-        if (versionEl) {
-          // 如果傳回的是 "briefing-v7"，這行會把它修剪成 "v7"，並顯示出來
-          const displayVer = event.data.version.replace('briefing-', '');
-          versionEl.innerText = `SYS Build ${displayVer}`;
+      // ==========================================
+      // 🚀 核心升級：終極強制更新機制 (Controller Change)
+      // ==========================================
+      let refreshing = false; // 加上防護鎖，避免無限重新整理迴圈
+      
+      // 當 Service Worker 的控制權發生轉移（通常是因為新版本執行了 skipWaiting()）
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          console.log('🔄 偵測到新版飛行計畫 (Service Worker 更新)，執行強制戰術重新整理！');
+          window.location.reload(); // 物理級強制重整頁面
+          refreshing = true;
         }
-      }
-    });
+      });
 
-    // ---------------- 新增區塊結束 ----------------
-  });
-}
+      // ------------------------------------------
+      // 📡 跨執行緒通訊：回報目前版號給前端 UI (維持不變)
+      // ------------------------------------------
+      navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+          registration.active.postMessage('GET_VERSION');
+        }
+      });
+
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'VERSION_REPORT') {
+          const versionEl = document.getElementById('sys-version');
+          if (versionEl) {
+            const displayVer = event.data.version.replace('briefing-', '');
+            versionEl.innerText = `SYS Build ${displayVer}`;
+          }
+        }
+      });
+    });
+  }
 </script>
 </body>
 </html>
