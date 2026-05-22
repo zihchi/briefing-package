@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班表轉換器 (免費版)</title>
+  <!-- Tailwind CSS -->
+  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+  <!-- Tesseract.js (Free OCR Engine) -->
+  <script src="[https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js)"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center font-sans">
+
+  <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-bold text-slate-800">✈️ 班表轉行事曆</h1>
+      <p class="text-slate-500 text-sm mt-2">上傳截圖，一鍵生成 Apple 日曆檔 (免 API)</p>
+    </div>
+
+    <!-- Upload Area -->
+    <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+      <input type="file" id="rosterImage" accept="image/*" class="hidden" onchange="previewImage(event)">
+      <label for="rosterImage" class="cursor-pointer flex flex-col items-center">
+        <svg class="w-12 h-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        <span class="text-slate-600 font-medium" id="fileName">點擊選擇班表截圖</span>
+      </label>
+    </div>
+    
+    <!-- Preview Image -->
+    <div class="mt-4 hidden" id="previewContainer">
+      <img id="imagePreview" class="rounded border border-slate-200 max-h-48 mx-auto shadow-sm" src="" alt="預覽圖">
+    </div>
+
+    <!-- Convert Button -->
+    <button id="convertBtn" onclick="startConversion()" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
+      開始轉換 ICS
+    </button>
+    
+    <!-- Status Message -->
+    <p id="statusMsg" class="text-center text-sm mt-4 text-slate-600 font-medium"></p>
+  </div>
+
+  <script>
+    let base64String = "";
+
+    // 建立班表字典檔 (節錄自 REV13 PDF)
+    const DUTY_DICTIONARY = {
+      "DO": "Days Off",
+      "HDO": "Holiday Days Off",
+      "MDO": "Mandatory Day Off",
+      "ANL": "Annual Leave",
+      "SKL": "Sick Leave",
+      "BNL": "Business Leave",
+      "S3A": "Standby from 0000-1000",
+      "S3B": "Standby from 0600-1600",
+      "S3C": "Standby from 1000-2000",
+      "S3D": "Standby from 1400-2400",
+      "S3E": "Standby from 0900-1700",
+      "R2A": "Reserve from 0000-1000",
+      "R2B": "Reserve from 0800-1800",
+      "R2C": "Reserve from 1400-2359",
+      "GS": "Ground School",
+      "FFS": "Full Flight Simulator",
+      "PC": "Proficiency Check",
+      "RT": "Recurrent Training",
+      "PT": "Proficiency Training",
+      "CRM JET": "CRM & Join Emergency Training",
+      "A33 PADV": "A330 Pre-Aircraft Training / Advance"
+    };
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      document.getElementById('fileName').innerText = file.name;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('imagePreview').src = e.target.result;
+        document.getElementById('previewContainer').classList.remove('hidden');
+        base64String = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+
+    // Tesseract.js OCR Execution
+    async function startConversion() {
+      if (!base64String) {
+        alert("請先上傳圖片！");
+        return;
+      }
+      
+      const btn = document.getElementById('convertBtn');
+      const status = document.getElementById('statusMsg');
+      
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        AI 引擎運算中...
+      `;
+      status.innerText = "正在使用本機端免費 OCR 引擎辨識網格 (首次運行需時稍長)...";
+      status.className = "text-center text-sm mt-4 text-blue-600 font-medium animate-pulse";
+
+      try {
+        // Run OCR with English language model
+        const result = await Tesseract.recognize(base64String, 'eng');
+        const words = result.data.words;
+        
+        if (!words || words.length === 0) {
+          throw new Error("圖片中找不到任何文字，請確認截圖是否清晰！");
+        }
+
+        // Map Tesseract bounding box output to our algorithm's format
+        const annotations = words.map(w => ({
+          description: w.text,
+          boundingPoly: { vertices: [{ x: w.bbox.x0, y: w.bbox.y0 }] }
+        }));
+        
+        // Parse Grid & Generate ICS
+        const rosterData = extractGridData(annotations);
+        const icsString = generateICS(rosterData);
+        
+        status.innerText = "✅ 轉換成功！即將開始下載";
+        status.className = "text-center text-sm mt-4 text-emerald-600 font-medium";
+        downloadICS(icsString);
+        resetButton();
+        
+      } catch (error) {
+        status.innerText = "❌ 系統錯誤：" + error.message;
+        status.className = "text-center text-sm mt-4 text-red-600 font-medium";
+        resetButton();
+      }
+    }
+
+    // Grid Parsing Logic (Y coordinate for rows, X for columns)
+    function extractGridData(annotations) {
+      let rows = [];
+      annotations.forEach(item => {
+        let y = item.boundingPoly.vertices[0].y;
+        let text = item.description;
+        let x = item.boundingPoly.vertices[0].x;
+        
+        let added = false;
+        for (let i = 0; i < rows.length; i++) {
+          if (Math.abs(rows[i].y - y) < 15) { // 15px tolerance
+            rows[i].items.push({ text: text, x: x });
+            added = true;
+            break;
+          }
+        }
+        if (!added) {
+          rows.push({ y: y, items: [{ text: text, x: x }] });
+        }
+      });
+      
+      rows.sort((a, b) => a.y - b.y);
+      
+      let year = new Date().getFullYear();
+      let month = new Date().getMonth() + 1;
+      let parsedEvents = [];
+      const monthMap = {"JAN":1,"FEB":2,"MAR":3,"APR":4,"MAY":5,"JUN":6,"JUL":7,"AUG":8,"SEP":9,"OCT":10,"NOV":11,"DEC":12};
+      
+      for (let r = 0; r < rows.length; r++) {
+        rows[r].items.sort((a, b) => a.x - b.x);
+        let rowStr = rows[r].items.map(i => i.text).join("");
+        
+        let yearMonthMatch = rowStr.match(/(\d{4})\.([A-Z]{3})/i);
+        if (yearMonthMatch) {
+          year = parseInt(yearMonthMatch[1]);
+          month = monthMap[yearMonthMatch[2].toUpperCase()] || month;
+          continue;
+        }
+        
+        let isDateRow = rows[r].items.filter(i => /^\d{1,2}$/.test(i.text)).length >= 3;
+        
+        if (isDateRow && r + 1 < rows.length) {
+          let dateItems = rows[r].items;
+          let dutyItems = rows[r+1].items; 
+          
+          dateItems.forEach(dItem => {
+            if (/^\d{1,2}$/.test(dItem.text)) {
+              let day = parseInt(dItem.text);
+              let matchedDuty = dutyItems.reduce((prev, curr) => {
+                return (Math.abs(curr.x - dItem.x) < Math.abs(prev.x - dItem.x) ? curr : prev);
+              }, dutyItems[0]);
+              
+              if (matchedDuty && Math.abs(matchedDuty.x - dItem.x) < 100) {
+                parsedEvents.push({
+                  year: year,
+                  month: month,
+                  day: day,
+                  code: matchedDuty.text
+                });
+              }
+            }
+          });
+        }
+      }
+      return parsedEvents;
+    }
+
+    // Generate Apple Calendar ICS file
+    function generateICS(rosterData) {
+      let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Starlux Roster Converter//TW\r\nCALSCALE:GREGORIAN\r\n";
+      
+      rosterData.forEach(data => {
+        let yStr = data.year.toString();
+        let mStr = data.month.toString().padStart(2, '0');
+        let dStr = data.day.toString().padStart(2, '0');
+        let dateStr = `${yStr}${mStr}${dStr}`;
+        
+        let rawCode = data.code;
+        let description = DUTY_DICTIONARY[rawCode] || "飛行任務或其他排程";
+        let summary = rawCode;
+        
+        if (rawCode.includes("JX")) {
+          description = `執行航班: ${rawCode}`;
+        } else if (DUTY_DICTIONARY[rawCode]) {
+          summary = `${rawCode} - ${DUTY_DICTIONARY[rawCode]}`;
+        }
+        
+        ics += "BEGIN:VEVENT\r\n";
+        ics += `DTSTART;VALUE=DATE:${dateStr}\r\n`;
+        ics += `DTEND;VALUE=DATE:${dateStr}\r\n`;
+        ics += `SUMMARY:${summary}\r\n`;
+        ics += `DESCRIPTION:${description}\r\n`;
+        ics += "END:VEVENT\r\n";
+      });
+      
+      ics += "END:VCALENDAR";
+      return ics;
+    }
+
+    function downloadICS(icsContent) {
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Starlux_Roster_${new Date().getTime()}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+
+    function resetButton() {
+      const btn = document.getElementById('convertBtn');
+      btn.disabled = false;
+      btn.innerHTML = "開始轉換 ICS";
+    }
+  </script>
+</body>
+</html>
