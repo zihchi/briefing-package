@@ -426,52 +426,86 @@
       </div>
   </div>
 
-  
-  <!-- 👇 這是全新加入的區塊：動態版本號指示器 -->
-  <div id="sys-version" style="text-align: right; padding: 5px 20px 20px 0; font-size: 11px; color: #cbd5e1; font-family: 'Courier New', Courier, monospace; letter-spacing: 1px; user-select: none; pointer-events: none;">
-    Verifying System...
+  <!-- 👇 全新加入：浮動更新通知橫幅 (預設隱藏) -->
+  <div id="update-banner" style="display: none; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
+    🚀 新版本已準備就緒，點擊立即更新！
   </div>
-  <!-- 👆 全新區塊結束 -->
-  
+
+  <!-- 👇 升級版：右下角版本號與「檢查更新」按鈕 -->
+  <div style="position: fixed; bottom: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 9000; background: rgba(255,255,255,0.85); padding: 6px 12px; border-radius: 12px; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <div id="sys-version" style="font-size: 11px; color: #64748b; font-family: 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">
+      Verifying...
+    </div>
+    <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: #3c79ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      檢查更新
+    </button>
+  </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- 關鍵修正：重新引用 app.js -->
 <script src="app.js?v=2.0"></script>
 <script>
-  // ==========================================
-  // 🚀 核心：Service Worker 註冊與自動更新機制
-  // ==========================================
   if ('serviceWorker' in navigator) {
-    // 預覽環境防護機制
     if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
-      console.log('⚠️ 偵測到預覽環境，跳過 Service Worker 註冊。');
       const versionEl = document.getElementById('sys-version');
-      if (versionEl) versionEl.innerText = `SYS Build 18 (Preview Mode)`;
+      if (versionEl) versionEl.innerText = `Build 18 (Preview)`;
     } else {
+      let newWorker;
+      const updateBanner = document.getElementById('update-banner');
+      const btnCheckUpdate = document.getElementById('btn-check-update');
+
+      // 【點擊橫幅事件】發送訊息給 SW，要求跳過等待並接管
+      if (updateBanner) {
+        updateBanner.addEventListener('click', () => {
+          if (newWorker) {
+            updateBanner.innerText = "🔄 更新中...";
+            newWorker.postMessage({ action: 'SKIP_WAITING' });
+          }
+        });
+      }
+
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js').then((reg) => {
           console.log('✅ ServiceWorker 註冊成功');
+
+          // 【點擊檢查更新按鈕事件】主動向伺服器詢問是否有新版 SW
+          if (btnCheckUpdate) {
+            btnCheckUpdate.addEventListener('click', () => {
+              btnCheckUpdate.innerText = "⏳ 檢查中...";
+              reg.update().then(() => {
+                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 1500);
+              }).catch(() => {
+                btnCheckUpdate.innerText = "❌ 檢查失敗";
+                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
+              });
+            });
+          }
+
+          // 監聽是否有新的 Service Worker 安裝
+          reg.addEventListener('updatefound', () => {
+            newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              // 當新版 SW 安裝完畢，且進入 'installed' (waiting) 狀態時
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // 顯示紅色浮動更新橫幅，讓使用者決定何時要刷新畫面
+                if (updateBanner) updateBanner.style.display = 'block';
+              }
+            });
+          });
         }).catch((err) => {
           console.error('ServiceWorker 註冊失敗:', err);
         });
 
-        // ==========================================
-        // 🚀 核心升級：終極強制更新機制 (Controller Change)
-        // ==========================================
-        let refreshing = false; // 加上防護鎖，避免無限重新整理迴圈
-        
-        // 當 Service Worker 的控制權發生轉移（通常是因為新版本執行了 skipWaiting()）
+        // 監聽 SW 接管畫面的事件 (當使用者點擊橫幅並發送 SKIP_WAITING 後觸發)
+        let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (!refreshing) {
-            console.log('🔄 偵測到新版系統 (Service Worker 更新)，執行強制戰術重新整理！');
-            window.location.reload(); // 物理級強制重整頁面
+            console.log('🔄 新版系統接管，執行重整！');
+            window.location.reload();
             refreshing = true;
           }
         });
 
-        // ------------------------------------------
-        // 📡 跨執行緒通訊：回報目前版號給前端 UI
-        // ------------------------------------------
+        // 向目前的 SW 獲取當前版本號
         navigator.serviceWorker.ready.then(registration => {
           if (registration.active) {
             registration.active.postMessage('GET_VERSION');
@@ -483,7 +517,7 @@
             const versionEl = document.getElementById('sys-version');
             if (versionEl) {
               const displayVer = event.data.version.replace('briefing-', '');
-              versionEl.innerText = `SYS Build ${displayVer}`;
+              versionEl.innerText = `Build ${displayVer}`;
             }
           }
         });
