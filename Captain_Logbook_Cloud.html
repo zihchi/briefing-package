@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2C2C2E">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pilot Logbook">
     <title>Pilot Logbook</title>
     
+    <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
@@ -67,6 +69,7 @@
 </head>
 <body class="pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-32">
 
+    <!-- App Initial Loading Screen -->
     <div id="app-loader">
         <div class="flex flex-col items-center gap-3">
             <div class="spinner !w-10 !h-10 !border-4 !border-t-[var(--jx-gold-dark)] border-[rgba(194,163,112,0.3)]"></div>
@@ -74,6 +77,7 @@
         </div>
     </div>
 
+    <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing...</span>
@@ -81,6 +85,7 @@
 
     <datalist id="pilot-datalist"></datalist>
 
+    <!-- Data Audit Modal -->
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -91,6 +96,7 @@
         </div>
     </div>
 
+    <!-- Carry Forward Settings Modal -->
     <div id="cf-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -144,6 +150,7 @@
         </div>
     </div>
 
+    <!-- List Modal (For Pilots & Airports) -->
     <div id="list-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center sticky top-0 z-10 shadow-sm">
@@ -154,6 +161,7 @@
         </div>
     </div>
 
+    <!-- MAIN VIEWS -->
     <div id="view-entry" class="hidden">
         <div id="edit-banner">Editing Mode</div>
         <header class="bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
@@ -181,7 +189,9 @@
             <input type="hidden" id="inp-index">
             
             <div class="md:grid md:grid-cols-2 md:gap-8">
+                <!-- Left Column -->
                 <div class="space-y-4">
+                    <!-- General Info -->
                     <div>
                         <div class="flex justify-between items-center pr-4 mt-2 md:mt-0">
                             <div class="section-title !pt-0">General Info</div>
@@ -213,6 +223,7 @@
                         </div>
                     </div>
 
+                    <!-- Aircraft -->
                     <div>
                         <div class="section-title md:mt-2">Aircraft</div>
                         <div class="ios-list shadow-sm">
@@ -229,6 +240,7 @@
                         </div>
                     </div>
 
+                    <!-- Flight Crew -->
                     <div>
                         <div class="section-title md:mt-2">Flight Crew</div>
                         <div class="ios-list shadow-sm">
@@ -294,7 +306,9 @@
                     </div>
                 </div>
 
+                <!-- Right Column -->
                 <div class="space-y-4">
+                    <!-- Time & Fuel -->
                     <div>
                         <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
                             <span>Time (UTC)</span>
@@ -361,6 +375,7 @@
                         </div>
                     </div>
 
+                    <!-- Operations (PF) -->
                     <div>
                         <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
                             <span>Operations (PF)</span>
@@ -383,6 +398,7 @@
                         </div>
                     </div>
 
+                    <!-- Remarks & Approach -->
                     <div>
                         <div class="section-title mt-2 md:mt-0">Remarks & Approach</div>
                         <div class="ios-list shadow-sm mb-4">
@@ -410,6 +426,7 @@
                         </div>
                     </div>
 
+                    <!-- Action Buttons -->
                     <div class="pb-8" id="action-create">
                         <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg">Save Logbook Entry</button>
                     </div>
@@ -455,7 +472,8 @@
                 <div class="relative w-full max-w-[200px]">
                     <div class="relative">
                         <select id="stats-time-filter" class="w-full appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="handleStatsFilterChange()">
-                            </select>
+                            <!-- Options generated dynamically -->
+                        </select>
                         <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="custom-date-wrapper" class="hidden flex gap-2 mt-2">
@@ -472,6 +490,7 @@
             </div>
         </header>
         <main class="mt-2">
+            <!-- Indicator for Active CF -->
             <div id="cf-indicator" onclick="toggleCF()" class="hidden mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Carry Forward Included (Tap to exclude)
@@ -527,6 +546,7 @@
             
             <div class="mt-8 px-4 mb-8 md:max-w-3xl lg:max-w-5xl mx-auto">
                 <div class="md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-x-8 md:gap-y-0">
+                    <!-- Column 1 -->
                     <div>
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 md:mt-0">Hours by Aircraft Type</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-acft"></div>
@@ -538,6 +558,7 @@
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-duty"></div>
                     </div>
 
+                    <!-- Column 2 -->
                     <div>
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 md:mt-0">Top Pilots Flown With</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
@@ -572,6 +593,9 @@
         </button>
     </nav>
 
+    <!-- ========================================== -->
+    <!-- 🚀 PWA 離線核心架構 🚀 -->
+    <!-- ========================================== -->
     <script>
         const manifestData = {
             "name": "Pilot Logbook",
@@ -594,21 +618,76 @@
         link.href = URL.createObjectURL(manifestBlob);
         document.head.appendChild(link);
 
-        // 緊急清除：殺死所有殘留的 Service Worker，釋放網路控制權
+        // 使用安全的字串相加，完全避免 Template Literals (反引號) 帶來的 Syntax Error
+        const swCode = "const CACHE_NAME = 'jx-logbook-v2.5';\n" +
+        "const urlsToCache = [\n" +
+        "    './',\n" +
+        "    './index.html',\n" +
+        "    'https://cdn.tailwindcss.com',\n" +
+        "    'https://cdn.jsdelivr.net/npm/chart.js',\n" +
+        "    'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',\n" +
+        "    'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js'\n" +
+        "];\n" +
+        "\n" +
+        "self.addEventListener('install', event => {\n" +
+        "    self.skipWaiting();\n" +
+        "    event.waitUntil(\n" +
+        "        caches.open(CACHE_NAME).then(cache => {\n" +
+        "            return Promise.allSettled(urlsToCache.map(url => cache.add(url)));\n" +
+        "        })\n" +
+        "    );\n" +
+        "});\n" +
+        "\n" +
+        "self.addEventListener('activate', event => {\n" +
+        "    self.clients.claim();\n" +
+        "    event.waitUntil(\n" +
+        "        caches.keys().then(cacheNames => {\n" +
+        "            return Promise.all(\n" +
+        "                cacheNames.map(cacheName => {\n" +
+        "                    if (cacheName !== CACHE_NAME) {\n" +
+        "                        return caches.delete(cacheName);\n" +
+        "                    }\n" +
+        "                })\n" +
+        "            );\n" +
+        "        })\n" +
+        "    );\n" +
+        "});\n" +
+        "\n" +
+        "self.addEventListener('fetch', event => {\n" +
+        "    if (event.request.url.includes('script.google.com')) {\n" +
+        "        event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })));\n" +
+        "        return;\n" +
+        "    }\n" +
+        "\n" +
+        "    if (event.request.mode === 'navigate') {\n" +
+        "        event.respondWith(\n" +
+        "            fetch(event.request).catch(() => {\n" +
+        "                return caches.match('./').then(res => res || caches.match('./index.html'));\n" +
+        "            })\n" +
+        "        );\n" +
+        "        return;\n" +
+        "    }\n" +
+        "\n" +
+        "    event.respondWith(\n" +
+        "        caches.match(event.request).then(cachedResponse => {\n" +
+        "            const fetchPromise = fetch(event.request).then(networkResponse => {\n" +
+        "                if(networkResponse && networkResponse.status === 200) {\n" +
+        "                    const responseToCache = networkResponse.clone();\n" +
+        "                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));\n" +
+        "                }\n" +
+        "                return networkResponse;\n" +
+        "            }).catch(() => {});\n" +
+        "            return cachedResponse || fetchPromise;\n" +
+        "        })\n" +
+        "    );\n" +
+        "});";
+
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                let hasUnregistered = false;
-                for(let registration of registrations) {
-                    registration.unregister();
-                    hasUnregistered = true;
-                    console.log('已清除異常的 Service Worker');
-                }
-                // 如果有清除舊的 SW，強制重新整理頁面以恢復乾淨的網路連線
-                if(hasUnregistered) {
-                    setTimeout(() => {
-                        window.location.reload(true);
-                    }, 500);
-                }
+            window.addEventListener('load', () => {
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(registration => {
+                    console.log('PWA ServiceWorker 註冊成功 v2.5');
+                }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
     </script>
@@ -945,14 +1024,12 @@
         }
 
         async function fetchDataFromCloud() {
-    if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
-    if(flightLogs.length === 0) showToast("Fetching initial data...", true);
-    
-    try {
-        // 新增隨機時間戳記與 no-store 指令，強制擊穿 Safari 的錯誤快取
-        const response = await fetch(GAS_URL + "?t=" + new Date().getTime(), { cache: 'no-store' });
-        const data = await response.json(); 
-// ...下略 
+            if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
+            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
+            
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json(); 
                 if(data.error === "offline") {
                     showToast("Offline. Using local data.");
                     return;
@@ -1493,6 +1570,146 @@
                     }
                 }
             });
+        }
+
+        function populateAircraftDropdowns() {
+            const regSelect = document.getElementById('inp-reg');
+            regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
+            const activeAcfts = dbAircrafts.filter(a => a.is_active == 1 || a.is_active == "1");
+            activeAcfts.forEach(a => regSelect.innerHTML += `<option value="${a.aircraft_id}">${a.aircraft_id}</option>`);
+        }
+
+        function handleRegistrationChange() {
+            updateEntryDash();
+        }
+
+        function populatePilotDropdown() {
+            const datalist = document.getElementById('pilot-datalist');
+            datalist.innerHTML = '';
+            dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
+            dbPilots.forEach(p => datalist.innerHTML += `<option value="${p.formattedName}">`);
+        }
+
+        function matchPilotName(rawName) {
+            if (!rawName) return '';
+            let exact = dbPilots.find(p => p.formattedName === rawName || p.name === rawName);
+            if (exact) return exact.formattedName;
+            let partial = dbPilots.find(p => p.formattedName.includes(rawName));
+            if (partial) return partial.formattedName;
+            return String(rawName).trim();
+        }
+        
+        function checkNewPilot(inputElem, type) {
+            const val = inputElem.value.trim();
+            if(!val) return;
+            const wrapperId = `${type}-custom-wrapper`;
+            const exists = dbPilots.some(p => p.formattedName === val);
+            if(!exists) {
+                document.getElementById(wrapperId).classList.remove('hidden');
+                document.getElementById(wrapperId).classList.add('flex');
+                document.getElementById(`inp-${type}-custom-name`).value = val;
+                document.getElementById(`inp-${type}-custom-nick`).focus();
+            } else {
+                document.getElementById(wrapperId).classList.add('hidden');
+                document.getElementById(wrapperId).classList.remove('flex');
+            }
+        }
+
+        function saveNewPilotToCloud(type) {
+            const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
+            const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
+            const inputId = `inp-${type}`;
+            const wrapperId = `${type}-custom-wrapper`;
+            if (name) {
+                const finalName = nick ? `${name} (${nick})` : name;
+                dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
+                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
+                populatePilotDropdown();
+                document.getElementById(inputId).value = finalName;
+                queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
+            }
+            document.getElementById(wrapperId).classList.add('hidden');
+            document.getElementById(wrapperId).classList.remove('flex');
+        }
+
+        function renderRecentFlights() {
+            const container = document.getElementById('recent-list-container');
+            const searchInput = document.getElementById('inp-search-recent');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            let validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
+            
+            if(query) {
+                validLogs = validLogs.filter(l => {
+                    const fltMatch = String(l.flt).toLowerCase().includes(query);
+                    const p1Match = String(l.pilot1).toLowerCase().includes(query);
+                    const p2Match = String(l.pilot2).toLowerCase().includes(query);
+                    const p3Match = String(l.pilot3).toLowerCase().includes(query);
+                    const depMatch = String(l.dep).toLowerCase().includes(query);
+                    const arrMatch = String(l.arr).toLowerCase().includes(query);
+                    return fltMatch || p1Match || p2Match || p3Match || depMatch || arrMatch;
+                });
+            }
+
+            if(validLogs.length === 0) { 
+                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)] font-medium">No flights found matching your search.</p>'; 
+                return; 
+            }
+
+            const sorted = [...validLogs].sort((a,b) => getSortTimestamp(b) - getSortTimestamp(a));
+            const groups = {};
+            sorted.forEach(log => {
+                const key = new Date(log.date).toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                if(!groups[key]) groups[key] = []; groups[key].push(log);
+            });
+
+            let finalHtml = '';
+            for(const [monthYear, logs] of Object.entries(groups)) {
+                let monthTotalMins = 0; let monthTakeoffs = 0; let monthLandings = 0; let monthPax = 0;
+                logs.forEach(l => {
+                    monthTotalMins += l.totalMins || 0;
+                    monthTakeoffs += (Number(l.day_to) || 0) + (Number(l.night_to) || 0);
+                    monthLandings += (Number(l.day_ldg) || 0) + (Number(l.night_ldg) || 0);
+                    monthPax += (Number(l.pax) || 0);
+                });
+                
+                let lf = logs.length > 0 ? (((monthPax / logs.length) / 297) * 100).toFixed(1) : 0;
+                let paxDisplay = `${monthPax} <span class="text-[9px] text-[var(--jx-gray)] font-normal ml-0.5">(${lf}%)</span>`;
+
+                let groupHtml = `<div class="px-4 py-2 bg-[#E8E4DF] border-b border-[var(--jx-divider)] md:rounded-t-xl md:mt-6 flex flex-col gap-1"><div class="flex justify-between items-center"><span class="text-[12px] font-bold text-[var(--jx-gray)] uppercase tracking-wider">${monthYear}</span><span class="text-[12px] font-bold text-red-600">${minsToStr(monthTotalMins)}</span></div><div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium"><span>Flt: <span class="font-bold text-[var(--jx-dark)]">${logs.length}</span></span><span>TO/LDG: <span class="font-bold text-[var(--jx-dark)]">${monthTakeoffs} / ${monthLandings}</span></span><span>Pax: <span class="font-bold text-[var(--jx-dark)]">${paxDisplay}</span></span></div></div><div class="bg-white border-b border-[var(--jx-divider)] md:bg-transparent md:border-none md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:p-4">`;
+                
+                logs.forEach(log => {
+                    const d = new Date(log.date); const blockTime = minsToStr(log.totalMins);
+                    
+                    const pilotBadge = log.pilot1 ? `<span class="text-[10px] text-[var(--jx-gray)] truncate bg-[#F4F0EB] px-1.5 py-0.5 rounded shadow-sm max-w-[100px] flex-shrink border border-[var(--jx-divider)] ml-2">👨‍✈️ ${log.pilot1}</span>` : '';
+                    const pendingBadge = log.syncStatus === 'pending' ? `<span class="bg-yellow-100 text-yellow-700 border border-yellow-200 text-[9px] px-1.5 py-0.5 rounded ml-2 font-bold shadow-sm flex items-center gap-1"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Pending</span>` : '';
+
+                    groupHtml += `<div class="flex items-center justify-between p-4 border-b border-[var(--jx-divider)] md:border md:rounded-xl md:bg-white md:shadow-sm cursor-pointer active:bg-gray-50 hover:bg-gray-50 md:hover:shadow-md transition-all" onclick="viewLog('${log.index}')">
+                        <div class="flex items-center gap-4 w-full">
+                            <div class="flex flex-col items-center justify-center w-10">
+                                <span class="text-xl font-bold text-[var(--jx-dark)]">${String(d.getDate()).padStart(2, '0')}</span>
+                                <span class="text-[10px] text-[var(--jx-gray)] uppercase font-semibold">${d.toLocaleString('en-US', { weekday: 'short' })}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <div class="flex items-center truncate">
+                                        <span class="font-bold text-[15px] text-[var(--jx-dark)]">JX${log.flt}</span>
+                                        ${pilotBadge}
+                                        ${pendingBadge}
+                                    </div>
+                                    <span class="font-mono text-[15px] font-bold text-[var(--jx-gold-dark)] flex-shrink-0 ml-2">${blockTime}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-[var(--jx-gray)] font-medium">
+                                    <span>${log.dep} ✈ ${log.arr}</span>
+                                    <span>${log.reg || log.acft}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                groupHtml += `</div>`; finalHtml += groupHtml;
+            }
+            container.innerHTML = finalHtml;
         }
 
         function cancelEntry() {
