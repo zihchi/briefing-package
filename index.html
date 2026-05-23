@@ -464,21 +464,11 @@
       }
 
       window.addEventListener('load', () => {
+        let swRegistration = null;
+
         navigator.serviceWorker.register('./service-worker.js').then((reg) => {
           console.log('✅ ServiceWorker 註冊成功');
-
-          // 【點擊檢查更新按鈕事件】主動向伺服器詢問是否有新版 SW
-          if (btnCheckUpdate) {
-            btnCheckUpdate.addEventListener('click', () => {
-              btnCheckUpdate.innerText = "⏳ 檢查中...";
-              reg.update().then(() => {
-                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 1500);
-              }).catch(() => {
-                btnCheckUpdate.innerText = "❌ 檢查失敗";
-                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
-              });
-            });
-          }
+          swRegistration = reg;
 
           // 監聽是否有新的 Service Worker 安裝
           reg.addEventListener('updatefound', () => {
@@ -495,6 +485,32 @@
           console.error('ServiceWorker 註冊失敗:', err);
         });
 
+        // 【點擊檢查更新按鈕事件】主動向伺服器詢問是否有新版 SW
+        if (btnCheckUpdate) {
+          btnCheckUpdate.addEventListener('click', () => {
+            // 1. 防呆：先確認硬體是否有網路
+            if (!navigator.onLine) {
+              btnCheckUpdate.innerText = "📴 無網路連接";
+              setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
+              return;
+            }
+
+            // 2. 防呆：確認 SW 是否成功註冊
+            if (swRegistration) {
+              btnCheckUpdate.innerText = "⏳ 檢查中...";
+              swRegistration.update().then(() => {
+                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 1500);
+              }).catch(() => {
+                btnCheckUpdate.innerText = "❌ 檢查失敗";
+                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
+              });
+            } else {
+              btnCheckUpdate.innerText = "❌ 尚未啟用離線";
+              setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
+            }
+          });
+        }
+
         // 監聽 SW 接管畫面的事件 (當使用者點擊橫幅並發送 SKIP_WAITING 後觸發)
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -506,6 +522,7 @@
         });
 
         // 向目前的 SW 獲取當前版本號
+        let versionResolved = false;
         navigator.serviceWorker.ready.then(registration => {
           if (registration.active) {
             registration.active.postMessage('GET_VERSION');
@@ -514,6 +531,7 @@
 
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data && event.data.type === 'VERSION_REPORT') {
+            versionResolved = true;
             const versionEl = document.getElementById('sys-version');
             if (versionEl) {
               const displayVer = event.data.version.replace('briefing-', '');
@@ -521,6 +539,16 @@
             }
           }
         });
+
+        // 防呆機制：如果 3 秒內沒有收到 SW 的回應，解除 Verifying... 的卡死狀態
+        setTimeout(() => {
+          if (!versionResolved) {
+            const versionEl = document.getElementById('sys-version');
+            if (versionEl && versionEl.innerText.includes('Verifying')) {
+              versionEl.innerText = 'Build 18 (Local/Offline)';
+            }
+          }
+        }, 3000);
       });
     }
   }
