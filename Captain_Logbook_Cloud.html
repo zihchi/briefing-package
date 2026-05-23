@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2C2C2E">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pilot Logbook">
     <title>Pilot Logbook</title>
     
-    <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
@@ -69,7 +67,6 @@
 </head>
 <body class="pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-32">
 
-    <!-- App Initial Loading Screen -->
     <div id="app-loader">
         <div class="flex flex-col items-center gap-3">
             <div class="spinner !w-10 !h-10 !border-4 !border-t-[var(--jx-gold-dark)] border-[rgba(194,163,112,0.3)]"></div>
@@ -77,7 +74,6 @@
         </div>
     </div>
 
-    <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing...</span>
@@ -85,7 +81,6 @@
 
     <datalist id="pilot-datalist"></datalist>
 
-    <!-- Data Audit Modal -->
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -96,7 +91,6 @@
         </div>
     </div>
 
-    <!-- Carry Forward Settings Modal -->
     <div id="cf-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center">
@@ -150,7 +144,6 @@
         </div>
     </div>
 
-    <!-- List Modal (For Pilots & Airports) -->
     <div id="list-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-[var(--jx-bg)] rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
             <div class="p-4 bg-[var(--jx-dark)] border-b flex justify-between items-center sticky top-0 z-10 shadow-sm">
@@ -161,7 +154,6 @@
         </div>
     </div>
 
-    <!-- MAIN VIEWS -->
     <div id="view-entry" class="hidden">
         <div id="edit-banner">Editing Mode</div>
         <header class="bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-4 px-4 sticky top-0 z-40 border-b border-[var(--jx-divider)] shadow-sm">
@@ -189,9 +181,7 @@
             <input type="hidden" id="inp-index">
             
             <div class="md:grid md:grid-cols-2 md:gap-8">
-                <!-- Left Column -->
                 <div class="space-y-4">
-                    <!-- General Info -->
                     <div>
                         <div class="flex justify-between items-center pr-4 mt-2 md:mt-0">
                             <div class="section-title !pt-0">General Info</div>
@@ -223,7 +213,6 @@
                         </div>
                     </div>
 
-                    <!-- Aircraft -->
                     <div>
                         <div class="section-title md:mt-2">Aircraft</div>
                         <div class="ios-list shadow-sm">
@@ -240,7 +229,6 @@
                         </div>
                     </div>
 
-                    <!-- Flight Crew -->
                     <div>
                         <div class="section-title md:mt-2">Flight Crew</div>
                         <div class="ios-list shadow-sm">
@@ -306,9 +294,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column -->
                 <div class="space-y-4">
-                    <!-- Time & Fuel -->
                     <div>
                         <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
                             <span>Time (UTC)</span>
@@ -375,7 +361,6 @@
                         </div>
                     </div>
 
-                    <!-- Operations (PF) -->
                     <div>
                         <div class="section-title mt-2 md:mt-0 flex justify-between items-end">
                             <span>Operations (PF)</span>
@@ -398,7 +383,6 @@
                         </div>
                     </div>
 
-                    <!-- Remarks & Approach -->
                     <div>
                         <div class="section-title mt-2 md:mt-0">Remarks & Approach</div>
                         <div class="ios-list shadow-sm mb-4">
@@ -426,7 +410,6 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
                     <div class="pb-8" id="action-create">
                         <button onclick="queueAction('create')" class="w-full bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold tracking-wide py-4 rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg">Save Logbook Entry</button>
                     </div>
@@ -472,8 +455,7 @@
                 <div class="relative w-full max-w-[200px]">
                     <div class="relative">
                         <select id="stats-time-filter" class="w-full appearance-none bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] font-semibold py-1.5 pl-3 pr-8 rounded-full text-sm shadow-sm focus:outline-none" onchange="handleStatsFilterChange()">
-                            <!-- Options generated dynamically -->
-                        </select>
+                            </select>
                         <svg class="w-4 h-4 absolute right-2.5 top-2 text-[var(--jx-gold-dark)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="custom-date-wrapper" class="hidden flex gap-2 mt-2">
@@ -490,7 +472,6 @@
             </div>
         </header>
         <main class="mt-2">
-            <!-- Indicator for Active CF -->
             <div id="cf-indicator" onclick="toggleCF()" class="hidden mx-4 md:max-w-3xl lg:max-w-5xl md:mx-auto mb-3 bg-[#FDFBF7] border border-[var(--jx-gold)] rounded-lg p-2 flex items-center justify-center gap-2 text-xs text-[var(--jx-gold-dark)] font-semibold shadow-sm cursor-pointer transition-colors active:scale-95 select-none">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Carry Forward Included (Tap to exclude)
@@ -546,7 +527,6 @@
             
             <div class="mt-8 px-4 mb-8 md:max-w-3xl lg:max-w-5xl mx-auto">
                 <div class="md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-x-8 md:gap-y-0">
-                    <!-- Column 1 -->
                     <div>
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 md:mt-0">Hours by Aircraft Type</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-acft"></div>
@@ -558,7 +538,6 @@
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-duty"></div>
                     </div>
 
-                    <!-- Column 2 -->
                     <div>
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6 md:mt-0">Top Pilots Flown With</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-pilots"></div>
@@ -593,9 +572,6 @@
         </button>
     </nav>
 
-    <!-- ========================================== -->
-    <!-- 🚀 PWA 離線核心架構 🚀 -->
-    <!-- ========================================== -->
     <script>
         const manifestData = {
             "name": "Pilot Logbook",
@@ -618,12 +594,21 @@
         link.href = URL.createObjectURL(manifestBlob);
         document.head.appendChild(link);
 
+        // 緊急清除：殺死所有殘留的 Service Worker，釋放網路控制權
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // 將這裡改為註冊外部的 sw.js
-                navigator.serviceWorker.register('./sw.js').then(registration => {
-                    console.log('PWA ServiceWorker 註冊成功 v2.6');
-                }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                let hasUnregistered = false;
+                for(let registration of registrations) {
+                    registration.unregister();
+                    hasUnregistered = true;
+                    console.log('已清除異常的 Service Worker');
+                }
+                // 如果有清除舊的 SW，強制重新整理頁面以恢復乾淨的網路連線
+                if(hasUnregistered) {
+                    setTimeout(() => {
+                        window.location.reload(true);
+                    }, 500);
+                }
             });
         }
     </script>
