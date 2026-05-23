@@ -1,5 +1,5 @@
 // 每次發布新版本或新增檔案時，請務必推進此版號
-const CACHE_NAME = 'briefing-v17'; 
+const CACHE_NAME = 'briefing-v18'; 
 const urlsToCache = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const urlsToCache = [
   './swap.html',
   './notam.html',
   './time.html',
+  './PCR.html',
   './fpl_decoder.html',     // 新增：ICAO FPL Decoder 檔案 (若您的檔名不同，請務必在此修改)
   './manifest.json',    // 確保 PWA 核心設定能離線讀取
   './icon-192.png',     // 確保離線時圖示正常顯示
