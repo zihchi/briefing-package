@@ -945,12 +945,14 @@
         }
 
         async function fetchDataFromCloud() {
-            if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
-            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
-            
-            try {
-                const response = await fetch(GAS_URL);
-                const data = await response.json(); 
+    if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
+    if(flightLogs.length === 0) showToast("Fetching initial data...", true);
+    
+    try {
+        // 新增隨機時間戳記與 no-store 指令，強制擊穿 Safari 的錯誤快取
+        const response = await fetch(GAS_URL + "?t=" + new Date().getTime(), { cache: 'no-store' });
+        const data = await response.json(); 
+// ...下略 
                 if(data.error === "offline") {
                     showToast("Offline. Using local data.");
                     return;
