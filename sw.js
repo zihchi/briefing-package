@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jx-logbook-v2.6';
+const CACHE_NAME = 'jx-logbook-v2.7';
 const urlsToCache = [
     './',
     './index.html',
@@ -16,7 +16,7 @@ self.addEventListener('install', event => {
         })
     );
 });
- 
+
 self.addEventListener('activate', event => {
     self.clients.claim();
     event.waitUntil(
@@ -33,35 +33,31 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // 遇到 Google Apps Script API 直接嘗試連線，若失敗則回傳 offline JSON
-    if (event.request.url.includes('script.google.com')) {
-        event.respondWith(
-            fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } }))
-        );
-        return;
+    // 【關鍵修正】完全放行 Google API 與轉址，不讓 Service Worker 介入
+    if (event.request.url.includes('script.google.com') || 
+        event.request.url.includes('script.googleusercontent.com')) {
+        return; // 直接 return，讓瀏覽器原生發送請求
     }
 
-    // 處理網頁導航請求 (離線時回傳 index.html)
+    // 處理 HTML 導航 (離線時回傳 index.html)
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match('./').then(res => res || caches.match('./index.html'));
-            })
+            fetch(event.request).catch(() => caches.match('./index.html'))
         );
         return;
     }
 
-    // 其他靜態資源請求 (CSS, JS)
+    // 其他靜態資源請求 (CSS, 腳本)
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            const fetchPromise = fetch(event.request).then(networkResponse => {
-                if(networkResponse && networkResponse.status === 200) {
-                    const responseToCache = networkResponse.clone();
+            return cachedResponse || fetch(event.request).then(response => {
+                // 確保只快取連線成功的檔案
+                if (response && response.status === 200) {
+                    const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
                 }
-                return networkResponse;
-            }).catch(() => {});
-            return cachedResponse || fetchPromise;
+                return response;
+            }).catch(() => {}); // 離線且無快取時默默失敗，不引發 Uncaught Error
         })
     );
 });
