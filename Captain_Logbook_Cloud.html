@@ -619,7 +619,7 @@
         document.head.appendChild(link);
 
         // 使用安全的字串相加，完全避免 Template Literals (反引號) 帶來的 Syntax Error
-        const swCode = "const CACHE_NAME = 'jx-logbook-v2.5';\n" +
+        const swCode = "const CACHE_NAME = 'jx-logbook-v2.6';\n" +
         "const urlsToCache = [\n" +
         "    './',\n" +
         "    './index.html',\n" +
@@ -686,7 +686,7 @@
             window.addEventListener('load', () => {
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
                 navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(registration => {
-                    console.log('PWA ServiceWorker 註冊成功 v2.5');
+                    console.log('PWA ServiceWorker 註冊成功 v2.6');
                 }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
@@ -740,6 +740,23 @@
         let cfData = {}; 
         let isCfActive = true; 
         let flightChartInst = null;
+
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 8000 } = options; // 預設 8 秒 timeout
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
 
         function setDateToUTCNow() {
             const now = new Date();
@@ -948,12 +965,6 @@
                 Chart.register(ChartDataLabels);
             }
 
-            const loader = document.getElementById('app-loader');
-            if(loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 400);
-            }
-
             cfData = {
                 flights: parseInt(CF_CONFIG.flights) || 0,
                 takeoffs: parseInt(CF_CONFIG.takeoffs) || 0,
@@ -966,9 +977,20 @@
 
             setDateToUTCNow();
             initTimeFilterDropdown();
-            loadLocalCache();
-            await processSyncQueue();
-            fetchDataFromCloud(); 
+            
+            // 1. 同步加載本地快取 (立即渲染 UI，無懼慢網)
+            loadLocalCache(); 
+            
+            const loader = document.getElementById('app-loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 400);
+            }
+
+            // 2. 異步處理同步隊列與拉取雲端資料 (背景執行，不阻塞 UI)
+            processSyncQueue(false).then(() => {
+                fetchDataFromCloud(); 
+            });
         };
 
         function loadLocalCache() {
@@ -987,17 +1009,22 @@
             } catch(e) { console.warn("Local cache issue."); }
         }
 
-        async function processSyncQueue() {
+        async function processSyncQueue(isManual = false) {
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
             if (queue.length === 0) return;
-            showToast(`Syncing ${queue.length} updates...`, true);
+            
+            if (isManual || queue.length >= 1) {
+                showToast(`Syncing ${queue.length} updates...`, true);
+            }
+            
             let remainingQueue = [];
             for (let item of queue) {
                 try {
-                    await fetch(GAS_URL, {
+                    await fetchWithTimeout(GAS_URL, {
                         method: 'POST', mode: 'no-cors',
                         body: new URLSearchParams(item),
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        timeout: 8000 // 8 秒超時
                     });
                     
                     let logToUpdate = flightLogs.find(l => String(l.index) === String(item.index));
@@ -1005,33 +1032,47 @@
                         delete logToUpdate.syncStatus;
                         localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
                     }
-                } catch (err) { remainingQueue.push(item); }
+                } catch (err) { 
+                    remainingQueue.push(item); 
+                }
             }
+            
             localStorage.setItem(SYNC_QUEUE, JSON.stringify(remainingQueue));
+            
             if (remainingQueue.length === 0) {
-                showToast("All offline data synced!");
+                if (queue.length >= 1) showToast("All offline data synced!");
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
             }
-            else showToast(`Offline mode. ${remainingQueue.length} items waiting.`);
+            else {
+                if (isManual) showToast(`Weak network. ${remainingQueue.length} items waiting.`);
+                else console.warn(`Sync incomplete, ${remainingQueue.length} items left in queue due to network/timeout.`);
+            }
         }
 
         function manualRefreshCloud() {
             const btn = document.querySelector('button[onclick="manualRefreshCloud()"] svg');
             if(btn) btn.classList.add('animate-spin');
-            fetchDataFromCloud().finally(() => {
+            
+            // Attempt sync first, then fetch
+            processSyncQueue(true).then(() => {
+                return fetchDataFromCloud();
+            }).finally(() => {
                 if(btn) btn.classList.remove('animate-spin');
             });
         }
 
         async function fetchDataFromCloud() {
             if(!GAS_URL || GAS_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
-            if(flightLogs.length === 0) showToast("Fetching initial data...", true);
+            
+            const isFirstLoad = (flightLogs.length === 0);
+            if(isFirstLoad) showToast("Fetching latest data...", true);
             
             try {
-                const response = await fetch(GAS_URL);
+                const response = await fetchWithTimeout(GAS_URL, { timeout: 8000 });
                 const data = await response.json(); 
+                
                 if(data.error === "offline") {
-                    showToast("Offline. Using local data.");
+                    if(isFirstLoad) showToast("Offline. Please connect to internet.");
                     return;
                 }
                 
@@ -1089,12 +1130,20 @@
                 });
 
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-                document.getElementById('sync-toast').classList.remove('show');
+                
+                if(isFirstLoad) document.getElementById('sync-toast').classList.remove('show');
                 
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
                 if(!document.getElementById('view-stats').classList.contains('hidden')) renderStats();
+                
             } catch (err) { 
-                showToast("Offline. Using cached data.");
+                if (err.name === 'AbortError') {
+                    console.warn("Fetch from cloud timed out.");
+                    if(isFirstLoad) showToast("Network too slow. Using empty state.");
+                } else {
+                    console.warn("Fetch from cloud failed.", err);
+                    if(isFirstLoad) showToast("Offline. Please check connection.");
+                }
             }
         }
 
