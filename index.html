@@ -21,7 +21,7 @@
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .btn { display: inline-block; padding: 0.8em 1.6em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; background-color: #f1f5f9; }
-  
+    
     /* 天氣2格圖排列 */
     .img-grid-2col { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
     .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 100%; height: auto; }
@@ -435,49 +435,60 @@
   
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- 關鍵修正：重新引用 app.js -->
 <script src="app.js?v=2.0"></script>
 <script>
+  // ==========================================
+  // 🚀 核心：Service Worker 註冊與自動更新機制
+  // ==========================================
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-        console.log('✅ ServiceWorker 註冊成功');
-      }).catch((err) => {
-        console.error('ServiceWorker 註冊失敗:', err);
-      });
+    // 預覽環境防護機制
+    if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
+      console.log('⚠️ 偵測到預覽環境，跳過 Service Worker 註冊。');
+      const versionEl = document.getElementById('sys-version');
+      if (versionEl) versionEl.innerText = `SYS Build 18 (Preview Mode)`;
+    } else {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+          console.log('✅ ServiceWorker 註冊成功');
+        }).catch((err) => {
+          console.error('ServiceWorker 註冊失敗:', err);
+        });
 
-      // ==========================================
-      // 🚀 核心升級：終極強制更新機制 (Controller Change)
-      // ==========================================
-      let refreshing = false; // 加上防護鎖，避免無限重新整理迴圈
-      
-      // 當 Service Worker 的控制權發生轉移（通常是因為新版本執行了 skipWaiting()）
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          console.log('🔄 偵測到新版飛行計畫 (Service Worker 更新)，執行強制戰術重新整理！');
-          window.location.reload(); // 物理級強制重整頁面
-          refreshing = true;
-        }
-      });
-
-      // ------------------------------------------
-      // 📡 跨執行緒通訊：回報目前版號給前端 UI (維持不變)
-      // ------------------------------------------
-      navigator.serviceWorker.ready.then(registration => {
-        if (registration.active) {
-          registration.active.postMessage('GET_VERSION');
-        }
-      });
-
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'VERSION_REPORT') {
-          const versionEl = document.getElementById('sys-version');
-          if (versionEl) {
-            const displayVer = event.data.version.replace('briefing-', '');
-            versionEl.innerText = `SYS Build ${displayVer}`;
+        // ==========================================
+        // 🚀 核心升級：終極強制更新機制 (Controller Change)
+        // ==========================================
+        let refreshing = false; // 加上防護鎖，避免無限重新整理迴圈
+        
+        // 當 Service Worker 的控制權發生轉移（通常是因為新版本執行了 skipWaiting()）
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            console.log('🔄 偵測到新版系統 (Service Worker 更新)，執行強制戰術重新整理！');
+            window.location.reload(); // 物理級強制重整頁面
+            refreshing = true;
           }
-        }
+        });
+
+        // ------------------------------------------
+        // 📡 跨執行緒通訊：回報目前版號給前端 UI
+        // ------------------------------------------
+        navigator.serviceWorker.ready.then(registration => {
+          if (registration.active) {
+            registration.active.postMessage('GET_VERSION');
+          }
+        });
+
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'VERSION_REPORT') {
+            const versionEl = document.getElementById('sys-version');
+            if (versionEl) {
+              const displayVer = event.data.version.replace('briefing-', '');
+              versionEl.innerText = `SYS Build ${displayVer}`;
+            }
+          }
+        });
       });
-    });
+    }
   }
 </script>
 </body>
