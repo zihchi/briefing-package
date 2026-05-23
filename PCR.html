@@ -2,10 +2,12 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>PCR/PCN 跑道強度解碼器暨機隊航班評估系統</title>
     <!-- 引入 Tailwind CSS 以呈現具現代感、質感的 UI -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide 圖示庫 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- 引入 MathJax 載入 LaTeX 數學公式 -->
     <script>
         window.MathJax = {
@@ -33,301 +35,387 @@
         body {
             background-color: #f3f4f6; /* Tailwind gray-100 */
         }
+
+        /* 導覽列 Header 專屬樣式 */
+        .top-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            padding: 16px 16px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 10;
+        }
+        @media (min-width: 768px) {
+            .top-header { padding: 16px 32px; }
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .back-btn {
+            display: inline-flex;
+            padding: 8px;
+            background-color: #f1f5f9;
+            color: #475569;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            margin-right: 8px;
+        }
+        .back-btn:hover {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+        .header-icon {
+            color: #0284c7;
+        }
+        .header-icon svg {
+            width: 32px;
+            height: 32px;
+        }
+        .header-text h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.025em;
+            color: #1e293b;
+        }
+        @media (min-width: 768px) {
+            .header-text h1 { font-size: 24px; }
+        }
+        .header-text p {
+            margin: 4px 0 0 0;
+            font-size: 11px;
+            color: #64748b;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 text-slate-800">
+<body class="min-h-screen flex flex-col items-center bg-gray-100 text-slate-800">
 
-    <div class="max-w-5xl w-full bg-white rounded-2xl shadow-xl overflow-hidden my-4">
-        
-        <!-- 標題區塊 -->
-        <div class="bg-slate-800 text-white p-6 text-center relative overflow-hidden">
-            <h1 class="text-3xl font-bold tracking-wide relative z-10">PCR / PCN 跑道解碼 & 航班評估系統</h1>
-            <p class="text-slate-300 mt-2 text-sm relative z-10">Pavement Classification Rating / Fleet Operation Assessment</p>
+    <!-- 頂部導覽列 -->
+    <header class="top-header">
+        <div class="header-content">
+            <a href="index.html" class="back-btn" title="返回簡報箱">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <div class="header-icon">
+                <i data-lucide="plane-takeoff"></i>
+            </div>
+            <div class="header-text">
+                <h1>跑道強度解碼與評估系統</h1>
+                <p>PCR / PCN Assessment</p>
+            </div>
         </div>
+    </header>
 
-        <div class="p-6 sm:p-8 space-y-6">
-            <!-- 輸入區塊 -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                
-                <!-- PCR 數值輸入 (數字鍵盤) -->
-                <div class="w-full sm:w-1/3">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">跑道強度 (PCR/PCN)</label>
-                    <input type="number" id="pcrNumber" placeholder="例如: 1040" min="0" value="1040"
-                        class="w-full text-center text-2xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                </div>
-
-                <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
-
-                <!-- 鋪面類型 (Pavement Type) -->
-                <div class="w-full sm:w-1/6">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">鋪面類型</label>
-                    <select id="pavementType" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
-                        <option value="F" selected>F (柔性)</option>
-                        <option value="R">R (剛性)</option>
-                    </select>
-                </div>
-
-                <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
-
-                <!-- 路基強度 (Subgrade Strength) -->
-                <div class="w-full sm:w-1/6">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">路基強度</label>
-                    <select id="subgradeStrength" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
-                        <option value="A">A (高)</option>
-                        <option value="B">B (中)</option>
-                        <option value="C" selected>C (低)</option>
-                        <option value="D">D (極低)</option>
-                    </select>
-                </div>
-
-                <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
-
-                <!-- 胎壓限制 (Tire Pressure) -->
-                <div class="w-full sm:w-1/6">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">胎壓限制</label>
-                    <select id="tirePressure" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
-                        <option value="W">W (無限制)</option>
-                        <option value="X" selected>X (中)</option>
-                        <option value="Y">Y (低)</option>
-                        <option value="Z">Z (極低)</option>
-                    </select>
-                </div>
-
-                <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
-
-                <!-- 評估方法 (Evaluation Method) -->
-                <div class="w-full sm:w-1/6">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">評估方法</label>
-                    <select id="evalMethod" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
-                        <option value="T" selected>T (技術)</option>
-                        <option value="U">U (經驗)</option>
-                    </select>
-                </div>
-
+    <!-- 主要內容區 -->
+    <main class="w-full flex-1 flex justify-center p-4 sm:p-6">
+        <div class="max-w-5xl w-full bg-white rounded-2xl shadow-xl overflow-hidden my-0 h-fit">
+            
+            <!-- 標題區塊 -->
+            <div class="bg-slate-800 text-white p-6 text-center relative overflow-hidden">
+                <h1 class="text-3xl font-bold tracking-wide relative z-10">PCR / PCN 跑道解碼 & 航班評估系統</h1>
+                <p class="text-slate-300 mt-2 text-sm relative z-10">Pavement Classification Rating / Fleet Operation Assessment</p>
             </div>
 
-            <!-- 兩欄主內容區 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- 左側：解碼結果顯示區 -->
-                <div class="space-y-4">
-                    <h2 class="text-lg font-bold text-slate-700 border-b-2 border-slate-200 pb-2">📖 跑道代碼解析</h2>
-                    <div id="decodeResult" class="space-y-3">
-                        <!-- 結果將由 JavaScript 動態生成注入 -->
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- 輸入區塊 -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    
+                    <!-- PCR 數值輸入 (數字鍵盤) -->
+                    <div class="w-full sm:w-1/3">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">跑道強度 (PCR/PCN)</label>
+                        <input type="number" id="pcrNumber" placeholder="例如: 1040" min="0" value="1040"
+                            class="w-full text-center text-2xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
                     </div>
-                </div>
 
-                <!-- 右側：飛機操作評估區 -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b-2 border-slate-200 pb-2">
-                        <h2 class="text-lg font-bold text-slate-700">✈️ 航班操作評估</h2>
-                        <!-- 機型選擇下拉選單 -->
-                        <select id="aircraftSelect" class="text-sm font-bold border-2 border-blue-200 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm">
-                            <option value="A330_900">A330-900 (WV920)</option>
-                            <option value="A321_NEO">A321NEO (WV053)</option>
+                    <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
+
+                    <!-- 鋪面類型 (Pavement Type) -->
+                    <div class="w-full sm:w-1/6">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">鋪面類型</label>
+                        <select id="pavementType" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
+                            <option value="F" selected>F (柔性)</option>
+                            <option value="R">R (剛性)</option>
                         </select>
                     </div>
-                    <div id="assessmentResult" class="flex flex-col justify-start">
-                        <!-- 評估結果將由 JavaScript 動態生成注入 -->
+
+                    <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
+
+                    <!-- 路基強度 (Subgrade Strength) -->
+                    <div class="w-full sm:w-1/6">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">路基強度</label>
+                        <select id="subgradeStrength" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
+                            <option value="A">A (高)</option>
+                            <option value="B">B (中)</option>
+                            <option value="C" selected>C (低)</option>
+                            <option value="D">D (極低)</option>
+                        </select>
+                    </div>
+
+                    <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
+
+                    <!-- 胎壓限制 (Tire Pressure) -->
+                    <div class="w-full sm:w-1/6">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">胎壓限制</label>
+                        <select id="tirePressure" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
+                            <option value="W">W (無限制)</option>
+                            <option value="X" selected>X (中)</option>
+                            <option value="Y">Y (低)</option>
+                            <option value="Z">Z (極低)</option>
+                        </select>
+                    </div>
+
+                    <div class="hidden sm:block text-3xl font-light text-slate-400 mt-5">/</div>
+
+                    <!-- 評估方法 (Evaluation Method) -->
+                    <div class="w-full sm:w-1/6">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">評估方法</label>
+                        <select id="evalMethod" class="w-full text-center text-xl font-bold p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white cursor-pointer transition-colors appearance-none text-center">
+                            <option value="T" selected>T (技術)</option>
+                            <option value="U">U (經驗)</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- 兩欄主內容區 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 左側：解碼結果顯示區 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-slate-700 border-b-2 border-slate-200 pb-2">📖 跑道代碼解析</h2>
+                        <div id="decodeResult" class="space-y-3">
+                            <!-- 結果將由 JavaScript 動態生成注入 -->
+                        </div>
+                    </div>
+
+                    <!-- 右側：飛機操作評估區 -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b-2 border-slate-200 pb-2">
+                            <h2 class="text-lg font-bold text-slate-700">✈️ 航班操作評估</h2>
+                            <!-- 機型選擇下拉選單 -->
+                            <select id="aircraftSelect" class="text-sm font-bold border-2 border-blue-200 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm">
+                                <option value="A330_900">A330-900 (WV920)</option>
+                                <option value="A321_NEO">A321NEO (WV053)</option>
+                            </select>
+                        </div>
+                        <div id="assessmentResult" class="flex flex-col justify-start">
+                            <!-- 評估結果將由 JavaScript 動態生成注入 -->
+                        </div>
                     </div>
                 </div>
+
+                <!-- 折疊面板區：採用 space-y-4 確保完美間距 -->
+                <div class="space-y-4 pt-4">
+                    
+                    <!-- 1. 計算方式折疊面板 -->
+                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
+                        <details class="group" id="calcDetails">
+                            <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
+                                <span class="flex items-center gap-2">
+                                    <span>📐</span> 計算方式 (Calculation Method)
+                                </span>
+                                <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
+                            </summary>
+                            <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-4 bg-white animate-fadeIn" id="calculationMethodContent">
+                                <!-- 計算方式細節由 JS 動態生成 -->
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 2. PCR(ACR) 與 PCN(ACN) 新舊制差異備註 -->
+                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
+                        <details class="group">
+                            <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
+                                <span class="flex items-center gap-2">
+                                    <span>🔄</span> 備註：PCR(ACR) 與 PCN(ACN) 新舊制差異 (Note: System Differences)
+                                </span>
+                                <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
+                            </summary>
+                            <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
+                                <p class="font-semibold text-slate-800">
+                                    國際民航組織（ICAO）於 2024 年 11 月正式全面推行全新的 <span class="text-blue-600">ACR-PCR</span> 鋪面強度申報系統，用以取代沿用數十年的舊款 <span class="text-slate-500">ACN-PCN</span> 系統。
+                                </p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">📍 舊制：ACN - PCN 系統</h4>
+                                        <p class="text-xs mb-2">
+                                            <strong>設計基底：</strong>基於1980年代的「等值單輪載重（Equivalent Single Wheel Load, ESWL）」概念。
+                                        </p>
+                                        <p class="text-xs text-slate-600">
+                                            將複雜的航機多輪起落架，簡化為單一虛擬車輪對地面的應力。隨著現代寬體客機（如 B777、A350、A380）起落架結構越來越複雜、載重成倍增長，舊有 ESWL 模型在模擬地基內部應力分佈時，誤差逐漸擴大，已無法精準保障新型鋪面的結構壽命。
+                                        </p>
+                                    </div>
+
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-blue-800 border-b border-slate-200 pb-2 mb-3">⚡ 新制：ACR - PCR 系統</h4>
+                                        <p class="text-xs mb-2">
+                                            <strong>設計基底：</strong>基於現代物理學的「多層彈性理論（Layered Elastic Analysis, LEA）」與結構應變。
+                                        </p>
+                                        <p class="text-xs text-slate-600">
+                                            新制摒棄了簡化的單輪概念，直接將起落架所有輪胎的實際配置、輪距及胎壓輸入多層彈性彈性力學模型，並以標準輪載重（$100\text{ kN}$）為基準，精確計算鋪面瀝青或混凝土底層的實際剪切應變與彎曲應變，大幅提升計算精確度。
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-amber-50/50 p-4 rounded-lg border border-amber-100">
+                                    <h4 class="font-bold text-amber-950 mb-2 flex items-center gap-1">
+                                        <span>⚠️</span> 最直觀的實務差異：十倍數值跨度
+                                    </h4>
+                                    <p class="text-xs text-amber-900 leading-relaxed mb-2">
+                                        新制（ACR/PCR）與舊制（ACN/PCN）在力學定義基準上的根本改變，導致兩者數值大小存在約 <strong>10 倍</strong> 的差距：
+                                    </p>
+                                    <div class="bg-white/80 p-3 rounded border border-amber-200 text-xs text-slate-700 font-mono space-y-1.5 my-2">
+                                        <p>$$\text{舊制 PCN 範圍：} \quad 10 \sim 150 \quad (\text{常見客機 ACN 約在 } 30 \sim 110)$$</p>
+                                        <p>$$\text{新制 PCR 範圍：} \quad 100 \sim 1500 \quad (\text{常見客機 ACR 約在 } 300 \sim 1100)$$</p>
+                                        <p class="text-blue-700 font-bold">$$\text{簡易對照轉換關係：} \quad ACR \approx 10 \times ACN \quad \text{或} \quad PCR \approx 10 \times PCN$$</p>
+                                    </div>
+                                    <p class="text-xs text-amber-950 font-semibold mt-2">
+                                        💡 實務提醒：當您查閱最新機場航圖，看到 PCR 數字為 <span class="underline">1040</span> 時，切勿恐慌！這代表該跑道強度約等效於舊制 PCN 的 <span class="underline">104</span>，這也是本評估系統在背景自動為您進行十倍折算、以完美相容現有傳統表格數據的科學依據。
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 3. 備註：ACN解釋折疊面板 -->
+                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
+                        <details class="group">
+                            <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
+                                <span class="flex items-center gap-2">
+                                    <span>📋</span> 備註：ACN解釋 (Note: ACN Explanation)
+                                </span>
+                                <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
+                            </summary>
+                            <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
+                                <p class="font-semibold text-slate-800">
+                                    國際民航組織（ICAO）傳統 ACN-PCN 機場跑道強度鋪面分類系統中，針對路基強度（Subgrade Strength Category）的標準定義表格。
+                                </p>
+                                <p>
+                                    此表格是航機強度代號（ACN）在計算時，用來對應剛性與柔性兩種不同鋪面、不同地基承載力的基準。以下為詳細的內容與專有名詞繁體中文解釋：
+                                </p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">1. 左側：剛性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACN FOR RIGID PAVEMENT</span></h4>
+                                        <p class="text-xs mb-3">
+                                            剛性鋪面（通常指水泥混凝土跑道）的路基強度是以<strong>威氏路基反應模數</strong>（Westergaard's modulus of subgrade reaction, $k$）來表示，單位為 $\text{MN/m}^3$（百萬牛頓／立方公尺）。
+                                        </p>
+                                        <p class="text-xs text-slate-500 mb-2">表格將其分為四個等級：</p>
+                                        <ul class="space-y-1.5 text-xs text-slate-700">
+                                            <li><span class="font-semibold text-blue-600">High（高強度）：</span>標準值為 150 $\text{MN/m}^3$（代號為 A）</li>
+                                            <li><span class="font-semibold text-emerald-600">Medium（中強度）：</span>標準值為 80 $\text{MN/m}^3$（代號為 B）</li>
+                                            <li><span class="font-semibold text-amber-600">Low（低強度）：</span>標準值為 40 $\text{MN/m}^3$（代號為 C）</li>
+                                            <li><span class="font-semibold text-rose-600">Ultra-low（極低強度）：</span>標準值為 20 $\text{MN/m}^3$（代號為 D）</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">2. 右側：柔性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACN FOR FLEXIBLE PAVEMENT</span></h4>
+                                        <p class="text-xs mb-3">
+                                            柔性鋪面（通常指瀝青混凝土跑道）的路基強度則是以<strong>加州承載比</strong>（California Bearing Ratio, CBR）的百分比值來表示。
+                                        </p>
+                                        <p class="text-xs text-slate-500 mb-2">表格同樣將其分為四個等級：</p>
+                                        <ul class="space-y-1.5 text-xs text-slate-700">
+                                            <li><span class="font-semibold text-blue-600">High（高強度）：</span>CBR = 15（代號為 A）</li>
+                                            <li><span class="font-semibold text-emerald-600">Medium（中強度）：</span>CBR = 10（代號為 B）</li>
+                                            <li><span class="font-semibold text-amber-600">Low（低強度）：</span>CBR = 6（代號為 C）</li>
+                                            <li><span class="font-semibold text-rose-600">Ultra-low（極低強度）：</span>CBR = 3（代號為 D）</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 mt-4">
+                                    <h4 class="font-bold text-blue-950 mb-2 flex items-center gap-1">
+                                        <span>💡</span> 觀念複習與對照應用
+                                    </h4>
+                                    <p class="text-xs text-blue-900 leading-relaxed">
+                                        在實際的航機操作與性能操作手冊（如 FCOM 或機場資料）中，當你要查閱飛機的 ACN 值時，必須先確認目的地機場跑道的鋪面類型（剛性 R 或柔性 F）以及路基等級（A、B、C、D）。
+                                    </p>
+                                    <p class="text-xs text-blue-900 leading-relaxed mt-2 font-semibold">
+                                        舉例說明：若某機場跑道發布的 PCN 代號中包含 F/C，代表該跑道為柔性鋪面（Flexible）且路基為低強度（Low, CBR = 6）。此時飛行員在查閱飛機 ACN 時，就必須對應到右側「Flexible Pavement - Low」這一欄所計算出來的 ACN 值，並確保 $ACN \le PCN$ 以符合鋪面保護與安全操作限制。
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 4. 備註：ACR解釋折疊面板 -->
+                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
+                        <details class="group">
+                            <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
+                                <span class="flex items-center gap-2">
+                                    <span>🌟</span> 備註：ACR解釋 (Note: ACR Explanation)
+                                </span>
+                                <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
+                            </summary>
+                            <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
+                                <p class="font-semibold text-slate-800">
+                                    國際民航組織（ICAO）於全新 ACR-PCR 系統中，針對路基強度（Subgrade Strength Category）的最新統一標準定義。
+                                </p>
+                                <p>
+                                    在舊制 ACN 中，剛性與柔性鋪面各自採用了不同的物理測量基準（威氏模數 $k$ 與 加州承載比 CBR）。但在最新的 ACR 系統中，為了全面配合「多層彈性理論（LEA）」，<strong>兩者已完美統一，皆採用「路基彈性模數（Elastic Modulus, $E$）」</strong>作為唯一評估基準，並且將單位全面統整為 $\text{MPa}$（百萬帕斯卡）。
+                                </p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">剛性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACR FOR RIGID PAVEMENT</span></h4>
+                                        <p class="text-xs text-slate-500 mb-2">以路基彈性模數 ($E$) 為基準：</p>
+                                        <ul class="space-y-1.5 text-xs text-slate-700 font-mono">
+                                            <li><span class="font-semibold text-blue-600 font-sans">High (高強度 A)：</span>$200 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-emerald-600 font-sans">Medium (中強度 B)：</span>$120 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-amber-600 font-sans">Low (低強度 C)：</span>$80 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-rose-600 font-sans">Ultra-low (極低 D)：</span>$50 \text{ MPa}$</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">柔性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACR FOR FLEXIBLE PAVEMENT</span></h4>
+                                        <p class="text-xs text-slate-500 mb-2">同樣以路基彈性模數 ($E$) 為基準：</p>
+                                        <ul class="space-y-1.5 text-xs text-slate-700 font-mono">
+                                            <li><span class="font-semibold text-blue-600 font-sans">High (高強度 A)：</span>$200 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-emerald-600 font-sans">Medium (中強度 B)：</span>$120 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-amber-600 font-sans">Low (低強度 C)：</span>$80 \text{ MPa}$</li>
+                                            <li><span class="font-semibold text-rose-600 font-sans">Ultra-low (極低 D)：</span>$50 \text{ MPa}$</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100 mt-4">
+                                    <h4 class="font-bold text-emerald-950 mb-2 flex items-center gap-1">
+                                        <span>✨</span> 航管與簽派實務亮點
+                                    </h4>
+                                    <p class="text-xs text-emerald-900 leading-relaxed">
+                                        這項「度量單位大一統」是 ACR-PCR 新制最優雅的改進之一。這代表從今以後，工程師與簽派員在翻閱 FCOM 性能手冊時，無需再為了剛性與柔性跑道去切換不同的測量定義與思維模型。只要看到路基代碼 A，無論是水泥還是柏油跑道，其背後代表的地基彈性模數皆為 $200 \text{ MPa}$。這種直觀且對稱的設計，大幅降低了跨系統核對數據時的人為誤判風險。
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                </div>
+
             </div>
-
-            <!-- 折疊面板區：採用 space-y-4 確保完美間距 -->
-            <div class="space-y-4 pt-4">
-                
-                <!-- 1. 計算方式折疊面板 -->
-                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
-                    <details class="group" id="calcDetails">
-                        <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
-                            <span class="flex items-center gap-2">
-                                <span>📐</span> 計算方式 (Calculation Method)
-                            </span>
-                            <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
-                        </summary>
-                        <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-4 bg-white animate-fadeIn" id="calculationMethodContent">
-                            <!-- 計算方式細節由 JS 動態生成 -->
-                        </div>
-                    </details>
-                </div>
-
-                <!-- 2. PCR(ACR) 與 PCN(ACN) 新舊制差異備註 -->
-                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
-                    <details class="group">
-                        <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
-                            <span class="flex items-center gap-2">
-                                <span>🔄</span> 備註：PCR(ACR) 與 PCN(ACN) 新舊制差異 (Note: System Differences)
-                            </span>
-                            <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
-                        </summary>
-                        <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
-                            <p class="font-semibold text-slate-800">
-                                國際民航組織（ICAO）於 2024 年 11 月正式全面推行全新的 <span class="text-blue-600">ACR-PCR</span> 鋪面強度申報系統，用以取代沿用數十年的舊款 <span class="text-slate-500">ACN-PCN</span> 系統。
-                            </p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">📍 舊制：ACN - PCN 系統</h4>
-                                    <p class="text-xs mb-2">
-                                        <strong>設計基底：</strong>基於1980年代的「等值單輪載重（Equivalent Single Wheel Load, ESWL）」概念。
-                                    </p>
-                                    <p class="text-xs text-slate-600">
-                                        將複雜的航機多輪起落架，簡化為單一虛擬車輪對地面的應力。隨著現代寬體客機（如 B777、A350、A380）起落架結構越來越複雜、載重成倍增長，舊有 ESWL 模型在模擬地基內部應力分佈時，誤差逐漸擴大，已無法精準保障新型鋪面的結構壽命。
-                                    </p>
-                                </div>
-
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-blue-800 border-b border-slate-200 pb-2 mb-3">⚡ 新制：ACR - PCR 系統</h4>
-                                    <p class="text-xs mb-2">
-                                        <strong>設計基底：</strong>基於現代物理學的「多層彈性理論（Layered Elastic Analysis, LEA）」與結構應變。
-                                    </p>
-                                    <p class="text-xs text-slate-600">
-                                        新制摒棄了簡化的單輪概念，直接將起落架所有輪胎的實際配置、輪距及胎壓輸入多層彈性彈性力學模型，並以標準輪載重（$100\text{ kN}$）為基準，精確計算鋪面瀝青或混凝土底層的實際剪切應變與彎曲應變，大幅提升計算精確度。
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="bg-amber-50/50 p-4 rounded-lg border border-amber-100">
-                                <h4 class="font-bold text-amber-950 mb-2 flex items-center gap-1">
-                                    <span>⚠️</span> 最直觀的實務差異：十倍數值跨度
-                                </h4>
-                                <p class="text-xs text-amber-900 leading-relaxed mb-2">
-                                    新制（ACR/PCR）與舊制（ACN/PCN）在力學定義基準上的根本改變，導致兩者數值大小存在約 <strong>10 倍</strong> 的差距：
-                                </p>
-                                <div class="bg-white/80 p-3 rounded border border-amber-200 text-xs text-slate-700 font-mono space-y-1.5 my-2">
-                                    <p>$$\text{舊制 PCN 範圍：} \quad 10 \sim 150 \quad (\text{常見客機 ACN 約在 } 30 \sim 110)$$</p>
-                                    <p>$$\text{新制 PCR 範圍：} \quad 100 \sim 1500 \quad (\text{常見客機 ACR 約在 } 300 \sim 1100)$$</p>
-                                    <p class="text-blue-700 font-bold">$$\text{簡易對照轉換關係：} \quad ACR \approx 10 \times ACN \quad \text{或} \quad PCR \approx 10 \times PCN$$</p>
-                                </div>
-                                <p class="text-xs text-amber-950 font-semibold mt-2">
-                                    💡 實務提醒：當您查閱最新機場航圖，看到 PCR 數字為 <span class="underline">1040</span> 時，切勿恐慌！這代表該跑道強度約等效於舊制 PCN 的 <span class="underline">104</span>，這也是本評估系統在背景自動為您進行十倍折算、以完美相容現有傳統表格數據的科學依據。
-                                </p>
-                            </div>
-                        </div>
-                    </details>
-                </div>
-
-                <!-- 3. 備註：ACN解釋折疊面板 -->
-                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
-                    <details class="group">
-                        <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
-                            <span class="flex items-center gap-2">
-                                <span>📋</span> 備註：ACN解釋 (Note: ACN Explanation)
-                            </span>
-                            <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
-                        </summary>
-                        <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
-                            <p class="font-semibold text-slate-800">
-                                國際民航組織（ICAO）傳統 ACN-PCN 機場跑道強度鋪面分類系統中，針對路基強度（Subgrade Strength Category）的標準定義表格。
-                            </p>
-                            <p>
-                                此表格是航機強度代號（ACN）在計算時，用來對應剛性與柔性兩種不同鋪面、不同地基承載力的基準。以下為詳細的內容與專有名詞繁體中文解釋：
-                            </p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">1. 左側：剛性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACN FOR RIGID PAVEMENT</span></h4>
-                                    <p class="text-xs mb-3">
-                                        剛性鋪面（通常指水泥混凝土跑道）的路基強度是以<strong>威氏路基反應模數</strong>（Westergaard's modulus of subgrade reaction, $k$）來表示，單位為 $\text{MN/m}^3$（百萬牛頓／立方公尺）。
-                                    </p>
-                                    <p class="text-xs text-slate-500 mb-2">表格將其分為四個等級：</p>
-                                    <ul class="space-y-1.5 text-xs text-slate-700">
-                                        <li><span class="font-semibold text-blue-600">High（高強度）：</span>標準值為 150 $\text{MN/m}^3$（代號為 A）</li>
-                                        <li><span class="font-semibold text-emerald-600">Medium（中強度）：</span>標準值為 80 $\text{MN/m}^3$（代號為 B）</li>
-                                        <li><span class="font-semibold text-amber-600">Low（低強度）：</span>標準值為 40 $\text{MN/m}^3$（代號為 C）</li>
-                                        <li><span class="font-semibold text-rose-600">Ultra-low（極低強度）：</span>標準值為 20 $\text{MN/m}^3$（代號為 D）</li>
-                                    </ul>
-                                </div>
-
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">2. 右側：柔性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACN FOR FLEXIBLE PAVEMENT</span></h4>
-                                    <p class="text-xs mb-3">
-                                        柔性鋪面（通常指瀝青混凝土跑道）的路基強度則是以<strong>加州承載比</strong>（California Bearing Ratio, CBR）的百分比值來表示。
-                                    </p>
-                                    <p class="text-xs text-slate-500 mb-2">表格同樣將其分為四個等級：</p>
-                                    <ul class="space-y-1.5 text-xs text-slate-700">
-                                        <li><span class="font-semibold text-blue-600">High（高強度）：</span>CBR = 15（代號為 A）</li>
-                                        <li><span class="font-semibold text-emerald-600">Medium（中強度）：</span>CBR = 10（代號為 B）</li>
-                                        <li><span class="font-semibold text-amber-600">Low（低強度）：</span>CBR = 6（代號為 C）</li>
-                                        <li><span class="font-semibold text-rose-600">Ultra-low（極低強度）：</span>CBR = 3（代號為 D）</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 mt-4">
-                                <h4 class="font-bold text-blue-950 mb-2 flex items-center gap-1">
-                                    <span>💡</span> 觀念複習與對照應用
-                                </h4>
-                                <p class="text-xs text-blue-900 leading-relaxed">
-                                    在實際的航機操作與性能操作手冊（如 FCOM 或機場資料）中，當你要查閱飛機的 ACN 值時，必須先確認目的地機場跑道的鋪面類型（剛性 R 或柔性 F）以及路基等級（A、B、C、D）。
-                                </p>
-                                <p class="text-xs text-blue-900 leading-relaxed mt-2 font-semibold">
-                                    舉例說明：若某機場跑道發布的 PCN 代號中包含 F/C，代表該跑道為柔性鋪面（Flexible）且路基為低強度（Low, CBR = 6）。此時飛行員在查閱飛機 ACN 時，就必須對應到右側「Flexible Pavement - Low」這一欄所計算出來的 ACN 值，並確保 $ACN \le PCN$ 以符合鋪面保護與安全操作限制。
-                                </p>
-                            </div>
-                        </div>
-                    </details>
-                </div>
-
-                <!-- 4. 備註：ACR解釋折疊面板 -->
-                <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
-                    <details class="group">
-                        <summary class="flex justify-between items-center p-4 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors list-none select-none">
-                            <span class="flex items-center gap-2">
-                                <span>🌟</span> 備註：ACR解釋 (Note: ACR Explanation)
-                            </span>
-                            <span class="transition-transform duration-300 group-open:rotate-180 text-slate-400">▼</span>
-                        </summary>
-                        <div class="p-5 border-t border-slate-200 text-sm text-slate-600 space-y-6 bg-white leading-relaxed">
-                            <p class="font-semibold text-slate-800">
-                                國際民航組織（ICAO）於全新 ACR-PCR 系統中，針對路基強度（Subgrade Strength Category）的最新統一標準定義。
-                            </p>
-                            <p>
-                                在舊制 ACN 中，剛性與柔性鋪面各自採用了不同的物理測量基準（威氏模數 $k$ 與 加州承載比 CBR）。但在最新的 ACR 系統中，為了全面配合「多層彈性理論（LEA）」，<strong>兩者已完美統一，皆採用「路基彈性模數（Elastic Modulus, $E$）」</strong>作為唯一評估基準，並且將單位全面統整為 $\text{MPa}$（百萬帕斯卡）。
-                            </p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">剛性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACR FOR RIGID PAVEMENT</span></h4>
-                                    <p class="text-xs text-slate-500 mb-2">以路基彈性模數 ($E$) 為基準：</p>
-                                    <ul class="space-y-1.5 text-xs text-slate-700 font-mono">
-                                        <li><span class="font-semibold text-blue-600 font-sans">High (高強度 A)：</span>$200 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-emerald-600 font-sans">Medium (中強度 B)：</span>$120 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-amber-600 font-sans">Low (低強度 C)：</span>$80 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-rose-600 font-sans">Ultra-low (極低 D)：</span>$50 \text{ MPa}$</li>
-                                    </ul>
-                                </div>
-
-                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                                    <h4 class="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">柔性鋪面路基強度<br><span class="text-xs text-slate-400 font-normal">ACR FOR FLEXIBLE PAVEMENT</span></h4>
-                                    <p class="text-xs text-slate-500 mb-2">同樣以路基彈性模數 ($E$) 為基準：</p>
-                                    <ul class="space-y-1.5 text-xs text-slate-700 font-mono">
-                                        <li><span class="font-semibold text-blue-600 font-sans">High (高強度 A)：</span>$200 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-emerald-600 font-sans">Medium (中強度 B)：</span>$120 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-amber-600 font-sans">Low (低強度 C)：</span>$80 \text{ MPa}$</li>
-                                        <li><span class="font-semibold text-rose-600 font-sans">Ultra-low (極低 D)：</span>$50 \text{ MPa}$</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100 mt-4">
-                                <h4 class="font-bold text-emerald-950 mb-2 flex items-center gap-1">
-                                    <span>✨</span> 航管與簽派實務亮點
-                                </h4>
-                                <p class="text-xs text-emerald-900 leading-relaxed">
-                                    這項「度量單位大一統」是 ACR-PCR 新制最優雅的改進之一。這代表從今以後，工程師與簽派員在翻閱 FCOM 性能手冊時，無需再為了剛性與柔性跑道去切換不同的測量定義與思維模型。只要看到路基代碼 A，無論是水泥還是柏油跑道，其背後代表的地基彈性模數皆為 $200 \text{ MPa}$。這種直觀且對稱的設計，大幅降低了跨系統核對數據時的人為誤判風險。
-                                </p>
-                            </div>
-                        </div>
-                    </details>
-                </div>
-
-            </div>
-
         </div>
-    </div>
+    </main>
 
     <!-- 邏輯處理區塊 -->
     <script>
+        // 啟用 Lucide Icon 渲染
+        lucide.createIcons();
+
         // --- 1. 定義代碼字典 (解碼用，加入 psi 換算) ---
         const dictionary = {
             pavement: {
