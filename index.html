@@ -470,6 +470,12 @@
           console.log('✅ ServiceWorker 註冊成功');
           swRegistration = reg;
 
+          // 【新增防呆】如果新版 SW 之前已經下載好並在背景等待，直接喚醒橫幅
+          if (reg.waiting) {
+            newWorker = reg.waiting;
+            if (updateBanner) updateBanner.style.display = 'block';
+          }
+
           // 監聽是否有新的 Service Worker 安裝
           reg.addEventListener('updatefound', () => {
             newWorker = reg.installing;
@@ -499,7 +505,13 @@
             if (swRegistration) {
               btnCheckUpdate.innerText = "⏳ 檢查中...";
               swRegistration.update().then(() => {
-                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 1500);
+                // 【優化】如果檢查完確認伺服器沒有更新的檔案，明確顯示已是最新
+                if (!swRegistration.installing && !swRegistration.waiting) {
+                  btnCheckUpdate.innerText = "✅ 已是最新";
+                } else {
+                  btnCheckUpdate.innerText = "✅ 檢查完成";
+                }
+                setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
               }).catch(() => {
                 btnCheckUpdate.innerText = "❌ 檢查失敗";
                 setTimeout(() => { btnCheckUpdate.innerText = "檢查更新"; }, 2000);
