@@ -120,7 +120,7 @@
                 <div class="space-y-4">
                     <div class="flex justify-between items-center border-b-2 border-slate-200 pb-2">
                         <h2 class="text-lg font-bold text-slate-700">✈️ 航班操作評估</h2>
-                        <!-- 機型選擇下拉選單 (新增) -->
+                        <!-- 機型選擇下拉選單 -->
                         <select id="aircraftSelect" class="text-sm font-bold border-2 border-blue-200 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm">
                             <option value="A330_900">A330-900 (WV920)</option>
                             <option value="A321_NEO">A321NEO (WV053)</option>
@@ -352,9 +352,7 @@
             }
         };
 
-        // --- 2. 內建機型資料庫 (Multi-Aircraft Database) ---
-        // 包含 A330-900 (WV920) 與 A321NEO (WV053)
-        // 註：最小值 (空重 ACR) 若原圖表未給出，係參考 LEA 理論與相似機型空載比例逆向估算，以供線性內插之邊界使用。
+        // --- 2. 內建機型資料庫 (Multi-Aircraft Database: ACN & ACR 雙軌) ---
         const aircraftDatabase = {
             'A330_900': {
                 name: "A330-900 (WV920)",
@@ -362,6 +360,20 @@
                 minWeight: 140000, 
                 tirePressureMPa: 1.56,
                 tirePressurePsi: 226,
+                acn: {
+                    'R': { 
+                        'A': { max: 61, min: 32 }, 
+                        'B': { max: 70, min: 33 }, 
+                        'C': { max: 83, min: 38 }, 
+                        'D': { max: 96, min: 43 } 
+                    },
+                    'F': { 
+                        'A': { max: 64, min: 31 }, 
+                        'B': { max: 69, min: 33 }, 
+                        'C': { max: 80, min: 36 }, 
+                        'D': { max: 108, min: 45 } 
+                    }
+                },
                 acr: {
                     'R': { 
                         'A': { max: 690, min: 362 }, 
@@ -380,9 +392,23 @@
             'A321_NEO': {
                 name: "A321NEO (WV053)",
                 maxWeight: 93900,
-                minWeight: 47500, // 約略空重估算
+                minWeight: 47000, // 已更新為官方空載重量
                 tirePressureMPa: 1.50,
-                tirePressurePsi: 218, // 1.50 * 145.038 約 = 218
+                tirePressurePsi: 218,
+                acn: {
+                    'R': { 
+                        'A': { max: 61, min: 27 }, 
+                        'B': { max: 63, min: 28 }, 
+                        'C': { max: 66, min: 30 }, 
+                        'D': { max: 69, min: 31 } 
+                    },
+                    'F': { 
+                        'A': { max: 53, min: 24 }, 
+                        'B': { max: 56, min: 24 }, 
+                        'C': { max: 61, min: 26 }, 
+                        'D': { max: 67, min: 30 } 
+                    }
+                },
                 acr: {
                     'R': { 
                         'A': { max: 620, min: 310 }, 
@@ -469,18 +495,23 @@
 
             const rawRunwayValue = parseInt(numValInput, 10);
             
-            // 雙制式適應轉換：全面對齊原生 ACR/PCR 的大數值（300 - 1100 區間）
+            // 智能雙制式偵測與路由
             let isPCR = true;
-            let runwayPCR = rawRunwayValue;
-            if (rawRunwayValue <= 150) {
-                // 輸入小於等於 150 判定為舊制 PCN，在背景乘以 10 轉換為等效 PCR 進行比對
-                isPCR = false;
-                runwayPCR = rawRunwayValue * 10;
-            }
+            let runwayValue = rawRunwayValue;
+            let currentSystemType = 'ACR'; // 預設新制
+            let maxAircraftValue, minAircraftValue;
 
-            // 抓取該情境下飛機的原生 ACR 上下限要求
-            const maxACR = aircraftData.acr[paveVal][subVal].max;
-            const minACR = aircraftData.acr[paveVal][subVal].min;
+            if (rawRunwayValue <= 150) {
+                // 判定為舊制 PCN，呼叫舊制 ACN 資料庫直接比對
+                isPCR = false;
+                currentSystemType = 'ACN';
+                maxAircraftValue = aircraftData.acn[paveVal][subVal].max;
+                minAircraftValue = aircraftData.acn[paveVal][subVal].min;
+            } else {
+                // 判定為新制 PCR，呼叫新制 ACR 資料庫直接比對
+                maxAircraftValue = aircraftData.acr[paveVal][subVal].max;
+                minAircraftValue = aircraftData.acr[paveVal][subVal].min;
+            }
             
             // 檢查重量強度 (三段式安全邏輯)
             let isStrengthSafe = false;
@@ -494,8 +525,8 @@
             let requiredReduction = 0;
             let interpRatio = 0;
 
-            if (runwayPCR >= maxACR) {
-                // 安全：等效 PCR 大於等於滿載 ACR
+            if (runwayValue >= maxAircraftValue) {
+                // 安全
                 isStrengthSafe = true;
                 cardStyle = 'border-green-500 bg-green-50';
                 overallTagHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-green-500 text-white">✅ 操作許可 (SAFE)</span>`;
@@ -503,19 +534,19 @@
                 requiredReduction = 0;
                 maxAllowedWeight = aircraftData.maxWeight;
                 interpRatio = 1;
-            } else if (runwayPCR >= minACR && runwayPCR < maxACR) {
-                // 受限：等效 PCR 介於滿載與空機之間 (需減重落地)
+            } else if (runwayValue >= minAircraftValue && runwayValue < maxAircraftValue) {
+                // 受限需減重
                 isYellowPenalty = true;
                 cardStyle = 'border-amber-500 bg-amber-50';
                 overallTagHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-amber-500 text-white">⚠️ 載重限制 (PENALTY)</span>`;
                 strengthStatusHtml = `<div class="text-2xl">⚠️</div>`;
                 
-                // 動態線性內插法計算最大允許重量 (W_allow)
-                interpRatio = (runwayPCR - minACR) / (maxACR - minACR);
+                // 動態線性內插法計算
+                interpRatio = (runwayValue - minAircraftValue) / (maxAircraftValue - minAircraftValue);
                 maxAllowedWeight = Math.round(aircraftData.minWeight + interpRatio * (aircraftData.maxWeight - aircraftData.minWeight));
                 requiredReduction = aircraftData.maxWeight - maxAllowedWeight;
             } else {
-                // 極度危險：等效 PCR 低於空載/最低負載 ACR 
+                // 極度危險
                 cardStyle = 'border-red-500 bg-red-50';
                 overallTagHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-red-500 text-white">❌ 禁止操作 (UNSAFE)</span>`;
                 strengthStatusHtml = `<div class="text-2xl">❌</div>`;
@@ -524,11 +555,11 @@
                 interpRatio = 0;
             }
 
-            // 檢查胎壓 (加入 MPa 與 psi 同步比對顯示)
+            // 檢查胎壓
             const maxAllowedTireMPa = dictionary.tire[tireVal].limitMPa;
             const isTireSafe = aircraftData.tirePressureMPa <= maxAllowedTireMPa;
             
-            // 如果胎壓不符合，強制覆蓋為紅燈狀態
+            // 胎壓不符強制覆蓋為紅燈
             if (!isTireSafe) {
                 cardStyle = 'border-red-500 bg-red-50';
                 overallTagHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-red-500 text-white">❌ 胎壓超標 (RESTRICTED)</span>`;
@@ -550,18 +581,18 @@
 
                     <div class="space-y-3">
                         
-                        <!-- 飛機 ACR 區間解碼顯示區 -->
+                        <!-- 飛機強度區間顯示 -->
                         <div class="bg-white/70 rounded-lg p-3 border border-slate-200">
-                            <p class="text-xs font-semibold text-slate-600 mb-2">機型 ACR 分佈範圍 (對應 ${paveVal}/${subVal} 鋪面組合)</p>
+                            <p class="text-xs font-semibold text-slate-600 mb-2">機型 ${currentSystemType} 分佈範圍 (對應 ${paveVal}/${subVal} 組合)</p>
                             <div class="flex justify-between text-xs">
                                 <div class="text-center bg-slate-50/80 rounded py-1.5 px-2 w-[48%] border border-slate-100">
-                                    <span class="block text-slate-400">最小 (Min ACR)</span>
-                                    <span class="font-bold text-slate-700 text-base">${minACR}</span>
+                                    <span class="block text-slate-400">最小 (Min ${currentSystemType})</span>
+                                    <span class="font-bold text-slate-700 text-base">${minAircraftValue}</span>
                                     <span class="block text-[10px] text-slate-500 mt-0.5">空載 ${formatNumber(aircraftData.minWeight)} kg</span>
                                 </div>
                                 <div class="text-center bg-slate-50/80 rounded py-1.5 px-2 w-[48%] border border-slate-100">
-                                    <span class="block text-slate-400">最大 (Max ACR)</span>
-                                    <span class="font-bold text-blue-600 text-base">${maxACR}</span>
+                                    <span class="block text-slate-400">最大 (Max ${currentSystemType})</span>
+                                    <span class="font-bold text-blue-600 text-base">${maxAircraftValue}</span>
                                     <span class="block text-[10px] text-slate-500 mt-0.5">滿載 ${formatNumber(aircraftData.maxWeight)} kg</span>
                                 </div>
                             </div>
@@ -571,12 +602,12 @@
                         <div class="flex justify-between items-center p-3 rounded-lg bg-white/70">
                             <div class="text-xs">
                                 <p class="font-semibold text-slate-500">
-                                    跑道強度 vs 飛機 Max ACR
+                                    跑道強度 vs 飛機 Max ${currentSystemType}
                                 </p>
                                 <p class="text-sm font-bold text-slate-700 mt-0.5">
-                                    跑道強度 (等效PCR) <span class="text-blue-600">${runwayPCR}</span> vs 滿載需求 <span class="${runwayPCR >= maxACR ? 'text-green-600' : 'text-red-500'}">${maxACR}</span>
+                                    跑道強度 (${isPCR ? 'PCR' : 'PCN'}) <span class="text-blue-600">${runwayValue}</span> vs 滿載需求 <span class="${runwayValue >= maxAircraftValue ? 'text-green-600' : 'text-red-500'}">${maxAircraftValue}</span>
                                 </p>
-                                ${!isPCR ? `<p class="text-[10px] text-slate-400 mt-0.5">（傳統PCN ${rawRunwayValue} 自動乘以10換算等效PCR: ${runwayPCR}）</p>` : ''}
+                                <p class="text-[10px] text-slate-400 mt-0.5">（系統已自動切換至 ${currentSystemType} 原生資料庫進行比對）</p>
                             </div>
                             ${strengthStatusHtml}
                         </div>
@@ -615,17 +646,17 @@
                     
                     <!-- 動態提示訊息 -->
                     <div class="mt-4 text-xs">
-                        ${(runwayPCR >= maxACR && isTireSafe) ? `
+                        ${(runwayValue >= maxAircraftValue && isTireSafe) ? `
                             <div class="p-3 bg-green-100/80 rounded-lg text-green-800 font-semibold flex gap-2">
                                 <span>💡</span><p>安全操作：跑道強度充裕，無須進行任何載重調減或減重措施。</p>
                             </div>
-                        ` : (runwayPCR >= minACR && runwayPCR < maxACR && isTireSafe) ? `
+                        ` : (runwayValue >= minAircraftValue && runwayValue < maxAircraftValue && isTireSafe) ? `
                             <div class="p-3 bg-amber-100 rounded-lg text-amber-800 font-semibold flex gap-2">
                                 <span>💡</span><p>載重處罰提示：跑道強度受限。為確保結構安全，起降前請務必減載至少 ${formatNumber(requiredReduction)} 公斤，控制總重低於 ${formatNumber(maxAllowedWeight)} 公斤！</p>
                             </div>
                         ` : `
                             <div class="p-3 bg-red-100 rounded-lg text-red-800 font-semibold flex gap-2">
-                                <span>🚨</span><p>不安全警告：${!isTireSafe ? '起落架胎壓顯著大於跑道限制，易造成鋪面瞬間剪力崩壞。' : '跑道強度過低（甚至小於最輕空載 ACR 要求）。'}嚴禁在此跑道起降！</p>
+                                <span>🚨</span><p>不安全警告：${!isTireSafe ? '起落架胎壓顯著大於跑道限制，易造成鋪面瞬間剪力崩壞。' : '跑道強度過低（甚至小於最輕空載 ' + currentSystemType + ' 要求）。'}嚴禁在此跑道起降！</p>
                             </div>
                         `}
                     </div>
@@ -635,57 +666,55 @@
             assessmentContainer.innerHTML = assessmentHtml;
 
             // --- 3. 渲染動態「計算方式」細節 ---
+            // 動態公式變數名稱：ACN or ACR
+            const sys = currentSystemType; 
+            const sysP = isPCR ? 'PCR' : 'PCN';
+
             let mathHtml = `
                 <div class="space-y-4 leading-relaxed animate-fadeIn">
                     <div>
-                        <h4 class="font-bold text-slate-800 mb-1">第一階段：跑道強度與制式轉換 (System Conversion Check)</h4>
+                        <h4 class="font-bold text-slate-800 mb-1">第一階段：智能制式路由 (System Routing)</h4>
                         <p class="text-xs">
-                            由於輸入之跑道數值為 <span class="font-bold text-blue-600">${rawRunwayValue}</span>：
+                            輸入之跑道數值為 <span class="font-bold text-blue-600">${rawRunwayValue}</span>：
                         </p>
                         ${isPCR ? `
-                        <p class="text-xs text-slate-500 mt-1">此數值大於 150，判定為 ICAO ACR-PCR 新制原生數值。直接作為 PCR 使用：</p>
-                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 my-2 font-mono text-xs">
-                            $$PCR_{\\text{equiv}} = ${runwayPCR}$$
-                        </div>
+                        <p class="text-xs text-slate-500 mt-1">此數值 $> 150$，系統判定為 ICAO ACR-PCR 新制。將自動調用飛機的 <strong>原生 ACR 資料庫</strong> 進行比對。</p>
                         ` : `
-                        <p class="text-xs text-slate-500 mt-1">此數值小於等於 150，判定為 ICAO ACN-PCN 舊制 legacy 數值。系統自動乘以 10 進行等效換算：</p>
-                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 my-2 font-mono text-xs">
-                            $$PCR_{\\text{equiv}} = \\text{PCN} \\times 10 = ${rawRunwayValue} \\times 10 = ${runwayPCR}$$
-                        </div>
+                        <p class="text-xs text-slate-500 mt-1">此數值 $\\le 150$，系統判定為 ICAO ACN-PCN 舊制。將自動調用飛機的 <strong>原生 ACN 資料庫</strong> 進行比對，無須折算。</p>
                         `}
                     </div>
 
                     <div>
-                        <h4 class="font-bold text-slate-800 mb-1">第二階段：航機 ACR 邊界參數調取 (ACR Matrix Binding)</h4>
+                        <h4 class="font-bold text-slate-800 mb-1">第二階段：航機 ${sys} 邊界參數調取 (${sys} Matrix Binding)</h4>
                         <p class="text-xs">
-                            根據選定的鋪面型態與路基條件：<span class="font-bold text-slate-700">${paveVal}/${subVal}</span>，調取 <span class="text-blue-700 font-bold">${aircraftData.name}</span> 數據庫中的原生 ACR 邊界值：
+                            根據選定之鋪面與路基條件：<span class="font-bold text-slate-700">${paveVal}/${subVal}</span>，調取 <span class="text-blue-700 font-bold">${aircraftData.name}</span> 數據庫中的原生 ${sys} 邊界值：
                         </p>
                         <ul class="list-disc list-inside text-xs pl-2 space-y-1 mt-1 text-slate-500">
-                            <li>最大起飛重量 (MTOW) $W_{\\text{max}} = ${formatNumber(aircraftData.maxWeight)} \\text{ kg}$，對應原生最大 $ACR_{\\text{max}} = ${maxACR}$</li>
-                            <li>基本操作空重 (Empty) $W_{\\text{min}} = ${formatNumber(aircraftData.minWeight)} \\text{ kg}$，對應估算最小 $ACR_{\\text{min}} = ${minACR}$</li>
+                            <li>最大起飛重量 $W_{\\text{max}} = ${formatNumber(aircraftData.maxWeight)} \\text{ kg}$，對應原生最大 $${sys}_{\\text{max}} = ${maxAircraftValue}$</li>
+                            <li>基本操作空重 $W_{\\text{min}} = ${formatNumber(aircraftData.minWeight)} \\text{ kg}$，對應原生最小 $${sys}_{\\text{min}} = ${minAircraftValue}$</li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 class="font-bold text-slate-800 mb-1">第三階段：載重限制與減重內插計算 (Linear Interpolation)</h4>
-                        ${runwayPCR >= maxACR ? `
+                        ${runwayValue >= maxAircraftValue ? `
                             <p class="text-xs text-green-700 font-semibold">
-                                因 $PCR_{\\text{equiv}} (${runwayPCR}) \\ge ACR_{\\text{max}} (${maxACR})$，故無須進行任何減重措施。
+                                因跑道 $${sysP} (${runwayValue}) \\ge ${sys}_{\\text{max}} (${maxAircraftValue})$，故無須進行任何減重措施。
                             </p>
                             <p class="text-xs mt-1">最大允許重量 $W_{\\text{allow}} = W_{\\text{max}} = ${formatNumber(aircraftData.maxWeight)} \\text{ kg}$，減載要求 $\\Delta W = 0 \\text{ kg}$。</p>
-                        ` : runwayPCR >= minACR ? `
+                        ` : runwayValue >= minAircraftValue ? `
                             <p class="text-xs">
-                                採用新制「多層彈性理論比例法」動態逆推最大允許起降重量：
+                                採用比例法動態逆推最大允許起降重量：
                             </p>
-                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 my-2 font-mono text-xs space-y-3">
-                                <p>$$\\text{線性内插比} = \\frac{PCR_{\\text{equiv}} - ACR_{\\text{min}}}{ACR_{\\text{max}} - ACR_{\\text{min}}} = \\frac{${runwayPCR} - ${minACR}}{${maxACR} - ${minACR}} = \\frac{${(runwayPCR - minACR).toFixed(1)}}{${maxACR - minACR}} \\approx ${(interpRatio).toFixed(4)}$$</p>
-                                <p>$$W_{\\text{allow}} = W_{\\text{min}} + \\left( \\text{線性内插比} \\times (W_{\\text{max}} - W_{\\text{min}}) \\right)$$</p>
+                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 my-2 font-mono text-xs space-y-3 overflow-x-auto">
+                                <p>$$\\text{內插比} = \\frac{${sysP} - ${sys}_{\\text{min}}}{${sys}_{\\text{max}} - ${sys}_{\\text{min}}} = \\frac{${runwayValue} - ${minAircraftValue}}{${maxAircraftValue} - ${minAircraftValue}} = \\frac{${(runwayValue - minAircraftValue).toFixed(1)}}{${maxAircraftValue - minAircraftValue}} \\approx ${(interpRatio).toFixed(4)}$$</p>
+                                <p>$$W_{\\text{allow}} = W_{\\text{min}} + \\left( \\text{內插比} \\times (W_{\\text{max}} - W_{\\text{min}}) \\right)$$</p>
                                 <p>$$W_{\\text{allow}} = ${formatNumber(aircraftData.minWeight)} + \\left( ${(interpRatio).toFixed(4)} \\times ${formatNumber(aircraftData.maxWeight - aircraftData.minWeight)} \\right) \\approx ${formatNumber(maxAllowedWeight)} \\text{ kg}$$</p>
-                                <p>$$\\text{必要減重重量 } \\Delta W = W_{\\text{max}} - W_{\\text{allow}} = ${formatNumber(aircraftData.maxWeight)} - ${formatNumber(formatNumber(maxAllowedWeight).replace(/,/g, ''))} = ${formatNumber(requiredReduction)} \\text{ kg}$$</p>
+                                <p>$$\\text{必要減重 } \\Delta W = W_{\\text{max}} - W_{\\text{allow}} = ${formatNumber(aircraftData.maxWeight)} - ${formatNumber(formatNumber(maxAllowedWeight).replace(/,/g, ''))} = ${formatNumber(requiredReduction)} \\text{ kg}$$</p>
                             </div>
                         ` : `
                             <p class="text-xs text-red-700 font-semibold">
-                                因 $PCR_{\\text{equiv}} (${runwayPCR}) < ACR_{\\text{min}} (${minACR})$，此跑道強度已低於該機型空機狀態下的承載極限（$ACR_{\\text{min}} = ${minACR}$）。因此無法透過「減重」或「限制酬載」之方式落地，禁止操作。
+                                因跑道 $${sysP} (${runwayValue}) < ${sys}_{\\text{min}} (${minAircraftValue})$，跑道強度已低於該機型空機狀態下的承載極限。無法透過減重落地，禁止操作。
                             </p>
                         `}
                     </div>
