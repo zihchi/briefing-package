@@ -14,7 +14,7 @@ const urlsToCache = [
   './notam.html',
   './time.html',
   './PCR.html',
-  './fpl_decoder.html',     // 新增：ICAO FPL Decoder 檔案 (若您的檔名不同，請務必在此修改)
+  './fpl_decoder.html',     // 新增：ICAO FPL Decoder 檔案
   './manifest.json',    // 確保 PWA 核心設定能離線讀取
   './icon-192.png',     // 確保離線時圖示正常顯示
   './icon-512.png',
@@ -27,7 +27,8 @@ const urlsToCache = [
 
 // 1. 安裝階段：快取檔案 + 強制插隊跳過等待
 self.addEventListener('install', event => {
-  console.log('⚙️ 新版 Service Worker (v7) 安裝中...');
+  // 💡 優化：讓日誌動態顯示目前的 CACHE_NAME，避免與舊日誌混淆
+  console.log(`⚙️ 新版 Service Worker (${CACHE_NAME}) 安裝中...`);
   
   // 核心指令 1：不要等了，直接插隊！
   self.skipWaiting(); 
