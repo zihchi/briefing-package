@@ -503,7 +503,7 @@ function getCategoryBadge(typeStr) {
 
     if(!displayCat) return '';
 
-    return `<span style="background:${bgColor}; color:white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">營運: ${displayCat} [${typeStr}]</span>`;
+    return `<span style="background:${bgColor}; color:white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">分類: ${displayCat} [${typeStr}]</span>`;
 }
 
 // ------------------------------------------
@@ -669,6 +669,7 @@ window.fetchHistoryMetarPopup = async function(icao) {
 // ==========================================
 const coordsDB = {
     "RCTP": [25.0777, 121.2328], "RCSS": [25.0697, 121.5525], "RCKH": [22.5771, 120.3500], "RCMQ": [24.2646, 120.6200], "RCNN": [22.9503, 120.2061], "RCFN": [22.7564, 121.1033],
+    "RCBS": [24.4283, 118.3592], "RCQC": [23.5681, 119.6300], "RCYU": [24.0276, 121.6174], "RCFG": [26.1580, 119.9576], "RCMT": [26.2238, 120.0022], "RCKU": [23.4619, 120.3956], "RCLM": [20.7042, 116.7183],
     "RJAA": [35.7647, 140.3863], "RJBB": [34.4273, 135.2440], "RJCC": [42.7752, 141.6923], "RJCH": [41.7700, 140.8220], "RJFF": [33.5859, 130.4507], "RJFK": [31.8034, 130.7194],
     "RJFT": [32.8372, 130.8553], "RJGG": [34.8583, 136.8053], "RJSS": [38.1397, 140.9169], "RJTT": [35.5523, 139.7797], "RJOT": [34.2144, 134.0156], "RJBE": [34.6328, 135.2239],
     "ROAH": [26.1958, 127.6458], "VHHH": [22.3089, 113.9146], "VMMC": [22.1496, 113.5915], "WMKK": [2.7456, 101.7099], "WMKP": [5.2971, 100.2769],
@@ -782,7 +783,6 @@ WMKP / Penang Intl. / Penang, Malaysia / R
 WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / R
 WSSS / Singapore Changi. / Singapore / R`;
 
-// 包含 941 和 1041 的聯集
 const rawA350 = `
 CYVR / Vancouver Intl. / Vancouver, Canada / A
 EDDB / Berlin Brandenburg Airport / Brandenburg, Germany / A
@@ -864,6 +864,21 @@ VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
 VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
 VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / A`;
 
+const rawDomestic = `
+RCTP / 桃園國際機場 / Taoyuan, Taiwan / D
+RCSS / 台北松山機場 / Taipei, Taiwan / D
+RCMQ / 台中國際機場 / Taichung, Taiwan / D
+RCKH / 高雄國際機場 / Kaohsiung, Taiwan / D
+RCBS / 金門機場 / Kinmen, Taiwan / D
+RCFN / 台東機場 / Taitung, Taiwan / D
+RCFG / 馬祖南竿機場 / Matsu, Taiwan / D
+RCKU / 嘉義機場 / Chiayi, Taiwan / D
+RCMT / 馬祖北竿機場 / Matsu, Taiwan / D
+RCNN / 台南機場 / Tainan, Taiwan / D
+RCQC / 澎湖機場 / Penghu, Taiwan / D
+RCYU / 花蓮機場 / Hualien, Taiwan / D
+RCLM / 東沙機場 / Dongsha Island, Taiwan / D`;
+
 function parseFleetData(rawString) {
     const lines = rawString.trim().split('\n');
     const map = new Map();
@@ -889,10 +904,8 @@ const fleets = {
     "A321": parseFleetData(rawA321),
     "A330": parseFleetData(rawA330),
     "A350": parseFleetData(rawA350),
-    "Domestic": [] 
+    "Domestic": parseFleetData(rawDomestic)
 };
-// 自動過濾台灣機場作為國內線
-fleets["Domestic"] = fleets["A321"].filter(a => a.icao.startsWith('RC'));
 
 const weatherCache = {};
 let currentFleet = "A330"; 
@@ -1059,7 +1072,7 @@ function initAviationMap() {
         window.aviationMapInstance.remove();
     }
 
-    window.aviationMapInstance = L.map('map').setView([23.5, 121.0], 5);
+    window.aviationMapInstance = L.map('map').setView([23.5, 121.0], 4);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
