@@ -1,19 +1,15 @@
 // ==========================================
-// 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版 + 雙引擎解析架構
-// 🆕 升級版：支援自訂 ICAO 地圖查詢 + 24H 歷史氣象紀錄整合 + 等寬字體強制渲染
+// 📦 簡報箱主核心引擎 (Core Engine) - 極速競速優化版 + 雙引擎解析架構 + 機隊升級
 // ==========================================
 
 // ------------------------------------------
 // 🌐 全域變數與系統資料庫 (Global State)
 // ------------------------------------------
-
-// 🎯 核心升級：定義航空標準等寬字體堆疊，確保所有氣象與 NOTAM 報文完美對齊
 const MONOSPACE_FONT = "font-family: ui-monospace, 'SF Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;";
 
 let notamMapInstance = null;
 let notamActiveLayers = [];
 let curfewClockInterval = null;
-let aviationMapInstance = null; 
 
 // ✈️ Turbli 航班資料庫
 const flightGroups = [
@@ -260,7 +256,6 @@ function loadPage(pageUrl) {
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
 
-            // 安全喚醒對應邏輯
             if (pageUrl.includes('curfew.html')) {
                 initCurfewCalculator(); 
             } 
@@ -380,8 +375,9 @@ function initFlightSelect() {
 }
 
 // ==========================================
-// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板
+// 🌍 首頁模組二：NOAA AWC 航空氣象儀表板 (機隊擴充版)
 // ==========================================
+
 function calculatePopupAtisAge(rawText) {
     if (!rawText || rawText.includes("無資料") || rawText.includes("失敗")) return "";
     const timeMatch = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
@@ -469,7 +465,49 @@ window.fetchPopupAtis = function(icao) {
 };
 
 // ------------------------------------------
-// ✈️ 地圖彈出視窗(Popup) 組件產生器 (抽象化以供重複使用)
+// ✈️ 智慧時間與分類標籤產生器
+// ------------------------------------------
+function getAirportTimeHTML(lng) {
+    const now = new Date();
+    const utcString = now.toISOString().substring(0, 16).replace('T', ' ') + 'Z';
+    
+    const offsetHours = Math.round(lng / 15);
+    const local = new Date(now.getTime() + offsetHours * 3600 * 1000);
+    
+    const YYYY = local.getUTCFullYear();
+    const MM = String(local.getUTCMonth() + 1).padStart(2, '0');
+    const DD = String(local.getUTCDate()).padStart(2, '0');
+    const HH = String(local.getUTCHours()).padStart(2, '0');
+    const MIN = String(local.getUTCMinutes()).padStart(2, '0');
+    const sign = offsetHours >= 0 ? '+' : '';
+    const localString = `${YYYY}-${MM}-${DD} ${HH}:${MIN} (UTC${sign}${offsetHours})`;
+
+    return `
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #64748b; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="flex: 1; min-width: 140px;"><span style="font-weight:bold; color:#475569;">🕒 UTC:</span> ${utcString}</div>
+            <div style="flex: 1; min-width: 140px;"><span style="font-weight:bold; color:#475569;">📍 Local:</span> ${localString}</div>
+        </div>
+    `;
+}
+
+function getCategoryBadge(typeStr) {
+    if (!typeStr) return '';
+    let bgColor = '#94a3b8'; // 預設灰色
+    let displayCat = '';
+
+    // 優先順序: S > R > A > P/RF
+    if (typeStr.includes('S')) { bgColor = '#f97316'; displayCat = 'S (Special)'; } // 橘色
+    else if (typeStr.includes('R')) { bgColor = '#22c55e'; displayCat = 'R (Regular)'; } // 綠色
+    else if (typeStr.includes('A')) { bgColor = '#3b82f6'; displayCat = 'A (Alternate)'; } // 藍色
+    else if (typeStr.includes('P') || typeStr.includes('RF')) { bgColor = '#64748b'; displayCat = typeStr.includes('P') ? 'P (Provisional)' : 'RF (Refueling)'; } // 灰色
+
+    if(!displayCat) return '';
+
+    return `<span style="background:${bgColor}; color:white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">營運: ${displayCat} [${typeStr}]</span>`;
+}
+
+// ------------------------------------------
+// ✈️ 地圖彈出視窗(Popup) 組件產生器
 // ------------------------------------------
 function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
     const metarState = parseWeatherElements(rawMetarText, 999, 99999);
@@ -486,10 +524,18 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
     const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
     const badgeColor = catColors[metarCat] || catColors['unk'];
 
+    const timeHtml = airport.lng ? getAirportTimeHTML(airport.lng) : '';
+    const fleetBadgeHtml = airport.type ? getCategoryBadge(airport.type) : '';
+
     return `
     <div class="weather-popup">
-        <div class="airport-title">${airport.name} (${airport.icao})</div>
+        <div class="airport-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span>${airport.name} (${airport.icao})</span>
+            ${fleetBadgeHtml}
+        </div>
         
+        ${timeHtml}
+
         <div class="data-block">
             <div class="section-title">
                 <span style="display:inline-flex; align-items:center;">
@@ -618,301 +664,358 @@ window.fetchHistoryMetarPopup = async function(icao) {
     }
 };
 
-function initAviationMap() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) return;
+// ==========================================
+// 🗺️ 核心機場座標與機隊資料庫
+// ==========================================
+const coordsDB = {
+    "RCTP": [25.0777, 121.2328], "RCSS": [25.0697, 121.5525], "RCKH": [22.5771, 120.3500], "RCMQ": [24.2646, 120.6200], "RCNN": [22.9503, 120.2061], "RCFN": [22.7564, 121.1033],
+    "RJAA": [35.7647, 140.3863], "RJBB": [34.4273, 135.2440], "RJCC": [42.7752, 141.6923], "RJCH": [41.7700, 140.8220], "RJFF": [33.5859, 130.4507], "RJFK": [31.8034, 130.7194],
+    "RJFT": [32.8372, 130.8553], "RJGG": [34.8583, 136.8053], "RJSS": [38.1397, 140.9169], "RJTT": [35.5523, 139.7797], "RJOT": [34.2144, 134.0156], "RJBE": [34.6328, 135.2239],
+    "ROAH": [26.1958, 127.6458], "VHHH": [22.3089, 113.9146], "VMMC": [22.1496, 113.5915], "WMKK": [2.7456, 101.7099], "WMKP": [5.2971, 100.2769],
+    "RPLC": [15.1858, 120.5599], "RPLL": [14.5090, 121.0194], "RPVM": [10.3075, 123.9794], "WSSS": [1.3592, 103.9893], "VTBD": [13.9126, 100.6068],
+    "VTBS": [13.6811, 100.7473], "VTBU": [12.6797, 101.0051], "VTCC": [18.7668, 98.9626], "VTSP": [8.1132, 98.3169], "VVCR": [11.9981, 109.2193],
+    "VVDN": [16.0439, 108.1994], "VVNB": [21.2212, 105.8072], "VVPQ": [10.1656, 103.9944], "VVTS": [10.8188, 106.6520], "WADD": [-8.7482, 115.1675],
+    "WARR": [-7.3798, 112.7836], "WIII": [-6.1256, 106.6558], "WBGG": [1.4847, 110.3468], "WICA": [-6.6264, 108.1763], "PGSN": [15.1188, 145.2428],
+    "PGUM": [13.4834, 144.7960], "PTRO": [7.3672, 134.5441], "RJFU": [32.9169, 129.9136], "RJNK": [36.3934, 136.4070], "RJOS": [34.1328, 134.6066],
+    "RJSN": [37.9558, 139.1133], "RKPC": [33.5113, 126.4930], "RKPK": [35.1795, 128.9382], "RKSI": [37.4602, 126.4407], "RKSS": [37.5583, 126.7906],
+    "RKTN": [35.8941, 128.6587], "ROIG": [24.3964, 124.1864], "RORS": [24.8267, 125.1447], "RPMD": [7.1253, 125.6456], "CYVR": [49.1967, -123.1815],
+    "EDDB": [52.3667, 13.5033], "EDDM": [48.3538, 11.7861], "EPWA": [52.1657, 20.9671], "KLAS": [36.0801, -115.1523], "KLAX": [33.9416, -118.4085],
+    "KOAK": [37.7213, -122.2207], "KONT": [34.0560, -117.6012], "KPDX": [45.5898, -122.5951], "KPHX": [33.4342, -112.0080], "KSEA": [47.4489, -122.3094],
+    "KSFO": [37.6189, -122.3750], "KSMF": [38.6954, -121.5908], "KTUS": [32.1161, -110.9410], "LKPR": [50.1008, 14.2600], "LOWL": [48.2332, 14.1875],
+    "LOWW": [48.1103, 16.5697], "PACD": [55.2045, -162.7246], "PAFA": [64.8151, -147.8563], "PAKN": [58.6768, -156.6492], "PANC": [61.1743, -149.9962],
+    "PASY": [52.7123, 174.1136], "PHNL": [21.3187, -157.9225], "PMDY": [28.2015, -177.3800], "PWAK": [19.2815, 166.6358]
+};
 
-    if (window.aviationMapInstance) {
-        window.aviationMapInstance.remove();
-    }
+const rawA321 = `
+PGSN / Saipan Intl. / Saipan, Northern Mariana / A
+PGUM / Guam Intl. / Agana, Guam, USA / R
+PTRO / Roman Tmetuchl Intl. / Koror, Palau / A
+RCFN / Taitung Airport / Taitung, Taiwan / P, S
+RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / P, S
+RCMQ / Taichung Intl. / Taichung, Taiwan / R
+RCNN / Tainan Airport / Tainan, Taiwan / P
+RCSS / Songshan Intl. / Taipei, Taiwan / A, S
+RCTP / Taiwan Taoyuan Intl. / Taoyuan, Taiwan / R
+RJAA / New Tokyo (Narita) Intl. / Tokyo, Japan / R
+RJBB / Kansai Intl. / Osaka, Japan / R
+RJBE / Kobe Airport / Kobe, Japan / R
+RJCC / New Chitose Airport / Sapporo, Japan / R
+RJCH / Hakodate Airport / Hakodate, Japan / R
+RJFF / Fukuoka Intl. / Fukuoka, Japan / R, S
+RJFK / Kagoshima Airport / Kagoshima, Japan / A
+RJFT / Kumamoto Airport / Kumamoto, Japan / R
+RJFU / Nagasaki Airport / Nagasaki, Japan / A
+RJGG / Chubu Centrair Intl. / Nagoya, Japan / R
+RJNK / Komatsu Intl. / Komatsu, Japan / A
+RJOS / Tokushima Awaodori Airport / Tokushima, Japan / P
+RJOT / Takamatsu Airport / Takamatsu, Japan / R
+RJSN / Niigata Intl. / Niigata, Japan / A
+RJSS / Sendai Intl. / Sendai, Japan / R
+RJTT / Tokyo (Haneda) Intl. / Tokyo, Japan / A
+RKPC / Jeju Intl. / Jeju, South Korea / A
+RKPK / Gimhae Intl. / Busan, South Korea / R, S
+RKSI / Incheon Intl. / Seoul, South Korea / A
+RKSS / Gimpo Intl. / Seoul, South Korea / A
+RKTN / Daegu Intl. / Daegu, South Korea / A
+ROAH / Naha Airport / Naha, Japan / R
+ROIG / Ishigaki Airport / Ishigaki, Japan / P
+RORS / Shimojishima Airport / Miyakojima, Japan / R
+RPLC / Clark Intl. / Angel City, Philippines / R
+RPLL / Ninoy Aquino Intl / Manila, Philippines / R
+RPMD / Francisco Bangoy Intl. / Davao, Philippines / A
+RPVM / Mactan Cebu Intl. / Lapu Lapu, Philippines / R
+VHHH / Hong Kong Intl. / Hong Kong, China / R, S
+VMMC / Macao Intl. / Macao, China / R
+VTBD / Don Mueang Intl. / Bangkok, Thailand / A
+VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
+VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
+VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / R
+VTSP / Phuket Intl. / Phuket, Thailand / A
+VVCR / Cam Ranh Intl. / Khanh Hoa, Vietnam / A
+VVDN / Danang Intl. / Danang, Vietnam / R
+VVNB / Noi bai Intl. / Hanoi, Vietnam / R
+VVPQ / Phu Quoc Intl. / Kiên Giang, Vietnam / R
+VVTS / Tan Son Nhat Intl. / Ho Chi Minh, Vietnam / R
+WADD / Bali Intl. / Denpasar, Indonesia / A
+WARR / Juanda Intl. / Surabaya, Indonesia / A
+WBGG / Kuching Intl. / Kuching, Malaysia / A
+WIII / Soekarno Hatta Intl. / Jakarta, Indonesia / R
+WICA / Kertajati Intl. / Majalengka, Indonesia / A
+WMKP / Penang Intl. / Penang, Malaysia / R
+WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / R
+WSSS / Singapore Changi. / Singapore / R`;
 
-    window.aviationMapInstance = L.map('map').setView([31.0, 130.0], 5);
+const rawA330 = `
+RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / A, S
+RCSS / Songshan Intl. / Taipei, Taiwan / A, S
+RCTP / Taiwan Taoyuan Intl. / Taoyuan, Taiwan / R
+RJAA / New Tokyo (Narita) Intl. / Tokyo, Japan / R
+RJBB / Kansai Intl. / Osaka, Japan / R
+RJCC / New Chitose Airport / Sapporo, Japan / R
+RJCH / Hakodate Airport / Hakodate, Japan / A
+RJFF / Fukuoka Intl. / Fukuoka, Japan / R, S
+RJFK / Kagoshima Airport / Kagoshima, Japan / A
+RJFT / Kumamoto Airport / Kumamoto, Japan / R
+RJGG / Chubu Centrair Intl. / Nagoya, Japan / R
+RJOT / Takamatsu Airport / Takamatsu, Japan / A
+RJSS / Sendai Intl. / Sendai, Japan / R
+RJTT / Tokyo (Haneda) Intl. / Tokyo, Japan / A
+ROAH / Naha Airport / Naha, Japan / R
+RPLC / Clark Intl. / Angel City, Philippines / R
+RPLL / Ninoy Aquino Intl / Manila, Philippines / R
+RPVM / Mactan Cebu Intl. / Lapu Lapu, Philippines / A
+VHHH / Hong Kong Intl. / Hong Kong, China / R, S
+VMMC / Macao Intl. / Macao, China / R
+VTBD / Don Mueang Intl. / Bangkok, Thailand / A
+VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
+VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
+VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / R
+VVCR / Cam Ranh Intl. / Khanh Hoa, Vietnam / A
+VVDN / Danang Intl. / Danang, Vietnam / R
+VVNB / Noi bai Intl. / Hanoi, Vietnam / R
+VVPQ / Phu Quoc Intl. / Kiên Giang, Vietnam / R
+VVTS / Tan Son Nhat Intl. / Ho Chi Minh, Vietnam / R
+WARR / Juanda Intl. / Surabaya, Indonesia / A
+WBGG / Kuching Intl. / Kuching, Malaysia / A
+WIII / Soekarno Hatta Intl. / Jakarta, Indonesia / A
+WMKP / Penang Intl. / Penang, Malaysia / R
+WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / R
+WSSS / Singapore Changi. / Singapore / R`;
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap & CARTO',
-        maxZoom: 20
-    }).addTo(window.aviationMapInstance);
+// 包含 941 和 1041 的聯集
+const rawA350 = `
+CYVR / Vancouver Intl. / Vancouver, Canada / A
+EDDB / Berlin Brandenburg Airport / Brandenburg, Germany / A
+EDDM / Munich Airport / Bavaria, Germany / A
+EPWA / Warsaw Chopin Airport / Warsaw, Poland / A
+KLAS / Harry Reid Intl. / Las Vegas, NV, USA / A
+KLAX / Los Angeles Intl. / Los Angeles, CA, USA / R
+KOAK / Oakland Intl. / Oakland, CA, USA / A
+KONT / Ontario Intl. / Ontario, CA, USA / R, S
+KPDX / Portland Intl. / Portland, OR, USA / A, RF
+KPHX / Phoenix Sky Harbor Intl. / Phoenix, AZ, USA / R
+KSEA / Seattle Intl. / SeaTac, WA, USA / R
+KSFO / San Francisco Intl. / San Francisco, CA, USA / R, S
+KSMF / Sacramento Intl. / Sacramento, CA, USA / A
+KTUS / Tucson Intl. / Tucson, AZ, USA / A
+LKPR / Prague Intl. / Prague, Czech / R
+LOWL / Linz Airport / Hörsching, Austria / A
+LOWW / Vienna Intl. / Schwechat, Austria / A
+PACD / Cold Bay Airport / Cold Bay, AK, USA / A
+PAFA / Fairbanks Intl. / Fairbanks, AK, USA / A
+PAKN / King Salmon Airport / King Salmon, AK, USA / A
+PANC / Ted Stevens Anchorage Intl. / Anchorage, AK, USA / A
+PASY / Eareckson Air Station / Shemya, AK, USA / A
+PGSN / Saipan Intl. / Saipan, Northern Mariana / A
+PGUM / Guam Intl. / Agana, Guam, USA / A
+PHNL / Inouye Intl. / Honolulu, HI, USA / A
+PMDY / Henderson Field / Midway Island / A
+PWAK / Wake Island Airfield / Wake Island / A
+RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / A, S
+RCSS / Songshan Intl. / Taipei, Taiwan / A, S
+RCTP / Taiwan Taoyuan Intl. / Taoyuan, Taiwan / R
+RJAA / New Tokyo (Narita) Intl. / Tokyo, Japan / R
+RJBB / Kansai Intl. / Osaka, Japan / R
+RJCC / New Chitose Airport / Sapporo, Japan / R
+RJCH / Hakodate Airport / Hakodate, Japan / A
+RJFF / Fukuoka Intl. / Fukuoka, Japan / R, S
+RJGG / Chubu Centrair Intl. / Nagoya, Japan / R
+RJSS / Sendai Intl. / Sendai, Japan / A
+RJTT / Tokyo (Haneda) Intl. / Tokyo, Japan / A
+RKPC / Jeju Intl. / Jeju, South Korea / A
+RKPK / Gimhae Intl. / Busan, South Korea / A, S
+RKSI / Incheon Intl. / Seoul, South Korea / A
+ROAH / Naha Airport / Naha, Japan / R
+RPLC / Clark Intl. / Angel City, Philippines / A
+RPLL / Ninoy Aquino Intl / Manila, Philippines / R
+RPVM / Mactan Cebu Intl. / Lapu Lapu, Philippines / A
+VHHH / Hong Kong Intl. / Hong Kong, China / R, S
+VMMC / Macao Intl. / Macao, China / R
+VTBD / Don Mueang Intl. / Bangkok, Thailand / A
+VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
+VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
+VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / A
+VVCR / Cam Ranh Intl. / Khanh Hoa, Vietnam / A
+VVDN / Danang Intl. / Danang, Vietnam / A
+VVNB / Noi bai Intl. / Hanoi, Vietnam / R
+VVPQ / Phu Quoc Intl. / Kiên Giang, Vietnam / A
+VVTS / Tan Son Nhat Intl. / Ho Chi Minh, Vietnam / R
+WARR / Juanda Intl. / Surabaya, Indonesia / A
+WIII / Soekarno Hatta Intl. / Jakarta, Indonesia / A
+WMKP / Penang Intl. / Penang, Malaysia / A
+WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / A
+WSSS / Singapore Changi. / Singapore / R
+RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / A, S
+RCTP / Taiwan Taoyuan Intl. / Taoyuan, Taiwan / R
+RJAA / New Tokyo (Narita) Intl. / Tokyo, Japan / R
+RJBB / Kansai Intl. / Osaka, Japan / R
+RJCC / New Chitose Airport / Sapporo, Japan / A
+RJFF / Fukuoka Intl. / Fukuoka, Japan / A, S
+RJGG / Chubu Centrair Intl. / Nagoya, Japan / A
+RJSS / Sendai Intl. / Sendai, Japan / A
+RJTT / Tokyo (Haneda) Intl. / Tokyo, Japan / A
+ROAH / Naha Airport / Naha, Japan / A
+RPLC / Clark Intl. / Angel City, Philippines / A
+RPLL / Ninoy Aquino Intl / Manila, Philippines / A
+VHHH / Hong Kong Intl. / Hong Kong, China / A, S
+VMMC / Macao Intl. / Macao, China / A
+VTBD / Don Mueang Intl. / Bangkok, Thailand / A
+VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
+VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
+VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / A`;
 
-    const airports = [
-        { icao: 'RCTP', name: '臺灣桃園國際機場', lat: 25.0777, lng: 121.2328 },
-        { icao: 'RCSS', name: '臺北松山機場', lat: 27.0388, lng: 121.2010 },
-        { icao: 'RCKH', name: '高雄國際機場', lat: 22.5771, lng: 120.3500 },
-        { icao: 'RJAA', name: '成田國際機場', lat: 35.7647, lng: 140.3863 },
-        { icao: 'RJBB', name: '關西國際機場', lat: 34.4273, lng: 135.2440 },
-        { icao: 'RJCC', name: '新千歲機場', lat: 42.7752, lng: 141.6923 },
-        { icao: 'RJCH', name: '函館機場', lat: 41.7700, lng: 140.8220 },
-        { icao: 'RJFF', name: '福岡機場', lat: 33.5859, lng: 130.4507 },
-        { icao: 'RJFK', name: '鹿兒島機場', lat: 31.8034, lng: 130.7194 },
-        { icao: 'RJFT', name: '熊本機場', lat: 32.8372, lng: 130.8553 },
-        { icao: 'RJGG', name: '中部國際機場', lat: 34.8583, lng: 136.8053 },
-        { icao: 'RJSS', name: '仙台機場', lat: 38.1397, lng: 140.9169 },
-        { icao: 'RJTT', name: '東京羽田國際機場', lat: 35.5523, lng: 139.7797 },
-        { icao: 'RJOT', name: '高松機場', lat: 34.2144, lng: 134.0156 }, 
-        { icao: 'RJBE', name: '神戶機場', lat: 34.6328, lng: 135.2239 }, 
-        { icao: 'ROAH', name: '那霸機場', lat: 26.1958, lng: 127.6458 },
-        { icao: 'VHHH', name: '香港國際機場', lat: 22.3089, lng: 113.9146 },
-        { icao: 'VMMC', name: '澳門國際機場', lat: 22.1496, lng: 113.5915 },
-        { icao: 'WMKK', name: '吉隆坡國際機場', lat: 2.7456, lng: 101.7099 },
-        { icao: 'VDPP', name: '金邊國際機場', lat: 11.5466, lng: 104.8441 },
-        { icao: 'VVCR', name: '金蘭國際機場', lat: 11.9981, lng: 109.2193 },
-        { icao: 'WMKP', name: '檳城國際機場', lat: 5.2971, lng: 100.2769 },
-        { icao: 'RPLC', name: '克拉克國際機場', lat: 15.1858, lng: 120.5599 },
-        { icao: 'RPLL', name: '馬尼拉國際機場', lat: 14.5090, lng: 121.0194 },
-        { icao: 'WSSS', name: '新加坡樟宜機場', lat: 1.3592, lng: 103.9893 },
-        { icao: 'VTBD', name: '曼谷廊曼國際機場', lat: 13.9126, lng: 100.6068 },
-        { icao: 'VTBS', name: '曼谷蘇凡納布機場', lat: 13.6811, lng: 100.7473 },
-        { icao: 'VVDN', name: '峴港國際機場', lat: 16.0439, lng: 108.1994 },
-        { icao: 'VVNB', name: '河內內排國際機場', lat: 21.2212, lng: 105.8072 },
-        { icao: 'VVPQ', name: '富國國際機場', lat: 10.1656, lng: 103.9944 },
-        { icao: 'VVTS', name: '胡志明市新山一機場', lat: 10.8188, lng: 106.6520 },
-        { icao: 'VTBU', name: '芭達雅-烏塔拋國際機場', lat: 12.6797, lng: 101.0051 }, 
-        { icao: 'RPVM', name: '麥克坦-宿霧國際機場', lat: 10.3075, lng: 123.9794 }, 
-        { icao: 'WIII', name: '雅加達-蘇加諾-哈達國際機場', lat: -6.1256, lng: 106.6558 }, 
-        { icao: 'WADD', name: '峇里島-伍拉·賴國際機場', lat: -8.7482, lng: 115.1675 }, 
-        { icao: 'WARR', name: '泗水-朱安達國際機場', lat: -7.3798, lng: 112.7836 }
-    ];
-
-    const weatherCache = {};
-    let isDataReady = false;
-    airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
-
-    // 🌍 全域共用：具備多重備援防線的資料擷取器
-    const fetchBulkWeatherFast = async (icaoList, type) => {
-        const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
-
-        const executeFetch = async (targetUrl, timeoutMs) => {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeoutMs);
-            try {
-                const res = await fetch(targetUrl, { signal: controller.signal });
-                clearTimeout(id);
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                return await res.json();
-            } catch (err) {
-                clearTimeout(id);
-                throw err;
+function parseFleetData(rawString) {
+    const lines = rawString.trim().split('\n');
+    const map = new Map();
+    lines.forEach(line => {
+        const parts = line.split('/').map(p => p.trim());
+        if(parts.length >= 4) {
+            const icao = parts[0];
+            const name = parts[1];
+            const type = parts[3];
+            const coords = coordsDB[icao] || [0, 0];
+            if (map.has(icao)) {
+                // 如果已經存在 (例如 A350 兩機型都有)，則累加屬性字串，後續徽章函數會自動抓取最高優先級
+                map.get(icao).type += ', ' + type;
+            } else {
+                map.set(icao, { icao, name, type, lat: coords[0], lng: coords[1] });
             }
-        };
+        }
+    });
+    return Array.from(map.values());
+}
 
+const fleets = {
+    "A321": parseFleetData(rawA321),
+    "A330": parseFleetData(rawA330),
+    "A350": parseFleetData(rawA350),
+    "Domestic": [] 
+};
+// 自動過濾台灣機場作為國內線
+fleets["Domestic"] = fleets["A321"].filter(a => a.icao.startsWith('RC'));
+
+const weatherCache = {};
+let currentFleet = "A330"; 
+let fleetMarkersLayer;
+
+// 🌍 全域共用：具備多重備援防線的資料擷取器
+const fetchBulkWeatherFast = async (icaoList, type) => {
+    if(!icaoList) return [];
+    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+
+    const executeFetch = async (targetUrl, timeoutMs) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeoutMs);
         try {
-            const data = await executeFetch(cleanUrl, 4500);
-            return Array.isArray(data) ? data : [];
-        } catch (errorA) {
-            console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
-            try {
-                const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
-                const dataA = await executeFetch(proxyA, 5500);
-                return Array.isArray(dataA) ? dataA : [];
-            } catch (errorB) {
-                console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
-                try {
-                    const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
-                    const dataB = await executeFetch(proxyB, 6000);
-                    return Array.isArray(dataB) ? dataB : [];
-                } catch (errorC) {
-                    console.error(`[全面失效] 無法為 ${type.toUpperCase()} 建立任何資料鏈路。`);
-                    throw new Error(`無法連接至氣象資料庫`); 
-                }
-            }
+            const res = await fetch(targetUrl, { signal: controller.signal });
+            clearTimeout(id);
+            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+            return await res.json();
+        } catch (err) {
+            clearTimeout(id);
+            throw err;
         }
     };
 
-    const bootSequence = async () => {
-        const statusIndicator = document.getElementById('sync-status');
+    try {
+        const data = await executeFetch(cleanUrl, 4500);
+        return Array.isArray(data) ? data : [];
+    } catch (errorA) {
+        console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
+        try {
+            const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
+            const dataA = await executeFetch(proxyA, 5500);
+            return Array.isArray(dataA) ? dataA : [];
+        } catch (errorB) {
+            console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
+            try {
+                const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+                const dataB = await executeFetch(proxyB, 6000);
+                return Array.isArray(dataB) ? dataB : [];
+            } catch (errorC) {
+                console.error(`[全面失效] 無法為 ${type.toUpperCase()} 建立任何資料鏈路。`);
+                throw new Error(`無法連接至氣象資料庫`); 
+            }
+        }
+    }
+};
+
+const syncFleetWeather = async (fleetName, forceRefresh = false) => {
+    const statusIndicator = document.getElementById('sync-status');
+    if (statusIndicator) {
+        statusIndicator.className = "px-3 py-1 rounded-full text-sm font-semibold text-white";
+        statusIndicator.style.backgroundColor = "#f39c12"; 
+        statusIndicator.innerText = `🚀 同步 ${fleetName} 機隊氣象資料中...`;
+    }
+    
+    const airports = fleets[fleetName];
+    
+    if (forceRefresh) {
+        airports.forEach(a => { delete weatherCache[a.icao]; });
+    }
+
+    // 過濾出尚未快取的 ICAO 列表 (大幅減少切換時的 API 負擔)
+    const missingIcaos = airports
+        .map(a => a.icao)
+        .filter(icao => !weatherCache[icao] || (!weatherCache[icao].metar && !weatherCache[icao].taf));
+
+    try {
+        if (missingIcaos.length > 0) {
+            const chunkSize = 50; // 分批請求防 URL 過長
+            for (let i = 0; i < missingIcaos.length; i += chunkSize) {
+                const chunk = missingIcaos.slice(i, i + chunkSize).join(',');
+                const [metars, tafs] = await Promise.all([
+                    fetchBulkWeatherFast(chunk, 'metar'),
+                    fetchBulkWeatherFast(chunk, 'taf')
+                ]);
+
+                // 初始化快取物件
+                missingIcaos.slice(i, i + chunkSize).forEach(icao => {
+                    if(!weatherCache[icao]) weatherCache[icao] = { metar: "", taf: "" };
+                });
+
+                metars.forEach(m => { 
+                    if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
+                });
+                tafs.forEach(t => { 
+                    if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
+                });
+            }
+        }
+
         if (statusIndicator) {
-            statusIndicator.style.backgroundColor = "#f39c12"; 
-            statusIndicator.innerText = "🚀 建立氣象資料鏈路中...";
+            statusIndicator.innerText = `✅ ${fleetName} 氣象就緒`;
+            statusIndicator.classList.remove('status-error');
+            statusIndicator.classList.add('status-loaded');
+            statusIndicator.style.backgroundColor = ""; 
         }
         
-        const icaoString = airports.map(a => a.icao).join(',');
+        renderFleetMarkers(fleetName);
 
-        try {
-            const [allMetars, allTafs] = await Promise.all([
-                fetchBulkWeatherFast(icaoString, 'metar'),
-                fetchBulkWeatherFast(icaoString, 'taf')
-            ]);
-
-            if (allMetars.length === 0 && allTafs.length === 0) {
-                throw new Error("無法連接天氣伺服器");
-            }
-
-            allMetars.forEach(m => { 
-                if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
-            });
-            
-            allTafs.forEach(t => { 
-                if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
-            });
-
-            isDataReady = true;
-            if (statusIndicator) {
-                statusIndicator.innerText = "✅ 氣象同步完成";
-                statusIndicator.classList.remove('status-error');
-                statusIndicator.classList.add('status-loaded');
-                statusIndicator.style.backgroundColor = ""; 
-            }
-        } catch (error) {
-            console.error("同步程序中斷：", error.message);
-            isDataReady = false; 
-            if (statusIndicator) {
-                statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
-                statusIndicator.classList.remove('status-loaded');
-                statusIndicator.classList.add('status-error');
-                statusIndicator.style.backgroundColor = "";
-            }
-        }
-    };
-
-    const refreshBtn = document.getElementById('btn-refresh-map');
-    if(refreshBtn) {
-        refreshBtn.onclick = () => {
-            refreshBtn.disabled = true;
-            refreshBtn.style.opacity = "0.5";
-            refreshBtn.style.cursor = "not-allowed";
-            refreshBtn.innerText = "⏳ 同步中...";
-
-            isDataReady = false;
-            airports.forEach(a => { weatherCache[a.icao] = { metar: "", taf: "" }; });
-            
-            bootSequence();
-
-            setTimeout(() => {
-                refreshBtn.disabled = false;
-                refreshBtn.style.opacity = "1";
-                refreshBtn.style.cursor = "pointer";
-                refreshBtn.innerText = "手動更新氣象";
-            }, 2000);
-        };
-
-        // 🌟 核心升級：注入自訂 ICAO 搜尋介面 (位置已互換)
-        let searchContainer = document.getElementById('custom-icao-search-container');
-        if (!searchContainer) {
-            searchContainer = document.createElement('div');
-            searchContainer.id = 'custom-icao-search-container';
-            searchContainer.style.display = 'inline-flex';
-            searchContainer.style.alignItems = 'center';
-            searchContainer.style.gap = '8px';
-            searchContainer.style.marginRight = '15px'; // 添加右側間距，因為要插在「更新按鈕」左邊
-            searchContainer.style.flexWrap = 'wrap';
-
-            searchContainer.innerHTML = `
-                <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 150px; text-transform: uppercase; font-weight: bold; outline: none;">
-                <button id="btn-search-icao" style="padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 搜尋機場</button>
-            `;
-
-            // 🎯 修改重點：將搜尋組件插入到「手動更新按鈕」的前方，達成位置互換
-            if (refreshBtn.parentNode) {
-                refreshBtn.parentNode.insertBefore(searchContainer, refreshBtn);
-            }
-
-            // 綁定自訂搜尋事件
-            document.getElementById('btn-search-icao').addEventListener('click', async function() {
-                const inputEl = document.getElementById('custom-icao-input');
-                let icao = inputEl.value.trim().toUpperCase();
-                const btn = this;
-
-                if(icao.length !== 4) {
-                    const origText = btn.innerText;
-                    btn.innerText = "⚠️ 請輸入四碼";
-                    btn.style.background = "#e74c3c";
-                    setTimeout(() => { btn.innerText = origText; btn.style.background = "#8e44ad"; }, 2000);
-                    return;
-                }
-
-                btn.disabled = true;
-                btn.innerText = "⏳ 尋找中...";
-                btn.style.opacity = "0.7";
-
-                try {
-                    // 🎯 修正重點：不再使用舊的 stationinfo，改為使用 airport API 並納入強大的備援機制
-                    const [airportData, metarData, tafData] = await Promise.all([
-                        fetchBulkWeatherFast(icao, 'airport'),
-                        fetchBulkWeatherFast(icao, 'metar'),
-                        fetchBulkWeatherFast(icao, 'taf')
-                    ]);
-
-                    let lat, lon, siteName;
-
-                    // 依序從各種回應中挖掘該機場的經緯度座標與名稱
-                    if (airportData.length > 0) {
-                        lat = airportData[0].lat;
-                        lon = airportData[0].lon;
-                        siteName = airportData[0].id || icao; // AWC airport 端點通常返回 id
-                    } else if (metarData.length > 0 && metarData[0].lat !== undefined) {
-                        lat = metarData[0].lat;
-                        lon = metarData[0].lon;
-                        siteName = metarData[0].name || icao;
-                    } else if (tafData.length > 0 && tafData[0].lat !== undefined) {
-                        lat = tafData[0].lat;
-                        lon = tafData[0].lon;
-                        siteName = tafData[0].name || icao;
-                    }
-
-                    // 如果三條通道都挖不到座標，宣告失敗
-                    if (lat === undefined || lon === undefined) {
-                        throw new Error("查無此機場或氣象座標資訊");
-                    }
-
-                    let rawMetarText = "";
-                    let rawTafText = "";
-                    if (metarData.length > 0) rawMetarText = metarData[0].rawOb || metarData[0].raw;
-                    if (tafData.length > 0) rawTafText = tafData[0].rawTAF || tafData[0].raw;
-
-                    // 3. 建立自定義🌟座標標記
-                    const customIcon = L.divIcon({
-                        html: '<div style="font-size:26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); line-height: 1; transform: translate(-5px, -15px);">🌟</div>',
-                        className: 'custom-icao-icon',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30]
-                    });
-
-                    const customMarker = L.marker([lat, lon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
-
-                    // 4. 動態計算邊界防護與寬度
-                    const mapElement = document.getElementById('map');
-                    const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
-                    const isMobile = window.innerWidth < 768;
-                    const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
-                    const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
-
-                    // 5. 綁定 Popup 面板
-                    const popupHtml = buildAirportPopupHtml({ icao: icao, name: siteName }, rawMetarText, rawTafText);
-
-                    customMarker.bindPopup(popupHtml, {
-                        maxWidth: dynamicMaxWidth,
-                        minWidth: dynamicMinWidth,
-                        maxHeight: 450,
-                        autoPanPadding: [20, 20],
-                        keepInView: true
-                    }).openPopup();
-
-                    // 平移過去
-                    window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
-
-                    // 恢復按鈕狀態
-                    btn.disabled = false;
-                    btn.innerText = "🔍 搜尋機場";
-                    btn.style.opacity = "1";
-                    inputEl.value = ""; 
-
-                } catch (err) {
-                    console.error("自訂機場搜尋失敗:", err);
-                    btn.innerText = "❌ 查無資料";
-                    btn.style.background = "#e74c3c";
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.innerText = "🔍 搜尋機場";
-                        btn.style.background = "#8e44ad";
-                        btn.style.opacity = "1";
-                    }, 2500);
-                }
-            });
+    } catch (error) {
+        console.error("同步程序中斷：", error.message);
+        if (statusIndicator) {
+            statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
+            statusIndicator.classList.remove('status-loaded');
+            statusIndicator.classList.add('status-error');
+            statusIndicator.style.backgroundColor = "";
         }
     }
+};
 
-    // 將預載機場加入地圖
+function renderFleetMarkers(fleetName) {
+    if (fleetMarkersLayer) {
+        fleetMarkersLayer.clearLayers();
+    }
+
+    const airports = fleets[fleetName];
+    let validBounds = [];
+
     airports.forEach(airport => {
-        const marker = L.marker([airport.lat, airport.lng]).addTo(window.aviationMapInstance);
+        if (airport.lat === 0 && airport.lng === 0) return; // 略過無座標的機場
+        
+        validBounds.push([airport.lat, airport.lng]);
+        const marker = L.marker([airport.lat, airport.lng]).addTo(fleetMarkersLayer);
 
         marker.on('click', function() {
             const mapElement = document.getElementById('map');
@@ -930,22 +1033,8 @@ function initAviationMap() {
                 keepInView: true 
             };
 
-            if (!isDataReady) {
-                L.popup(popupOpts)
-                    .setLatLng(marker.getLatLng())
-                    .setContent(`
-                    <div class="weather-popup">
-                        <div class="airport-title">${airport.name} (${airport.icao})</div>
-                        <div style="color: #e67e22; font-weight: bold;">⚠️ 資料尚未就緒，請稍候或點擊「手動更新氣象」。</div>
-                    </div>
-                `).openOn(window.aviationMapInstance);
-                return;
-            }
-
-            const rawMetarText = weatherCache[airport.icao].metar;
-            const rawTafText = weatherCache[airport.icao].taf;
-            
-            const popupHtml = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
+            const cache = weatherCache[airport.icao] || { metar: "", taf: "" };
+            const popupHtml = buildAirportPopupHtml(airport, cache.metar, cache.taf);
 
             L.popup(popupOpts)
                 .setLatLng(marker.getLatLng())
@@ -954,7 +1043,163 @@ function initAviationMap() {
         });
     });
 
-    bootSequence();
+    if (validBounds.length > 0 && window.aviationMapInstance) {
+        const bounds = L.latLngBounds(validBounds);
+        if(bounds.isValid()) {
+            window.aviationMapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
+        }
+    }
+}
+
+function initAviationMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
+
+    if (window.aviationMapInstance) {
+        window.aviationMapInstance.remove();
+    }
+
+    window.aviationMapInstance = L.map('map').setView([23.5, 121.0], 5);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap & CARTO',
+        maxZoom: 20
+    }).addTo(window.aviationMapInstance);
+
+    fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
+
+    // 綁定機隊切換按鈕
+    document.querySelectorAll('.fleet-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.fleet-btn').forEach(b => {
+                b.classList.remove('active'); b.classList.add('inactive');
+            });
+            this.classList.remove('inactive'); this.classList.add('active');
+
+            currentFleet = this.getAttribute('data-fleet');
+            syncFleetWeather(currentFleet, false);
+        });
+    });
+
+    const refreshBtn = document.getElementById('btn-refresh-map');
+    if(refreshBtn) {
+        refreshBtn.onclick = () => {
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = "0.5";
+            refreshBtn.style.cursor = "not-allowed";
+            refreshBtn.innerText = "⏳ 同步中...";
+            
+            syncFleetWeather(currentFleet, true).finally(() => {
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.style.opacity = "1";
+                    refreshBtn.style.cursor = "pointer";
+                    refreshBtn.innerText = "🔄 更新目前機隊";
+                }, 1000);
+            });
+        };
+    }
+
+    // 自訂 ICAO 搜尋功能
+    const btnSearchIcao = document.getElementById('btn-search-icao');
+    if (btnSearchIcao) {
+        btnSearchIcao.addEventListener('click', async function() {
+            const inputEl = document.getElementById('custom-icao-input');
+            let icao = inputEl.value.trim().toUpperCase();
+            const btn = this;
+
+            if(icao.length !== 4) {
+                const origText = btn.innerText;
+                btn.innerText = "⚠️ 四碼";
+                btn.style.background = "#e74c3c";
+                setTimeout(() => { btn.innerText = origText; btn.style.background = "#8e44ad"; }, 2000);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "⏳ 尋找...";
+            btn.style.opacity = "0.7";
+
+            try {
+                const [airportData, metarData, tafData] = await Promise.all([
+                    fetchBulkWeatherFast(icao, 'airport'),
+                    fetchBulkWeatherFast(icao, 'metar'),
+                    fetchBulkWeatherFast(icao, 'taf')
+                ]);
+
+                let lat, lon, siteName;
+
+                if (airportData.length > 0) {
+                    lat = airportData[0].lat;
+                    lon = airportData[0].lon;
+                    siteName = airportData[0].id || icao; 
+                } else if (metarData.length > 0 && metarData[0].lat !== undefined) {
+                    lat = metarData[0].lat;
+                    lon = metarData[0].lon;
+                    siteName = metarData[0].name || icao;
+                } else if (tafData.length > 0 && tafData[0].lat !== undefined) {
+                    lat = tafData[0].lat;
+                    lon = tafData[0].lon;
+                    siteName = tafData[0].name || icao;
+                }
+
+                if (lat === undefined || lon === undefined) {
+                    throw new Error("查無此機場或氣象座標資訊");
+                }
+
+                let rawMetarText = "";
+                let rawTafText = "";
+                if (metarData.length > 0) rawMetarText = metarData[0].rawOb || metarData[0].raw;
+                if (tafData.length > 0) rawTafText = tafData[0].rawTAF || tafData[0].raw;
+
+                const customIcon = L.divIcon({
+                    html: '<div style="font-size:26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); line-height: 1; transform: translate(-5px, -15px);">🌟</div>',
+                    className: 'custom-icao-icon',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+
+                const customMarker = L.marker([lat, lon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
+
+                const mapElement = document.getElementById('map');
+                const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
+                const isMobile = window.innerWidth < 768;
+                const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
+                const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
+
+                const popupHtml = buildAirportPopupHtml({ icao: icao, name: siteName, lat: lat, lng: lon }, rawMetarText, rawTafText);
+
+                customMarker.bindPopup(popupHtml, {
+                    maxWidth: dynamicMaxWidth,
+                    minWidth: dynamicMinWidth,
+                    maxHeight: 450,
+                    autoPanPadding: [20, 20],
+                    keepInView: true
+                }).openPopup();
+
+                window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
+
+                btn.disabled = false;
+                btn.innerText = "🔍 搜尋";
+                btn.style.opacity = "1";
+                inputEl.value = ""; 
+
+            } catch (err) {
+                console.error("自訂機場搜尋失敗:", err);
+                btn.innerText = "❌ 失敗";
+                btn.style.background = "#e74c3c";
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = "🔍 搜尋";
+                    btn.style.background = "#8e44ad";
+                    btn.style.opacity = "1";
+                }, 2500);
+            }
+        });
+    }
+
+    // 啟動預設機隊同步 (預設為 A330)
+    syncFleetWeather(currentFleet, false);
 }
 
 // ==========================================
