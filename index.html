@@ -330,37 +330,47 @@
   </div>
 
   <div class="section">
-  <div class="map-header">
-    <h2 style="margin: 0; width: 100%;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; width: 100%; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            🌍 NOAA AWC METAR/TAF & D-ATIS
-            <div id="sync-status" style="background-color: #34495e;">⏸️ 系統初始化中...</div>
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <!-- Custom ICAO Search -->
-            <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 8px;">
-                <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100px; text-transform: uppercase; font-weight: bold; outline: none;">
-                <button id="btn-search-icao" style="margin: 0; padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 ICAO搜尋</button>
-            </div>
-            <!-- Refresh Button -->
-            <button id="btn-refresh-map" style="background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 6px 10px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 0;">🔄 手動更新</button>
-        </div>
-      </div>
-    </h2>
+    <!-- 將原本的分散區塊整合成單一 Flex 容器 (同一列) -->
+    <div class="map-header" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 10px;">
 
-    <!-- Fleet Selector -->
-    <div id="fleet-selector" style="display: flex; flex-wrap: wrap; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 10px; width: 100%; border: 1px solid #e2e8f0; margin-top: 10px;">
-        <span style="font-size: 13px; font-weight: bold; color: #64748b; display: flex; align-items: center; padding-left: 5px;">✈️ 切換機隊：</span>
-        <button class="fleet-btn active" data-fleet="A330">A330</button>
-        <button class="fleet-btn inactive" data-fleet="A321">A321</button>
-        <button class="fleet-btn inactive" data-fleet="A350">A350</button>
-        <button class="fleet-btn inactive" data-fleet="Domestic">國內線</button>
+      <!-- 左側：標題與系統狀態 -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+          <h2 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: #1e293b;">
+              🌍 NOAA AWC METAR/TAF & D-ATIS
+          </h2>
+          <div id="sync-status" style="background-color: #34495e; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">
+              ⏸️ 系統初始化中...
+          </div>
+      </div>
+
+      <!-- 中間：機隊選擇器 (將其融入同一列) -->
+      <div id="fleet-selector" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 0;">
+          <span style="font-size: 12px; font-weight: bold; color: #64748b; display: flex; align-items: center;"></span>
+          <button class="fleet-btn active" data-fleet="A330">A330</button>
+          <button class="fleet-btn inactive" data-fleet="A321">A321</button>
+          <button class="fleet-btn inactive" data-fleet="A350">A350</button>
+          <button class="fleet-btn inactive" data-fleet="Domestic">Domestic</button>
+      </div>
+
+      <!-- 右側：搜尋與更新 (依要求調小尺寸) -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <!-- Custom ICAO Search (縮小版) -->
+          <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 4px;">
+              <!-- 寬度從 100px 縮小至 65px，padding 與 font-size 調小 -->
+              <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 65px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
+              <!-- padding 與 font-size 調小 -->
+              <button id="btn-search-icao" style="margin: 0; padding: 4px 8px; background: #8e44ad; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 12px;">🔍 ICAO搜尋</button>
+          </div>
+          
+          <!-- Refresh Button (縮小版) -->
+          <!-- padding, font-size 與 border 調小 -->
+          <button id="btn-refresh-map" style="background: transparent; border: 1.5px solid #3c79ff; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #3c79ff; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 0;">🔄 手動更新</button>
+      </div>
+
     </div>
+    <div id="map"></div>
   </div>
-  <div id="map"></div>
-</div>
+
   <div class="section windy-section">
     <h2>🌧️ Windy 即時雷達圖 
       <button onclick="refreshIframe('windyRadar')">重新整理</button>
