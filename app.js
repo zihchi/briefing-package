@@ -507,6 +507,77 @@ function getCategoryBadge(typeStr) {
 }
 
 // ------------------------------------------
+// 🌤️ 開源氣象整合 (Open-Meteo) 輔助函數
+// ------------------------------------------
+function getWmoEmoji(code, isNight) {
+    // 根據 WMO 天氣代碼返回對應 Emoji
+    if (code === 0) return isNight ? '🌙' : '☀️';
+    if (code === 1) return isNight ? '🌤️' : '🌤️'; 
+    if (code === 2) return '⛅';
+    if (code === 3) return '☁️';
+    if ([45, 48].includes(code)) return '🌫️';
+    if ([51, 53, 55, 56, 57].includes(code)) return '🌧️';
+    if ([61, 63, 65, 66, 67].includes(code)) return '🌧️';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return '🌨️';
+    if ([80, 81, 82].includes(code)) return '🌦️';
+    if ([95, 96, 99].includes(code)) return '⛈️';
+    return '❓';
+}
+
+window.fetchOpenMeteoForecast = async function(icao, lat, lng) {
+    const container = document.getElementById(`os-weather-${icao}`);
+    if (!container) return;
+
+    if (!lat || !lng) {
+        container.innerHTML = '<div style="font-size:12px; color:#ef4444; padding:8px; text-align:center;">無座標資訊，無法載入天氣</div>';
+        return;
+    }
+
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,weathercode&timezone=UTC&forecast_days=2`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('API Error');
+        const data = await res.json();
+
+        const now = new Date();
+        const currentUtcHour = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0));
+
+        let startIndex = data.hourly.time.findIndex(t => new Date(t + "Z").getTime() >= currentUtcHour.getTime());
+        if (startIndex === -1) startIndex = 0;
+
+        let html = `<div style="display:flex; overflow-x:auto; gap:12px; padding:10px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; font-family: ui-monospace, 'SF Mono', Consolas, monospace; justify-content: space-between;">`;
+
+        // 每 3 小時為間隔，總共 24 小時 (8 個節點)
+        for (let i = 0; i <= 24; i += 3) {
+            const idx = startIndex + i;
+            if (idx >= data.hourly.time.length) break;
+
+            const timeStr = data.hourly.time[idx]; 
+            const dateObj = new Date(timeStr + "Z");
+            const hh = String(dateObj.getUTCHours()).padStart(2, '0');
+            const temp = Math.round(data.hourly.temperature_2m[idx]);
+            const code = data.hourly.weathercode[idx];
+
+            const isNight = (dateObj.getUTCHours() < 6 || dateObj.getUTCHours() >= 18);
+            const emoji = getWmoEmoji(code, isNight);
+
+            html += `
+                <div style="display:flex; flex-direction:column; align-items:center; min-width:45px;">
+                    <span style="font-size:11px; color:#64748b; font-weight:bold;">${hh}Z</span>
+                    <span style="font-size:22px; margin:4px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">${emoji}</span>
+                    <span style="font-size:14px; font-weight:bold; color:#1e293b;">${temp}°C</span>
+                </div>
+            `;
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        container.innerHTML = '<div style="font-size:12px; color:#ef4444; padding:8px; text-align:center;">開源天氣載入失敗</div>';
+    }
+};
+
+// ------------------------------------------
 // ✈️ 地圖彈出視窗(Popup) 組件產生器
 // ------------------------------------------
 function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
@@ -536,6 +607,10 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         
         ${timeHtml}
 
+        <div id="os-weather-${airport.icao}" style="margin-bottom: 15px;">
+            <div style="font-size:12px; color:#64748b; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">⏳ 正在擷取開源氣象資料...</div>
+        </div>
+
         <div class="data-block">
             <div class="section-title">
                 <span style="display:inline-flex; align-items:center;">
@@ -562,7 +637,6 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
             <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;"></div>
         </div>
 
-        <!-- NEW: 歷史氣象 (過去 24 小時) -->
         <div class="data-block" style="border-bottom: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="color: #8e44ad; font-size: 13.5px; font-weight: bold;">🕒 歷史氣象 (過去 24 小時)</span>
@@ -1053,6 +1127,9 @@ function renderFleetMarkers(fleetName) {
                 .setLatLng(marker.getLatLng())
                 .setContent(popupHtml)
                 .openOn(window.aviationMapInstance);
+                
+            // 觸發開源氣象讀取
+            setTimeout(() => window.fetchOpenMeteoForecast(airport.icao, airport.lat, airport.lng), 50);
         });
     });
 
@@ -1189,6 +1266,9 @@ function initAviationMap() {
                     autoPanPadding: [20, 20],
                     keepInView: true
                 }).openPopup();
+                
+                // 觸發開源氣象讀取
+                setTimeout(() => window.fetchOpenMeteoForecast(icao, lat, lon), 50);
 
                 window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
 
@@ -1674,14 +1754,14 @@ function smartToDec(val) {
     if (nums.includes('.') && nums.split('.')[0].length <= 3) {
        dec = parseFloat(nums);
     } else {
-        const isLat = (dir === 'N' || dir === 'S');
-        const degLen = isLat ? 2 : 3;
+       const isLat = (dir === 'N' || dir === 'S');
+       const degLen = isLat ? 2 : 3;
 
-        if (nums.length >= degLen + 2) {
-            const d = parseFloat(nums.slice(0, degLen));
-            const rest = nums.slice(degLen);
-            
-            if (rest.includes('.')) {
+       if (nums.length >= degLen + 2) {
+           const d = parseFloat(nums.slice(0, degLen));
+           const rest = nums.slice(degLen);
+           
+           if (rest.includes('.')) {
                  const dotIndex = rest.indexOf('.');
                  if (dotIndex === 2) { 
                      const m = parseFloat(rest);
@@ -1696,7 +1776,7 @@ function smartToDec(val) {
                 const s = rest.length >= 4 ? parseFloat(rest.slice(2, 4)) : 0;
                 dec = d + (m / 60) + (s / 3600);
             }
-        }
+       }
     }
     
     if (!isNaN(dec)) {
