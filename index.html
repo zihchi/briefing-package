@@ -331,17 +331,36 @@
 
   <div class="section">
   <div class="map-header">
-    <h2 style="margin: 0;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        🌍 NOAA AWC METAR/TAF & D-ATIS
-        <div id="sync-status" style="background-color: #34495e;">⏸️ 待命：請手動更新氣象</div>
+    <h2 style="margin: 0; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; width: 100%; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            🌍 NOAA AWC METAR/TAF & D-ATIS
+            <div id="sync-status" style="background-color: #34495e;">⏸️ 系統初始化中...</div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <!-- Custom ICAO Search -->
+            <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 8px;">
+                <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100px; text-transform: uppercase; font-weight: bold; outline: none;">
+                <button id="btn-search-icao" style="margin: 0; padding: 6px 12px; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔍 ICAO搜尋</button>
+            </div>
+            <!-- Refresh Button -->
+            <button id="btn-refresh-map" style="background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 6px 10px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 0;">🔄 手動更新</button>
+        </div>
       </div>
     </h2>
-    <button id="btn-refresh-map">手動更新氣象</button>
+
+    <!-- Fleet Selector -->
+    <div id="fleet-selector" style="display: flex; flex-wrap: wrap; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 10px; width: 100%; border: 1px solid #e2e8f0; margin-top: 10px;">
+        <span style="font-size: 13px; font-weight: bold; color: #64748b; display: flex; align-items: center; padding-left: 5px;">✈️ 切換機隊：</span>
+        <button class="fleet-btn active" data-fleet="A330">A330</button>
+        <button class="fleet-btn inactive" data-fleet="A321">A321</button>
+        <button class="fleet-btn inactive" data-fleet="A350">A350</button>
+        <button class="fleet-btn inactive" data-fleet="Domestic">國內線</button>
+    </div>
   </div>
   <div id="map"></div>
 </div>
-
   <div class="section windy-section">
     <h2>🌧️ Windy 即時雷達圖 
       <button onclick="refreshIframe('windyRadar')">重新整理</button>
