@@ -135,6 +135,22 @@
         background: #94a3b8; 
     }
 
+    /* 👇 NEW: 開源氣象 24H 橫卡滑動滾動條優化 */
+    div[id^="os-weather-"]::-webkit-scrollbar {
+        height: 5px;
+    }
+    div[id^="os-weather-"]::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.03);
+        border-radius: 10px;
+    }
+    div[id^="os-weather-"]::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    div[id^="os-weather-"]::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     /* =========================================
        通用工具樣式 (iOS 風格 / 包含 Curfew, Time Calc, Altimetry)
        ========================================= */
@@ -282,7 +298,7 @@
       <li><label><input type="checkbox"> Information : 班號、飛時、巡航高度</label></li>
       <li><label><input type="checkbox"> Registration : 機號、旅客、水量、MEL、停機位</label></li>
       <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
-      <li><label><input type="checkbox"> Performance : 油量、起飛重、落地重、MEL</label></li>
+      <li><label><input type="checkbox"> Performance : 油量、起重、落地重、MEL</label></li>
       <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
       <li><label><input type="checkbox"> Fleet Notice Reviewed and ✅ </label></li>
       <li><label><input type="checkbox"> OFP Signed </label></li>
@@ -330,10 +346,8 @@
   </div>
 
   <div class="section">
-    <!-- 將原本的分散區塊整合成單一 Flex 容器 (同一列) -->
     <div class="map-header" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 10px;">
 
-      <!-- 左側：標題與系統狀態 -->
       <div style="display: flex; align-items: center; gap: 10px;">
           <h2 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: #1e293b;">
               🌍 NOAA AWC METAR/TAF & D-ATIS
@@ -343,7 +357,6 @@
           </div>
       </div>
 
-      <!-- 中間：機隊選擇器 (將其融入同一列) -->
       <div id="fleet-selector" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 0;">
           <span style="font-size: 12px; font-weight: bold; color: #64748b; display: flex; align-items: center;"></span>
           <button class="fleet-btn active" data-fleet="A330">A330</button>
@@ -352,18 +365,12 @@
           <button class="fleet-btn inactive" data-fleet="Domestic">Domestic</button>
       </div>
 
-      <!-- 右側：搜尋與更新 (依要求調小尺寸) -->
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <!-- Custom ICAO Search (縮小版) -->
           <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 4px;">
-              <!-- 寬度從 100px 縮小至 65px，padding 與 font-size 調小 -->
               <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 65px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
-              <!-- padding 與 font-size 調小 -->
               <button id="btn-search-icao" style="margin: 0; padding: 4px 8px; background: #8e44ad; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 12px;">🔍 ICAO搜尋</button>
           </div>
           
-          <!-- Refresh Button (縮小版) -->
-          <!-- padding, font-size 與 border 調小 -->
           <button id="btn-refresh-map" style="background: transparent; border: 1.5px solid #3c79ff; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #3c79ff; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 0;">🔄 手動更新</button>
       </div>
 
@@ -402,6 +409,7 @@
     </h2>
     <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
       style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+     stream
     </iframe>
   </div>
 
@@ -455,12 +463,10 @@
       </div>
   </div>
 
-  <!-- 👇 全新加入：浮動更新通知橫幅 (預設隱藏) -->
   <div id="update-banner" style="display: none; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
     🚀 新版本已準備就緒，點擊立即更新！
   </div>
 
-  <!-- 👇 升級版：右下角版本號與「檢查更新」按鈕 -->
   <div style="position: fixed; bottom: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 9000; background: rgba(255,255,255,0.85); padding: 6px 12px; border-radius: 12px; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
     <div id="sys-version" style="font-size: 11px; color: #64748b; font-family: 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">
       Verifying...
