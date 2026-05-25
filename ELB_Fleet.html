@@ -834,39 +834,169 @@ async function openDetail(tail, cardEl) {
   const panel = document.getElementById('detail-panel');
   const body  = document.getElementById('detail-body');
   document.getElementById('detail-title').textContent = tail;
-  document.getElementById('detail-subtitle').textContent = tail2type(tail);
+
+  // 從機隊清單抓對應的 ac 資料給 subtitle 顯示機型
+  const ac = fleetData.find(a => a.tail === tail);
+  document.getElementById('detail-subtitle').textContent = ac ? ac.type : '';
+
   panel.classList.add('open');
   if (window.innerWidth < 640) document.getElementById('detail-overlay').classList.add('show');
 
-  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>探測單機 endpoint 中…</div>`;
+  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>載入 NTC / MEL / 近 5 航班…（約 10-15 秒）</div>`;
 
   try {
     const r = await api(`/api/aircraft/${encodeURIComponent(tail)}`);
-    if (!r.ok) { body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(r.error||'未知錯誤')}</div>`; return; }
-    renderDetailProbes(body, tail, r.probes || []);
+    if (!r.ok) {
+      body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(r.error||'未知錯誤')}</div>`;
+      return;
+    }
+    renderAircraftDetail(body, tail, r);
   } catch (e) {
     body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(e.message)}</div>`;
   }
 }
 
-// 階段一：列出每個 endpoint 的狀態 + 第一個成功的 raw JSON
-function renderDetailProbes(container, tail, probes) {
-  const ok = probes.find(p => p.status === 200);
-  let html = '<div class="det-sec"><div class="det-sec-hdr">REST endpoint 探測結果</div>';
-  for (const p of probes) {
-    const color = p.status === 200 ? '#86efac' : p.status === 0 ? '#fca5a5' : '#fbbf24';
-    html += `<div style="font-size:11px;font-family:monospace;color:${color};margin-bottom:4px;word-break:break-all">${p.status} — ${esc(p.path)}</div>`;
+// ── 渲染單機完整詳情 ─────────────────────────────────────────
+function renderAircraftDetail(container, tail, data) {
+  const state = data.state || {};
+  const ntcs  = data.notesToCrew || [];
+  const mels  = data.deferredDefects || [];
+  const recentFlights  = data.recentFlights || [];
+  const currentFlights = data.currentFlights || [];
+
+  let html = '';
+
+  // ── 目前航班 ──
+  if (currentFlights.length > 0) {
+    const f = currentFlights[0];
+    if (!f._error) {
+      const num   = fmt(f.flightNumber || f.flightNum || f.flight || '');
+      const orig  = fmt(f.departureAirport || f.origin || f.dep || '');
+      const dest  = fmt(f.arrivalAirport || f.destination || f.arr || '');
+      html += `<div class="det-sec" style="background:rgba(34,197,94,0.08);border-left:3px solid var(--green);padding-left:14px;">
+        <div class="det-sec-hdr" style="color:var(--green)">✈ 目前航班</div>
+        <div style="font-size:18px;font-weight:800;margin:4px 0;">${esc(num || '—')}</div>
+        <div style="font-size:14px;color:var(--text)">${esc(orig||'?')} → ${esc(dest||'?')}</div>
+      </div>`;
+    }
+  }
+
+  // ── NTC ──
+  html += `<div class="det-sec"><div class="det-sec-hdr">Notices to Crew <span class="cnt">${ntcs.length}</span></div>`;
+  if (!ntcs.length) {
+    html += `<div class="empty-note">無 NTC</div>`;
+  } else {
+    ntcs.forEach((n, i) => {
+      if (n._error) { html += `<div class="ntc-item"><div class="ntc-desc" style="color:var(--red)">${esc(n._id)}: ${esc(n._error)}</div></div>`; return; }
+      const num  = fmt(n.recordName || n.ntcNumber || n._id);
+      const act  = (n.ntcActions && n.ntcActions[0]) || {};
+      const text = fmt(act.comments || n.description || n.title || '');
+      const sb   = fmt(act.sbReference || n.sbReference || '');
+      const expDate = act.expiration && act.expiration[0] && act.expiration[0].date;
+      const expDays = expDate ? Math.round((new Date(expDate) - new Date()) / 86400000) : null;
+      const uid = `ntc-${tail}-${i}`;
+      html += `<div class="ntc-item">
+        <div class="ntc-head">
+          <span class="ntc-num">${esc(num)}</span>
+          ${expDays !== null ? `<span class="mel-meta-tag ${expDays<=7?'expiry-crit':expDays<=14?'expiry-warn':'expiry-ok'}" style="margin-left:auto">Expires ${expDays}d</span>` : ''}
+        </div>
+        ${sb ? `<div style="font-size:11px;color:var(--purple);margin-top:4px">SB: ${esc(sb)}</div>` : ''}
+        <div class="ntc-toggle" onclick="toggleNtc('${uid}')">▶ 全文</div>
+        <div class="ntc-content" id="${uid}">${esc(text || '（無內容）')}</div>
+      </div>`;
+    });
   }
   html += '</div>';
 
-  if (ok) {
-    html += `<div class="det-sec"><div class="det-sec-hdr">第一個成功 endpoint 的回應</div>
-      <div style="font-size:11px;color:var(--gold);margin-bottom:6px">${esc(ok.path)}</div>
-      <pre style="background:var(--surface);padding:10px;border-radius:8px;font-size:10px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all">${esc(JSON.stringify(ok.body, null, 2))}</pre>
-    </div>`;
+  // ── MEL ──
+  html += `<div class="det-sec"><div class="det-sec-hdr">MEL Deferred Defects <span class="cnt">${mels.length}</span></div>`;
+  if (!mels.length) {
+    html += `<div class="empty-note">無 MEL</div>`;
   } else {
-    html += `<div class="det-sec"><div class="empty-note">所有 REST endpoint 都失敗。MEL/NTC/飛行記錄需要 WebSocket — 請使用機隊頁右上角的「擷取 Bookmarklet」功能（待開發 Phase 2）</div></div>`;
+    for (const m of mels) {
+      if (m._error) { html += `<div class="mel-item"><div class="mel-desc" style="color:var(--red)">${esc(m._id)}: ${esc(m._error)}</div></div>`; continue; }
+      const num  = fmt(m.recordName || m.melItemNumber || m.number || m._id);
+      const desc = fmt(m.faultDescription || m.description || m.title || '');
+      const action = m._action || {};
+      const deferral = action.maintActionDeferral || {};
+      const cat = fmt(deferral.deferralCategoryOther || deferral.deferralCategory || '');
+      const refs = Array.isArray(action.actionAuthorityRef) ? action.actionAuthorityRef : [];
+      const ref = refs.find(r => r.typeOfReference === 'MEL' || r.typeOfReference === 'CDL');
+      const refDoc = ref ? fmt(ref.documentNumber || '') : '';
+      // 計算過期
+      const exp0 = deferral.expiration && deferral.expiration[0];
+      let expTag = '';
+      if (exp0) {
+        if (exp0.relativeTime && exp0.relativeTime.days && m.originDateTime) {
+          const days = exp0.relativeTime.days;
+          const expDate = new Date(new Date(m.originDateTime).getTime() + days * 86400000);
+          const daysLeft = Math.round((expDate - new Date()) / 86400000);
+          expTag = `<span class="mel-meta-tag ${daysLeft<0?'expiry-exp':daysLeft<=3?'expiry-crit':daysLeft<=10?'expiry-warn':'expiry-ok'}">${daysLeft<0?'EXPIRED':daysLeft+'d'}</span>`;
+        } else if (exp0.quantity && exp0.unitName) {
+          expTag = `<span class="mel-meta-tag expiry-warn">${exp0.quantity} ${esc(exp0.unitName)}</span>`;
+        }
+      }
+      html += `<div class="mel-item">
+        <div class="mel-head">
+          <span class="mel-num">${esc(num)}</span>
+          <span class="mel-desc">${esc(desc || '（無說明）')}</span>
+        </div>
+        <div class="mel-meta">
+          ${cat ? catTag(cat) : ''}
+          ${refDoc ? `<span class="mel-meta-tag">REF: ${esc(refDoc)}</span>` : ''}
+          ${expTag}
+        </div>
+      </div>`;
+    }
   }
+  html += '</div>';
+
+  // ── 近 5 航班 ──
+  html += `<div class="det-sec"><div class="det-sec-hdr">近 5 航班 <span class="cnt">${recentFlights.length}</span></div>`;
+  if (!recentFlights.length) {
+    html += `<div class="empty-note">無飛行記錄</div>`;
+  } else {
+    for (const flt of recentFlights) {
+      if (flt._error) { html += `<div class="flt-item"><div class="flt-route" style="color:var(--red)">${esc(flt._id)}: ${esc(flt._error)}</div></div>`; continue; }
+      const num  = fmt(flt.flightNumber || flt.flightNum || flt.flight || flt._id);
+      const orig = fmt(flt.departureAirport || flt.origin || flt.dep || '');
+      const dest = fmt(flt.arrivalAirport || flt.destination || flt.arr || '');
+      const dt   = fmt(flt.startDate || flt.inTime || flt.arrivalTime || flt.date || '');
+      const logs = Array.isArray(flt._logs) ? flt._logs : [];
+
+      let logHtml = '';
+      for (const log of logs) {
+        if (log && !log._error) {
+          const lnum = fmt(log.recordName || log._id);
+          const ldesc = fmt(log.faultDescription || log.description || '');
+          const action = log.maintActionId ? '' : ''; // TODO maybe fetch
+          if (lnum || ldesc) {
+            logHtml += `<div class="fault-row">
+              ${lnum ? `<div class="fault-code">${esc(lnum)}</div>` : ''}
+              ${ldesc ? `<div class="fault-desc">${esc(ldesc)}</div>` : ''}
+            </div>`;
+          }
+        }
+      }
+
+      html += `<div class="flt-item">
+        <div class="flt-head">
+          <span class="flt-num">${esc(num)}</span>
+          <span class="flt-route">${esc(orig||'?')} → ${esc(dest||'?')}</span>
+          <span class="flt-time">${esc(dt ? dt.slice(0,10) : '')}</span>
+        </div>
+        ${logHtml ? `<div class="fault-list">${logHtml}</div>` : ''}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ── Debug ──
+  html += `<div class="debug-sec">
+    <div class="debug-toggle" onclick="toggleDebug('dbg-${tail.replace(/-/g,'')}')">🔬 Raw 資料</div>
+    <div class="debug-content" id="dbg-${tail.replace(/-/g,'')}">${esc(JSON.stringify(data,null,2))}</div>
+  </div>`;
+
   container.innerHTML = html;
 }
 

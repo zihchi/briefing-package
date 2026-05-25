@@ -392,102 +392,93 @@ async function handleFleet(request, origin) {
   }
 }
 
-// 開啟 WS，subscribe 單機，收集回傳的 entity 資料
-async function fetchAircraftViaWS(cookies, tail, timeoutMs = 10000) {
+// 開啟 WS，撈單機完整詳情：state + NTCs + MELs + 近 5 航班
+async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
   const ws = await openELBWebSocket(cookies);
+  let closed = false;
+  const closeWS = () => { if (!closed) { closed = true; try { ws.close(1000, 'done'); } catch {} } };
 
-  return new Promise((resolve) => {
-    let resolved = false;
-    let operatorCode = null;
-    let nextId = 0;
-    let subscribed = false;
-    const collected = [];
-    const trace = [];
+  // 整體超時保護
+  const overallTimer = setTimeout(() => closeWS(), timeoutMs);
 
-    const finish = (result) => {
-      if (resolved) return;
-      resolved = true;
-      try { ws.close(1000, 'done'); } catch {}
-      resolve({ ...result, trace });
-    };
+  try {
+    await waitForInit(ws);
+    const pipe = makeWSPipeline(ws);
 
-    const timer = setTimeout(() => {
-      // 超時 → 把目前收集到的回應傳回（可能已部分到齊）
-      if (collected.length > 0) {
-        finish({ ok: true, data: collected, partial: true });
-      } else {
-        finish({ ok: false, error: `WS timeout after ${timeoutMs}ms` });
-      }
-    }, timeoutMs);
+    // Step 1: 單機狀態（拿到 IDs）
+    const state = await pipe.req('getAircraftState', { id: tail }, 10000);
 
-    // 子收集 timer：收到第一筆 aircraft 訊息後再等 1.5 秒，給多個 extension 機會送來
-    let collectTimer = null;
+    const ntcIds   = Array.isArray(state.notesToCrew)     ? state.notesToCrew     : [];
+    const melIds   = Array.isArray(state.deferredDefects) ? state.deferredDefects : [];
+    const closedFs = Array.isArray(state.closedFlights)   ? state.closedFlights.slice(0, 5) : [];
+    const activeFs = Array.isArray(state.activeFlights)   ? state.activeFlights   : [];
 
-    ws.addEventListener('message', (event) => {
-      let msg;
-      try { msg = JSON.parse(event.data); } catch { return; }
-      trace.push({ dir: '←', preview: JSON.stringify(msg).slice(0, 200) });
+    // Step 2: 並行抓所有東西
+    const [ntcs, mels, recentFlights, currentFlights] = await Promise.all([
+      // NTC 全文
+      Promise.all(ntcIds.map(id =>
+        pipe.req('getNoteToCrew', { id }, 7000)
+          .then(d => ({ _id: id, ...d }))
+          .catch(e => ({ _id: id, _error: e.message }))
+      )),
 
-      if (!operatorCode && msg.content && msg.content.operatorCode) {
-        operatorCode = msg.content.operatorCode;
-
-        const subMsg = {
-          id: nextId++,
-          type: 'sub',
-          func: 'logbookApiEvent',
-          content: {
-            type: 'Aircraft',
-            entityId: tail,
-            extensions: [
-              'FleetDashboard:Detail',
-              'FleetDashboard:MEL',
-              'FleetDashboard:NTC',
-              'FleetDashboard:RecentDefects',
-              'FleetDashboard:FlightLog',
-            ],
-          },
-        };
-        trace.push({ dir: '→', preview: JSON.stringify(subMsg) });
-        ws.send(JSON.stringify(subMsg));
-        subscribed = true;
-        return;
-      }
-
-      // 訊息屬於我們訂閱的那台飛機？
-      if (subscribed && msg.content) {
-        const isThisAircraft =
-          msg.content.aircraftIdentifier === tail ||
-          msg.content.entityId === tail ||
-          (msg.entityId === tail) ||
-          (msg.content.id === tail);
-
-        if (isThisAircraft || msg.type === 'res') {
-          collected.push(msg);
-          // 收到第一筆後再多等 1.5 秒給其他 extension 推資料
-          if (collectTimer) clearTimeout(collectTimer);
-          collectTimer = setTimeout(() => {
-            clearTimeout(timer);
-            finish({ ok: true, data: collected });
-          }, 1500);
+      // MEL 條目 + 維修動作（兩段查詢）
+      Promise.all(melIds.map(async id => {
+        try {
+          const ml = await pipe.req('getMaintLog', { id }, 7000);
+          const maId = ml?.latestDeferringMaintActionId;
+          if (maId) {
+            ml._action = await pipe.req('getMaintAction', { id: maId }, 7000).catch(() => null);
+          }
+          return { _id: id, ...ml };
+        } catch (e) {
+          return { _id: id, _error: e.message };
         }
-      }
-    });
+      })),
 
-    ws.addEventListener('close', (event) => {
-      clearTimeout(timer);
-      if (collectTimer) clearTimeout(collectTimer);
-      if (collected.length > 0) {
-        finish({ ok: true, data: collected });
-      } else {
-        finish({ ok: false, error: `WS closed code=${event.code}` });
-      }
-    });
+      // 近 5 航班 + 每個航班的 log entries
+      Promise.all(closedFs.map(async id => {
+        try {
+          const flt = await pipe.req('getFlight', { id }, 7000);
+          const logIds = Array.isArray(flt?.maintLogIds) ? flt.maintLogIds : [];
+          flt._logs = await Promise.all(
+            logIds.map(lid =>
+              pipe.req('getMaintLog', { id: lid }, 6000)
+                .then(d => ({ _id: lid, ...d }))
+                .catch(e => ({ _id: lid, _error: e.message }))
+            )
+          );
+          return { _id: id, ...flt };
+        } catch (e) {
+          return { _id: id, _error: e.message };
+        }
+      })),
 
-    ws.addEventListener('error', () => {
-      clearTimeout(timer);
-      finish({ ok: false, error: 'WS error event' });
-    });
-  });
+      // 目前在飛的航班（基本資訊）
+      Promise.all(activeFs.map(id =>
+        pipe.req('getFlight', { id }, 7000)
+          .then(d => ({ _id: id, ...d }))
+          .catch(e => ({ _id: id, _error: e.message }))
+      )),
+    ]);
+
+    clearTimeout(overallTimer);
+    closeWS();
+    return {
+      ok: true,
+      data: {
+        state,
+        notesToCrew: ntcs,
+        deferredDefects: mels,
+        recentFlights,
+        currentFlights,
+      },
+    };
+  } catch (e) {
+    clearTimeout(overallTimer);
+    closeWS();
+    return { ok: false, error: e.message || String(e) };
+  }
 }
 
 // ──────────────────────────────────────────
@@ -502,11 +493,9 @@ async function handleAircraft(request, tail, origin) {
   if (!cookies.JSESSIONID) return jsonResp({ ok: false, error: '缺少 JSESSIONID cookie' }, 401, origin);
 
   try {
-    const result = await fetchAircraftViaWS(cookies, tail);
-    if (!result.ok) {
-      return jsonResp({ ok: false, error: result.error, trace: result.trace }, 502, origin);
-    }
-    return jsonResp({ ok: true, tail, data: result.data, partial: !!result.partial, trace: result.trace }, 200, origin);
+    const result = await fetchAircraftDetailViaWS(cookies, tail);
+    if (!result.ok) return jsonResp({ ok: false, error: result.error }, 502, origin);
+    return jsonResp({ ok: true, tail, ...result.data }, 200, origin);
   } catch (e) {
     return jsonResp({ ok: false, error: 'WS 連線失敗: ' + e.message }, 502, origin);
   }
@@ -548,7 +537,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.2-pipeline', features: ['websocket-client', 'direct-login', 'fleet-enrichment'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.3-detail', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail'] }, 200, origin);
     }
 
     try {
