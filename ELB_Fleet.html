@@ -735,36 +735,55 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 // ─────────────────────────────────────────────
 function parseFleetList(data) {
   if (!data) return [];
-  const list = arrF(data, ['aircraftList','aircraft','list','assets','data','items','planes']);
+  const list = arrF(data, ['aircraft','aircraftList','list','assets','data','items','planes']);
   if (!list.length && typeof data === 'object') {
-    // maybe data IS the dict of tail → fields
     return Object.keys(data).filter(k => k.startsWith('B-')).map(tail => buildAcObj(tail, data[tail]));
   }
   return list.map(a => {
-    const tail = fmt(a.tail || a.registration || a.id || a.aircraftId || a.tailNumber || a.name);
+    // ELB WebSocket 回的真實欄位名
+    const tail = fmt(a.aircraftIdentifier || a.tail || a.registration || a.id || a.aircraftId || a.tailNumber || a.name);
     return buildAcObj(tail, a);
   });
 }
 
 function buildAcObj(tail, a) {
-  const acd = a.aircraftData || a.data || a;
-  function fd(key) { return fmt(acd[key] || acd['AircraftStatus.' + key] || a[key] || ''); }
+  // 從 aircraftGroups 取機型（A321/A330/A350）
+  let type = 'UNKN';
+  if (Array.isArray(a.aircraftGroups) && a.aircraftGroups[0]) {
+    type = a.aircraftGroups[0];
+  } else if (Array.isArray(a.fleetMembership) && a.fleetMembership[0]) {
+    type = a.fleetMembership[0];
+  } else {
+    type = tail2type(tail);
+  }
 
-  const origin = fd('flightOrigin') || fd('origin') || fd('departureAirport') || fd('dep');
-  const dest   = fd('flightDestination') || fd('destination') || fd('arrivalAirport') || fd('arr');
-  const flt    = fd('flightNumber') || fd('flightNum') || fd('flight');
-  const phase  = (fd('flightPhase') || fd('phase') || fd('status') || '').toUpperCase();
-
-  const melCnt = numVal(acd['No. of DDs_MEL'] || acd['No. of Open Defect_MEL'] || acd.melCount || acd.mel_count || 0);
-  const ddCnt  = numVal(acd['No. of DDs'] || acd['No. of DeferredDefects'] || acd.ddCount || 0);
-  const ntcCnt = numVal(acd['No. of DDs_NTC'] || acd['No. of Open Defect_NTC'] || acd.ntcCount || 0);
-
+  // 由飛機狀態欄位推測 (activeFlights/closedFlights/scheduledFlights/openDefects/...)
+  const hasActive = Array.isArray(a.activeFlights) && a.activeFlights.length > 0;
+  const facets = Array.isArray(a.facets) ? a.facets : [];
   let stBadge = 'gnd';
-  if (phase.includes('FLIGHT') || phase.includes('AIR') || phase.includes('IN_FLIGHT')) stBadge = 'fly';
-  else if (phase.includes('AOG')) stBadge = 'aog';
-  else if (phase.includes('MAINT') || phase.includes('RELEASE') || phase.includes('HANGAR')) stBadge = 'maint';
+  if (hasActive) stBadge = 'fly';
+  else if (facets.some(f => /AOG/i.test(f))) stBadge = 'aog';
+  else if (facets.some(f => /MAINT|RELEASE/i.test(f))) stBadge = 'maint';
 
-  return { tail, type: tail2type(tail), origin, dest, flt, stBadge, melCnt, ddCnt, ntcCnt, raw: a };
+  // 缺陷/NTC 數量 — 從陣列長度
+  const deferredDefects = Array.isArray(a.deferredDefects) ? a.deferredDefects : [];
+  const openDefects     = Array.isArray(a.openDefects) ? a.openDefects : [];
+  const notesToCrew     = Array.isArray(a.notesToCrew) ? a.notesToCrew : [];
+
+  const melCnt = deferredDefects.length;
+  const ddCnt  = openDefects.length;
+  const ntcCnt = notesToCrew.length;
+
+  // 航班路線資訊（會在後續 enrich 階段補上）
+  const origin = '';
+  const dest = '';
+  const flt = '';
+
+  return {
+    tail, type, origin, dest, flt, stBadge, melCnt, ddCnt, ntcCnt,
+    serial: fmt(a.aircraftSerialNum || a.serialNumber || ''),
+    raw: a,
+  };
 }
 
 // ─────────────────────────────────────────────
