@@ -482,7 +482,7 @@
   if ('serviceWorker' in navigator) {
     if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
       const versionEl = document.getElementById('sys-version');
-      if (versionEl) versionEl.innerText = `Build 18 (Preview)`;
+      if (versionEl) versionEl.innerText = `Build v19 (Preview)`;
     } else {
       let newWorker;
       const updateBanner = document.getElementById('update-banner');
@@ -592,7 +592,7 @@
           if (!versionResolved) {
             const versionEl = document.getElementById('sys-version');
             if (versionEl && versionEl.innerText.includes('Verifying')) {
-              versionEl.innerText = 'Build 18 (Local/Offline)';
+              versionEl.innerText = 'Build v19 (Local/Offline)';
             }
           }
         }, 3000);
