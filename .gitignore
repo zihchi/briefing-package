@@ -1,0 +1,7 @@
+# Python
+server/__pycache__/
+server/*.pyc
+server/.env
+
+# macOS
+.DS_Store

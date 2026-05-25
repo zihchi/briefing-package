@@ -7,726 +7,916 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ELB 機隊">
-  <title>ELB 機隊 Dashboard — 書籤工具</title>
+  <title>ELB 機隊 Dashboard</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0f172a; --surface: #1e293b; --border: #334155;
-      --text: #e2e8f0; --muted: #94a3b8; --accent: #3b82f6;
-      --gold: #f59e0b; --green: #22c55e; --red: #ef4444;
+      --bg: #0f172a; --surface: #1e293b; --surface2: #263348;
+      --border: #334155; --border2: #475569;
+      --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b;
+      --gold: #f59e0b; --gold2: #fbbf24; --gold-dim: #78350f;
+      --green: #22c55e; --red: #ef4444; --orange: #f97316;
+      --blue: #3b82f6; --purple: #a855f7;
+      --aog: #dc2626; --dd: #f97316;
     }
+    html, body { height: 100%; }
     body {
       background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      min-height: 100vh; display: flex; flex-direction: column;
-      align-items: center; padding: 40px 20px 80px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
-    .container { width: 100%; max-width: 560px; }
-    .hero { text-align: center; margin-bottom: 36px; }
-    .hero-icon { font-size: 44px; margin-bottom: 10px; }
-    h1 { font-size: 26px; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; }
-    .subtitle { color: var(--muted); font-size: 14px; margin-top: 8px; line-height: 1.7; }
-    .step {
+
+    /* ── Topbar ── */
+    #topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,23,42,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 52px;
+    }
+    #topbar .logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: -0.01em; }
+    #topbar .logo span { color: var(--text); }
+    #status-dot {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--muted);
+    }
+    #status-dot .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--dim); transition: background 0.3s;
+    }
+    #status-dot.ok .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    #status-dot.err .dot { background: var(--red); }
+    #topbar-actions { display: flex; gap: 8px; align-items: center; }
+    #btn-refresh, #btn-logout {
+      border: none; cursor: pointer; border-radius: 8px;
+      font-size: 12px; font-weight: 600; padding: 5px 10px;
+      transition: opacity 0.2s;
+    }
+    #btn-refresh { background: var(--surface2); color: var(--text); }
+    #btn-logout { background: transparent; color: var(--dim); }
+    #btn-refresh:hover, #btn-logout:hover { opacity: 0.7; }
+
+    /* ── Layout ── */
+    #main { min-height: calc(100vh - 52px); }
+
+    /* ── Login Screen ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 52px); padding: 24px;
+    }
+    .login-card {
+      width: 100%; max-width: 380px;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 20px 22px; margin-bottom: 14px;
+      border-radius: 20px; padding: 32px 28px;
     }
-    .step-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-    .step-num {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: var(--accent); color: white;
-      font-size: 12px; font-weight: 800;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .login-card .icon { font-size: 40px; margin-bottom: 12px; }
+    .login-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .login-card .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .field-group { margin-bottom: 14px; }
+    .field-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em; }
+    .field-group input {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg); border: 1px solid var(--border2);
+      border-radius: 10px; color: var(--text); font-size: 15px;
+      outline: none; transition: border-color 0.2s;
     }
-    .step-title { font-size: 15px; font-weight: 700; color: #f8fafc; }
-    .step-body { color: var(--muted); font-size: 13px; line-height: 1.75; padding-left: 38px; }
-    .drag-zone {
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-      margin-top: 16px; padding: 22px 16px;
-      border: 2px dashed var(--border); border-radius: 10px;
+    .field-group input:focus { border-color: var(--gold); }
+    .remember-row { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+    .remember-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+    .remember-row label { font-size: 13px; color: var(--muted); cursor: pointer; }
+    #login-btn {
+      width: 100%; padding: 13px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+      color: #000; font-size: 16px; font-weight: 800;
+      border-radius: 12px; transition: opacity 0.2s;
     }
-    #bm-link {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      color: #000; font-size: 15px; font-weight: 800;
-      padding: 13px 28px; border-radius: 10px;
-      text-decoration: none; cursor: grab;
-      box-shadow: 0 4px 18px rgba(245,158,11,0.35);
-      transition: box-shadow 0.2s, transform 0.15s;
-      user-select: none; -webkit-user-drag: auto;
+    #login-btn:hover { opacity: 0.85; }
+    #login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #login-error { color: var(--red); font-size: 13px; margin-top: 12px; text-align: center; min-height: 18px; }
+    .server-hint {
+      margin-top: 20px; padding: 14px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 12px; color: var(--dim); line-height: 1.7;
     }
-    #bm-link:active { cursor: grabbing; transform: scale(0.97); }
-    .drag-hint { color: #475569; font-size: 12px; text-align: center; }
-    code {
-      background: rgba(255,255,255,0.08); padding: 2px 7px;
-      border-radius: 4px; font-family: 'SF Mono', Menlo, monospace;
-      font-size: 12px; color: #7dd3fc;
+    .server-hint strong { color: var(--muted); }
+    .server-hint code {
+      background: var(--surface2); padding: 2px 6px; border-radius: 4px;
+      font-family: 'SF Mono', monospace; font-size: 11px; color: var(--gold);
     }
-    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-    .feature-item {
-      background: rgba(255,255,255,0.04); border-radius: 8px;
-      padding: 10px 12px; font-size: 13px; color: var(--muted);
+
+    /* ── Server-offline banner ── */
+    #offline-banner {
+      display: none;
+      background: linear-gradient(135deg, #7c2d12, #92400e);
+      border: 1px solid #c2410c;
+      border-radius: 14px; padding: 20px;
+      margin: 20px 16px 0;
+      font-size: 13px; line-height: 1.75;
+    }
+    #offline-banner h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #fdba74; }
+    #offline-banner code {
+      display: inline-block;
+      background: rgba(0,0,0,0.3); padding: 6px 10px;
+      border-radius: 7px; font-family: 'SF Mono', monospace;
+      font-size: 12px; color: #fde68a; margin: 4px 0;
+      word-break: break-all;
+    }
+
+    /* ── Fleet Dashboard ── */
+    #fleet-screen { display: none; }
+    #filter-bar {
+      display: flex; gap: 8px; padding: 14px 16px 0; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #filter-bar::-webkit-scrollbar { display: none; }
+    .flt-btn {
+      flex-shrink: 0; padding: 6px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--muted); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    }
+    .flt-btn.active {
+      background: var(--gold); border-color: var(--gold); color: #000;
+    }
+
+    /* ── Fleet grid ── */
+    #fleet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px; padding: 14px 16px;
+    }
+    .ac-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 12px 12px;
+      cursor: pointer; transition: all 0.18s; position: relative;
+      overflow: hidden;
+    }
+    .ac-card:hover { border-color: var(--gold); transform: translateY(-1px); }
+    .ac-card.selected { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
+    .ac-card .tail {
+      font-size: 17px; font-weight: 800; letter-spacing: 0.02em;
+      color: #f8fafc; margin-bottom: 4px;
+    }
+    .ac-card .type-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      color: var(--gold); opacity: 0.85;
+    }
+    .ac-card .status-row {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
+    }
+    .ac-card .route { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ac-card .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .badge {
+      font-size: 10px; font-weight: 700; padding: 2px 6px;
+      border-radius: 5px; white-space: nowrap;
+    }
+    .badge.mel  { background: rgba(249,115,22,0.18); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+    .badge.dd   { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .badge.ntc  { background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+    .badge.fly  { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+    .badge.gnd  { background: rgba(148,163,184,0.1); color: var(--muted); border: 1px solid var(--border); }
+    .badge.maint { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.aog  { background: rgba(220,38,38,0.25);  color: #fca5a5; border: 1px solid rgba(220,38,38,0.4); }
+    .loading-spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #fleet-status { padding: 20px 16px; color: var(--muted); font-size: 14px; text-align: center; }
+
+    /* ── Detail panel ── */
+    #detail-panel {
+      position: fixed; top: 52px; right: 0; bottom: 0;
+      width: min(480px, 100vw);
+      background: var(--bg); border-left: 1px solid var(--border);
+      z-index: 50; display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow: hidden;
+    }
+    #detail-panel.open { transform: translateX(0); }
+    #detail-header {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    #detail-title { font-size: 20px; font-weight: 800; flex: 1; }
+    #detail-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    #btn-close-detail {
+      width: 32px; height: 32px; border: none; background: var(--surface);
+      color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #detail-body { flex: 1; overflow-y: auto; padding: 0 0 24px; }
+
+    /* Detail sections */
+    .det-sec { margin: 0 16px 0; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .det-sec:last-child { border-bottom: none; }
+    .det-sec-hdr {
+      font-size: 11px; font-weight: 700; color: var(--gold);
+      letter-spacing: 0.08em; margin-bottom: 10px;
       display: flex; align-items: center; gap: 8px;
     }
-    @media (max-width: 480px) { .feature-grid { grid-template-columns: 1fr; } }
+    .det-sec-hdr .cnt {
+      background: rgba(245,158,11,0.15); color: var(--gold);
+      border-radius: 10px; padding: 1px 7px; font-size: 10px;
+    }
+    .empty-note { color: var(--dim); font-size: 13px; font-style: italic; }
+
+    /* MEL item */
+    .mel-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    }
+    .mel-item .mel-head { display: flex; align-items: flex-start; gap: 8px; }
+    .mel-item .mel-num { font-size: 13px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+    .mel-item .mel-desc { font-size: 13px; color: var(--text); line-height: 1.4; flex: 1; }
+    .mel-item .mel-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+    .mel-meta-tag {
+      font-size: 11px; padding: 2px 7px; border-radius: 5px;
+      background: var(--surface2); color: var(--muted);
+    }
+    .mel-meta-tag.cat-a { color: #f87171; background: rgba(239,68,68,0.1); }
+    .mel-meta-tag.cat-b { color: #fb923c; background: rgba(249,115,22,0.1); }
+    .mel-meta-tag.cat-c { color: var(--gold2); background: rgba(251,191,36,0.1); }
+    .mel-meta-tag.cat-d { color: #86efac; background: rgba(34,197,94,0.1); }
+    .expiry-ok   { color: #86efac; background: rgba(34,197,94,0.1); font-weight: 700; }
+    .expiry-warn { color: #fbbf24; background: rgba(245,158,11,0.15); font-weight: 700; }
+    .expiry-crit { color: #f87171; background: rgba(239,68,68,0.15); font-weight: 700; }
+    .expiry-exp  { color: #fca5a5; background: rgba(220,38,38,0.2);  font-weight: 700; }
+
+    /* NTC item */
+    .ntc-item {
+      background: var(--surface); border: 1px solid rgba(168,85,247,0.2);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    }
+    .ntc-item .ntc-head { display: flex; align-items: flex-start; gap: 8px; }
+    .ntc-item .ntc-num { font-size: 12px; font-weight: 700; color: #c084fc; flex-shrink: 0; }
+    .ntc-item .ntc-desc { font-size: 13px; color: var(--text); line-height: 1.4; flex: 1; }
+    .ntc-toggle {
+      font-size: 11px; color: #c084fc; cursor: pointer; margin-top: 6px;
+      display: inline-block; user-select: none;
+    }
+    .ntc-content {
+      display: none; margin-top: 8px; padding: 8px;
+      background: var(--bg); border-radius: 7px;
+      font-size: 12px; color: var(--muted); line-height: 1.7;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .ntc-content.open { display: block; }
+
+    /* Flight item */
+    .flt-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    }
+    .flt-head { display: flex; align-items: center; gap: 8px; }
+    .flt-num { font-size: 13px; font-weight: 700; color: var(--text); }
+    .flt-route { font-size: 12px; color: var(--muted); flex: 1; }
+    .flt-time { font-size: 11px; color: var(--dim); }
+    .fault-list { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .fault-row {
+      background: var(--bg); border-radius: 7px; padding: 7px 9px;
+      font-size: 12px; line-height: 1.5;
+    }
+    .fault-code { color: var(--orange); font-weight: 700; margin-bottom: 2px; }
+    .fault-desc { color: var(--text); }
+    .fault-action { color: var(--muted); font-style: italic; }
+
+    /* Debug section */
+    .debug-sec {
+      margin: 0 16px; padding: 10px 0;
+    }
+    .debug-toggle {
+      font-size: 11px; color: var(--dim); cursor: pointer;
+      user-select: none; display: flex; align-items: center; gap: 6px;
+    }
+    .debug-content {
+      display: none; margin-top: 8px; padding: 10px;
+      background: var(--surface); border-radius: 8px; border: 1px solid var(--border);
+      font-size: 10px; font-family: 'SF Mono', monospace; color: var(--muted);
+      max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+    }
+    .debug-content.open { display: block; }
+
+    /* Detail loading */
+    .det-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      padding: 48px 24px; color: var(--muted); font-size: 13px;
+    }
+
+    /* Responsive: detail full-screen on narrow */
+    @media (max-width: 640px) {
+      #fleet-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    }
+
+    /* Overlay for detail on mobile */
+    #detail-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 49; backdrop-filter: blur(2px);
+    }
+    #detail-overlay.show { display: block; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="hero">
-    <div class="hero-icon">✈️</div>
-    <h1>ELB 機隊 Dashboard</h1>
-    <p class="subtitle">在 ELB 系統內一鍵展開完整機隊總覽<br>
-    MEL 詳情 · NTC · 近 5 筆飛行記錄 · Fault Log</p>
-  </div>
 
-  <div class="step">
-    <div class="step-hdr"><div class="step-num">1</div>
-      <div class="step-title">把書籤拖到瀏覽器書籤列</div></div>
-    <div class="step-body">用滑鼠「按住拖曳」下方金色按鈕到瀏覽器書籤列。</div>
-    <div class="drag-zone">
-      <a id="bm-link" href="#">✈️&nbsp; ELB 機隊 Dashboard</a>
-      <p class="drag-hint">☝️ 按住上方按鈕，拖到書籤列儲存</p>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-hdr"><div class="step-num">2</div>
-      <div class="step-title">登入 ELB，開啟任意頁面</div></div>
-    <div class="step-body">
-      前往 <code>elb.starlux-airlines.com</code> 確認已登入。<br>
-      不需要先開 Fleet Dashboard，任何 ELB 頁面均可。
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-hdr"><div class="step-num">3</div>
-      <div class="step-title">點一下書籤，展開完整機隊</div></div>
-    <div class="step-body">
-      點擊書籤後，頁面自動展開全螢幕機隊面板。<br>
-      點任何機號查看 MEL / NTC / 飛行記錄詳情。<br>
-      再次點擊書籤可關閉面板。
-    </div>
-    <div class="feature-grid">
-      <div class="feature-item">🛩️ 全機隊狀態一覽</div>
-      <div class="feature-item">📋 MEL 詳情 · Category</div>
-      <div class="feature-item">📣 NTC 全文展開</div>
-      <div class="feature-item">🕐 近 5 筆飛行 + Fault</div>
-    </div>
+<!-- ── Topbar ── -->
+<div id="topbar">
+  <div class="logo">✈ <span>ELB</span> 機隊</div>
+  <div id="status-dot"><div class="dot"></div><span id="status-text">連線中…</span></div>
+  <div id="topbar-actions">
+    <button id="btn-refresh" onclick="onRefresh()" style="display:none">↻ 更新</button>
+    <button id="btn-logout" onclick="onLogout()" style="display:none">登出</button>
   </div>
 </div>
 
+<!-- ── Main ── -->
+<div id="main">
+
+  <!-- Server offline notice -->
+  <div id="offline-banner">
+    <h3>⚠️ 後端伺服器未啟動</h3>
+    在 Mac 上開啟「終端機」，貼上以下指令：<br><br>
+    <code>cd ~/Downloads/briefing-package/server && bash start.sh</code><br><br>
+    伺服器啟動後重新整理此頁面。<br>
+    如在 iPhone/iPad 使用，請將下方網址的 <strong>localhost</strong> 換成 Mac 的區域 IP（例如 192.168.x.x）：<br>
+    <code id="server-url-hint">http://localhost:3001</code>
+    <br>
+    <button onclick="promptServerUrl()" style="margin-top:10px; padding:6px 14px; border-radius:8px; border:none; background:rgba(255,255,255,0.15); color:#fff; cursor:pointer; font-size:12px;">
+      修改伺服器網址
+    </button>
+  </div>
+
+  <!-- Login -->
+  <div id="login-screen" style="display:none">
+    <div class="login-card">
+      <div class="icon">🔐</div>
+      <h2>登入 ELB</h2>
+      <p class="sub">帳密只傳給本機伺服器，不會離開您的裝置</p>
+      <div class="field-group">
+        <label>ELB 帳號</label>
+        <input id="f-user" type="text" placeholder="員工編號" autocomplete="username" inputmode="numeric">
+      </div>
+      <div class="field-group">
+        <label>密碼</label>
+        <input id="f-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="remember-row">
+        <input type="checkbox" id="f-remember">
+        <label for="f-remember">記住帳號（儲存於此裝置）</label>
+      </div>
+      <button id="login-btn" onclick="doLogin()">登入並載入機隊</button>
+      <div id="login-error"></div>
+      <div class="server-hint">
+        後端伺服器需在 Mac 上執行：<br>
+        <code>cd ~/Downloads/briefing-package/server && bash start.sh</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fleet dashboard -->
+  <div id="fleet-screen">
+    <div id="filter-bar">
+      <button class="flt-btn active" data-type="ALL" onclick="setFilter('ALL', this)">全部</button>
+      <button class="flt-btn" data-type="A321" onclick="setFilter('A321', this)">A321neo</button>
+      <button class="flt-btn" data-type="A330" onclick="setFilter('A330', this)">A330-900</button>
+      <button class="flt-btn" data-type="A350" onclick="setFilter('A350', this)">A350</button>
+    </div>
+    <div id="fleet-status"></div>
+    <div id="fleet-grid"></div>
+  </div>
+</div>
+
+<!-- Detail Overlay (mobile) -->
+<div id="detail-overlay" onclick="closeDetail()"></div>
+
+<!-- Detail Panel -->
+<div id="detail-panel">
+  <div id="detail-header">
+    <div>
+      <div id="detail-title">—</div>
+      <div id="detail-subtitle"></div>
+    </div>
+    <button id="btn-close-detail" onclick="closeDetail()">✕</button>
+  </div>
+  <div id="detail-body"></div>
+</div>
+
 <script>
-// ============================================================
-//  ELB Fleet Dashboard Bookmarklet v3
-//  完整版：MEL / NTC / Flight Log / Fault Entries
-// ============================================================
-function elbFleetDashboard() {
-  /* ─ 0. 常數 ─ */
-  var PID = '__elbfd3__';
+'use strict';
 
-  /* ─ 1. 切換顯示 ─ */
-  var ex = document.getElementById(PID);
-  if (ex) { ex.remove(); document.getElementById(PID+'_css') && document.getElementById(PID+'_css').remove(); return; }
+// ─────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────
+const DEF_SERVER = 'http://localhost:3001';
+function serverUrl() { return localStorage.getItem('elbServerUrl') || DEF_SERVER; }
 
-  /* ─ 2. 驗證域名 ─ */
-  if (!location.hostname.includes('starlux-airlines.com')) {
-    alert('ELB 機隊 Dashboard\n\n請在 ELB 系統頁面點擊此書籤。'); return;
+function promptServerUrl() {
+  const cur = serverUrl();
+  const v = prompt('ELB 後端伺服器網址（修改後儲存並重試）', cur);
+  if (v && v.trim()) {
+    localStorage.setItem('elbServerUrl', v.trim().replace(/\/$/, ''));
+    location.reload();
   }
-
-  /* ─ 3. 取得 Vue API ─ */
-  var api = null;
-  try {
-    var ae = document.getElementById('app');
-    if (ae && ae.__vue__) api = ae.__vue__.$root.$api;
-    if (!api) api = ae.__vue__.$children[0].$api;
-  } catch(e){}
-  if (!api) { alert('ELB 機隊 Dashboard\n\n找不到 Vue API，請確認 ELB 已完全載入後再試。'); return; }
-
-  /* ─ 4. CSS ─ */
-  var css = document.createElement('style');
-  css.id = PID+'_css';
-  css.textContent =
-    '#'+PID+'{position:fixed;inset:0;background:#0c1220;color:#e2e8f0;z-index:2147483647;'+
-    'display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;}'+
-    '#'+PID+' *{box-sizing:border-box;margin:0;padding:0;}'+
-    /* Header */
-    '.fd-hdr{background:#0a0f1a;border-bottom:1px solid #1e293b;padding:10px 14px;'+
-    'display:flex;align-items:center;gap:10px;flex-shrink:0;}'+
-    '.fd-title{flex:1;font-size:16px;font-weight:800;color:#f8fafc;}'+
-    '.fd-title small{display:block;font-size:11px;font-weight:400;color:#475569;margin-top:1px;}'+
-    '.fd-btn{background:#1e293b;border:1px solid #334155;border-radius:7px;'+
-    'color:#94a3b8;font-size:13px;padding:6px 12px;cursor:pointer;white-space:nowrap;flex-shrink:0;}'+
-    '.fd-btn:hover{background:#334155;color:#e2e8f0;}'+
-    '.fd-close{color:#64748b;font-size:20px;background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;}'+
-    '.fd-close:hover{color:#f87171;}'+
-    /* Summary */
-    '.fd-sum{display:flex;gap:12px;padding:6px 14px;background:rgba(255,255,255,.02);'+
-    'border-bottom:1px solid rgba(255,255,255,.04);overflow-x:auto;flex-shrink:0;}'+
-    '.fd-sum::-webkit-scrollbar{display:none;}'+
-    '.fd-si{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;color:#64748b;flex-shrink:0;}'+
-    '.fd-si b{color:#e2e8f0;}'+
-    '.fd-dot{width:6px;height:6px;border-radius:50%;}'+
-    '.fd-dot.fly{background:#22c55e;}.fd-dot.gnd{background:#475569;}'+
-    '.fd-dot.aog{background:#ef4444;}.fd-dot.mel{background:#f59e0b;}'+
-    /* Content */
-    '.fd-body{flex:1;overflow-y:auto;padding:10px 10px 20px;}'+
-    '.fd-body::-webkit-scrollbar{width:3px;}'+
-    '.fd-body::-webkit-scrollbar-thumb{background:#1e293b;}'+
-    /* Group */
-    '.fd-grp-hdr{display:flex;align-items:center;gap:8px;padding:6px 2px 8px;margin-top:4px;}'+
-    '.fd-grp-hdr h3{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.07em;}'+
-    '.fd-grp-cnt{background:#1e293b;border:1px solid #334155;border-radius:20px;font-size:10px;color:#64748b;padding:1px 7px;}'+
-    '.fd-grp-line{flex:1;height:1px;background:rgba(255,255,255,.04);}'+
-    /* Grid */
-    '.fd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:9px;}'+
-    /* AC Card */
-    '.fd-card{background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s;}'+
-    '.fd-card:hover{border-color:#475569;}'+
-    '.fd-card.s-fly{border-top:3px solid #22c55e;}.fd-card.s-gnd{border-top:3px solid #1e293b;}'+
-    '.fd-card.s-aog{border-top:3px solid #ef4444;}.fd-card.s-maint{border-top:3px solid #f97316;}'+
-    '.fd-card-head{padding:9px 12px 7px;display:flex;align-items:center;gap:7px;'+
-    'border-bottom:1px solid rgba(255,255,255,.05);}'+
-    '.fd-tail{font-size:15px;font-weight:800;color:#f8fafc;letter-spacing:.03em;flex:1;}'+
-    '.fd-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;'+
-    'text-transform:uppercase;letter-spacing:.05em;}'+
-    '.b-type{background:rgba(59,130,246,.14);color:#60a5fa;}'+
-    '.b-fly{background:rgba(34,197,94,.14);color:#4ade80;}'+
-    '.b-gnd{background:rgba(100,116,139,.14);color:#94a3b8;}'+
-    '.b-aog{background:rgba(239,68,68,.22);color:#f87171;}'+
-    '.b-mel{background:rgba(245,158,11,.18);color:#fbbf24;}'+
-    '.b-ntc{background:rgba(139,92,246,.18);color:#a78bfa;}'+
-    '.b-exp{background:rgba(239,68,68,.15);color:#f87171;font-size:10px;}'+
-    '.b-soon{background:rgba(245,158,11,.15);color:#fbbf24;font-size:10px;}'+
-    /* Card body */
-    '.fd-card-body{padding:7px 12px 9px;}'+
-    '.fd-row{display:flex;align-items:baseline;justify-content:space-between;'+
-    'padding:2.5px 0;border-bottom:1px solid rgba(255,255,255,.035);}'+
-    '.fd-row:last-child{border-bottom:none;}'+
-    '.fd-lbl{font-size:11px;color:#64748b;flex-shrink:0;margin-right:8px;}'+
-    '.fd-val{font-size:12px;color:#e2e8f0;text-align:right;word-break:break-word;}'+
-    '.fd-val.hi{color:#f8fafc;font-weight:600;}.fd-val.warn{color:#f59e0b;}'+
-    '.fd-val.danger{color:#ef4444;}.fd-val.ok{color:#22c55e;}'+
-    /* Defect strip */
-    '.fd-def-strip{display:flex;gap:5px;padding:5px 0 3px;border-bottom:1px solid rgba(255,255,255,.035);flex-wrap:wrap;}'+
-    '.fd-chip{display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.04);border-radius:5px;padding:3px 7px;}'+
-    '.fd-chip .cl{font-size:9px;color:#64748b;}.fd-chip .cv{font-size:13px;font-weight:800;}'+
-    '.fd-chip.ct .cv{color:#f97316;}.fd-chip.cc .cv{color:#f59e0b;}'+
-    '.fd-chip.cm .cv{color:#a78bfa;}.fd-chip.ci .cv{color:#67e8f9;}'+
-    '.fd-chip.z .cv{color:#2d3e55;}'+
-    /* OOOI */
-    '.fd-oooi{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;'+
-    'padding:6px 0 2px;border-top:1px solid rgba(255,255,255,.04);margin-top:3px;}'+
-    '.fd-oc{text-align:center;}.fd-ol{font-size:9px;color:#334155;text-transform:uppercase;margin-bottom:1px;}'+
-    '.fd-ov{font-size:11px;}.fd-ov.v{color:#93c5fd;font-weight:600;}.fd-ov.e{color:#1e3a52;}'+
-    /* Restriction */
-    '.fd-restr{display:flex;gap:6px;align-items:flex-start;background:rgba(239,68,68,.07);'+
-    'border:1px solid rgba(239,68,68,.18);border-radius:6px;padding:4px 8px;margin-top:4px;'+
-    'font-size:11px;color:#fca5a5;line-height:1.55;}'+
-    /* Detail Panel */
-    '.fd-det{background:#0c1220;border:1px solid #334155;border-radius:12px;'+
-    'margin-top:4px;overflow:hidden;}'+
-    '.fd-det-hdr{padding:8px 12px;background:#0f1929;display:flex;align-items:center;'+
-    'justify-content:space-between;border-bottom:1px solid #1e293b;}'+
-    '.fd-det-title{font-size:13px;font-weight:700;color:#f8fafc;}'+
-    '.fd-det-close{background:none;border:none;color:#475569;cursor:pointer;font-size:16px;}'+
-    '.fd-det-body{padding:10px 12px;}'+
-    /* MEL Section */
-    '.fd-sec-title{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;'+
-    'letter-spacing:.07em;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid #1e293b;}'+
-    '.fd-sec-title:first-child{margin-top:0;}'+
-    '.fd-mel-item{border:1px solid #1e293b;border-radius:8px;padding:8px 10px;margin-bottom:7px;'+
-    'background:#0f172a;}'+
-    '.fd-mel-num{font-size:13px;font-weight:700;color:#f59e0b;}'+
-    '.fd-mel-desc{font-size:12px;color:#e2e8f0;margin-top:3px;line-height:1.5;}'+
-    '.fd-mel-meta{display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap;}'+
-    '.fd-mel-meta span{font-size:10px;color:#64748b;}'+
-    '.fd-mel-meta .tag{background:rgba(245,158,11,.15);color:#fbbf24;border-radius:4px;'+
-    'padding:1px 6px;font-size:10px;font-weight:700;}'+
-    '.fd-mel-exp{font-size:11px;font-weight:700;}'+
-    '.fd-mel-exp.ok{color:#22c55e;}.fd-mel-exp.warn{color:#f59e0b;}.fd-mel-exp.danger{color:#ef4444;}'+
-    /* NTC Section */
-    '.fd-ntc-item{border:1px solid #1e293b;border-radius:8px;padding:8px 10px;margin-bottom:7px;'+
-    'background:#0f172a;}'+
-    '.fd-ntc-num{font-size:13px;font-weight:700;color:#a78bfa;}'+
-    '.fd-ntc-desc{font-size:12px;color:#e2e8f0;margin-top:3px;line-height:1.5;}'+
-    '.fd-ntc-ref{font-size:11px;color:#64748b;margin-top:3px;}'+
-    '.fd-ntc-content{font-size:11px;color:#64748b;margin-top:6px;line-height:1.65;'+
-    'max-height:80px;overflow:hidden;position:relative;}'+
-    '.fd-ntc-content.open{max-height:none;}'+
-    '.fd-ntc-toggle{font-size:10px;color:#60a5fa;cursor:pointer;margin-top:3px;display:block;}'+
-    /* Flight Log Section */
-    '.fd-flt-item{border-left:2px solid #1e293b;padding:4px 0 4px 10px;margin-bottom:8px;}'+
-    '.fd-flt-item.has-fault{border-left-color:#f59e0b;}'+
-    '.fd-flt-head{display:flex;align-items:center;gap:8px;}'+
-    '.fd-flt-num{font-size:13px;font-weight:700;color:#f59e0b;}'+
-    '.fd-flt-route{font-size:12px;color:#e2e8f0;font-weight:600;}'+
-    '.fd-flt-time{font-size:11px;color:#475569;margin-left:auto;}'+
-    '.fd-fault{margin-top:5px;padding:4px 8px;background:rgba(245,158,11,.07);'+
-    'border-radius:5px;border-left:2px solid #f59e0b;}'+
-    '.fd-fault-code{font-size:11px;font-weight:700;color:#f59e0b;}'+
-    '.fd-fault-desc{font-size:11px;color:#e2e8f0;margin-top:1px;}'+
-    '.fd-fault-action{font-size:10px;color:#64748b;margin-top:2px;line-height:1.5;}'+
-    /* Loading / Error */
-    '.fd-loading{text-align:center;padding:30px 0;color:#334155;font-size:13px;}'+
-    '.fd-err{color:#f87171;font-size:12px;padding:8px 0;}'+
-    '.fd-empty{color:#334155;font-size:11px;text-align:center;padding:12px 0;}'+
-    /* Spinner */
-    '@keyframes fd-spin{to{transform:rotate(360deg)}}'+
-    '.fd-spinner{display:inline-block;width:16px;height:16px;border:2px solid #1e293b;'+
-    'border-top-color:#3b82f6;border-radius:50%;animation:fd-spin .7s linear infinite;}'+
-    /* Responsive */
-    '@media(max-width:640px){.fd-grid{grid-template-columns:1fr;}}';
-  document.head.appendChild(css);
-
-  /* ─ 5. DOM ─ */
-  var wrap = document.createElement('div');
-  wrap.id = PID;
-  wrap.innerHTML =
-    '<div class="fd-hdr">'+
-    '<div class="fd-title">✈️ ELB 機隊 Dashboard<small id="fd_sub">載入中…</small></div>'+
-    '<button class="fd-btn" id="fd_ref">↻</button>'+
-    '<button class="fd-close" id="fd_x">✕</button>'+
-    '</div>'+
-    '<div class="fd-sum" id="fd_sum"></div>'+
-    '<div class="fd-body" id="fd_body"><div class="fd-loading"><span class="fd-spinner"></span><br><br>載入機隊資料中…</div></div>';
-  document.body.appendChild(wrap);
-
-  var body = g('fd_body'), sub = g('fd_sub'), sumBar = g('fd_sum');
-  g('fd_x').onclick = function() { wrap.remove(); css.remove(); };
-  g('fd_ref').onclick = function() { loadFleet(); };
-
-  /* ─ 6. 工具函式 ─ */
-  function g(id) { return document.getElementById(id); }
-  function esc(v) {
-    if (v==null) return '—';
-    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  function dig(o, keys) {
-    if (!o) return null;
-    for (var i=0; i<keys.length; i++) {
-      var v = o[keys[i]];
-      if (v!==undefined && v!==null && v!=='') return v;
-    }
-    return null;
-  }
-  function deepDig(o) {
-    if (o==null) return null;
-    if (typeof o==='string') return o.trim()||null;
-    if (typeof o==='number') return String(o);
-    if (Array.isArray(o)) return o.length ? deepDig(o[0]) : null;
-    if (typeof o==='object') {
-      var probes=['value','displayValue','text','label','name','statusLabel','statusCode','status','code','description','flightNum','flightNumber'];
-      for (var i=0;i<probes.length;i++) {
-        var p=o[probes[i]];
-        if (typeof p==='string' && p.trim()) return p.trim();
-        if (typeof p==='number') return String(p);
-      }
-      var strs=Object.values(o).filter(function(v){return typeof v==='string' && v.trim();});
-      strs.sort(function(a,b){return a.length-b.length;});
-      return strs.length ? strs[0] : null;
-    }
-    return null;
-  }
-  function fmt(v) { return deepDig(v); }
-  function numV(v) {
-    if (v==null) return null;
-    if (typeof v==='number') return v;
-    if (typeof v==='object') {
-      var n=v.count!==undefined?v.count:v.value!==undefined?v.value:v.total!==undefined?v.total:null;
-      if (n!=null){var r=parseInt(n,10);return isNaN(r)?0:r;}return null;
-    }
-    var n=parseInt(v,10); return isNaN(n)?null:n;
-  }
-  function padZ(n){return n<10?'0'+n:String(n);}
-  function fmtUTC(iso){
-    if (!iso) return null;
-    try{var d=new Date(iso);if(isNaN(d))return null;
-      return padZ(d.getUTCHours())+padZ(d.getUTCMinutes())+'Z';}catch(e){return null;}
-  }
-  function fmtDate(iso){
-    if (!iso) return null;
-    try{var d=new Date(iso);if(isNaN(d))return null;
-      return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+' '+padZ(d.getUTCHours())+':'+padZ(d.getUTCMinutes())+'Z';
-    }catch(e){return null;}
-  }
-  function parseExpiry(v){
-    if (!v) return null;
-    var s=deepDig(v)||'';
-    var d=new Date(s);
-    if (!isNaN(d)) return d;
-    var MONTHS={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
-    var m=s.match(/(\d{1,2})[- ]([A-Z]{3})[- ](\d{4})/i);
-    if (m){var mo=MONTHS[m[2].toUpperCase()];if(mo!==undefined)return new Date(parseInt(m[3]),mo,parseInt(m[1]));}
-    return null;
-  }
-  function daysLeft(v){
-    var d=parseExpiry(v); if(!d) return null;
-    return Math.ceil((d-Date.now())/86400000);
-  }
-  function expiryTag(days){
-    if (days==null) return '';
-    if (days<0)  return ' <span class="fd-badge b-exp">EXPIRED</span>';
-    if (days<=3) return ' <span class="fd-badge b-exp">'+days+'d</span>';
-    if (days<=7) return ' <span class="fd-badge b-soon">'+days+'d</span>';
-    return ' <span style="font-size:10px;color:#64748b">'+days+'d</span>';
-  }
-  function expiryClass(days){
-    if (days==null) return '';
-    if (days<0) return 'danger';
-    if (days<=7) return 'warn';
-    return 'ok';
-  }
-  function statusSuffix(st){
-    if (!st) return 'gnd';
-    var u=String(st).toUpperCase();
-    if (u.includes('AOG')) return 'aog';
-    if (u.includes('MAINT')||u.includes('HANGAR')) return 'maint';
-    if (u.includes('FLIGHT')||u.includes('AIR')||u.includes('DEPART')||u.includes('STARTED')||u.includes('AIRBORNE')) return 'fly';
-    return 'gnd';
-  }
-  function safePro(fn){
-    try{ var p=fn(); if(p&&typeof p.then==='function') return p.then(function(v){return{ok:1,d:v};}).catch(function(e){return{ok:0,e:String(e)};});
-      return Promise.resolve({ok:1,d:p}); }
-    catch(e){ return Promise.resolve({ok:0,e:String(e)}); }
-  }
-  function getType(meta){
-    var raw=dig(meta,['Aircraft.aircraftGroupName','Aircraft.aircraftType','aircraftGroupName','aircraftType','groupName','type']);
-    if(raw){var u=String(deepDig(raw)||raw).toUpperCase();
-      if(u.includes('A330')||u.includes('330')) return 'A330';
-      if(u.includes('A321')||u.includes('321')) return 'A321';
-      if(u.includes('A350')||u.includes('350')) return 'A350';
-    }
-    var tail=meta['Aircraft.aircraftIdentifier']||'';
-    if(/^B-583/.test(tail)) return 'A330';
-    if(/^B-582/.test(tail)) return 'A321';
-    if(/^B-584|^B-585/.test(tail)) return 'A350';
-    return 'Other';
-  }
-  function arrF(o, keys){
-    if (!o) return [];
-    for(var i=0;i<keys.length;i++){var v=o[keys[i]];if(Array.isArray(v)&&v.length) return v;}
-    if(Array.isArray(o)) return o;
-    return [];
-  }
-
-  /* ─ 7. 機隊資料載入 ─ */
-  var fleetCache=null;
-  function loadFleet(){
-    body.innerHTML='<div class="fd-loading"><span class="fd-spinner"></span><br><br>載入機隊資料中…</div>';
-    sub.textContent='載入中…';
-    safePro(function(){ return api.getAircraftList({extensions:['FleetDashboard:RecentDefects','FleetDashboard:ColumnConfiguration']}); })
-    .then(function(r){
-      if(!r.ok){body.innerHTML='<div class="fd-err">❌ getAircraftList 失敗：'+esc(r.e)+'</div>';return;}
-      fleetCache=r.d;
-      renderFleet(r.d);
-    });
-  }
-
-  function renderFleet(data){
-    /* Aircraft list from various possible shapes */
-    var acList=arrF(data,['aircraftList','aircraft','list','assets','data']);
-    if (!acList.length && data&&typeof data==='object') {
-      var vals=Object.values(data).filter(Array.isArray);
-      if(vals.length) acList=vals[0];
-    }
-
-    /* Filter out TEST */
-    acList=acList.filter(function(a){
-      var id=String(a.id||a['Aircraft.aircraftIdentifier']||a.registration||'');
-      return !id.includes('TEST')&&!id.includes('test');
-    });
-
-    /* Summary counts */
-    var cnt={fly:0,gnd:0,aog:0,mel:0,ntc:0};
-    acList.forEach(function(a){
-      var st=fmt(dig(a,['flightState','flightStatus','status','aircraftStatus']))||'';
-      var s=statusSuffix(st);
-      if(s==='fly') cnt.fly++; else if(s==='aog') cnt.aog++; else cnt.gnd++;
-      var m=numV(dig(a,['deferredDefectCount','melCount','No. of DDs (MEL)']))||0;
-      cnt.mel+=m;
-    });
-
-    sub.textContent='更新 '+new Date().toTimeString().slice(0,5)+' (TPE)';
-    sumBar.innerHTML=
-      '<div class="fd-si"><span class="fd-dot fly"></span><b>'+cnt.fly+'</b> 在飛</div>'+
-      '<div class="fd-si"><span class="fd-dot gnd"></span><b>'+cnt.gnd+'</b> 停機</div>'+
-      '<div class="fd-si"><span class="fd-dot aog"></span><b>'+cnt.aog+'</b> AOG</div>'+
-      '<div class="fd-si"><span class="fd-dot mel"></span><b>'+cnt.mel+'</b> MEL</div>'+
-      '<div class="fd-si" style="color:#475569;">共 '+acList.length+' 架</div>';
-
-    /* Group by type */
-    var groups={};
-    acList.forEach(function(a){
-      var t=getType(a); if(!groups[t]) groups[t]=[]; groups[t].push(a);
-    });
-
-    var html=''; var order=['A321','A330','A350']; var done={};
-    order.forEach(function(t){if(groups[t]){html+=renderGroup(t,groups[t]);done[t]=1;}});
-    Object.keys(groups).forEach(function(t){if(!done[t]) html+=renderGroup(t,groups[t]);});
-    body.innerHTML=html||'<div class="fd-loading">沒有機隊資料</div>';
-
-    /* Bind click events */
-    body.querySelectorAll('.fd-card').forEach(function(card){
-      card.addEventListener('click', function(){
-        var tail=card.getAttribute('data-tail');
-        var detId='fd_det_'+tail.replace(/-/g,'');
-        var existing=document.getElementById(detId);
-        if(existing){existing.remove();return;}
-        openDetail(tail, card);
-      });
-    });
-  }
-
-  function renderGroup(type,list){
-    var h='<div class="fd-grp-hdr"><h3>'+esc(type)+'</h3><span class="fd-grp-cnt">'+list.length+'</span><div class="fd-grp-line"></div></div><div class="fd-grid">';
-    list.forEach(function(a){ h+=renderCard(a); });
-    return h+'</div>';
-  }
-
-  function renderCard(a){
-    var tail=String(a.id||a['Aircraft.aircraftIdentifier']||a.registration||'?');
-    var type=getType(a);
-
-    /* Status */
-    var st=fmt(dig(a,['flightState','flightStatus','status','aircraftStatus','state']))||'';
-    var suf=statusSuffix(st);
-    var badgeCls={fly:'b-fly',gnd:'b-gnd',aog:'b-aog',maint:'b-aog'}[suf]||'b-gnd';
-    var stLabel=st?(st.length>18?st.slice(0,16)+'…':st):'On Ground';
-
-    /* Flight */
-    var fltNo=fmt(dig(a,['flightNumber','flightNum','currentFlight','flightNo']))||'';
-    if(fltNo) fltNo=fltNo.replace(/^JX\s*/i,'');
-    var orig=fmt(dig(a,['flightOrigin','origin','departureStation','dep']))||'';
-    var dest=fmt(dig(a,['flightDestination','destination','arrivalStation','arr']))||'';
-
-    /* Defects */
-    var tech=numV(dig(a,['openDefectCount','techDefectCount']));
-    var cabin=numV(dig(a,['cabinDefectCount']));
-    var mel=numV(dig(a,['deferredDefectCount','melCount']));
-    var exp=numV(dig(a,['expiredCount']));
-
-    /* OOOI */
-    var oOut=fmtUTC(dig(a,['oooiOut','outTime','AircraftStatus.oooiOut.actual']));
-    var oOff=fmtUTC(dig(a,['oooiOff','offTime','AircraftStatus.oooiOff.actual']));
-    var oOn=fmtUTC(dig(a,['oooiOn','onTime','AircraftStatus.oooiOn.actual']));
-    var oIn=fmtUTC(dig(a,['oooiIn','inTime','AircraftStatus.oooiIn.actual']));
-
-    /* Recent defects from fleet extension */
-    var recentDefs=arrF(a,['recentDefects','defects','activeDefects']);
-    var defSnippets='';
-    for(var i=0;i<Math.min(recentDefs.length,2);i++){
-      var d=recentDefs[i]; var ctx=d&&d.context?d.context:d;
-      var desc=fmt(dig(ctx,['faultDescription','description','defectDescription','text']))||'';
-      var fl=ctx&&ctx.flightLog; var fNum=fl&&fl.flightNum?'JX'+fl.flightNum+' ':'';
-      if(desc) defSnippets+='<div style="font-size:10px;color:#64748b;padding:2px 0;border-top:1px solid rgba(255,255,255,.03)">'+esc(fNum)+esc(desc.slice(0,60))+(desc.length>60?'…':'')+'</div>';
-    }
-
-    var h='<div class="fd-card s-'+suf+'" data-tail="'+esc(tail)+'">';
-    h+='<div class="fd-card-head">';
-    h+='<span class="fd-tail">'+esc(tail)+'</span>';
-    h+='<span class="fd-badge b-type">'+esc(type)+'</span>';
-    h+='<span class="fd-badge '+badgeCls+'">'+esc(stLabel)+'</span>';
-    if(mel>0) h+='<span class="fd-badge b-mel">MEL '+mel+'</span>';
-    if(exp>0) h+='<span class="fd-badge b-exp">EXP '+exp+'</span>';
-    h+='</div>';
-    h+='<div class="fd-card-body">';
-    if(fltNo||orig||dest){
-      var route=[fltNo?'JX'+fltNo:'',orig&&dest?orig+' → '+dest:orig||dest?'→ '+dest:''].filter(Boolean).join('  ');
-      h+='<div class="fd-row"><span class="fd-lbl">航班</span><span class="fd-val hi">'+esc(route)+'</span></div>';
-    }
-    if(tech!==null||cabin!==null||mel!==null){
-      h+='<div class="fd-def-strip">';
-      h+=chip('Tech',tech,'ct'); h+=chip('Cabin',cabin,'cc'); h+=chip('MEL',mel,'cm');
-      if(exp>0) h+=chip('Exp',exp,'ct');
-      h+='</div>';
-    }
-    if(oOut||oOff||oOn||oIn){
-      h+='<div class="fd-oooi">';
-      h+=ocell('OUT',oOut)+ocell('OFF',oOff)+ocell('ON',oOn)+ocell('IN',oIn);
-      h+='</div>';
-    }
-    h+=defSnippets;
-    h+='<div style="font-size:10px;color:#334155;text-align:center;padding:4px 0">點擊展開 MEL / NTC / 飛行記錄 ▾</div>';
-    h+='</div></div>';
-    return h;
-  }
-
-  function chip(lbl,n,cls){
-    var z=(n==null||n===0)?' z':'';
-    return '<div class="fd-chip '+cls+z+'"><span class="cl">'+lbl+'</span><span class="cv">'+(n==null?'?':n)+'</span></div>';
-  }
-  function ocell(lbl,val){
-    return '<div class="fd-oc"><div class="fd-ol">'+lbl+'</div><div class="fd-ov '+(val?'v':'e')+'">'+(val||'——')+'</div></div>';
-  }
-
-  /* ─ 8. 單機詳情 ─ */
-  function openDetail(tail, cardEl){
-    var detId='fd_det_'+tail.replace(/-/g,'');
-    var det=document.createElement('div');
-    det.id=detId; det.className='fd-det';
-    det.innerHTML='<div class="fd-det-hdr"><span class="fd-det-title">'+esc(tail)+' 詳情</span>'+
-      '<button class="fd-det-close" onclick="document.getElementById(\''+detId+'\').remove()">✕</button></div>'+
-      '<div class="fd-det-body"><div class="fd-loading"><span class="fd-spinner"></span> 載入中…</div></div>';
-    cardEl.parentNode.insertBefore(det, cardEl.nextSibling);
-
-    Promise.all([
-      safePro(function(){ return api.getAircraftState({id:tail,extensions:['MEL','NTC','ActiveDefects','FleetDashboard:Detail']}); }),
-      safePro(function(){ return api.getFlightLog({id:tail,extensions:['Recent','History','AircraftHistory']}); })
-    ]).then(function(res){
-      renderDetail(det.querySelector('.fd-det-body'), tail, res[0], res[1]);
-    });
-  }
-
-  function renderDetail(container, tail, stateR, flightR){
-    var html='';
-
-    /* ── MEL ── */
-    var sd=stateR.ok?stateR.d:{};
-    var melItems=arrF(sd,['mel','activeMel','deferredDefects','mels','MEL','melItems',
-      'activeDefects','defects','deferredItems']);
-    /* Filter to MEL type if mixed */
-    var melOnly=melItems.filter(function(m){
-      var t=String(fmt(dig(m,['type','defectType','category','deferralType']))||'').toUpperCase();
-      return !t||t.includes('MEL')||t.includes('DD')||t.includes('DEFER')||t==='D'||t==='C'||t==='B'||t==='A';
-    });
-    if(!melOnly.length) melOnly=melItems;
-
-    if(melOnly.length){
-      html+='<div class="fd-sec-title">MEL 暫緩故障 ('+melOnly.length+')</div>';
-      melOnly.forEach(function(m){
-        var ctx=m.context||m.defect||m;
-        var num=fmt(dig(ctx,['melItemNumber','melNumber','itemNumber','deferralNumber','number','defectNumber','id']))||'';
-        var desc=fmt(dig(ctx,['description','defectDescription','faultDescription','melDescription','itemDescription','text']))||'';
-        var ref=fmt(dig(ctx,['deferralReference','referenceNumber','reference','defectReference','ref','logNumber']))||'';
-        var cat=fmt(dig(ctx,['category','melCategory','deferralCategory','type']))||'';
-        var expV=dig(ctx,['expirationDate','expiry','dueDate','expirationDateTime','expDate','melExpiry']);
-        var days=daysLeft(expV);
-        var expStr=fmt(expV)||'';
-
-        html+='<div class="fd-mel-item">';
-        if(num) html+='<div class="fd-mel-num">'+esc(num)+'</div>';
-        if(desc) html+='<div class="fd-mel-desc">'+esc(desc)+'</div>';
-        html+='<div class="fd-mel-meta">';
-        if(ref) html+='<span>REF '+esc(ref)+'</span>';
-        if(cat&&cat.length<=3) html+='<span class="tag">Cat '+esc(cat)+'</span>';
-        if(expStr&&days!==null){
-          html+='<span class="fd-mel-exp '+expiryClass(days)+'">到期 '+Math.abs(days||0)+' 天'+(days<0?' (已過期)':'')+'</span>';
-        } else if(expStr) {
-          html+='<span>'+esc(expStr)+'</span>';
-        }
-        html+='</div></div>';
-      });
-    } else {
-      html+='<div class="fd-sec-title">MEL 暫緩故障</div><div class="fd-empty">— 無 MEL —</div>';
-    }
-
-    /* ── NTC ── */
-    var ntcItems=arrF(sd,['ntc','notices','NTC','noticesForCrew','ntcItems','noticesToCrew',
-      'crewNotices','acceptedItems','acceptItems']);
-    if(ntcItems.length){
-      html+='<div class="fd-sec-title">Notices to Crew ('+ntcItems.length+')</div>';
-      ntcItems.forEach(function(n,idx){
-        var ctx=n.context||n;
-        var num=fmt(dig(ctx,['ntcNumber','noticeNumber','number','id','ntcId','noticeId']))||'NTC'+(idx+1);
-        var sbRef=fmt(dig(ctx,['sbReference','serviceReference','reference','sbNumber','sb','SB']))||'';
-        var desc=fmt(dig(ctx,['description','subject','title','text','noticeDescription']))||'';
-        var expV=dig(ctx,['expirationDate','expiry','dueDate','expirationDateTime']);
-        var days=daysLeft(expV);
-        var content=fmt(dig(ctx,['content','text','body','message','fullText','details']))||'';
-        var ntcId='fd_ntc_'+tail.replace(/-/g,'')+idx;
-
-        html+='<div class="fd-ntc-item">';
-        html+='<div class="fd-ntc-num">'+esc(num)+expiryTag(days)+'</div>';
-        if(sbRef) html+='<div class="fd-ntc-ref">'+esc(sbRef)+'</div>';
-        if(desc) html+='<div class="fd-ntc-desc">'+esc(desc)+'</div>';
-        if(content&&content!==desc){
-          html+='<div class="fd-ntc-content" id="'+ntcId+'">'+esc(content)+'</div>'+
-            '<span class="fd-ntc-toggle" onclick="(function(){var e=document.getElementById(\''+ntcId+'\');'+
-            'e.classList.toggle(\'open\');this.textContent=e.classList.contains(\'open\')?\'▲ 收起\':\'▼ 展開全文\';}).call(this)">▼ 展開全文</span>';
-        }
-        html+='</div>';
-      });
-    } else {
-      html+='<div class="fd-sec-title">Notices to Crew</div><div class="fd-empty">— 無 NTC —</div>';
-    }
-
-    /* ── Flight Log ── */
-    var fd=flightR.ok?flightR.d:{};
-    var fltList=arrF(fd,['recentFlights','flights','flightHistory','history','logs','records',
-      'flightLogs','log','data']);
-    if(!fltList.length && fd&&typeof fd==='object'){
-      var vals=Object.values(fd).filter(Array.isArray);
-      if(vals.length) fltList=vals[0];
-    }
-
-    html+='<div class="fd-sec-title">最近飛行記錄 ('+Math.min(fltList.length,5)+')</div>';
-    if(fltList.length){
-      fltList.slice(0,5).forEach(function(f){
-        var ctx=f.context||f.flightLog||f;
-        var fNum=fmt(dig(ctx,['flightNumber','flightNum','flight','number']))||'';
-        if(fNum) fNum=fNum.replace(/^JX\s*/i,'');
-        var orig=fmt(dig(ctx,['flightOrigin','origin','departureStation','dep','from']))||'';
-        var dest=fmt(dig(ctx,['flightDestination','destination','arrivalStation','arr','to']))||'';
-        var time=dig(ctx,['inTime','arrivalTime','oooiIn','completionTime','flightDate','date','startTime','outTime']);
-        var timeStr=fmtDate(time)||fmt(time)||'';
-
-        /* Fault entries */
-        var faults=arrF(ctx,['faultEntries','faults','defects','techLog','entries','logEntries',
-          'flightDefects','discrepancies','technicalLog']);
-
-        var hasFault=faults.length>0;
-        html+='<div class="fd-flt-item'+(hasFault?' has-fault':'')+'">';
-        html+='<div class="fd-flt-head">';
-        if(fNum) html+='<span class="fd-flt-num">JX'+esc(fNum)+'</span>';
-        if(orig||dest) html+='<span class="fd-flt-route">'+esc(orig||'?')+' → '+esc(dest||'?')+'</span>';
-        if(timeStr) html+='<span class="fd-flt-time">'+esc(timeStr)+'</span>';
-        html+='</div>';
-
-        faults.slice(0,3).forEach(function(fault){
-          var fc=fault.context||fault;
-          var code=fmt(dig(fc,['faultCode','code','ataCode','discrepancyCode','number','id']))||'';
-          var fdesc=fmt(dig(fc,['faultDescription','description','discrepancy','text','fault','defect']))||'';
-          var action=fmt(dig(fc,['remedialAction','action','correction','rectification','text','resolution']))||'';
-          html+='<div class="fd-fault">';
-          if(code) html+='<div class="fd-fault-code">'+esc(code)+'</div>';
-          if(fdesc&&fdesc!==code) html+='<div class="fd-fault-desc">'+esc(fdesc)+'</div>';
-          if(action&&action!==fdesc) html+='<div class="fd-fault-action">► '+esc(action.slice(0,120))+(action.length>120?'…':'')+'</div>';
-          html+='</div>';
-        });
-
-        html+='</div>';
-      });
-    } else {
-      if(!flightR.ok) html+='<div class="fd-err">飛行記錄載入失敗：'+esc(flightR.e)+'</div>';
-      else html+='<div class="fd-empty">— 無飛行記錄 —</div>';
-    }
-
-    /* Debug (collapsible) */
-    var dbgId='fd_dbg_'+tail.replace(/-/g,'');
-    html+='<details style="margin-top:10px"><summary style="font-size:10px;color:#1e3a52;cursor:pointer">🔬 原始資料</summary>'+
-      '<pre id="'+dbgId+'" style="font-size:9px;color:#2d4a5c;background:#020617;padding:8px;border-radius:6px;'+
-      'overflow:auto;max-height:200px;white-space:pre-wrap;word-break:break-all;margin-top:4px;">'+
-      esc(JSON.stringify({state:stateR.ok?stateR.d:stateR.e, flight:flightR.ok?flightR.d:flightR.e},null,2))+
-      '</pre></details>';
-
-    container.innerHTML=html;
-  }
-
-  /* ─ 9. 啟動 ─ */
-  loadFleet();
 }
 
-/* ── 生成書籤 href ── */
-(function(){
-  var src = elbFleetDashboard.toString();
-  var body = src.slice(src.indexOf('{')+1, src.lastIndexOf('}'));
-  document.getElementById('bm-link').href = 'javascript:(function(){'+body+'})();';
-})();
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let fleetData = [];
+let currentFilter = 'ALL';
+let selectedTail = null;
 
-document.getElementById('bm-link').addEventListener('click', function(e){
-  e.preventDefault();
-  alert('📌 請用滑鼠「拖曳」此按鈕到書籤列，不要直接點擊！\n\n拖到書籤列後，前往 ELB 頁面點書籤即可展開機隊 Dashboard。');
+// ─────────────────────────────────────────────
+// API helpers
+// ─────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(serverUrl() + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  return res.json();
+}
+
+// ─────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────
+async function boot() {
+  setStatus('connecting');
+  updateHint();
+
+  let status;
+  try {
+    status = await Promise.race([
+      api('/api/status'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+    ]);
+  } catch (_) {
+    setStatus('offline');
+    showOfflineBanner();
+    return;
+  }
+
+  setStatus('online');
+  hideOfflineBanner();
+
+  if (status.loggedIn) {
+    showFleetScreen();
+    loadFleet();
+  } else {
+    showLoginScreen();
+    restoreCredentials();
+  }
+}
+
+function updateHint() {
+  document.getElementById('server-url-hint').textContent = serverUrl();
+}
+
+// ─────────────────────────────────────────────
+// Status dot
+// ─────────────────────────────────────────────
+function setStatus(state) {
+  const el = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  el.className = 'status-dot';
+  if (state === 'online')      { el.classList.add('ok');  txt.textContent = '伺服器連線中'; }
+  else if (state === 'offline') { el.classList.add('err'); txt.textContent = '伺服器離線'; }
+  else                          { txt.textContent = '連線中…'; }
+}
+
+// ─────────────────────────────────────────────
+// Screen switches
+// ─────────────────────────────────────────────
+function showOfflineBanner()  { document.getElementById('offline-banner').style.display = 'block'; }
+function hideOfflineBanner()  { document.getElementById('offline-banner').style.display = 'none'; }
+
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('fleet-screen').style.display = 'none';
+  document.getElementById('btn-refresh').style.display = 'none';
+  document.getElementById('btn-logout').style.display = 'none';
+}
+
+function showFleetScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('fleet-screen').style.display = 'block';
+  document.getElementById('btn-refresh').style.display = '';
+  document.getElementById('btn-logout').style.display = '';
+}
+
+// ─────────────────────────────────────────────
+// Credentials
+// ─────────────────────────────────────────────
+function restoreCredentials() {
+  const saved = localStorage.getItem('elbUser');
+  if (saved) {
+    document.getElementById('f-user').value = saved;
+    document.getElementById('f-remember').checked = true;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Login
+// ─────────────────────────────────────────────
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  const user = document.getElementById('f-user').value.trim();
+  const pass = document.getElementById('f-pass').value;
+  const remember = document.getElementById('f-remember').checked;
+
+  errEl.textContent = '';
+  if (!user || !pass) { errEl.textContent = '請輸入帳號和密碼'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '登入中，請稍候…（約 20 秒）';
+
+  try {
+    const r = await api('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    if (r.ok) {
+      if (remember) localStorage.setItem('elbUser', user);
+      else localStorage.removeItem('elbUser');
+      showFleetScreen();
+      loadFleet();
+    } else {
+      errEl.textContent = r.error || '登入失敗';
+      btn.disabled = false;
+      btn.textContent = '登入並載入機隊';
+    }
+  } catch (e) {
+    errEl.textContent = '無法連線到後端伺服器：' + e.message;
+    btn.disabled = false;
+    btn.textContent = '登入並載入機隊';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Fleet
+// ─────────────────────────────────────────────
+async function loadFleet() {
+  document.getElementById('fleet-status').innerHTML =
+    '<span class="loading-spinner"></span>&nbsp; 載入機隊資料中…';
+  document.getElementById('fleet-grid').innerHTML = '';
+
+  try {
+    const r = await api('/api/fleet');
+    if (r.code === 'NOT_LOGGED_IN') { showLoginScreen(); return; }
+    if (!r.ok) { document.getElementById('fleet-status').textContent = '❌ ' + (r.error || '未知錯誤'); return; }
+
+    fleetData = parseFleetList(r.data);
+    document.getElementById('fleet-status').textContent = '';
+    renderFleet();
+  } catch (e) {
+    document.getElementById('fleet-status').textContent = '無法取得機隊資料：' + e.message;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Data helpers
+// ─────────────────────────────────────────────
+function deepDig(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'object') return String(v);
+  const probes = ['value','displayValue','text','label','statusLabel','statusCode','status','name','code','description','flightNum','flightNumber','statusText','val'];
+  for (const k of probes) {
+    if (k in v && v[k] !== null && v[k] !== undefined && typeof v[k] !== 'object') return String(v[k]);
+  }
+  if (Array.isArray(v)) return v.length ? deepDig(v[0]) : null;
+  // pick shortest string-valued property
+  let best = null;
+  for (const k of Object.keys(v)) {
+    if (v[k] !== null && typeof v[k] === 'string' && v[k].length > 0) {
+      if (best === null || v[k].length < best.length) best = v[k];
+    }
+  }
+  return best;
+}
+
+function fmt(v) { const s = deepDig(v); return s || ''; }
+
+function numVal(v) {
+  const s = fmt(v) || String(v || 0);
+  return parseInt(s, 10) || 0;
+}
+
+function tail2type(tail) {
+  const t = String(tail);
+  if (t.startsWith('B-582')) return 'A321';
+  if (t.startsWith('B-583')) return 'A330';
+  if (t.startsWith('B-584') || t.startsWith('B-585')) return 'A350';
+  return 'UNKN';
+}
+
+function daysLeft(v) {
+  if (!v) return null;
+  const s = fmt(v) || String(v);
+  const patterns = [
+    /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+    /(\d{4})(\d{2})(\d{2})/,
+  ];
+  for (const p of patterns) {
+    const m = s.match(p);
+    if (m) {
+      const d = (p.source.startsWith('(\\d{4})') && !p.source.includes('\\d{1,2}'))
+        ? new Date(m[1], m[2]-1, m[3])
+        : (p.source.startsWith('(\\d{4})[') ? new Date(m[1], m[2]-1, m[3]) : new Date(m[3], m[1]-1, m[2]));
+      if (!isNaN(d)) return Math.floor((d - Date.now()) / 86400000);
+    }
+  }
+  const n = parseInt(s, 10);
+  return isNaN(n) ? null : n;
+}
+
+function expiryTag(v) {
+  const d = daysLeft(v);
+  if (d === null) return '';
+  if (d < 0)  return `<span class="mel-meta-tag expiry-exp">EXPIRED</span>`;
+  if (d <= 3)  return `<span class="mel-meta-tag expiry-crit">${d}d</span>`;
+  if (d <= 10) return `<span class="mel-meta-tag expiry-warn">${d}d</span>`;
+  return `<span class="mel-meta-tag expiry-ok">${d}d</span>`;
+}
+
+function catTag(cat) {
+  if (!cat) return '';
+  const c = String(cat).toUpperCase().trim();
+  const cls = c === 'A' ? 'cat-a' : c === 'B' ? 'cat-b' : c === 'C' ? 'cat-c' : c === 'D' ? 'cat-d' : '';
+  return `<span class="mel-meta-tag ${cls}">Cat ${c}</span>`;
+}
+
+function arrF(o, keys) {
+  if (!o || typeof o !== 'object') return [];
+  for (const k of keys) {
+    if (Array.isArray(o[k]) && o[k].length > 0) return o[k];
+    if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) {
+      const vals = Object.values(o[k]);
+      if (vals.length && Array.isArray(vals[0])) return vals[0];
+    }
+  }
+  // deep search: first array value with entries
+  for (const k of Object.keys(o)) {
+    if (Array.isArray(o[k]) && o[k].length > 0) return o[k];
+  }
+  return [];
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─────────────────────────────────────────────
+// Parse fleet list
+// ─────────────────────────────────────────────
+function parseFleetList(data) {
+  if (!data) return [];
+  const list = arrF(data, ['aircraftList','aircraft','list','assets','data','items','planes']);
+  if (!list.length && typeof data === 'object') {
+    // maybe data IS the dict of tail → fields
+    return Object.keys(data).filter(k => k.startsWith('B-')).map(tail => buildAcObj(tail, data[tail]));
+  }
+  return list.map(a => {
+    const tail = fmt(a.tail || a.registration || a.id || a.aircraftId || a.tailNumber || a.name);
+    return buildAcObj(tail, a);
+  });
+}
+
+function buildAcObj(tail, a) {
+  const acd = a.aircraftData || a.data || a;
+  function fd(key) { return fmt(acd[key] || acd['AircraftStatus.' + key] || a[key] || ''); }
+
+  const origin = fd('flightOrigin') || fd('origin') || fd('departureAirport') || fd('dep');
+  const dest   = fd('flightDestination') || fd('destination') || fd('arrivalAirport') || fd('arr');
+  const flt    = fd('flightNumber') || fd('flightNum') || fd('flight');
+  const phase  = (fd('flightPhase') || fd('phase') || fd('status') || '').toUpperCase();
+
+  const melCnt = numVal(acd['No. of DDs_MEL'] || acd['No. of Open Defect_MEL'] || acd.melCount || acd.mel_count || 0);
+  const ddCnt  = numVal(acd['No. of DDs'] || acd['No. of DeferredDefects'] || acd.ddCount || 0);
+  const ntcCnt = numVal(acd['No. of DDs_NTC'] || acd['No. of Open Defect_NTC'] || acd.ntcCount || 0);
+
+  let stBadge = 'gnd';
+  if (phase.includes('FLIGHT') || phase.includes('AIR') || phase.includes('IN_FLIGHT')) stBadge = 'fly';
+  else if (phase.includes('AOG')) stBadge = 'aog';
+  else if (phase.includes('MAINT') || phase.includes('RELEASE') || phase.includes('HANGAR')) stBadge = 'maint';
+
+  return { tail, type: tail2type(tail), origin, dest, flt, stBadge, melCnt, ddCnt, ntcCnt, raw: a };
+}
+
+// ─────────────────────────────────────────────
+// Render fleet
+// ─────────────────────────────────────────────
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.flt-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderFleet();
+}
+
+function renderFleet() {
+  const grid = document.getElementById('fleet-grid');
+  const list = fleetData.filter(a => currentFilter === 'ALL' || a.type === currentFilter);
+  if (!list.length) { grid.innerHTML = '<div style="grid-column:1/-1;color:var(--dim);font-size:13px;padding:12px 0">沒有符合條件的飛機</div>'; return; }
+
+  grid.innerHTML = list.map(a => {
+    const route = a.flt ? `${a.flt}  ${a.origin||'?'}→${a.dest||'?'}` : (a.origin ? `${a.origin}→${a.dest||'?'}` : '—');
+    const badges = [
+      a.stBadge === 'fly'   ? '<span class="badge fly">✈ 飛行中</span>'  :
+      a.stBadge === 'aog'   ? '<span class="badge aog">AOG</span>'        :
+      a.stBadge === 'maint' ? '<span class="badge maint">維修中</span>'   :
+                              '<span class="badge gnd">地面</span>',
+      a.melCnt > 0 ? `<span class="badge mel">MEL×${a.melCnt}</span>` : '',
+      a.ddCnt  > 0 ? `<span class="badge dd">DD×${a.ddCnt}</span>`   : '',
+      a.ntcCnt > 0 ? `<span class="badge ntc">NTC×${a.ntcCnt}</span>` : '',
+    ].filter(Boolean).join('');
+
+    return `<div class="ac-card${a.tail === selectedTail ? ' selected' : ''}" onclick="openDetail('${a.tail}', this)">
+      <div class="tail">${esc(a.tail)}</div>
+      <div class="type-badge">${a.type}</div>
+      <div class="status-row">
+        <span class="route" title="${esc(route)}">${esc(route)}</span>
+      </div>
+      <div class="badges">${badges}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// Detail
+// ─────────────────────────────────────────────
+async function openDetail(tail, cardEl) {
+  selectedTail = tail;
+  document.querySelectorAll('.ac-card').forEach(c => c.classList.remove('selected'));
+  if (cardEl) cardEl.classList.add('selected');
+
+  const panel = document.getElementById('detail-panel');
+  const body  = document.getElementById('detail-body');
+  document.getElementById('detail-title').textContent = tail;
+  document.getElementById('detail-subtitle').textContent = tail2type(tail);
+  panel.classList.add('open');
+  if (window.innerWidth < 640) document.getElementById('detail-overlay').classList.add('show');
+
+  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>載入 MEL / NTC / 飛行記錄中…</div>`;
+
+  try {
+    const r = await api(`/api/fleet/${encodeURIComponent(tail)}`);
+    if (!r.ok) { body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(r.error||'未知錯誤')}</div>`; return; }
+    renderDetail(body, tail, r.state, r.flight);
+  } catch (e) {
+    body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(e.message)}</div>`;
+  }
+}
+
+function closeDetail() {
+  selectedTail = null;
+  document.querySelectorAll('.ac-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-overlay').classList.remove('show');
+}
+
+function renderDetail(container, tail, stateR, flightR) {
+  const sd  = stateR?.data ?? stateR ?? {};
+  const fd  = flightR?.data ?? flightR ?? {};
+
+  let html = '';
+
+  // ── MEL ──
+  const melItems = arrF(sd, ['mel','activeMel','deferredDefects','mels','MEL','melItems','activeDefects','defects','deferredItems','melList']);
+  html += `<div class="det-sec">
+    <div class="det-sec-hdr">MEL <span class="cnt">${melItems.length}</span></div>`;
+  if (!melItems.length) {
+    html += `<div class="empty-note">無有效 MEL 項目</div>`;
+  } else {
+    for (const m of melItems) {
+      const num  = fmt(m.melItemNumber || m.melNumber || m.itemNumber || m.number || m.id);
+      const desc = fmt(m.description || m.melDescription || m.title || m.name);
+      const cat  = fmt(m.category || m.deferralCategory || m.melCategory);
+      const ref  = fmt(m.deferralReference || m.reference || m.ref || m.sbReference || m.melRef);
+      const exp  = m.expirationDate || m.expiry || m.expiryDate || m.dueDate || m.deadline;
+      html += `<div class="mel-item">
+        <div class="mel-head">
+          <span class="mel-num">${esc(num||'—')}</span>
+          <span class="mel-desc">${esc(desc||'（無說明）')}</span>
+        </div>
+        <div class="mel-meta">
+          ${catTag(cat)}
+          ${ref ? `<span class="mel-meta-tag">REF: ${esc(ref)}</span>` : ''}
+          ${expiryTag(exp)}
+        </div>
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ── NTC ──
+  const ntcItems = arrF(sd, ['ntc','notices','NTC','noticesForCrew','ntcItems','noticesToCrew','crewNotices','acceptedItems','ntcList']);
+  html += `<div class="det-sec">
+    <div class="det-sec-hdr">NTC <span class="cnt">${ntcItems.length}</span></div>`;
+  if (!ntcItems.length) {
+    html += `<div class="empty-note">無有效 NTC 項目</div>`;
+  } else {
+    for (let i = 0; i < ntcItems.length; i++) {
+      const n = ntcItems[i];
+      const num  = fmt(n.ntcNumber || n.number || n.id || n.noticeNumber);
+      const sb   = fmt(n.sbReference || n.reference || n.ref || n.sbRef);
+      const desc = fmt(n.description || n.title || n.name || n.subject);
+      const exp  = n.expirationDate || n.expiry || n.expiryDate || n.dueDate;
+      const body = fmt(n.content || n.body || n.text || n.fullText || n.details || n.description);
+      const uid  = `ntc-${i}`;
+      html += `<div class="ntc-item">
+        <div class="ntc-head">
+          <span class="ntc-num">${esc(num||'—')}</span>
+          <span class="ntc-desc">${esc(desc||'（無說明）')}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">
+          ${sb  ? `<span class="mel-meta-tag" style="color:#c084fc">SB: ${esc(sb)}</span>` : ''}
+          ${expiryTag(exp)}
+        </div>
+        ${body ? `<div class="ntc-toggle" onclick="toggleNtc('${uid}')">▶ 查看全文</div>
+        <div class="ntc-content" id="${uid}">${esc(body)}</div>` : ''}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ── Flight Log ──
+  const fltList = arrF(fd, ['recentFlights','flights','flightHistory','history','logs','records','flightLogs','flightList','entries']);
+  const recent  = fltList.slice(0, 5);
+  html += `<div class="det-sec">
+    <div class="det-sec-hdr">最近飛行 <span class="cnt">${recent.length}</span></div>`;
+  if (!recent.length) {
+    html += `<div class="empty-note">無飛行記錄</div>`;
+  } else {
+    for (const f of recent) {
+      const fnum = fmt(f.flightNumber || f.flightNum || f.flight || f.fltNum);
+      const orig = fmt(f.origin || f.departureAirport || f.dep || f.departure);
+      const dst  = fmt(f.destination || f.arrivalAirport || f.arr || f.arrival);
+      const inT  = fmt(f.inTime || f.arrivalTime || f.landingTime || f.in || f.time || f.date);
+      const faults = arrF(f, ['faultEntries','faults','defects','techLog','entries','logEntries','faultLog','technicalLog']);
+      let faultHtml = '';
+      for (const ft of faults) {
+        const code   = fmt(ft.faultCode   || ft.code       || ft.ataCode    || ft.ata);
+        const fdesc  = fmt(ft.faultDescription || ft.description || ft.fault || ft.text);
+        const action = fmt(ft.remedialAction   || ft.action      || ft.resolution || ft.corrective);
+        faultHtml += `<div class="fault-row">
+          ${code  ? `<div class="fault-code">${esc(code)}</div>` : ''}
+          ${fdesc ? `<div class="fault-desc">${esc(fdesc)}</div>` : ''}
+          ${action? `<div class="fault-action">✦ ${esc(action)}</div>` : ''}
+        </div>`;
+      }
+      html += `<div class="flt-item">
+        <div class="flt-head">
+          <span class="flt-num">${esc(fnum||'—')}</span>
+          <span class="flt-route">${esc(orig||'?')} → ${esc(dst||'?')}</span>
+          <span class="flt-time">${esc(inT||'')}</span>
+        </div>
+        ${faults.length ? `<div class="fault-list">${faultHtml}</div>` : ''}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ── Debug ──
+  html += `<div class="debug-sec">
+    <div class="debug-toggle" onclick="toggleDebug('dbg-${tail.replace('-','')}')">🔬 Raw API 資料（除錯用）</div>
+    <div class="debug-content" id="dbg-${tail.replace('-','')}">STATE:\n${esc(JSON.stringify(stateR,null,2))}\n\nFLIGHT:\n${esc(JSON.stringify(flightR,null,2))}</div>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+function toggleNtc(id) {
+  const el = document.getElementById(id);
+  const tog = el.previousElementSibling;
+  const open = el.classList.toggle('open');
+  tog.textContent = open ? '▼ 收起全文' : '▶ 查看全文';
+}
+function toggleDebug(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ─────────────────────────────────────────────
+// Actions
+// ─────────────────────────────────────────────
+function onRefresh() { closeDetail(); loadFleet(); }
+
+async function onLogout() {
+  try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+  closeDetail();
+  fleetData = [];
+  showLoginScreen();
+}
+
+// Enter key on login
+document.getElementById('f-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
 });
+
+// ─────────────────────────────────────────────
+// Start
+// ─────────────────────────────────────────────
+boot();
 </script>
 </body>
 </html>
