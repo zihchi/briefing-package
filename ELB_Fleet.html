@@ -187,16 +187,105 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     #fleet-status { padding: 20px 16px; color: var(--muted); font-size: 14px; text-align: center; }
 
-    /* ── Detail panel ── */
+    /* ── Detail panel ── iPad/iPhone friendly 全螢幕 ── */
     #detail-panel {
-      position: fixed; top: 52px; right: 0; bottom: 0;
-      width: min(480px, 100vw);
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(560px, 100vw);
       background: var(--bg); border-left: 1px solid var(--border);
       z-index: 50; display: flex; flex-direction: column;
       transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
       overflow: hidden;
     }
+    @media (max-width: 768px) {
+      #detail-panel { width: 100vw; border-left: none; }
+    }
     #detail-panel.open { transform: translateX(0); }
+
+    /* iPad/iPhone safe-area */
+    @supports (padding: env(safe-area-inset-top)) {
+      #detail-panel { padding-top: env(safe-area-inset-top); }
+    }
+
+    /* ── Detail: flight context bar ── */
+    .det-flight-bar {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(38,51,72,0.95));
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .det-flight-bar .tail-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+    }
+    .det-flight-bar .tail { font-size: 22px; font-weight: 800; color: #f8fafc; }
+    .det-flight-bar .ac-type { font-size: 11px; color: var(--gold); padding: 2px 8px; border: 1px solid rgba(245,158,11,0.4); border-radius: 5px; }
+    .det-flight-bar .flight-info {
+      display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-size: 17px;
+    }
+    .det-flight-bar .flight-route { font-weight: 700; }
+    .det-flight-bar .flight-num { font-size: 13px; color: var(--gold); font-weight: 700; }
+    .det-flight-bar .flight-date { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .det-flight-bar .checkpoints {
+      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+    .ckpt {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 3px 8px; border-radius: 12px;
+      background: rgba(34,197,94,0.12); color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+    .ckpt.warn { background: rgba(245,158,11,0.12); color: var(--gold); border-color: rgba(245,158,11,0.3); }
+    .ckpt.muted { background: var(--surface2); color: var(--dim); border-color: var(--border); }
+
+    /* ── Detail: tabs ── */
+    .det-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--bg);
+    }
+    .det-tab {
+      flex: 1; padding: 14px 12px; border: none; background: transparent;
+      color: var(--muted); font-size: 15px; font-weight: 700; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .det-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    .det-section-grid {
+      display: grid; gap: 10px;
+      grid-template-columns: 1fr;
+      padding: 12px;
+    }
+    @media (min-width: 480px) {
+      .det-section-grid.two-col { grid-template-columns: 1fr 1fr; }
+    }
+    .det-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px;
+    }
+    .det-card .card-hdr {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .det-card .card-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .det-card .card-count {
+      background: var(--surface2); color: var(--muted);
+      padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;
+    }
+    .det-card .card-count.nonzero { background: rgba(245,158,11,0.2); color: var(--gold); }
+    .det-card .card-count.alert { background: rgba(239,68,68,0.2); color: #f87171; }
+
+    /* Fuel display */
+    .fuel-card {
+      background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.04));
+      border: 1px solid rgba(59,130,246,0.3);
+      padding: 12px 14px; border-radius: 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .fuel-card .fuel-icon { font-size: 22px; }
+    .fuel-card .fuel-info { flex: 1; }
+    .fuel-card .fuel-label { font-size: 11px; color: var(--muted); }
+    .fuel-card .fuel-value {
+      font-size: 22px; font-weight: 800; color: #60a5fa;
+      font-variant-numeric: tabular-nums;
+    }
+    .fuel-card .fuel-unit { font-size: 11px; color: var(--dim); margin-left: 2px; }
     #detail-header {
       padding: 16px 16px 12px;
       border-bottom: 1px solid var(--border);
@@ -398,12 +487,26 @@
 
 <!-- Detail Panel -->
 <div id="detail-panel">
-  <div id="detail-header">
-    <div>
-      <div id="detail-title">—</div>
-      <div id="detail-subtitle"></div>
+  <div id="detail-flight-bar" class="det-flight-bar">
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="flex:1">
+        <div class="tail-row">
+          <span class="tail" id="det-tail">—</span>
+          <span class="ac-type" id="det-actype"></span>
+        </div>
+        <div class="flight-info">
+          <span class="flight-route" id="det-route">—</span>
+          <span class="flight-num" id="det-flightnum"></span>
+          <span class="flight-date" id="det-flightdate"></span>
+        </div>
+        <div class="checkpoints" id="det-checkpoints"></div>
+      </div>
+      <button id="btn-close-detail" onclick="closeDetail()" style="background:var(--surface2);border:none;color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
     </div>
-    <button id="btn-close-detail" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="det-tabs">
+    <button class="det-tab active" data-tab="dashboard" onclick="setDetTab('dashboard')">📊 Dashboard</button>
+    <button class="det-tab" data-tab="history" onclick="setDetTab('history')">📋 History</button>
   </div>
   <div id="detail-body"></div>
 </div>
@@ -826,23 +929,73 @@ function renderFleet() {
 // ─────────────────────────────────────────────
 // Detail
 // ─────────────────────────────────────────────
+// ── 過濾掉雜訊條目（routine / nil defect / autoland satisfactory 等）─────
+const SKIP_FAULT_PATTERNS = [
+  /NIL TECHNICAL DEFECT/i,
+  /AUTOLAND SATISFACTORY/i,
+  /AUTOLAND NOT (PERFORMED|ATTEMPTED)/i,
+  /APU IN-?FLIGHT START (NOT )?PERFORMED/i,
+  /STAYOVER CHECK/i,
+  /TURNAROUND CHECK/i,
+  /ENGINE OIL UPLIFT/i,
+  /NIL NOTED/i,
+  /ACKNOWLEDGE NIL DEFECT/i,
+  /CONDITION CHECK NORMAL/i,
+];
+
+function isNoiseLog(log) {
+  const desc = (log.comments || log.faultDescription || log.description || '').toUpperCase();
+  return SKIP_FAULT_PATTERNS.some(p => p.test(desc));
+}
+
+// 從 fuelMeasurement 抓 arrival（最後一筆）總油量
+function extractArrivalFuel(fuels) {
+  if (!Array.isArray(fuels) || fuels.length === 0) return null;
+  for (const fuel of fuels) {
+    if (fuel._error) continue;
+    const m = fuel.fuelMeasurement;
+    if (Array.isArray(m) && m.length > 0) {
+      // 按時間排序，取最後一筆
+      const sorted = [...m].sort((a, b) =>
+        new Date(a.originDateTime || 0) - new Date(b.originDateTime || 0));
+      const last = sorted[sorted.length - 1];
+      // 找出 total 或 quantity 欄位
+      const total = last.total || last.totalQuantity || last.quantity || last.fuelQuantity;
+      if (total != null) {
+        return { value: total, time: last.originDateTime, unit: last.unitName || 'kg' };
+      }
+    }
+  }
+  return null;
+}
+
+let _curDetailData = null;
+let _curDetailTab = 'dashboard';
+
 async function openDetail(tail, cardEl) {
   selectedTail = tail;
+  _curDetailTab = 'dashboard';
   document.querySelectorAll('.ac-card').forEach(c => c.classList.remove('selected'));
   if (cardEl) cardEl.classList.add('selected');
 
   const panel = document.getElementById('detail-panel');
   const body  = document.getElementById('detail-body');
-  document.getElementById('detail-title').textContent = tail;
-
-  // 從機隊清單抓對應的 ac 資料給 subtitle 顯示機型
-  const ac = fleetData.find(a => a.tail === tail);
-  document.getElementById('detail-subtitle').textContent = ac ? ac.type : '';
-
   panel.classList.add('open');
   if (window.innerWidth < 640) document.getElementById('detail-overlay').classList.add('show');
 
-  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>載入 NTC / MEL / 近 5 航班…（約 10-15 秒）</div>`;
+  // 重置 flight bar 顯示
+  const ac = fleetData.find(a => a.tail === tail);
+  document.getElementById('det-tail').textContent = tail;
+  document.getElementById('det-actype').textContent = ac ? ac.type : '';
+  document.getElementById('det-route').textContent = '—';
+  document.getElementById('det-flightnum').textContent = '';
+  document.getElementById('det-flightdate').textContent = '';
+  document.getElementById('det-checkpoints').innerHTML = '';
+
+  // Reset tab to dashboard
+  document.querySelectorAll('.det-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'dashboard'));
+
+  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>載入中…（約 10-15 秒）</div>`;
 
   try {
     const r = await api(`/api/aircraft/${encodeURIComponent(tail)}`);
@@ -850,10 +1003,272 @@ async function openDetail(tail, cardEl) {
       body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(r.error||'未知錯誤')}</div>`;
       return;
     }
-    renderAircraftDetail(body, tail, r);
+    _curDetailData = r;
+    updateFlightBar(r);
+    renderDashboardTab(body, r);
   } catch (e) {
     body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(e.message)}</div>`;
   }
+}
+
+function setDetTab(name) {
+  _curDetailTab = name;
+  document.querySelectorAll('.det-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  const body = document.getElementById('detail-body');
+  if (!_curDetailData) return;
+  if (name === 'dashboard') renderDashboardTab(body, _curDetailData);
+  else renderHistoryTab(body, _curDetailData);
+}
+
+// ── 更新頂部 flight context bar ──
+function updateFlightBar(data) {
+  const recent = (data.recentFlights || []).filter(f => !f._error);
+  const lastFlight = recent[0]; // 最新一筆 closed flight
+
+  if (lastFlight) {
+    const num   = fmt(lastFlight.flightNum || '');
+    const orig  = fmt(lastFlight.originStationCode || '');
+    const dest  = fmt(lastFlight.destinationStationCode || '');
+    const date  = fmt(lastFlight.flightOriginDate || '');
+    document.getElementById('det-route').innerHTML = `${esc(orig||'?')} <span style="color:var(--gold)">→</span> ${esc(dest||'?')}`;
+    document.getElementById('det-flightnum').textContent = num;
+    document.getElementById('det-flightdate').textContent = date ? date.slice(0,10) : '';
+  }
+
+  // Checkpoints (Fluids / Checks / Defects / Certified) — 從 state 推測
+  const st = data.state || {};
+  const requiresSig = Array.isArray(st.requiresSignature) && st.requiresSignature.length > 0;
+  const hasOpenDef = Array.isArray(st.openDefects) && st.openDefects.length > 0;
+  const cpEl = document.getElementById('det-checkpoints');
+  cpEl.innerHTML = `
+    <span class="ckpt">✓ Fluids</span>
+    <span class="ckpt">✓ Checks</span>
+    <span class="ckpt ${hasOpenDef ? 'warn' : ''}">${hasOpenDef ? '⚠' : '✓'} Defects</span>
+    <span class="ckpt ${requiresSig ? 'warn' : 'muted'}">${requiresSig ? '⚠ Pending' : '○ Certified'}</span>
+  `;
+}
+
+// ── Dashboard tab: 6 區塊 ──
+function renderDashboardTab(container, data) {
+  const st    = data.state || {};
+  const ntcs  = data.notesToCrew || [];
+  const mels  = data.deferredDefects || [];
+
+  // 分類 MEL → MEL / Inspection / Acceptable
+  // 用 maintAction.actionAuthorityRef[].typeOfReference 判斷
+  function classifyMel(m) {
+    const refs = m._action?.actionAuthorityRef || [];
+    const isMel = refs.some(r => r.typeOfReference === 'MEL' || r.typeOfDocumentOther === 'MEL');
+    const isCdl = refs.some(r => r.typeOfReference === 'CDL' || r.typeOfDocumentOther === 'CDL');
+    if (isMel) return 'mel';
+    if (isCdl) return 'mel'; // 也算進 MEL 分類
+    // 沒有 MEL/CDL ref → 看 deferral category
+    const cat = m._action?.maintActionDeferral?.deferralCategory;
+    if (cat === 'INSPECTION' || cat === 'INSP' || /^I/.test(cat || '')) return 'inspection';
+    return 'acceptable';
+  }
+
+  const melsByType = { mel: [], inspection: [], acceptable: [] };
+  for (const m of mels) {
+    if (m._error) continue;
+    melsByType[classifyMel(m)].push(m);
+  }
+
+  const openDefCount = Array.isArray(st.openDefects) ? st.openDefects.length : 0;
+
+  let html = `<div class="det-section-grid two-col">`;
+
+  // 1. Defects & Reporting
+  html += renderDashCard('Defects & Reporting', openDefCount, openDefCount > 0 ? 'alert' : '', `
+    ${openDefCount === 0 ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無進行中缺陷</div>' :
+    '<div style="font-size:12px;color:var(--muted)">' + openDefCount + ' 筆未處理</div>'}
+  `);
+
+  // 2. MEL Deferred Defects
+  html += renderDashCard('MEL Deferred Defects', melsByType.mel.length, melsByType.mel.length > 0 ? 'nonzero' : '',
+    melsByType.mel.length === 0 ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無 MEL</div>' :
+    melsByType.mel.map(m => renderMelMini(m)).join(''));
+
+  // 3. Inspection Deferred Defects
+  html += renderDashCard('Inspection Deferred', melsByType.inspection.length, melsByType.inspection.length > 0 ? 'nonzero' : '',
+    melsByType.inspection.length === 0 ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無 Inspection DD</div>' :
+    melsByType.inspection.map(m => renderMelMini(m)).join(''));
+
+  // 4. Acceptable Deferred Defects
+  html += renderDashCard('Acceptable Deferred', melsByType.acceptable.length, melsByType.acceptable.length > 0 ? 'nonzero' : '',
+    melsByType.acceptable.length === 0 ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無 ADD</div>' :
+    melsByType.acceptable.map(m => renderMelMini(m)).join(''));
+
+  html += `</div>`;
+
+  // 5. Notices to Crew (全寬)
+  html += `<div style="padding:0 12px 8px">`;
+  html += `<div class="det-card">
+    <div class="card-hdr">
+      <span class="card-title" style="color:#c084fc">📢 Notices to Crew</span>
+      <span class="card-count ${ntcs.length>0?'nonzero':''}">${ntcs.length}</span>
+    </div>`;
+  if (!ntcs.length) {
+    html += `<div class="empty-note" style="font-size:12px">無 NTC</div>`;
+  } else {
+    for (let i = 0; i < ntcs.length; i++) {
+      html += renderNtcMini(ntcs[i], i);
+    }
+  }
+  html += `</div></div>`;
+
+  // 6. Information
+  html += `<div style="padding:0 12px 12px">`;
+  html += renderInfoCard(data);
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
+function renderDashCard(title, count, countCls, bodyHtml) {
+  return `<div class="det-card">
+    <div class="card-hdr">
+      <span class="card-title">${esc(title)}</span>
+      <span class="card-count ${countCls}">${count}</span>
+    </div>
+    ${bodyHtml || ''}
+  </div>`;
+}
+
+function renderMelMini(m) {
+  const num = fmt(m.recordName || m._id);
+  const desc = fmt(m.comments || m.faultDescription || '');
+  const action = m._action || {};
+  const deferral = action.maintActionDeferral || {};
+  const refs = Array.isArray(action.actionAuthorityRef) ? action.actionAuthorityRef : [];
+  const ref = refs.find(r => r.typeOfReference === 'MEL' || r.typeOfReference === 'CDL');
+  const refDoc = ref ? fmt(ref.documentNumber || '') : '';
+  const cat = fmt(deferral.deferralCategoryOther || deferral.deferralCategory || '');
+  const exp0 = deferral.expiration?.[0];
+  let expTag = '';
+  if (exp0) {
+    if (exp0.relativeTime?.days && m.originDateTime) {
+      const days = exp0.relativeTime.days;
+      const expDate = new Date(new Date(m.originDateTime).getTime() + days * 86400000);
+      const dl = Math.round((expDate - new Date()) / 86400000);
+      const cls = dl<0?'expiry-exp':dl<=3?'expiry-crit':dl<=10?'expiry-warn':'expiry-ok';
+      expTag = `<span class="mel-meta-tag ${cls}">${dl<0?'EXPIRED':dl+'d'}</span>`;
+    }
+  }
+  return `<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px;margin-top:6px;">
+    <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;">
+      <span style="color:var(--gold);font-weight:700">${esc(num)}</span>
+      ${refDoc?`<span class="mel-meta-tag" style="font-size:10px">${esc(refDoc)}</span>`:''}
+      ${cat?catTag(cat):''}
+      ${expTag}
+    </div>
+    ${desc?`<div style="color:var(--muted);margin-top:4px;font-size:11px;line-height:1.4">${esc(desc.slice(0,150))}</div>`:''}
+  </div>`;
+}
+
+function renderNtcMini(n, i) {
+  if (n._error) return `<div style="color:var(--red);font-size:11px">${esc(n._id)}: ${esc(n._error)}</div>`;
+  const num  = fmt(n.recordName || n._id);
+  const act  = n.ntcActions?.[0] || {};
+  const body = fmt(act.comments || '');
+  const expDate = act.expiration?.[0]?.date;
+  const expDays = expDate ? Math.round((new Date(expDate) - new Date()) / 86400000) : null;
+  const uid = 'ntc-mini-'+i;
+  return `<div style="padding:10px 0;border-top:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:#c084fc;font-weight:700;font-size:14px">${esc(num)}</span>
+      ${expDays !== null ? `<span class="mel-meta-tag ${expDays<=7?'expiry-crit':expDays<=14?'expiry-warn':'expiry-ok'}" style="margin-left:auto">Expires ${expDays}d</span>` : ''}
+    </div>
+    ${body ? `<div style="margin-top:6px;white-space:pre-wrap;color:var(--muted);font-size:12px;line-height:1.55">${esc(body)}</div>` : ''}
+  </div>`;
+}
+
+function renderInfoCard(data) {
+  const recent = (data.recentFlights || []).filter(f => !f._error);
+  const lastFlight = recent[0];
+
+  // Arrival fuel
+  let fuelHtml = '';
+  if (lastFlight) {
+    const arrivalFuel = extractArrivalFuel(lastFlight._fuels);
+    if (arrivalFuel) {
+      fuelHtml = `<div class="fuel-card">
+        <div class="fuel-icon">⛽</div>
+        <div class="fuel-info">
+          <div class="fuel-label">Arrival Fuel · ${esc(lastFlight.flightNum||'')} ${esc(lastFlight.destinationStationCode||'')}</div>
+          <div class="fuel-value">${(arrivalFuel.value||0).toLocaleString()}<span class="fuel-unit">${esc(arrivalFuel.unit||'kg')}</span></div>
+        </div>
+      </div>`;
+    }
+  }
+
+  return `<div class="det-card">
+    <div class="card-hdr">
+      <span class="card-title">ℹ Information</span>
+    </div>
+    ${fuelHtml || '<div class="empty-note" style="font-size:12px">無資料</div>'}
+  </div>`;
+}
+
+// ── History tab: 近 5 航班 + log entries（已過濾雜訊）──
+function renderHistoryTab(container, data) {
+  const flights = data.recentFlights || [];
+  let html = `<div style="padding:12px;">`;
+
+  if (!flights.length) {
+    html += `<div class="empty-note">無飛行記錄</div>`;
+  } else {
+    for (const flt of flights) {
+      if (flt._error) {
+        html += `<div class="flt-item"><div class="flt-route" style="color:var(--red)">${esc(flt._id)}: ${esc(flt._error)}</div></div>`;
+        continue;
+      }
+      const num  = fmt(flt.flightNum || flt._id);
+      const orig = fmt(flt.originStationCode || '');
+      const dest = fmt(flt.destinationStationCode || '');
+      const dt   = fmt(flt.flightOriginDate || '');
+      const allLogs = Array.isArray(flt._logs) ? flt._logs : [];
+
+      // 過濾掉雜訊
+      const filteredLogs = allLogs.filter(l => l && !l._error && !isNoiseLog(l));
+
+      let logHtml = '';
+      for (const log of filteredLogs) {
+        const lnum  = fmt(log.recordName || log._id);
+        const ldesc = fmt(log.comments || log.faultDescription || '');
+        const ata   = fmt(log.ataNum || '');
+        const prefix = (lnum || '').slice(0, 2).toUpperCase();
+        const typeColor = prefix === 'FL' ? '#22c55e' : prefix === 'ML' ? '#f59e0b' : prefix === 'SV' ? '#3b82f6' : '#94a3b8';
+        const typeBg    = prefix === 'FL' ? 'rgba(34,197,94,0.18)' : prefix === 'ML' ? 'rgba(245,158,11,0.18)' : prefix === 'SV' ? 'rgba(59,130,246,0.18)' : 'rgba(148,163,184,0.18)';
+        const typeTag = ['FL','ML','SV'].includes(prefix)
+          ? `<span style="background:${typeBg};color:${typeColor};padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;margin-right:6px">${prefix}</span>`
+          : '';
+        logHtml += `<div class="fault-row" style="background:var(--bg);border:1px solid var(--border);">
+          <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}</div>
+          ${ldesc ? `<div class="fault-desc">${esc(ldesc)}</div>` : ''}
+        </div>`;
+      }
+
+      html += `<div class="flt-item" style="margin-bottom:12px;">
+        <div class="flt-head">
+          <span class="flt-num">${esc(num)}</span>
+          <span class="flt-route">${esc(orig||'?')} → ${esc(dest||'?')}</span>
+          <span class="flt-time">${esc(dt ? dt.slice(0,10) : '')}</span>
+        </div>
+        ${filteredLogs.length ? `<div class="fault-list">${logHtml}</div>` :
+          `<div style="font-size:11px;color:var(--dim);font-style:italic;padding:6px 0">無異常紀錄</div>`}
+      </div>`;
+    }
+  }
+
+  // Debug
+  html += `<div class="debug-sec">
+    <div class="debug-toggle" onclick="toggleDebug('dbg-h')">🔬 Raw 資料</div>
+    <div class="debug-content" id="dbg-h">${esc(JSON.stringify(data,null,2))}</div>
+  </div>`;
+
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
 // ── 渲染單機完整詳情 ─────────────────────────────────────────

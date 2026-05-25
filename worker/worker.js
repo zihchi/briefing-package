@@ -436,15 +436,15 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
         }
       })),
 
-      // 近 5 航班 + 每個航班的 log entries
-      // 分流: maintLogIds → getMaintLog, serviceLogIds → getServiceLog
+      // 近 5 航班 + 每個航班的 log entries + fuel
       Promise.all(closedFs.map(async id => {
         try {
           const flt = await pipe.req('getFlightLog', { id }, 7000);
-          const mlIds = Array.isArray(flt?.maintLogIds)    ? flt.maintLogIds    : [];
-          const svIds = Array.isArray(flt?.serviceLogIds)  ? flt.serviceLogIds  : [];
+          const mlIds   = Array.isArray(flt?.maintLogIds)    ? flt.maintLogIds    : [];
+          const svIds   = Array.isArray(flt?.serviceLogIds)  ? flt.serviceLogIds  : [];
+          const fuelIds = Array.isArray(flt?.fuelRecordIds)  ? flt.fuelRecordIds  : [];
 
-          const [mlLogs, svLogs] = await Promise.all([
+          const [mlLogs, svLogs, fuels] = await Promise.all([
             Promise.all(mlIds.map(lid =>
               pipe.req('getMaintLog', { id: lid }, 6000)
                 .then(d => ({ _id: lid, _type: 'ML', ...d }))
@@ -455,9 +455,15 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
                 .then(d => ({ _id: lid, _type: 'SV', ...d }))
                 .catch(e => ({ _id: lid, _type: 'SV', _error: e.message }))
             )),
+            Promise.all(fuelIds.map(fid =>
+              pipe.req('getFuelRecord', { id: fid }, 6000)
+                .then(d => ({ _id: fid, ...d }))
+                .catch(e => ({ _id: fid, _error: e.message }))
+            )),
           ]);
 
           flt._logs = [...mlLogs, ...svLogs];
+          flt._fuels = fuels;
           return { _id: id, ...flt };
         } catch (e) {
           return { _id: id, _error: e.message };
@@ -586,7 +592,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.6-logentries', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'maintlog+servicelog'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.7-fuel', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records'] }, 200, origin);
     }
 
     try {
