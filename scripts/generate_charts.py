@@ -82,10 +82,15 @@ def date_strs() -> list[str]:
 
 
 async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, bool, str]:
-    """抓單一航班一天的圖。回傳 (cache_key, success, message)"""
+    """抓單一航班一天的圖。回傳 (cache_key, success, message)
+    注意：turbli 用「不補零」的班號，例如 JX-2 而非 JX-002。
+    cache_key 維持與 app.js 一致的補零版本 (001-, 002-...)，避免前端要做轉換。
+    """
     cache_key = f"{flight}-{date}"
     out_path = CACHE_DIR / f"{cache_key}.png"
-    url = f"https://turbli.com/{route}/{date}/JX-{flight}/"
+    # 班號去前導零後組 turbli URL；純數字才去零，非數字班號維持原樣
+    turbli_flight = str(int(flight)) if flight.isdigit() else flight
+    url = f"https://turbli.com/{route}/{date}/JX-{turbli_flight}/"
 
     # 偽裝成真實 Chrome (預設 HeadlessChrome UA 會被 turbli 的 Cloudflare 直接擋)
     context = await browser.new_context(

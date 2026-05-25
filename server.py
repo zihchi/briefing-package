@@ -45,8 +45,11 @@ class TurbliUnavailable(Exception):
 
 
 def fetch_turbulence_chart(route: str, date: str, flight: str) -> bytes:
-    """開瀏覽器抓圖。回傳 PNG bytes。"""
-    url = f"https://turbli.com/{route}/{date}/JX-{flight}/"
+    """開瀏覽器抓圖。回傳 PNG bytes。
+    注意：turbli 用「不補零」的班號 (JX-2 而非 JX-002)，前端可能送補零版過來。
+    """
+    turbli_flight = str(int(flight)) if flight.isdigit() else flight
+    url = f"https://turbli.com/{route}/{date}/JX-{turbli_flight}/"
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
