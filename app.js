@@ -306,10 +306,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const turbliBtn = document.getElementById("turbliBtn");
     if(turbliBtn) {
-        turbliBtn.addEventListener("click", function () {
-            const url = this.dataset.url;
-            if (url) window.open(url, "_blank");
-        });
+        turbliBtn.addEventListener("click", function () { loadTurbliChart(false); });
+    }
+    const turbliRefreshBtn = document.getElementById("turbliRefreshBtn");
+    if(turbliRefreshBtn) {
+        turbliRefreshBtn.addEventListener("click", function () { loadTurbliChart(true); });
     }
     console.log("✈️ 簡報箱主核心系統已全面整合上線 (Core Engine Online)");
 });
@@ -348,10 +349,15 @@ function initFlightSelect() {
   function updateTurbliUrl() {
     const selectedFlight = selectEl.value;
     const selectedDate = dateSelectEl.value;
+    const srcLink = document.getElementById("turbliSourceLink");
 
     if (!selectedFlight) {
       btn.disabled = true;
       btn.dataset.url = "";
+      btn.dataset.flight = "";
+      btn.dataset.route = "";
+      btn.dataset.date = "";
+      if (srcLink) srcLink.href = "https://turbli.com/";
       return;
     }
 
@@ -366,12 +372,76 @@ function initFlightSelect() {
     const flight = window.flights.find(f => f.flightNo === selectedFlight);
     if (!flight) return;
 
-    btn.dataset.url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
+    const url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
+    btn.dataset.url = url;
+    btn.dataset.flight = selectedFlight;
+    btn.dataset.route = flight.route;
+    btn.dataset.date = dateStr;
     btn.disabled = false;
+    if (srcLink) srcLink.href = url;
   }
 
   selectEl.addEventListener("change", updateTurbliUrl);
   dateSelectEl.addEventListener("change", updateTurbliUrl);
+}
+
+// ==========================================
+// 🌪️ Turbli 湍流圖 — 後端截圖 API 呼叫
+// ==========================================
+// API base：同源（http://<host>:5050）時用相對路徑，file:// 直開時 fallback 到本機
+window.TURBLI_API_BASE = (location.protocol === "http:" || location.protocol === "https:")
+  ? ""
+  : "http://127.0.0.1:5050";
+
+async function loadTurbliChart(forceRefresh) {
+  const btn = document.getElementById("turbliBtn");
+  const area = document.getElementById("turbliChartArea");
+  const box = document.getElementById("turbliChartBox");
+  const status = document.getElementById("turbliStatus");
+  const meta = document.getElementById("turbliMeta");
+  const refreshBtn = document.getElementById("turbliRefreshBtn");
+  if (!btn || !area || !box) return;
+
+  const flight = btn.dataset.flight;
+  const route = btn.dataset.route;
+  const date = btn.dataset.date;
+  if (!flight || !route || !date) return;
+
+  area.style.display = "block";
+  if (refreshBtn) refreshBtn.style.display = "none";
+  if (meta) meta.textContent = "";
+  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 正在抓取湍流圖…首次需 5-10 秒</div>`;
+
+  const params = new URLSearchParams({ flight, route, date });
+  if (forceRefresh) params.set("_t", String(Date.now())); // 繞過瀏覽器快取
+  const apiUrl = `${window.TURBLI_API_BASE}/api/chart?${params.toString()}`;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(apiUrl);
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); if (j.error) msg = j.error; } catch (_) {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const imgUrl = URL.createObjectURL(blob);
+    const cacheHit = res.headers.get("X-Cache") === "HIT";
+    const ms = Math.round(performance.now() - t0);
+
+    box.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = imgUrl;
+    img.alt = `JX-${flight} ${route} 湍流圖`;
+    img.style.cssText = "max-width:100%; height:auto; border-radius:8px; display:block;";
+    box.appendChild(img);
+
+    if (meta) meta.textContent = `${cacheHit ? "✅ 快取命中" : "🆕 即時抓取"} · ${ms} ms · JX-${flight} · ${route} · ${date}`;
+    if (refreshBtn) refreshBtn.style.display = "inline-block";
+  } catch (err) {
+    box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">❌ ${err.message || "載入失敗"}<br><span style="font-size:12px; color:#94a3b8;">請確認 server.py 是否已啟動 (python3 server.py)</span></div>`;
+    if (refreshBtn) refreshBtn.style.display = "inline-block";
+  }
 }
 
 // ==========================================

@@ -11,23 +11,49 @@ import threading
 import time
 import json
 import socket
-from flask import Flask, jsonify, request
+import os
+from flask import Flask, jsonify, request, send_from_directory
+
+# 專案根目錄 = server/ 的上一層
+BRIEFING_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # ──────────────────────────────────────────────
-# App & CORS
+# App & CORS  +  靜態檔服務
 # ──────────────────────────────────────────────
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
 @app.after_request
 def cors(r):
+    # 允許 GitHub Pages、file://、localhost 等任何 origin
     r.headers["Access-Control-Allow-Origin"] = "*"
     r.headers["Access-Control-Allow-Headers"] = "Content-Type"
     r.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    # Chrome Private Network Access：允許 https 頁面呼叫 http://localhost
+    r.headers["Access-Control-Allow-Private-Network"] = "true"
     return r
 
 @app.route("/api/<path:p>", methods=["OPTIONS"])
 def options_handler(p):
     return jsonify({}), 200
+
+# ──────────────────────────────────────────────
+# 靜態檔：把整個 briefing-package 當網站根
+# 訪問 http://localhost:3001/ELB_Fleet.html 即可
+# ──────────────────────────────────────────────
+@app.route("/")
+def root_index():
+    return send_from_directory(BRIEFING_ROOT, "ELB_Fleet.html")
+
+@app.route("/<path:fname>")
+def static_files(fname):
+    # 防止 path traversal
+    safe = os.path.normpath(fname).lstrip("/")
+    if safe.startswith("..") or safe.startswith("server/"):
+        return "Not found", 404
+    full = os.path.join(BRIEFING_ROOT, safe)
+    if not os.path.isfile(full):
+        return "Not found", 404
+    return send_from_directory(BRIEFING_ROOT, safe)
 
 # ──────────────────────────────────────────────
 # Playwright 全域狀態

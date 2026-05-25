@@ -335,13 +335,23 @@
         <button id="turbliBtn" disabled class="!m-0 !px-6 !py-2.5 !bg-[#3c79ff] !text-white !font-bold !rounded-lg shadow hover:!bg-blue-700 disabled:!opacity-50 disabled:!cursor-not-allowed transition-all">
           查詢
         </button>
-        <a href="https://turbli.com/" target="_blank" class="inline-block">
+        <a id="turbliSourceLink" href="https://turbli.com/" target="_blank" class="inline-block">
           <button type="button" class="!m-0 !px-6 !py-2.5 !bg-white border-2 border-[#3c79ff] !text-[#3c79ff] !font-bold !rounded-lg shadow hover:!bg-blue-50 transition-all">
-            官網
+            開啟原站
           </button>
         </a>
       </div>
 
+    </div>
+
+    <div id="turbliChartArea" class="mt-2" style="display:none;">
+      <div id="turbliChartBox" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px; min-height:120px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div id="turbliStatus" style="color:#64748b; font-size:14px; padding:20px 10px;">準備中…</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:12px; color:#64748b;">
+        <span id="turbliMeta"></span>
+        <button id="turbliRefreshBtn" type="button" style="margin:0; padding:4px 12px; font-size:12px; background:#fff; color:#3c79ff; border:1px solid #3c79ff; border-radius:6px; cursor:pointer; display:none;">🔄 重新抓取</button>
+      </div>
     </div>
   </div>
 

@@ -337,13 +337,19 @@
 
   <!-- Server offline notice -->
   <div id="offline-banner">
-    <h3>⚠️ 後端伺服器未啟動</h3>
-    在 Mac 上開啟「終端機」，貼上以下指令：<br><br>
+    <h3>⚠️ 無法連線後端伺服器</h3>
+    <div id="offline-detail-https" style="display:none; margin-bottom:14px; padding:12px; background:rgba(0,0,0,0.25); border-radius:10px;">
+      <strong style="color:#fde68a;">⚠ 你現在從 <code id="cur-origin"></code> 進來的</strong><br>
+      因為瀏覽器的「混合內容」規則，<strong>https 頁面無法呼叫 http://localhost</strong>，請改從本機伺服器開：<br><br>
+      <a id="local-link" href="http://localhost:3001/ELB_Fleet.html" style="display:inline-block; padding:10px 16px; background:#f59e0b; color:#000; font-weight:800; border-radius:8px; text-decoration:none;">
+        👉 切換到 http://localhost:3001/ELB_Fleet.html
+      </a>
+      <br><br><small style="opacity:0.8">（先確認下方指令已執行、伺服器在線後再點）</small>
+    </div>
+    <strong>啟動伺服器</strong> — 在 Mac 上開啟「終端機」，貼上：<br><br>
     <code>cd ~/Downloads/briefing-package/server && bash start.sh</code><br><br>
-    伺服器啟動後重新整理此頁面。<br>
-    如在 iPhone/iPad 使用，請將下方網址的 <strong>localhost</strong> 換成 Mac 的區域 IP（例如 192.168.x.x）：<br>
-    <code id="server-url-hint">http://localhost:3001</code>
-    <br>
+    <strong>iPhone/iPad 使用</strong> — 將下方網址 <strong>localhost</strong> 換成 Mac 的區域 IP（如 192.168.x.x）：<br>
+    <code id="server-url-hint">http://localhost:3001</code><br>
     <button onclick="promptServerUrl()" style="margin-top:10px; padding:6px 14px; border-radius:8px; border:none; background:rgba(255,255,255,0.15); color:#fff; cursor:pointer; font-size:12px;">
       修改伺服器網址
     </button>
@@ -473,6 +479,11 @@ async function boot() {
 
 function updateHint() {
   document.getElementById('server-url-hint').textContent = serverUrl();
+  // 偵測 https 從 GitHub Pages（或其他遠端）進來 → 顯示 localhost 切換建議
+  if (location.protocol === 'https:' && !location.hostname.match(/^(localhost|127\.|192\.|10\.|172\.)/)) {
+    document.getElementById('offline-detail-https').style.display = 'block';
+    document.getElementById('cur-origin').textContent = location.origin;
+  }
 }
 
 // ─────────────────────────────────────────────
