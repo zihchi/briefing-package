@@ -425,13 +425,53 @@ async function loadTurbliChart(forceRefresh) {
   area.style.display = "block";
   if (refreshBtn) refreshBtn.style.display = "none";
   if (meta) meta.textContent = "";
-  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 正在抓取湍流圖…首次需 5-10 秒</div>`;
-
-  const params = new URLSearchParams({ flight, route, date });
-  if (forceRefresh) params.set("_t", String(Date.now())); // 繞過瀏覽器快取
-  const apiUrl = `${window.TURBLI_API_BASE}/api/chart?${params.toString()}`;
+  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 載入湍流圖…</div>`;
 
   const t0 = performance.now();
+
+  // 先試 chartcache (GitHub Actions 預先抓好的靜態 PNG)
+  // 除非按了「重新抓取」才繞過 chartcache 直接打 API (即時版)
+  if (!forceRefresh) {
+    const cacheUrl = `chartcache/${flight}-${date}.png`;
+    try {
+      const res = await fetch(cacheUrl, { method: "GET", cache: "default" });
+      if (res.ok) {
+        const blob = await res.blob();
+        const imgUrl = URL.createObjectURL(blob);
+        const ms = Math.round(performance.now() - t0);
+
+        box.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = imgUrl;
+        img.alt = `JX-${flight} ${route} 湍流圖`;
+        img.style.cssText = "max-width:100%; height:auto; border-radius:8px; display:block;";
+        box.appendChild(img);
+
+        // 從 Last-Modified header 顯示資料新舊度
+        const lastMod = res.headers.get("Last-Modified");
+        let ageStr = "";
+        if (lastMod) {
+          const ageMs = Date.now() - new Date(lastMod).getTime();
+          const ageMin = Math.floor(ageMs / 60000);
+          if (ageMin < 60) ageStr = ` · 圖 ${ageMin} 分鐘前抓的`;
+          else ageStr = ` · 圖 ${Math.floor(ageMin/60)} 小時前抓的`;
+        }
+        if (meta) meta.textContent = `📦 預存快取 · ${ms} ms · JX-${flight} · ${route} · ${date}${ageStr}`;
+        if (refreshBtn) refreshBtn.style.display = "inline-block";
+        return;
+      }
+    } catch (_) {
+      // chartcache 不可用就 fallback 到 API
+    }
+  }
+
+  // Fallback：chartcache 沒這張或使用者按了重新抓取 → 打 server API (即時)
+  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 預存快取沒有，即時抓取中…首次需 5-10 秒</div>`;
+
+  const params = new URLSearchParams({ flight, route, date });
+  if (forceRefresh) params.set("_t", String(Date.now()));
+  const apiUrl = `${window.TURBLI_API_BASE}/api/chart?${params.toString()}`;
+
   try {
     const res = await fetch(apiUrl);
     if (!res.ok) {
@@ -451,10 +491,10 @@ async function loadTurbliChart(forceRefresh) {
     img.style.cssText = "max-width:100%; height:auto; border-radius:8px; display:block;";
     box.appendChild(img);
 
-    if (meta) meta.textContent = `${cacheHit ? "✅ 快取命中" : "🆕 即時抓取"} · ${ms} ms · JX-${flight} · ${route} · ${date}`;
+    if (meta) meta.textContent = `${cacheHit ? "✅ 即時快取" : "🆕 剛抓取"} · ${ms} ms · JX-${flight} · ${route} · ${date}`;
     if (refreshBtn) refreshBtn.style.display = "inline-block";
   } catch (err) {
-    box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">❌ ${err.message || "載入失敗"}<br><span style="font-size:12px; color:#94a3b8;">請確認 server.py 是否已啟動 (python3 server.py)</span></div>`;
+    box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">📭 預存快取暫無此航班，且即時 server 未開<br><span style="font-size:12px; color:#94a3b8;">GitHub Actions 每 6 小時更新，請稍後再試；或從 turbli.com 原站查看</span></div>`;
     if (refreshBtn) refreshBtn.style.display = "inline-block";
   }
 }
