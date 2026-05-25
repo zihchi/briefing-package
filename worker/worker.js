@@ -502,6 +502,45 @@ async function handleAircraft(request, tail, origin) {
 }
 
 // ──────────────────────────────────────────
+// /api/ws-probe?id=xxx&funcs=getFlight,getFlt,...
+// 給定一個 ID，試多個函式名稱，回報哪個有回應
+// ──────────────────────────────────────────
+async function handleWsProbe(request, origin) {
+  const url = new URL(request.url);
+  const token = request.headers.get('X-Session-Token') || url.searchParams.get('session');
+  const id = url.searchParams.get('id');
+  const funcsParam = url.searchParams.get('funcs') || 'getFlight,getFlt,getFlightLog,getFltLog,getFlightLogPage,getMaintLogPage,getFlightRecord,getEntity';
+  if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
+  if (!id) return jsonResp({ ok: false, error: '需要 id 參數' }, 400, origin);
+
+  const cookies = decodeSession(token) || {};
+  const ws = await openELBWebSocket(cookies);
+  let closed = false;
+  const closeWS = () => { if (!closed) { closed = true; try { ws.close(); } catch {} } };
+
+  try {
+    await waitForInit(ws);
+    const pipe = makeWSPipeline(ws);
+    const funcs = funcsParam.split(',').map(s => s.trim()).filter(Boolean);
+
+    const results = await Promise.all(funcs.map(async func => {
+      try {
+        const data = await pipe.req(func, { id }, 5000);
+        return { func, ok: true, keys: data && typeof data === 'object' ? Object.keys(data).slice(0, 20) : null, preview: JSON.stringify(data).slice(0, 300) };
+      } catch (e) {
+        return { func, ok: false, error: e.message };
+      }
+    }));
+
+    closeWS();
+    return jsonResp({ ok: true, id, results }, 200, origin);
+  } catch (e) {
+    closeWS();
+    return jsonResp({ ok: false, error: e.message }, 502, origin);
+  }
+}
+
+// ──────────────────────────────────────────
 // /api/proxy?path=/elb/...  GET  X-Session-Token
 // ──────────────────────────────────────────
 async function handleProxy(request, origin) {
@@ -537,7 +576,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.3-detail', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.4-probe', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'ws-probe'] }, 200, origin);
     }
 
     try {
@@ -559,6 +598,9 @@ export default {
       }
       if (url.pathname === '/api/proxy' && request.method === 'GET') {
         return await handleProxy(request, origin);
+      }
+      if (url.pathname === '/api/ws-probe' && request.method === 'GET') {
+        return await handleWsProbe(request, origin);
       }
     } catch (e) {
       return jsonResp({ ok: false, error: String(e), stack: (e && e.stack) || '' }, 500, origin);
