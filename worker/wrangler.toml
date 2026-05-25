@@ -1,0 +1,9 @@
+name = "elb"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+# 不需要 KV / R2 / D1 / Durable Objects
+# 純粹是 stateless proxy，credentials 由前端管理
+
+[observability]
+enabled = true

@@ -335,23 +335,21 @@
 <!-- ── Main ── -->
 <div id="main">
 
-  <!-- Server offline notice -->
+  <!-- Worker setup notice -->
   <div id="offline-banner">
-    <h3>⚠️ 無法連線後端伺服器</h3>
-    <div id="offline-detail-https" style="display:none; margin-bottom:14px; padding:12px; background:rgba(0,0,0,0.25); border-radius:10px;">
-      <strong style="color:#fde68a;">⚠ 你現在從 <code id="cur-origin"></code> 進來的</strong><br>
-      因為瀏覽器的「混合內容」規則，<strong>https 頁面無法呼叫 http://localhost</strong>，請改從本機伺服器開：<br><br>
-      <a id="local-link" href="http://localhost:3001/ELB_Fleet.html" style="display:inline-block; padding:10px 16px; background:#f59e0b; color:#000; font-weight:800; border-radius:8px; text-decoration:none;">
-        👉 切換到 http://localhost:3001/ELB_Fleet.html
-      </a>
-      <br><br><small style="opacity:0.8">（先確認下方指令已執行、伺服器在線後再點）</small>
+    <h3 id="offline-h">⚙️ 尚未設定 Cloudflare Worker 網址</h3>
+    <div id="offline-body">
+      首次使用請先部署 Cloudflare Worker（一次性，免費，無需本機伺服器）：<br><br>
+      <strong>1.</strong> 註冊 <a href="https://dash.cloudflare.com/sign-up" target="_blank" style="color:#fde68a;text-decoration:underline">Cloudflare 免費帳號</a><br>
+      <strong>2.</strong> Mac 終端機執行：<br>
+      <code>cd ~/briefing-package/worker</code><br>
+      <code>npm install -g wrangler</code><br>
+      <code>wrangler login</code><br>
+      <code>wrangler deploy</code><br><br>
+      <strong>3.</strong> 部署完會顯示一串網址（例如 <code>https://elb.xxx.workers.dev</code>），按下方按鈕貼進去。
     </div>
-    <strong>啟動伺服器</strong> — 在 Mac 上開啟「終端機」，貼上：<br><br>
-    <code>cd ~/Downloads/briefing-package/server && bash start.sh</code><br><br>
-    <strong>iPhone/iPad 使用</strong> — 將下方網址 <strong>localhost</strong> 換成 Mac 的區域 IP（如 192.168.x.x）：<br>
-    <code id="server-url-hint">http://localhost:3001</code><br>
-    <button onclick="promptServerUrl()" style="margin-top:10px; padding:6px 14px; border-radius:8px; border:none; background:rgba(255,255,255,0.15); color:#fff; cursor:pointer; font-size:12px;">
-      修改伺服器網址
+    <button onclick="promptServerUrl()" style="margin-top:14px; padding:10px 20px; border-radius:10px; border:none; background:#f59e0b; color:#000; cursor:pointer; font-size:14px; font-weight:800;">
+      🔧 設定 Worker 網址
     </button>
   </div>
 
@@ -376,8 +374,8 @@
       <button id="login-btn" onclick="doLogin()">登入並載入機隊</button>
       <div id="login-error"></div>
       <div class="server-hint">
-        後端伺服器需在 Mac 上執行：<br>
-        <code>cd ~/Downloads/briefing-package/server && bash start.sh</code>
+        透過 Cloudflare Worker：<code id="worker-hint">—</code><br>
+        <button onclick="promptServerUrl()" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;font-size:11px;">修改 Worker 網址</button>
       </div>
     </div>
   </div>
@@ -414,16 +412,24 @@
 'use strict';
 
 // ─────────────────────────────────────────────
-// Config
+// Config — Cloudflare Worker URL
 // ─────────────────────────────────────────────
-const DEF_SERVER = 'http://localhost:3001';
-function serverUrl() { return localStorage.getItem('elbServerUrl') || DEF_SERVER; }
+function workerUrl() { return localStorage.getItem('elbWorkerUrl') || ''; }
+function sessionToken() { return localStorage.getItem('elbSession') || ''; }
+function setSession(s) {
+  if (s) localStorage.setItem('elbSession', s);
+  else   localStorage.removeItem('elbSession');
+}
 
 function promptServerUrl() {
-  const cur = serverUrl();
-  const v = prompt('ELB 後端伺服器網址（修改後儲存並重試）', cur);
+  const cur = workerUrl();
+  const v = prompt(
+    'Cloudflare Worker 網址\n（例如 https://elb.你的帳號.workers.dev）',
+    cur || 'https://'
+  );
   if (v && v.trim()) {
-    localStorage.setItem('elbServerUrl', v.trim().replace(/\/$/, ''));
+    const cleaned = v.trim().replace(/\/$/, '');
+    localStorage.setItem('elbWorkerUrl', cleaned);
     location.reload();
   }
 }
@@ -439,9 +445,17 @@ let selectedTail = null;
 // API helpers
 // ─────────────────────────────────────────────
 async function api(path, opts = {}) {
-  const res = await fetch(serverUrl() + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
+  const base = workerUrl();
+  if (!base) throw new Error('NO_WORKER_URL');
+
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  const tok = sessionToken();
+  if (tok) headers['X-Session-Token'] = tok;
+
+  const res = await fetch(base + path, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body,
   });
   return res.json();
 }
@@ -451,15 +465,35 @@ async function api(path, opts = {}) {
 // ─────────────────────────────────────────────
 async function boot() {
   setStatus('connecting');
-  updateHint();
+  const base = workerUrl();
+  document.getElementById('worker-hint').textContent = base || '（未設定）';
 
-  let status;
+  // 沒設定 Worker URL → 顯示一次性部署引導
+  if (!base) {
+    setStatus('offline');
+    showOfflineBanner();
+    return;
+  }
+
+  // 戳一下 Worker ping，驗證可達
+  let ping;
   try {
-    status = await Promise.race([
-      api('/api/status'),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+    ping = await Promise.race([
+      fetch(base + '/api/ping').then(r => r.json()),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
     ]);
-  } catch (_) {
+  } catch (e) {
+    setStatus('offline');
+    document.getElementById('offline-h').textContent = '⚠️ 無法連線到 Worker';
+    document.getElementById('offline-body').innerHTML =
+      `已設定 <code>${esc(base)}</code> 但連不上。請確認：<br>
+      1. URL 拼字正確<br>
+      2. 已執行 <code>wrangler deploy</code><br>
+      3. 沒被廣告攔截器擋（試試開新無痕分頁）`;
+    showOfflineBanner();
+    return;
+  }
+  if (!ping || !ping.ok) {
     setStatus('offline');
     showOfflineBanner();
     return;
@@ -468,22 +502,21 @@ async function boot() {
   setStatus('online');
   hideOfflineBanner();
 
-  if (status.loggedIn) {
-    showFleetScreen();
-    loadFleet();
-  } else {
-    showLoginScreen();
-    restoreCredentials();
+  // 有 session → 直接看機隊；沒有 → 登入頁
+  if (sessionToken()) {
+    // 驗證 session 還活著
+    try {
+      const st = await api('/api/status');
+      if (st.loggedIn) {
+        showFleetScreen();
+        loadFleet();
+        return;
+      }
+    } catch (_) {}
+    setSession(null);
   }
-}
-
-function updateHint() {
-  document.getElementById('server-url-hint').textContent = serverUrl();
-  // 偵測 https 從 GitHub Pages（或其他遠端）進來 → 顯示 localhost 切換建議
-  if (location.protocol === 'https:' && !location.hostname.match(/^(localhost|127\.|192\.|10\.|172\.)/)) {
-    document.getElementById('offline-detail-https').style.display = 'block';
-    document.getElementById('cur-origin').textContent = location.origin;
-  }
+  showLoginScreen();
+  restoreCredentials();
 }
 
 // ─────────────────────────────────────────────
@@ -493,8 +526,8 @@ function setStatus(state) {
   const el = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   el.className = 'status-dot';
-  if (state === 'online')      { el.classList.add('ok');  txt.textContent = '伺服器連線中'; }
-  else if (state === 'offline') { el.classList.add('err'); txt.textContent = '伺服器離線'; }
+  if (state === 'online')       { el.classList.add('ok');  txt.textContent = 'Worker 連線'; }
+  else if (state === 'offline') { el.classList.add('err'); txt.textContent = 'Worker 離線'; }
   else                          { txt.textContent = '連線中…'; }
 }
 
@@ -543,14 +576,15 @@ async function doLogin() {
   if (!user || !pass) { errEl.textContent = '請輸入帳號和密碼'; return; }
 
   btn.disabled = true;
-  btn.textContent = '登入中，請稍候…（約 20 秒）';
+  btn.textContent = '登入中…';
 
   try {
     const r = await api('/api/login', {
       method: 'POST',
-      body: JSON.stringify({ username: user, password: pass }),
+      body: JSON.stringify({ user, pass }),
     });
-    if (r.ok) {
+    if (r.ok && r.session) {
+      setSession(r.session);
       if (remember) localStorage.setItem('elbUser', user);
       else localStorage.removeItem('elbUser');
       showFleetScreen();
@@ -561,7 +595,7 @@ async function doLogin() {
       btn.textContent = '登入並載入機隊';
     }
   } catch (e) {
-    errEl.textContent = '無法連線到後端伺服器：' + e.message;
+    errEl.textContent = '無法呼叫 Worker：' + e.message;
     btn.disabled = false;
     btn.textContent = '登入並載入機隊';
   }
@@ -577,9 +611,16 @@ async function loadFleet() {
 
   try {
     const r = await api('/api/fleet');
-    if (r.code === 'NOT_LOGGED_IN') { showLoginScreen(); return; }
-    if (!r.ok) { document.getElementById('fleet-status').textContent = '❌ ' + (r.error || '未知錯誤'); return; }
-
+    if (!r.ok) {
+      // session 過期 → 重新登入
+      if (r.error === '未登入' || r.status === 401) {
+        setSession(null);
+        showLoginScreen();
+        return;
+      }
+      document.getElementById('fleet-status').textContent = '❌ ' + (r.error || '未知錯誤');
+      return;
+    }
     fleetData = parseFleetList(r.data);
     document.getElementById('fleet-status').textContent = '';
     renderFleet();
@@ -768,15 +809,36 @@ async function openDetail(tail, cardEl) {
   panel.classList.add('open');
   if (window.innerWidth < 640) document.getElementById('detail-overlay').classList.add('show');
 
-  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>載入 MEL / NTC / 飛行記錄中…</div>`;
+  body.innerHTML = `<div class="det-loading"><div class="loading-spinner"></div>探測單機 endpoint 中…</div>`;
 
   try {
-    const r = await api(`/api/fleet/${encodeURIComponent(tail)}`);
+    const r = await api(`/api/aircraft/${encodeURIComponent(tail)}`);
     if (!r.ok) { body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(r.error||'未知錯誤')}</div>`; return; }
-    renderDetail(body, tail, r.state, r.flight);
+    renderDetailProbes(body, tail, r.probes || []);
   } catch (e) {
     body.innerHTML = `<div style="padding:20px;color:var(--red)">❌ ${esc(e.message)}</div>`;
   }
+}
+
+// 階段一：列出每個 endpoint 的狀態 + 第一個成功的 raw JSON
+function renderDetailProbes(container, tail, probes) {
+  const ok = probes.find(p => p.status === 200);
+  let html = '<div class="det-sec"><div class="det-sec-hdr">REST endpoint 探測結果</div>';
+  for (const p of probes) {
+    const color = p.status === 200 ? '#86efac' : p.status === 0 ? '#fca5a5' : '#fbbf24';
+    html += `<div style="font-size:11px;font-family:monospace;color:${color};margin-bottom:4px;word-break:break-all">${p.status} — ${esc(p.path)}</div>`;
+  }
+  html += '</div>';
+
+  if (ok) {
+    html += `<div class="det-sec"><div class="det-sec-hdr">第一個成功 endpoint 的回應</div>
+      <div style="font-size:11px;color:var(--gold);margin-bottom:6px">${esc(ok.path)}</div>
+      <pre style="background:var(--surface);padding:10px;border-radius:8px;font-size:10px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all">${esc(JSON.stringify(ok.body, null, 2))}</pre>
+    </div>`;
+  } else {
+    html += `<div class="det-sec"><div class="empty-note">所有 REST endpoint 都失敗。MEL/NTC/飛行記錄需要 WebSocket — 請使用機隊頁右上角的「擷取 Bookmarklet」功能（待開發 Phase 2）</div></div>`;
+  }
+  container.innerHTML = html;
 }
 
 function closeDetail() {
@@ -913,7 +975,7 @@ function toggleDebug(id) {
 function onRefresh() { closeDetail(); loadFleet(); }
 
 async function onLogout() {
-  try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+  setSession(null);
   closeDetail();
   fleetData = [];
   showLoginScreen();
