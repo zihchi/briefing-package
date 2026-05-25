@@ -445,11 +445,19 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
           const fuelIds = Array.isArray(flt?.fuelRecordIds)  ? flt.fuelRecordIds  : [];
 
           const [mlLogs, svLogs, fuels] = await Promise.all([
-            Promise.all(mlIds.map(lid =>
-              pipe.req('getMaintLog', { id: lid }, 6000)
-                .then(d => ({ _id: lid, _type: 'ML', ...d }))
-                .catch(e => ({ _id: lid, _type: 'ML', _error: e.message }))
-            )),
+            // ML：抓 maintLog + 它的 latestMaintActionId（"Action to Close" 內容）
+            Promise.all(mlIds.map(async lid => {
+              try {
+                const ml = await pipe.req('getMaintLog', { id: lid }, 6000);
+                const actId = ml?.latestMaintActionId;
+                if (actId) {
+                  ml._action = await pipe.req('getMaintAction', { id: actId }, 6000).catch(() => null);
+                }
+                return { _id: lid, _type: 'ML', ...ml };
+              } catch (e) {
+                return { _id: lid, _type: 'ML', _error: e.message };
+              }
+            })),
             Promise.all(svIds.map(lid =>
               pipe.req('getServiceLog', { id: lid }, 6000)
                 .then(d => ({ _id: lid, _type: 'SV', ...d }))
@@ -592,7 +600,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.7-fuel', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.8-title-action', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records', 'log-actions'] }, 200, origin);
     }
 
     try {
