@@ -93,7 +93,14 @@ async function elbFetch(path, token, opts = {}) {
   headers.set('Cookie', cookieStr(cookies));
   headers.set('User-Agent', UA);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json, text/plain, */*');
+  headers.set('Accept-Language', 'zh-TW,zh;q=0.9,en;q=0.8');
   headers.set('Referer', `${ELB_BASE}/elb/`);
+  headers.set('Origin', ELB_BASE);
+  // ★ 關鍵：標示為 AJAX，繞過 SPA HTML fallback
+  headers.set('X-Requested-With', 'XMLHttpRequest');
+  headers.set('Sec-Fetch-Dest', 'empty');
+  headers.set('Sec-Fetch-Mode', 'cors');
+  headers.set('Sec-Fetch-Site', 'same-origin');
   return fetch(`${ELB_BASE}${path}`, {
     ...opts,
     headers,
@@ -138,8 +145,13 @@ async function handleLogin(request, origin) {
       'Cookie': cookieStr(cookies),
       'User-Agent': UA,
       'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
       'Origin': ELB_BASE,
       'Referer': `${ELB_BASE}/elb/`,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
     },
     body: form,
     redirect: 'manual',
@@ -172,7 +184,13 @@ async function handleLogin(request, origin) {
       'Cookie': cookieStr(cookies),
       'User-Agent': UA,
       'Accept': 'application/json',
+      'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
       'Referer': `${ELB_BASE}/elb/`,
+      'Origin': ELB_BASE,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
     },
     redirect: 'manual',
   });
@@ -326,7 +344,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '2.0' }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '2.1' }, 200, origin);
     }
 
     try {
