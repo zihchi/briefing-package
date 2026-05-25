@@ -388,10 +388,25 @@ function initFlightSelect() {
 // ==========================================
 // 🌪️ Turbli 湍流圖 — 後端截圖 API 呼叫
 // ==========================================
-// API base：同源（http://<host>:5050）時用相對路徑，file:// 直開時 fallback 到本機
-window.TURBLI_API_BASE = (location.protocol === "http:" || location.protocol === "https:")
-  ? ""
-  : "http://127.0.0.1:5050";
+// 家裡 Mac 上的 Cloudflare Tunnel 公開網址（隨機 URL，重開機會變）
+// 若要更新：跑 update-tunnel-url.command 桌面腳本（會自動 sed + git push）
+const TURBLI_TUNNEL_URL = "https://wizard-providing-processed-meyer.trycloudflare.com";
+
+// API base 邏輯：
+// - 從 GitHub Pages 或其他非本機網址開啟 → 用 Cloudflare tunnel
+// - 從本機 server (port 5050) 開啟 → 用相對路徑（同源）
+// - 從 localhost 別的 port (例如 3001) → 用 tunnel 也行
+// - file:// 直開 → fallback 本機
+window.TURBLI_API_BASE = (function() {
+  const h = location.hostname;
+  if (location.protocol === "file:") return "http://127.0.0.1:5050";
+  if (location.port === "5050") return "";  // 任何 host:5050 都是本機 Flask server
+  if (h === "127.0.0.1" || h === "localhost") return "http://127.0.0.1:5050";
+  try {
+    if (new URL(TURBLI_TUNNEL_URL).host === location.host) return ""; // 走 tunnel 直連
+  } catch (_) {}
+  return TURBLI_TUNNEL_URL; // GitHub Pages 等 → 透過 tunnel
+})();
 
 async function loadTurbliChart(forceRefresh) {
   const btn = document.getElementById("turbliBtn");
