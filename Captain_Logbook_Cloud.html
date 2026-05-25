@@ -77,6 +77,11 @@
         </div>
     </div>
 
+    <!-- Offline Banner -->
+    <div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:#FF3B30;color:white;text-align:center;font-size:12px;font-weight:bold;z-index:201;padding:calc(env(safe-area-inset-top, 0px) + 6px) 16px 6px;">
+        ✈ 離線模式 — 顯示本機快取資料
+    </div>
+
     <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
@@ -661,8 +666,10 @@
         "\n" +
         "    if (event.request.mode === 'navigate') {\n" +
         "        event.respondWith(\n" +
-        "            fetch(event.request).catch(() => {\n" +
-        "                return caches.match('./').then(res => res || caches.match('./index.html'));\n" +
+        "            caches.match(event.request).then(cached => {\n" +
+        "                return cached || fetch(event.request).then(res => {\n" +
+        "                    return caches.open(CACHE_NAME).then(cache => { cache.put(event.request, res.clone()); return res; });\n" +
+        "                }).catch(() => caches.match('./'));\n" +
         "            })\n" +
         "        );\n" +
         "        return;\n" +
@@ -687,6 +694,9 @@
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
                 navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(registration => {
                     console.log('PWA ServiceWorker 註冊成功 v2.6');
+                    if (navigator.onLine && window.location.protocol !== 'file:') {
+                        caches.open('jx-logbook-v2.6').then(cache => cache.add(window.location.href)).catch(() => {});
+                    }
                 }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
@@ -989,9 +999,22 @@
 
             // 2. 異步處理同步隊列與拉取雲端資料 (背景執行，不阻塞 UI)
             processSyncQueue(false).then(() => {
-                fetchDataFromCloud(); 
+                fetchDataFromCloud();
             });
+
+            // 3. 離線狀態偵測
+            updateOfflineBanner();
+            window.addEventListener('online', () => {
+                updateOfflineBanner();
+                processSyncQueue(false).then(() => fetchDataFromCloud());
+            });
+            window.addEventListener('offline', updateOfflineBanner);
         };
+
+        function updateOfflineBanner() {
+            const banner = document.getElementById('offline-banner');
+            if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+        }
 
         function loadLocalCache() {
             try {
