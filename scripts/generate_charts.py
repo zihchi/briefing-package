@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import random
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -107,15 +108,30 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
     )
     page = await context.new_page()
     try:
-        response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
-        status = response.status if response else 0
-        # turbli 主動回的 HTTP code，快速跳過不浪費 timeout
-        if status == 410:
-            return cache_key, False, "skip:410 已起飛或不在 48h 內"
-        if status == 404:
-            return cache_key, False, "skip:404 turbli 無此航班"
-        if status != 200:
-            return cache_key, False, f"HTTP {status}"
+        # 最多 retry 一次（Cloudflare 偶爾會 403）
+        last_err = None
+        for attempt in range(2):
+            if attempt > 0:
+                await page.wait_for_timeout(5000 + random.randint(0, 3000))  # 退避 5-8s
+            response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            status = response.status if response else 0
+            # turbli 主動回的 HTTP code，快速跳過不浪費 timeout
+            if status == 410:
+                return cache_key, False, "skip:410 已起飛或不在 48h 內"
+            if status == 404:
+                return cache_key, False, "skip:404 turbli 無此航班"
+            if status == 403:
+                # Cloudflare 擋的，下一輪 retry
+                last_err = "403 (Cloudflare)"
+                continue
+            if status != 200:
+                last_err = f"HTTP {status}"
+                continue
+            # status == 200，繼續
+            break
+        else:
+            return cache_key, False, last_err or "未知錯誤"
+
         await page.wait_for_selector("#chartTurbulence svg", timeout=25000)
         await page.wait_for_timeout(1200)
 
@@ -150,7 +166,7 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
         await context.close()
 
 
-async def worker(name: int, browser, queue: asyncio.Queue, stats: dict):
+async def worker(name: int, browser, queue: asyncio.Queue, stats: dict, request_delay: float):
     while True:
         try:
             item = queue.get_nowait()
@@ -171,9 +187,12 @@ async def worker(name: int, browser, queue: asyncio.Queue, stats: dict):
             mark = "❌"
         print(f"  [w{name}] {mark} JX-{flight} {route} {date} ({dt:.1f}s) {msg}", flush=True)
         queue.task_done()
+        # 防止 Cloudflare 把我們擋掉，每次請求後等一下（隨機抖動）
+        if request_delay > 0:
+            await asyncio.sleep(request_delay + random.uniform(0, request_delay))
 
 
-async def main(concurrency: int):
+async def main(concurrency: int, request_delay: float):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     dates = date_strs()
     print(f"📅 目標日期：{dates}")
@@ -203,7 +222,7 @@ async def main(concurrency: int):
         browser = await p.chromium.launch(headless=True)
         try:
             workers = [
-                asyncio.create_task(worker(i + 1, browser, queue, stats))
+                asyncio.create_task(worker(i + 1, browser, queue, stats, request_delay))
                 for i in range(concurrency)
             ]
             await asyncio.gather(*workers)
@@ -221,6 +240,8 @@ async def main(concurrency: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--concurrency", type=int, default=2)
+    parser.add_argument("--delay", type=float, default=1.5,
+                        help="每次請求後的基礎等待秒數 (會加隨機抖動)")
     args = parser.parse_args()
-    asyncio.run(main(args.concurrency))
+    asyncio.run(main(args.concurrency, args.delay))
