@@ -108,11 +108,13 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
     )
     page = await context.new_page()
     try:
-        # 最多 retry 一次（Cloudflare 偶爾會 403）
+        # 最多 retry 兩次（共 3 次嘗試），Cloudflare 偶爾會 403
         last_err = None
-        for attempt in range(2):
+        for attempt in range(3):
             if attempt > 0:
-                await page.wait_for_timeout(5000 + random.randint(0, 3000))  # 退避 5-8s
+                # 指數退避：第 2 次 8-13s, 第 3 次 16-26s
+                base_wait = 8000 * (2 ** (attempt - 1))
+                await page.wait_for_timeout(base_wait + random.randint(0, 5000))
             response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
             status = response.status if response else 0
             # turbli 主動回的 HTTP code，快速跳過不浪費 timeout
@@ -121,13 +123,11 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
             if status == 404:
                 return cache_key, False, "skip:404 turbli 無此航班"
             if status == 403:
-                # Cloudflare 擋的，下一輪 retry
-                last_err = "403 (Cloudflare)"
+                last_err = f"403 Cloudflare (try {attempt+1}/3)"
                 continue
             if status != 200:
-                last_err = f"HTTP {status}"
+                last_err = f"HTTP {status} (try {attempt+1}/3)"
                 continue
-            # status == 200，繼續
             break
         else:
             return cache_key, False, last_err or "未知錯誤"
@@ -240,8 +240,9 @@ async def main(concurrency: int, request_delay: float):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concurrency", type=int, default=2)
-    parser.add_argument("--delay", type=float, default=1.5,
-                        help="每次請求後的基礎等待秒數 (會加隨機抖動)")
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="同時抓的航班數 (越低越不會被 Cloudflare 擋)")
+    parser.add_argument("--delay", type=float, default=3.0,
+                        help="每次請求後的基礎等待秒數 (會加 0~delay 的隨機抖動)")
     args = parser.parse_args()
     asyncio.run(main(args.concurrency, args.delay))

@@ -1,9 +1,9 @@
 name: Turbli 湍流圖預先抓取
 
 on:
-  # 每 6 小時自動跑一次 (UTC 1, 7, 13, 19 ≈ 台北 9, 15, 21, 3)
+  # 每 3 小時自動跑一次 (UTC 0,3,6,9,12,15,18,21 ≈ 台北 8,11,14,17,20,23,02,05)
   schedule:
-    - cron: '0 1,7,13,19 * * *'
+    - cron: '0 */3 * * *'
   # 也可手動觸發
   workflow_dispatch:
   # push 程式改動時順便跑一次（方便部署）
@@ -19,7 +19,7 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repo
