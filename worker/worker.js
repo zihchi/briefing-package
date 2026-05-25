@@ -178,41 +178,16 @@ async function handleLogin(request, origin) {
     Object.assign(cookies, collectCookies(cur));
   }
 
-  // Step 4: 驗證 — 戳真正會用的 endpoint，看回 JSON 還是 HTML
-  const testRes = await fetch(`${ELB_BASE}/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST`, {
-    headers: {
-      'Cookie': cookieStr(cookies),
-      'User-Agent': UA,
-      'Accept': 'application/json',
-      'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
-      'Referer': `${ELB_BASE}/elb/`,
-      'Origin': ELB_BASE,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'same-origin',
-    },
-    redirect: 'manual',
-  });
-  const ct = testRes.headers.get('content-type') || '';
-  const testText = await testRes.text();
-
-  if (testRes.status !== 200 || !ct.includes('json')) {
-    // HTML 表示登入失敗 / session 沒生效
+  // 不需要 REST 驗證 — ELB 不管帳密對錯都會給 JSESSIONID
+  // 真正可不可以用，要靠 WebSocket 才能知道
+  if (!cookies.JSESSIONID) {
     return jsonResp({
       ok: false,
-      error: '登入失敗（ELB 回了 HTML，帳密可能錯了或 session 沒帶上）',
-      debug: {
-        loginStatus: loginRes.status,
-        testStatus: testRes.status,
-        testContentType: ct,
-        cookieNames: Object.keys(cookies),
-        bodyPreview: testText.slice(0, 300),
-      },
+      error: '登入失敗（ELB 沒回 JSESSIONID）',
+      debug: { loginStatus: loginRes.status, cookieNames: Object.keys(cookies) },
     }, 401, origin);
   }
 
-  // 登入成功
   return jsonResp({
     ok: true,
     session: encodeSession(cookies),
@@ -559,7 +534,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.0-ws', features: ['websocket-client', 'cookie-paste'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.1-direct-login', features: ['websocket-client', 'direct-login'] }, 200, origin);
     }
 
     try {
