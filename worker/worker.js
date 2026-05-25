@@ -287,73 +287,87 @@ async function openELBWebSocket(cookies) {
   return ws;
 }
 
-// 開啟 WS，發送 getAircraftList，等資料回來
-async function fetchFleetViaWS(cookies, timeoutMs = 12000) {
-  const ws = await openELBWebSocket(cookies);
+// 共用 WS pipeline：可在同一連線上送多個 req，依 id 收回應
+function makeWSPipeline(ws) {
+  const pending = new Map();   // id → resolve
+  let nextId = 0;
 
-  return new Promise((resolve) => {
-    let resolved = false;
-    let operatorCode = null;
-    let nextId = 0;
-    const trace = [];
+  ws.addEventListener('message', (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch { return; }
+    if (msg.type === 'res' && msg.id != null && pending.has(msg.id)) {
+      const fn = pending.get(msg.id);
+      pending.delete(msg.id);
+      fn(msg.content);
+    }
+  });
 
-    const finish = (result) => {
-      if (resolved) return;
-      resolved = true;
-      try { ws.close(1000, 'done'); } catch {}
-      resolve({ ...result, trace });
-    };
+  return {
+    req(func, content, perReqTimeoutMs = 8000) {
+      return new Promise((resolve, reject) => {
+        const id = nextId++;
+        const t = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`req ${func} timeout`));
+        }, perReqTimeoutMs);
+        pending.set(id, (data) => { clearTimeout(t); resolve(data); });
+        ws.send(JSON.stringify({ id, type: 'req', func, content }));
+      });
+    },
+    nextId() { return nextId; },
+  };
+}
 
-    const timer = setTimeout(() => {
-      finish({ ok: false, error: `WS timeout after ${timeoutMs}ms` });
-    }, timeoutMs);
-
-    ws.addEventListener('message', (event) => {
+// 等到第一筆 init 訊息（含 operatorCode）才能開始送 req
+function waitForInit(ws, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('init timeout')), timeoutMs);
+    const handler = (event) => {
       let msg;
       try { msg = JSON.parse(event.data); } catch { return; }
-      trace.push({ dir: '←', preview: JSON.stringify(msg).slice(0, 150) });
-
-      // 第一個有 operatorCode 的訊息 → 是 INIT
-      if (!operatorCode && msg.content && msg.content.operatorCode) {
-        operatorCode = msg.content.operatorCode;
-        const subMsg = {
-          id: nextId++,
-          type: 'sub',
-          func: 'logbookApiEvent',
-          content: { type: 'ML', extensions: ['FleetDashboard:Detail'] },
-        };
-        const reqMsg = {
-          id: nextId++,
-          type: 'req',
-          func: 'getAircraftList',
-          content: {
-            id: operatorCode,
-            extensions: ['FleetDashboard:RecentDefects', 'FleetDashboard:ColumnConfiguration'],
-          },
-        };
-        trace.push({ dir: '→', preview: JSON.stringify(subMsg) });
-        trace.push({ dir: '→', preview: JSON.stringify(reqMsg) });
-        ws.send(JSON.stringify(subMsg));
-        ws.send(JSON.stringify(reqMsg));
+      if (msg.content && msg.content.operatorCode) {
+        clearTimeout(t);
+        ws.removeEventListener('message', handler);
+        resolve(msg.content.operatorCode);
       }
-
-      // getAircraftList 的回應：通常 type=res 且 content 含 aircraft 陣列
-      if (msg.type === 'res' && msg.content && Array.isArray(msg.content.aircraft)) {
-        clearTimeout(timer);
-        finish({ ok: true, data: msg.content, operatorCode });
-      }
-    });
-
-    ws.addEventListener('close', (event) => {
-      clearTimeout(timer);
-      finish({ ok: false, error: `WS closed code=${event.code} reason="${event.reason || ''}"` });
-    });
-
-    ws.addEventListener('error', () => {
-      clearTimeout(timer);
-      finish({ ok: false, error: 'WS error event' });
-    });
+    };
+    ws.addEventListener('message', handler);
   });
+}
+
+// 開啟 WS，撈機隊清單，再並行 enrich 每台飛機的 state
+async function fetchFleetViaWS(cookies, timeoutMs = 25000) {
+  const ws = await openELBWebSocket(cookies);
+  let closed = false;
+  const closeWS = () => { if (!closed) { closed = true; try { ws.close(1000, 'done'); } catch {} } };
+
+  try {
+    const operatorCode = await waitForInit(ws);
+    const pipe = makeWSPipeline(ws);
+
+    // Step 1: 拿機隊清單
+    const fleetData = await pipe.req('getAircraftList', {
+      id: operatorCode,
+      extensions: ['FleetDashboard:RecentDefects', 'FleetDashboard:ColumnConfiguration'],
+    }, 10000);
+
+    const aircraft = Array.isArray(fleetData?.aircraft) ? fleetData.aircraft : [];
+
+    // Step 2: 並行抓每台 state（合併到原本清單）
+    const enriched = await Promise.all(
+      aircraft.map(a =>
+        pipe.req('getAircraftState', { id: a.aircraftIdentifier }, 8000)
+          .then(state => ({ ...a, ...state }))
+          .catch(() => a) // 個別失敗就用 bare info
+      )
+    );
+
+    closeWS();
+    return { ok: true, data: { ...fleetData, aircraft: enriched }, operatorCode, count: enriched.length };
+  } catch (e) {
+    closeWS();
+    return { ok: false, error: e.message || String(e) };
+  }
 }
 
 // ──────────────────────────────────────────
@@ -534,7 +548,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.1-direct-login', features: ['websocket-client', 'direct-login'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.2-pipeline', features: ['websocket-client', 'direct-login', 'fleet-enrichment'] }, 200, origin);
     }
 
     try {
