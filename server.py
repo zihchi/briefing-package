@@ -39,6 +39,11 @@ def _valid_date(v: str) -> bool:
     return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", v or ""))
 
 
+class TurbliUnavailable(Exception):
+    """turbli 對該航班沒資料（410 已起飛/太遠、404 找不到）"""
+    pass
+
+
 def fetch_turbulence_chart(route: str, date: str, flight: str) -> bytes:
     """開瀏覽器抓圖。回傳 PNG bytes。"""
     url = f"https://turbli.com/{route}/{date}/JX-{flight}/"
@@ -46,11 +51,24 @@ def fetch_turbulence_chart(route: str, date: str, flight: str) -> bytes:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
-            page = browser.new_page(viewport={"width": 1400, "height": 2400})
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            # 等湍流圖渲染完成（SVG 出現在 #chartTurbulence 內）
+            context = browser.new_context(
+                viewport={"width": 1400, "height": 2400},
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/148.0.0.0 Safari/537.36"
+                ),
+            )
+            page = context.new_page()
+            response = page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            status = response.status if response else 0
+            if status == 410:
+                raise TurbliUnavailable("航班已起飛或不在 turbli 的 48 小時預報範圍內")
+            if status == 404:
+                raise TurbliUnavailable("turbli 找不到這個航班，可能不營運或航線錯誤")
+            if status != 200:
+                raise RuntimeError(f"turbli 回 HTTP {status}")
             page.wait_for_selector("#chartTurbulence svg", timeout=30000)
-            # 給 D3/Chart 動畫一點時間
             page.wait_for_timeout(1500)
 
             # 算出涵蓋標題列 + 圖表本體 + 圖例 的截圖區
@@ -138,6 +156,8 @@ def api_chart():
 
     try:
         png = fetch_turbulence_chart(route, date, flight)
+    except TurbliUnavailable as e:
+        return jsonify({"error": str(e), "unavailable": True}), 404
     except Exception as e:
         return jsonify({"error": f"抓取失敗：{e}"}), 502
 

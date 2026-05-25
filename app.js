@@ -476,8 +476,15 @@ async function loadTurbliChart(forceRefresh) {
     const res = await fetch(apiUrl);
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
-      try { const j = await res.json(); if (j.error) msg = j.error; } catch (_) {}
-      throw new Error(msg);
+      let unavailable = false;
+      try {
+        const j = await res.json();
+        if (j.error) msg = j.error;
+        if (j.unavailable) unavailable = true;
+      } catch (_) {}
+      const err = new Error(msg);
+      err.unavailable = unavailable;
+      throw err;
     }
     const blob = await res.blob();
     const imgUrl = URL.createObjectURL(blob);
@@ -494,7 +501,19 @@ async function loadTurbliChart(forceRefresh) {
     if (meta) meta.textContent = `${cacheHit ? "✅ 即時快取" : "🆕 剛抓取"} · ${ms} ms · JX-${flight} · ${route} · ${date}`;
     if (refreshBtn) refreshBtn.style.display = "inline-block";
   } catch (err) {
-    box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">📭 預存快取暫無此航班，且即時 server 未開<br><span style="font-size:12px; color:#94a3b8;">GitHub Actions 每 6 小時更新，請稍後再試；或從 turbli.com 原站查看</span></div>`;
+    const turbliUrl = `https://turbli.com/${route}/${date}/JX-${flight}/`;
+    if (err.unavailable) {
+      // turbli 主動回 410/404 — 真的沒這航班的預報
+      box.innerHTML = `<div style="color:#64748b; font-size:14px; padding:20px 10px; text-align:center;">
+        🛬 <b>turbli 對這航班沒有預報資料</b><br>
+        <span style="font-size:13px;">${err.message}</span><br>
+        <a href="${turbliUrl}" target="_blank" style="font-size:12px; color:#3c79ff; margin-top:8px; display:inline-block;">↗ 到 turbli.com 確認</a>
+      </div>`;
+    } else {
+      // 真的連不到 server（chartcache miss + 後端離線/超時）
+      box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">📭 預存快取暫無此航班，且即時抓取失敗<br>
+        <span style="font-size:12px; color:#94a3b8;">原因：${err.message}<br>GitHub Actions 每 6 小時更新，請稍後再試；或 <a href="${turbliUrl}" target="_blank" style="color:#3c79ff;">到 turbli 原站</a></span></div>`;
+    }
     if (refreshBtn) refreshBtn.style.display = "inline-block";
   }
 }

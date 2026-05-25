@@ -87,11 +87,31 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
     out_path = CACHE_DIR / f"{cache_key}.png"
     url = f"https://turbli.com/{route}/{date}/JX-{flight}/"
 
-    context = await browser.new_context(viewport={"width": 1400, "height": 2400})
+    # 偽裝成真實 Chrome (預設 HeadlessChrome UA 會被 turbli 的 Cloudflare 直接擋)
+    context = await browser.new_context(
+        viewport={"width": 1400, "height": 2400},
+        user_agent=(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/148.0.0.0 Safari/537.36"
+        ),
+        locale="en-US",
+        extra_http_headers={
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    )
     page = await context.new_page()
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=45000)
-        await page.wait_for_selector("#chartTurbulence svg", timeout=20000)
+        response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        status = response.status if response else 0
+        # turbli 主動回的 HTTP code，快速跳過不浪費 timeout
+        if status == 410:
+            return cache_key, False, "skip:410 已起飛或不在 48h 內"
+        if status == 404:
+            return cache_key, False, "skip:404 turbli 無此航班"
+        if status != 200:
+            return cache_key, False, f"HTTP {status}"
+        await page.wait_for_selector("#chartTurbulence svg", timeout=25000)
         await page.wait_for_timeout(1200)
 
         bbox = await page.evaluate(
@@ -135,12 +155,16 @@ async def worker(name: int, browser, queue: asyncio.Queue, stats: dict):
         t0 = time.time()
         cache_key, ok, msg = await fetch_one(browser, flight, route, date)
         dt = time.time() - t0
-        status = "✅" if ok else "❌"
-        print(f"  [worker {name}] {status} JX-{flight} {route} {date} ({dt:.1f}s) {msg}", flush=True)
         if ok:
             stats["ok"] += 1
+            mark = "✅"
+        elif msg.startswith("skip:"):
+            stats["skip"] += 1
+            mark = "⏭️ "
         else:
             stats["fail"] += 1
+            mark = "❌"
+        print(f"  [w{name}] {mark} JX-{flight} {route} {date} ({dt:.1f}s) {msg}", flush=True)
         queue.task_done()
 
 
@@ -167,7 +191,7 @@ async def main(concurrency: int):
         for date in dates:
             queue.put_nowait((flight, route, date))
 
-    stats = {"ok": 0, "fail": 0}
+    stats = {"ok": 0, "skip": 0, "fail": 0}
     t_start = time.time()
 
     async with async_playwright() as p:
@@ -183,7 +207,7 @@ async def main(concurrency: int):
 
     elapsed = time.time() - t_start
     print(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print(f"完成：✅ {stats['ok']}  ❌ {stats['fail']}  共 {elapsed:.1f} 秒")
+    print(f"完成：✅ {stats['ok']}  ⏭️ {stats['skip']} (已起飛/無資料)  ❌ {stats['fail']} (真錯誤)  共 {elapsed:.1f} 秒")
     print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     # 即使有部分失敗也不讓 workflow 整體失敗
