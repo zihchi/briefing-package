@@ -596,10 +596,10 @@ function renderFleet(data) {
             dig(acs, ['flightState', 'FlightState', 'flightStatus'])
         ));
         cnt[st]++;
-        cnt.defects += numVal(dig(acd, ['No. of Open Defect (Tech)', 'OpenDefectTech']) ||
-                              dig(acs, ['openDefectCount'])) || 0;
-        cnt.mel     += numVal(dig(acd, ['No. of DDs (MEL)', 'MelCount']) ||
-                              dig(acs, ['deferredDefectCount'])) || 0;
+        cnt.defects += numVal(dig(acd, ['No. of Open Defect_Tech', 'No. of Open Defect (Tech)', 'OpenDefectTech']) ||
+                              dig(acs, ['AircraftStatus.openDefectCount', 'openDefectCount'])) || 0;
+        cnt.mel     += numVal(dig(acd, ['No. of DDs_MEL', 'No. of DDs (MEL)', 'MelCount']) ||
+                              dig(acs, ['AircraftStatus.deferredDefectCount', 'deferredDefectCount'])) || 0;
     });
 
     $('sum-flight').textContent  = cnt.flight;
@@ -687,28 +687,30 @@ function renderCard(meta, fleetData) {
     }
     var flightSt = fmt(
         dig(acd, ['Flight Status', 'flightStatus', 'FlightStatus']) ||
-        dig(acs, ['flightState', 'FlightState', 'flightStatus'])
+        dig(acs, ['AircraftStatus.flightState', 'flightState', 'FlightState'])
     );
-    var origin = fmt(dig(acs, ['flightOrigin', 'FlightOrigin', 'origin', 'dep'])) || fltOrig;
-    var dest   = fmt(dig(acs, ['flightDestination', 'FlightDestination', 'destination', 'arr'])) || fltDest;
+    var origin = fmt(dig(acs, ['AircraftStatus.flightOrigin', 'flightOrigin', 'FlightOrigin'])) || fltOrig;
+    var dest   = fmt(dig(acs, ['AircraftStatus.flightDestination', 'flightDestination', 'FlightDestination'])) || fltDest;
 
-    var techN  = numVal(dig(acd, ['No. of Open Defect (Tech)',  'OpenDefectTech',  'openDefectTech'])
-                     || dig(acs, ['openDefectCount']));
-    var cabinN = numVal(dig(acd, ['No. of Open Defect (Cabin)', 'OpenDefectCabin', 'openDefectCabin']));
-    var melN   = numVal(dig(acd, ['No. of DDs (MEL)',  'MelCount',  'melCount',  'DDsMEL'])
-                     || dig(acs, ['deferredDefectCount']));
-    var inspN  = numVal(dig(acd, ['No. of DDs (Insp)', 'InspCount', 'DDsInsp']));
-    var accN   = numVal(dig(acd, ['No. of DDs (Accept)','AcceptCount','DDsAccept']));
-    var expN   = numVal(dig(acs, ['expiredCount']));
+    /* Defect / DD counts — ELB uses underscore-joined keys inside aircraftData */
+    var techN  = numVal(dig(acd, ['No. of Open Defect_Tech',  'No. of Open Defect (Tech)',  'OpenDefectTech'])
+                     || dig(acs, ['AircraftStatus.openDefectCount', 'openDefectCount']));
+    var cabinN = numVal(dig(acd, ['No. of Open Defect_Cabin', 'No. of Open Defect (Cabin)', 'OpenDefectCabin']));
+    var melN   = numVal(dig(acd, ['No. of DDs_MEL',    'No. of DDs (MEL)',    'MelCount'])
+                     || dig(acs, ['AircraftStatus.deferredDefectCount', 'deferredDefectCount']));
+    var inspN  = numVal(dig(acd, ['No. of DDs_Insp',   'No. of DDs (Insp)',   'InspCount']));
+    var accN   = numVal(dig(acd, ['No. of DDs_Accept',  'No. of DDs (Accept)', 'AcceptCount']));
+    var expN   = numVal(dig(acs, ['AircraftStatus.expiredCount', 'expiredCount']));
 
     var nextDD  = fmt(dig(acd, ['Next DD Expiry', 'NextDDExpiry', 'nextDDExpiry', 'nextExpiry']));
     var restr   = fmt(dig(acd, ['Restrictions', 'restrictions', 'Restriction']));
     var maintRl = fmt(dig(acd, ['Maint Released', 'maintReleased', 'MaintReleased']));
 
-    var oOut = fmtUTC(dig(acs, ['oooiOut', 'OOOIOut', 'outTime', 'out']));
-    var oOff = fmtUTC(dig(acs, ['oooiOff', 'OOOIOff', 'offTime', 'off']));
-    var oOn  = fmtUTC(dig(acs, ['oooiOn',  'OOOIOn',  'onTime',  'on']));
-    var oIn  = fmtUTC(dig(acs, ['oooiIn',  'OOOIIn',  'inTime',  'in']));
+    /* OOOI — keys use "AircraftStatus.oooiXxx.actual" */
+    var oOut = fmtUTC(dig(acs, ['AircraftStatus.oooiOut.actual', 'AircraftStatus.oooiOut.latest', 'oooiOut']));
+    var oOff = fmtUTC(dig(acs, ['AircraftStatus.oooiOff.actual', 'oooiOff']));
+    var oOn  = fmtUTC(dig(acs, ['AircraftStatus.oooiOn.actual',  'oooiOn']));
+    var oIn  = fmtUTC(dig(acs, ['AircraftStatus.oooiIn.actual',  'AircraftStatus.oooiIn.latest', 'oooiIn']));
 
     /* ── Status ── */
     var sClass = getStatusClass(flightSt);
@@ -766,9 +768,11 @@ function renderCard(meta, fleetData) {
             '<span class="ac-val ' + ddValClass + '">' + esc(nextDD) + ' ' + ddExtra + '</span>');
     }
 
-    /* Maint not released */
-    if (maintRl && maintRl.toUpperCase() === 'N') {
-        h += acRow('Maint Released', '<span class="ac-val danger">NO ⚠️</span>');
+    /* Maint Released — show warning when not explicitly "Released" */
+    var isReleased = !maintRl || maintRl.toLowerCase() === 'released' ||
+                     maintRl.toLowerCase() === 'yes' || maintRl.toLowerCase() === 'y';
+    if (!isReleased && maintRl) {
+        h += acRow('Maint Released', '<span class="ac-val warn">' + esc(maintRl) + ' ⚠️</span>');
     }
 
     /* Restrictions */
@@ -953,6 +957,7 @@ function getType(meta) {
     if (/^B-583/.test(tail)) return 'A330';
     if (/^B-582/.test(tail)) return 'A321';
     if (/^B-584/.test(tail)) return 'A350';
+    if (/^B-585/.test(tail)) return 'A350';
     return 'Other';
 }
 
