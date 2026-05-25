@@ -1,13 +1,13 @@
 // ==========================================
-// ✈️  ELB Proxy — Cloudflare Worker
+// ✈️  ELB Proxy — Cloudflare Worker (v2)
 // ==========================================
 // 從 https://zihchi.github.io 呼叫 → 這支 Worker → ELB
-// 部署：cd worker && wrangler deploy
+// 部署：push to GitHub → Cloudflare 自動部署
 // ==========================================
 
 const ELB_BASE = 'https://elb.starlux-airlines.com';
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-// 允許的前端來源
 const ALLOWED_ORIGINS = [
   'https://zihchi.github.io',
   'http://localhost:3001',
@@ -34,13 +34,65 @@ function jsonResp(data, status, origin) {
 }
 
 // ──────────────────────────────────────────
-// ELB 共用：用 session 帶 cookie 打 ELB API
+// Cookie 工具
 // ──────────────────────────────────────────
-async function elbFetch(path, session, opts = {}) {
+function collectCookies(res) {
+  const result = {};
+  // CF Workers 支援 getSetCookie() 標準方法
+  let list = [];
+  if (typeof res.headers.getSetCookie === 'function') {
+    list = res.headers.getSetCookie();
+  } else {
+    const sc = res.headers.get('set-cookie');
+    if (sc) list = [sc];
+  }
+  for (const sc of list) {
+    if (!sc) continue;
+    const m = sc.match(/^([^=]+)=([^;]*)/);
+    if (m) {
+      const name = m[1].trim();
+      const value = m[2].trim();
+      if (name && value && value !== '""' && value !== 'deleteMe') {
+        result[name] = value;
+      }
+    }
+  }
+  return result;
+}
+
+function cookieStr(obj) {
+  return Object.entries(obj).map(([k, v]) => `${k}=${v}`).join('; ');
+}
+
+function encodeSession(cookies) {
+  // base64-url 編碼整包 cookie
+  const json = JSON.stringify(cookies);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeSession(token) {
+  if (!token) return null;
+  try {
+    let b64 = token.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const json = decodeURIComponent(escape(atob(b64)));
+    const obj = JSON.parse(json);
+    if (obj && typeof obj === 'object') return obj;
+  } catch {}
+  // 向後相容：純 JSESSIONID
+  return { JSESSIONID: token };
+}
+
+// ──────────────────────────────────────────
+// ELB fetch — 帶上整包 cookie
+// ──────────────────────────────────────────
+async function elbFetch(path, token, opts = {}) {
+  const cookies = decodeSession(token) || {};
   const headers = new Headers(opts.headers || {});
-  headers.set('Cookie', `JSESSIONID=${session}`);
-  headers.set('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-  headers.set('Accept', 'application/json, text/plain, */*');
+  headers.set('Cookie', cookieStr(cookies));
+  headers.set('User-Agent', UA);
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json, text/plain, */*');
   headers.set('Referer', `${ELB_BASE}/elb/`);
   return fetch(`${ELB_BASE}${path}`, {
     ...opts,
@@ -54,9 +106,7 @@ async function elbFetch(path, session, opts = {}) {
 // ──────────────────────────────────────────
 async function handleLogin(request, origin) {
   let body;
-  try {
-    body = await request.json();
-  } catch {
+  try { body = await request.json(); } catch {
     return jsonResp({ ok: false, error: '請求格式錯誤' }, 400, origin);
   }
   const { user, pass } = body;
@@ -64,15 +114,29 @@ async function handleLogin(request, origin) {
     return jsonResp({ ok: false, error: '缺少帳號或密碼' }, 400, origin);
   }
 
+  // Step 1: GET /elb/ 取得初始 cookies（像真實瀏覽器）
+  let cookies = {};
+  try {
+    const initRes = await fetch(`${ELB_BASE}/elb/`, {
+      headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml' },
+      redirect: 'manual',
+    });
+    Object.assign(cookies, collectCookies(initRes));
+  } catch (e) {
+    return jsonResp({ ok: false, error: 'ELB 連線失敗: ' + String(e) }, 502, origin);
+  }
+
+  // Step 2: POST 帳密
   const form = new URLSearchParams();
   form.set('j_username', user);
   form.set('j_password', pass);
 
-  const res = await fetch(`${ELB_BASE}/elb/auth`, {
+  const loginRes = await fetch(`${ELB_BASE}/elb/auth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+      'Cookie': cookieStr(cookies),
+      'User-Agent': UA,
       'Accept': 'application/json, text/plain, */*',
       'Origin': ELB_BASE,
       'Referer': `${ELB_BASE}/elb/`,
@@ -81,73 +145,120 @@ async function handleLogin(request, origin) {
     redirect: 'manual',
   });
 
-  // ELB 登入成功會在 Set-Cookie 回 JSESSIONID
-  const setCookie = res.headers.get('set-cookie') || '';
-  const m = setCookie.match(/JSESSIONID=([^;]+)/);
+  Object.assign(cookies, collectCookies(loginRes));
 
-  if (!m) {
-    // 也試試 multiple set-cookie 寫法
-    const all = res.headers.getAll ? res.headers.getAll('set-cookie') : [setCookie];
-    for (const c of all) {
-      const mm = c && c.match(/JSESSIONID=([^;]+)/);
-      if (mm) {
-        return jsonResp({ ok: true, session: mm[1] }, 200, origin);
-      }
-    }
+  // Step 3: 若 302，跟著 redirect 走最多 3 跳（拿後續 cookies）
+  let cur = loginRes;
+  for (let i = 0; i < 3; i++) {
+    if (cur.status !== 301 && cur.status !== 302 && cur.status !== 303) break;
+    const loc = cur.headers.get('location');
+    if (!loc) break;
+    const followUrl = new URL(loc, ELB_BASE).toString();
+    cur = await fetch(followUrl, {
+      headers: {
+        'Cookie': cookieStr(cookies),
+        'User-Agent': UA,
+        'Accept': 'text/html,application/xhtml+xml',
+        'Referer': `${ELB_BASE}/elb/`,
+      },
+      redirect: 'manual',
+    });
+    Object.assign(cookies, collectCookies(cur));
+  }
+
+  // Step 4: 驗證 — 戳真正會用的 endpoint，看回 JSON 還是 HTML
+  const testRes = await fetch(`${ELB_BASE}/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST`, {
+    headers: {
+      'Cookie': cookieStr(cookies),
+      'User-Agent': UA,
+      'Accept': 'application/json',
+      'Referer': `${ELB_BASE}/elb/`,
+    },
+    redirect: 'manual',
+  });
+  const ct = testRes.headers.get('content-type') || '';
+  const testText = await testRes.text();
+
+  if (testRes.status !== 200 || !ct.includes('json')) {
+    // HTML 表示登入失敗 / session 沒生效
     return jsonResp({
       ok: false,
-      error: '登入失敗（沒拿到 session）',
-      status: res.status,
+      error: '登入失敗（ELB 回了 HTML，帳密可能錯了或 session 沒帶上）',
+      debug: {
+        loginStatus: loginRes.status,
+        testStatus: testRes.status,
+        testContentType: ct,
+        cookieNames: Object.keys(cookies),
+        bodyPreview: testText.slice(0, 300),
+      },
     }, 401, origin);
   }
 
-  return jsonResp({ ok: true, session: m[1] }, 200, origin);
+  // 登入成功
+  return jsonResp({
+    ok: true,
+    session: encodeSession(cookies),
+    cookieNames: Object.keys(cookies),
+  }, 200, origin);
 }
 
 // ──────────────────────────────────────────
-// /api/status  GET (?session=)
-// 檢查 session 還有效嗎
+// /api/status  GET (X-Session-Token)
 // ──────────────────────────────────────────
 async function handleStatus(request, origin) {
   const url = new URL(request.url);
-  const session = url.searchParams.get('session') || request.headers.get('X-Session-Token');
-  if (!session) return jsonResp({ ok: true, loggedIn: false }, 200, origin);
+  const token = url.searchParams.get('session') || request.headers.get('X-Session-Token');
+  if (!token) return jsonResp({ ok: true, loggedIn: false }, 200, origin);
 
-  // 戳個輕量 endpoint 看會不會被踢
-  const res = await elbFetch('/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST', session);
-  if (res.status === 200) {
-    return jsonResp({ ok: true, loggedIn: true }, 200, origin);
-  }
-  return jsonResp({ ok: true, loggedIn: false, status: res.status }, 200, origin);
+  const res = await elbFetch('/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST', token);
+  const ct = res.headers.get('content-type') || '';
+  return jsonResp({
+    ok: true,
+    loggedIn: res.status === 200 && ct.includes('json'),
+    status: res.status,
+    contentType: ct,
+  }, 200, origin);
 }
 
 // ──────────────────────────────────────────
 // /api/fleet  GET  X-Session-Token
-// 機隊總覽（REST 可達）
 // ──────────────────────────────────────────
 async function handleFleet(request, origin) {
-  const session = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
-  if (!session) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
+  const token = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
+  if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
 
-  const res = await elbFetch('/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST', session);
+  const res = await elbFetch('/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST', token);
+  const ct = res.headers.get('content-type') || '';
+  const text = await res.text();
+
   if (res.status !== 200) {
-    return jsonResp({ ok: false, error: 'fleet fetch 失敗', status: res.status }, res.status, origin);
+    return jsonResp({ ok: false, error: `fleet HTTP ${res.status}`, bodyPreview: text.slice(0, 200) }, res.status, origin);
   }
-  const data = await res.json();
-  return jsonResp({ ok: true, data }, 200, origin);
+  if (!ct.includes('json')) {
+    return jsonResp({
+      ok: false,
+      error: 'ELB 回了非 JSON（session 過期？）',
+      contentType: ct,
+      bodyPreview: text.slice(0, 200),
+    }, 401, origin);
+  }
+
+  try {
+    return jsonResp({ ok: true, data: JSON.parse(text) }, 200, origin);
+  } catch (e) {
+    return jsonResp({ ok: false, error: 'JSON 解析失敗', detail: String(e), bodyPreview: text.slice(0, 200) }, 500, origin);
+  }
 }
 
 // ──────────────────────────────────────────
 // /api/aircraft/:tail  GET  X-Session-Token
-// 單機詳細（REST，包含 Combined Fleet 資料）
+// 並行戳多個可能的 endpoint
 // ──────────────────────────────────────────
 async function handleAircraft(request, tail, origin) {
-  const session = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
-  if (!session) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
+  const token = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
+  if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
 
   const safe = encodeURIComponent(tail);
-
-  // 並行戳多個可能的 endpoint，回報哪個成功
   const probes = [
     `/elb/services/landingPage/getFleetDataForAircraft/Combined%20Fleet/${safe}`,
     `/elb/services/aircraft/getAircraftState/${safe}`,
@@ -158,11 +269,19 @@ async function handleAircraft(request, tail, origin) {
 
   const results = await Promise.all(probes.map(async (p) => {
     try {
-      const r = await elbFetch(p, session);
+      const r = await elbFetch(p, token);
       const text = await r.text();
+      const ct = r.headers.get('content-type') || '';
       let parsed = null;
-      try { parsed = JSON.parse(text); } catch {}
-      return { path: p, status: r.status, body: parsed ?? text.slice(0, 500) };
+      if (ct.includes('json')) {
+        try { parsed = JSON.parse(text); } catch {}
+      }
+      return {
+        path: p,
+        status: r.status,
+        contentType: ct,
+        body: parsed ?? text.slice(0, 500),
+      };
     } catch (e) {
       return { path: p, status: 0, error: String(e) };
     }
@@ -173,18 +292,17 @@ async function handleAircraft(request, tail, origin) {
 
 // ──────────────────────────────────────────
 // /api/proxy?path=/elb/...  GET  X-Session-Token
-// 萬用轉發器：給前端探索 endpoint 用
 // ──────────────────────────────────────────
 async function handleProxy(request, origin) {
   const url = new URL(request.url);
   const path = url.searchParams.get('path');
-  const session = request.headers.get('X-Session-Token') || url.searchParams.get('session');
+  const token = request.headers.get('X-Session-Token') || url.searchParams.get('session');
   if (!path || !path.startsWith('/elb/')) {
     return jsonResp({ ok: false, error: 'path 必須以 /elb/ 開頭' }, 400, origin);
   }
-  if (!session) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
+  if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
 
-  const res = await elbFetch(path, session);
+  const res = await elbFetch(path, token);
   const ct = res.headers.get('content-type') || '';
   const text = await res.text();
   if (ct.includes('application/json')) {
@@ -192,7 +310,7 @@ async function handleProxy(request, origin) {
       return jsonResp({ ok: true, status: res.status, data: JSON.parse(text) }, 200, origin);
     } catch {}
   }
-  return jsonResp({ ok: true, status: res.status, contentType: ct, raw: text }, 200, origin);
+  return jsonResp({ ok: true, status: res.status, contentType: ct, raw: text.slice(0, 5000) }, 200, origin);
 }
 
 // ──────────────────────────────────────────
@@ -207,9 +325,8 @@ export default {
       return new Response(null, { status: 204, headers: cors(origin) });
     }
 
-    // 健康檢查
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '1.0' }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '2.0' }, 200, origin);
     }
 
     try {
@@ -230,7 +347,7 @@ export default {
         return await handleProxy(request, origin);
       }
     } catch (e) {
-      return jsonResp({ ok: false, error: String(e), stack: e.stack }, 500, origin);
+      return jsonResp({ ok: false, error: String(e), stack: (e && e.stack) || '' }, 500, origin);
     }
 
     return jsonResp({ ok: false, error: 'Not found', path: url.pathname }, 404, origin);

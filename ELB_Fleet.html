@@ -590,7 +590,15 @@ async function doLogin() {
       showFleetScreen();
       loadFleet();
     } else {
-      errEl.textContent = r.error || '登入失敗';
+      let msg = r.error || '登入失敗';
+      if (r.debug) {
+        msg += '\n\n[除錯資訊]\n' + JSON.stringify(r.debug, null, 2);
+      }
+      errEl.textContent = msg;
+      errEl.style.whiteSpace = 'pre-wrap';
+      errEl.style.textAlign = 'left';
+      errEl.style.fontFamily = 'monospace';
+      errEl.style.fontSize = '11px';
       btn.disabled = false;
       btn.textContent = '登入並載入機隊';
     }
@@ -613,12 +621,16 @@ async function loadFleet() {
     const r = await api('/api/fleet');
     if (!r.ok) {
       // session 過期 → 重新登入
-      if (r.error === '未登入' || r.status === 401) {
+      if (r.error === '未登入' || r.error === 'ELB 回了非 JSON（session 過期？）') {
         setSession(null);
         showLoginScreen();
+        document.getElementById('login-error').textContent = '請重新登入（session 已失效）';
         return;
       }
-      document.getElementById('fleet-status').textContent = '❌ ' + (r.error || '未知錯誤');
+      let msg = '❌ ' + (r.error || '未知錯誤');
+      if (r.bodyPreview) msg += '\n\n[預覽] ' + r.bodyPreview;
+      document.getElementById('fleet-status').textContent = msg;
+      document.getElementById('fleet-status').style.whiteSpace = 'pre-wrap';
       return;
     }
     fleetData = parseFleetList(r.data);
