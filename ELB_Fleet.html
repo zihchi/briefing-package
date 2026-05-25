@@ -971,9 +971,13 @@ function renderAircraftDetail(container, tail, data) {
           const lnum  = fmt(log.recordName || log._id);
           const ldesc = fmt(log.comments || log.faultDescription || log.description || '');
           const ata   = fmt(log.ataNum || '');
-          const typeTag = log._type === 'ML' ? '<span style="background:rgba(245,158,11,0.2);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">ML</span>' :
-                          log._type === 'SV' ? '<span style="background:rgba(59,130,246,0.2);color:#60a5fa;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">SV</span>' :
-                          '';
+          // 從 recordName 開頭兩字推 type（FL/ML/SV）
+          const prefix = (lnum || '').slice(0, 2).toUpperCase();
+          const typeColor = prefix === 'FL' ? '#22c55e' : prefix === 'ML' ? '#f59e0b' : prefix === 'SV' ? '#3b82f6' : '#94a3b8';
+          const typeBg    = prefix === 'FL' ? 'rgba(34,197,94,0.2)' : prefix === 'ML' ? 'rgba(245,158,11,0.2)' : prefix === 'SV' ? 'rgba(59,130,246,0.2)' : 'rgba(148,163,184,0.2)';
+          const typeTag = ['FL','ML','SV'].includes(prefix)
+            ? `<span style="background:${typeBg};color:${typeColor};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">${prefix}</span>`
+            : '';
           if (lnum || ldesc) {
             logHtml += `<div class="fault-row">
               <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}</div>
