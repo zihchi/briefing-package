@@ -314,45 +314,83 @@
   </div>
 
   <div class="section flex flex-col gap-5">
-    <h2 class="!mb-0">🛫 Turbli 航班亂流查詢</h2>
-    <div class="flex flex-wrap items-end gap-5">
-      
-      <div class="flex flex-col gap-2">
-        <label for="flightSelect" class="text-sm font-semibold text-gray-600">請選擇航班</label>
-        <select id="flightSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[180px] outline-none transition-all cursor-pointer">
-          </select>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label for="dateSelect" class="text-sm font-semibold text-gray-600">請選擇日期</label>
-        <select id="dateSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[140px] outline-none transition-all cursor-pointer">
-          <option value="today">今天</option>
-          <option value="tomorrow">明天</option>
-        </select>
-      </div>
-
-      <div class="flex gap-3">
-        <button id="turbliBtn" disabled class="!m-0 !px-6 !py-2.5 !bg-[#3c79ff] !text-white !font-bold !rounded-lg shadow hover:!bg-blue-700 disabled:!opacity-50 disabled:!cursor-not-allowed transition-all">
-          查詢
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <h2 class="!mb-0">🛫 Turbli 航班亂流查詢 (直接出圖)</h2>
+      <a href="https://turbli.com/" target="_blank" class="inline-block">
+        <button type="button" class="!m-0 !px-4 !py-2 !bg-white border-2 border-[#3c79ff] !text-[#3c79ff] !font-bold !rounded-lg shadow hover:!bg-blue-50 transition-all text-sm">
+          ↗ 開啟原站
         </button>
-        <a id="turbliSourceLink" href="https://turbli.com/" target="_blank" class="inline-block">
-          <button type="button" class="!m-0 !px-6 !py-2.5 !bg-white border-2 border-[#3c79ff] !text-[#3c79ff] !font-bold !rounded-lg shadow hover:!bg-blue-50 transition-all">
-            開啟原站
-          </button>
-        </a>
-      </div>
-
+      </a>
     </div>
 
-    <div id="turbliChartArea" class="mt-2" style="display:none;">
-      <div id="turbliChartBox" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:12px; min-height:120px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-        <div id="turbliStatus" style="color:#64748b; font-size:14px; padding:20px 10px;">準備中…</div>
+    <div class="flex flex-col gap-2">
+      <label for="flightSelect" class="text-sm font-semibold text-gray-600">請選擇航班（選了直接顯示今天 + 明天兩張圖）</label>
+      <select id="flightSelect" class="!m-0 !p-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 min-w-[180px] max-w-md outline-none transition-all cursor-pointer">
+      </select>
+    </div>
+
+    <div id="turbliChartArea" class="turbli-grid" style="display:none;">
+      <div class="turbli-cell" data-slot="today">
+        <div class="turbli-cell-header">
+          <span class="turbli-cell-title">今天 <span class="turbli-cell-date"></span></span>
+          <span class="turbli-cell-age"></span>
+        </div>
+        <div class="turbli-cell-body">
+          <div class="turbli-cell-status">載入中…</div>
+        </div>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:12px; color:#64748b;">
-        <span id="turbliMeta"></span>
-        <button id="turbliRefreshBtn" type="button" style="margin:0; padding:4px 12px; font-size:12px; background:#fff; color:#3c79ff; border:1px solid #3c79ff; border-radius:6px; cursor:pointer; display:none;">🔄 重新抓取</button>
+      <div class="turbli-cell" data-slot="tomorrow">
+        <div class="turbli-cell-header">
+          <span class="turbli-cell-title">明天 <span class="turbli-cell-date"></span></span>
+          <span class="turbli-cell-age"></span>
+        </div>
+        <div class="turbli-cell-body">
+          <div class="turbli-cell-status">載入中…</div>
+        </div>
       </div>
     </div>
+
+    <style>
+      .turbli-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 768px) {
+        .turbli-grid { grid-template-columns: 1fr; }
+      }
+      .turbli-cell {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        min-height: 200px;
+      }
+      .turbli-cell-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 0 4px;
+        flex-wrap: wrap;
+      }
+      .turbli-cell-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+      .turbli-cell-date { font-weight: 500; color: #64748b; font-size: 13px; margin-left: 4px; }
+      .turbli-cell-age { font-size: 12px; color: #94a3b8; }
+      .turbli-cell-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .turbli-cell-body img { width: 100%; height: auto; display: block; border-radius: 6px; }
+      .turbli-cell-status { color: #94a3b8; font-size: 14px; padding: 30px 10px; text-align: center; }
+      .turbli-cell-status.loading { color: #3c79ff; font-weight: 600; }
+      .turbli-cell-status.empty::before { content: "📭 "; }
+    </style>
   </div>
 
   <div class="section">

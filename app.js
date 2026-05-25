@@ -304,14 +304,6 @@ document.addEventListener("DOMContentLoaded", function () {
     initFlightSelect();
     initAviationMap();
 
-    const turbliBtn = document.getElementById("turbliBtn");
-    if(turbliBtn) {
-        turbliBtn.addEventListener("click", function () { loadTurbliChart(false); });
-    }
-    const turbliRefreshBtn = document.getElementById("turbliRefreshBtn");
-    if(turbliRefreshBtn) {
-        turbliRefreshBtn.addEventListener("click", function () { loadTurbliChart(true); });
-    }
     console.log("✈️ 簡報箱主核心系統已全面整合上線 (Core Engine Online)");
 });
 
@@ -322,10 +314,7 @@ function refreshIframe(id) {
 
 function initFlightSelect() {
   const selectEl = document.getElementById("flightSelect");
-  const dateSelectEl = document.getElementById("dateSelect");
-  const btn = document.getElementById("turbliBtn");
-
-  if (!selectEl || !dateSelectEl || !btn) return;
+  if (!selectEl) return;
 
   const defaultOption = document.createElement("option");
   defaultOption.value = "";
@@ -340,182 +329,97 @@ function initFlightSelect() {
       .forEach(item => {
         const opt = document.createElement("option");
         opt.value = item.flightNo;
-        opt.textContent = item.flightNo;
+        opt.textContent = `${item.flightNo}  (${item.route})`;
         optgroup.appendChild(opt);
       });
     selectEl.appendChild(optgroup);
   });
 
-  function updateTurbliUrl() {
-    const selectedFlight = selectEl.value;
-    const selectedDate = dateSelectEl.value;
-    const srcLink = document.getElementById("turbliSourceLink");
-
-    if (!selectedFlight) {
-      btn.disabled = true;
-      btn.dataset.url = "";
-      btn.dataset.flight = "";
-      btn.dataset.route = "";
-      btn.dataset.date = "";
-      if (srcLink) srcLink.href = "https://turbli.com/";
+  selectEl.addEventListener("change", function() {
+    const flightNo = selectEl.value;
+    if (!flightNo) {
+      const area = document.getElementById("turbliChartArea");
+      if (area) area.style.display = "none";
       return;
     }
-
-    const date = new Date();
-    if (selectedDate === "tomorrow") date.setDate(date.getDate() + 1);
-
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-
-    const flight = window.flights.find(f => f.flightNo === selectedFlight);
-    if (!flight) return;
-
-    const url = `https://turbli.com/${flight.route}/${dateStr}/JX-${selectedFlight}/`;
-    btn.dataset.url = url;
-    btn.dataset.flight = selectedFlight;
-    btn.dataset.route = flight.route;
-    btn.dataset.date = dateStr;
-    btn.disabled = false;
-    if (srcLink) srcLink.href = url;
-  }
-
-  selectEl.addEventListener("change", updateTurbliUrl);
-  dateSelectEl.addEventListener("change", updateTurbliUrl);
+    loadTurbliChartsForFlight(flightNo);
+  });
 }
 
 // ==========================================
-// 🌪️ Turbli 湍流圖 — 後端截圖 API 呼叫
+// 🌪️ Turbli 湍流圖 — 選航班直接顯示今天 + 明天兩張圖
 // ==========================================
-// 家裡 Mac 上的 Cloudflare Tunnel 公開網址（隨機 URL，重開機會變）
-// 若要更新：跑 update-tunnel-url.command 桌面腳本（會自動 sed + git push）
-const TURBLI_TUNNEL_URL = "https://wizard-providing-processed-meyer.trycloudflare.com";
 
-// API base 邏輯：
-// - 從 GitHub Pages 或其他非本機網址開啟 → 用 Cloudflare tunnel
-// - 從本機 server (port 5050) 開啟 → 用相對路徑（同源）
-// - 從 localhost 別的 port (例如 3001) → 用 tunnel 也行
-// - file:// 直開 → fallback 本機
-window.TURBLI_API_BASE = (function() {
-  const h = location.hostname;
-  if (location.protocol === "file:") return "http://127.0.0.1:5050";
-  if (location.port === "5050") return "";  // 任何 host:5050 都是本機 Flask server
-  if (h === "127.0.0.1" || h === "localhost") return "http://127.0.0.1:5050";
-  try {
-    if (new URL(TURBLI_TUNNEL_URL).host === location.host) return ""; // 走 tunnel 直連
-  } catch (_) {}
-  return TURBLI_TUNNEL_URL; // GitHub Pages 等 → 透過 tunnel
-})();
+// 台北時間今天 / 明天 (YYYY-MM-DD)
+function turbliDatesTaipei() {
+  // 用 Asia/Taipei 取目前日期
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit"
+  });
+  const today = fmt.format(new Date()); // YYYY-MM-DD
+  const t = new Date();
+  t.setUTCDate(t.getUTCDate() + 1);
+  const tomorrow = fmt.format(t);
+  return { today, tomorrow };
+}
 
-async function loadTurbliChart(forceRefresh) {
-  const btn = document.getElementById("turbliBtn");
-  const area = document.getElementById("turbliChartArea");
-  const box = document.getElementById("turbliChartBox");
-  const status = document.getElementById("turbliStatus");
-  const meta = document.getElementById("turbliMeta");
-  const refreshBtn = document.getElementById("turbliRefreshBtn");
-  if (!btn || !area || !box) return;
+function formatAge(lastModified) {
+  if (!lastModified) return "";
+  const ageMs = Date.now() - new Date(lastModified).getTime();
+  if (ageMs < 0) return "剛抓的";
+  const min = Math.floor(ageMs / 60000);
+  if (min < 1) return "剛抓的";
+  if (min < 60) return `${min} 分鐘前抓的`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} 小時前抓的`;
+  return `${Math.floor(hr/24)} 天前抓的`;
+}
 
-  const flight = btn.dataset.flight;
-  const route = btn.dataset.route;
-  const date = btn.dataset.date;
-  if (!flight || !route || !date) return;
+async function loadOneTurbliCell(cellEl, flight, date, route) {
+  const dateEl = cellEl.querySelector(".turbli-cell-date");
+  const ageEl = cellEl.querySelector(".turbli-cell-age");
+  const body = cellEl.querySelector(".turbli-cell-body");
 
-  area.style.display = "block";
-  if (refreshBtn) refreshBtn.style.display = "none";
-  if (meta) meta.textContent = "";
-  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 載入湍流圖…</div>`;
-
-  const t0 = performance.now();
-
-  // 先試 chartcache (GitHub Actions 預先抓好的靜態 PNG)
-  // 除非按了「重新抓取」才繞過 chartcache 直接打 API (即時版)
-  if (!forceRefresh) {
-    const cacheUrl = `chartcache/${flight}-${date}.png`;
-    try {
-      const res = await fetch(cacheUrl, { method: "GET", cache: "default" });
-      if (res.ok) {
-        const blob = await res.blob();
-        const imgUrl = URL.createObjectURL(blob);
-        const ms = Math.round(performance.now() - t0);
-
-        box.innerHTML = "";
-        const img = document.createElement("img");
-        img.src = imgUrl;
-        img.alt = `JX-${flight} ${route} 湍流圖`;
-        img.style.cssText = "max-width:100%; height:auto; border-radius:8px; display:block;";
-        box.appendChild(img);
-
-        // 從 Last-Modified header 顯示資料新舊度
-        const lastMod = res.headers.get("Last-Modified");
-        let ageStr = "";
-        if (lastMod) {
-          const ageMs = Date.now() - new Date(lastMod).getTime();
-          const ageMin = Math.floor(ageMs / 60000);
-          if (ageMin < 60) ageStr = ` · 圖 ${ageMin} 分鐘前抓的`;
-          else ageStr = ` · 圖 ${Math.floor(ageMin/60)} 小時前抓的`;
-        }
-        if (meta) meta.textContent = `📦 預存快取 · ${ms} ms · JX-${flight} · ${route} · ${date}${ageStr}`;
-        if (refreshBtn) refreshBtn.style.display = "inline-block";
-        return;
-      }
-    } catch (_) {
-      // chartcache 不可用就 fallback 到 API
-    }
-  }
-
-  // Fallback：chartcache 沒這張或使用者按了重新抓取 → 打 server API (即時)
-  box.innerHTML = `<div id="turbliStatus" style="color:#3c79ff; font-size:14px; padding:20px 10px; font-weight:bold;">✈️ 預存快取沒有，即時抓取中…首次需 5-10 秒</div>`;
-
-  const params = new URLSearchParams({ flight, route, date });
-  if (forceRefresh) params.set("_t", String(Date.now()));
-  const apiUrl = `${window.TURBLI_API_BASE}/api/chart?${params.toString()}`;
+  if (dateEl) dateEl.textContent = date;
+  if (ageEl) ageEl.textContent = "";
+  body.innerHTML = `<div class="turbli-cell-status loading">✈️ 載入中…</div>`;
 
   try {
-    const res = await fetch(apiUrl);
-    if (!res.ok) {
-      let msg = `HTTP ${res.status}`;
-      let unavailable = false;
-      try {
-        const j = await res.json();
-        if (j.error) msg = j.error;
-        if (j.unavailable) unavailable = true;
-      } catch (_) {}
-      const err = new Error(msg);
-      err.unavailable = unavailable;
-      throw err;
-    }
+    const res = await fetch(`chartcache/${flight}-${date}.png`, { cache: "default" });
+    if (!res.ok) throw new Error("not-cached");
     const blob = await res.blob();
     const imgUrl = URL.createObjectURL(blob);
-    const cacheHit = res.headers.get("X-Cache") === "HIT";
-    const ms = Math.round(performance.now() - t0);
 
-    box.innerHTML = "";
+    body.innerHTML = "";
     const img = document.createElement("img");
     img.src = imgUrl;
-    img.alt = `JX-${flight} ${route} 湍流圖`;
-    img.style.cssText = "max-width:100%; height:auto; border-radius:8px; display:block;";
-    box.appendChild(img);
+    img.alt = `JX-${flight} ${route} ${date} 湍流圖`;
+    body.appendChild(img);
 
-    if (meta) meta.textContent = `${cacheHit ? "✅ 即時快取" : "🆕 剛抓取"} · ${ms} ms · JX-${flight} · ${route} · ${date}`;
-    if (refreshBtn) refreshBtn.style.display = "inline-block";
-  } catch (err) {
-    const turbliUrl = `https://turbli.com/${route}/${date}/JX-${flight}/`;
-    if (err.unavailable) {
-      // turbli 主動回 410/404 — 真的沒這航班的預報
-      box.innerHTML = `<div style="color:#64748b; font-size:14px; padding:20px 10px; text-align:center;">
-        🛬 <b>turbli 對這航班沒有預報資料</b><br>
-        <span style="font-size:13px;">${err.message}</span><br>
-        <a href="${turbliUrl}" target="_blank" style="font-size:12px; color:#3c79ff; margin-top:8px; display:inline-block;">↗ 到 turbli.com 確認</a>
-      </div>`;
-    } else {
-      // 真的連不到 server（chartcache miss + 後端離線/超時）
-      box.innerHTML = `<div style="color:#ef4444; font-size:14px; padding:20px 10px;">📭 預存快取暫無此航班，且即時抓取失敗<br>
-        <span style="font-size:12px; color:#94a3b8;">原因：${err.message}<br>GitHub Actions 每 6 小時更新，請稍後再試；或 <a href="${turbliUrl}" target="_blank" style="color:#3c79ff;">到 turbli 原站</a></span></div>`;
-    }
-    if (refreshBtn) refreshBtn.style.display = "inline-block";
+    const ageStr = formatAge(res.headers.get("Last-Modified"));
+    if (ageEl) ageEl.textContent = ageStr;
+  } catch (_) {
+    body.innerHTML = `<div class="turbli-cell-status empty">無資料</div>`;
+    if (ageEl) ageEl.textContent = "";
   }
+}
+
+async function loadTurbliChartsForFlight(flightNo) {
+  const area = document.getElementById("turbliChartArea");
+  if (!area) return;
+  const flight = window.flights.find(f => f.flightNo === flightNo);
+  if (!flight) return;
+
+  area.style.display = "grid";
+  const { today, tomorrow } = turbliDatesTaipei();
+  const todayCell = area.querySelector('[data-slot="today"]');
+  const tomorrowCell = area.querySelector('[data-slot="tomorrow"]');
+
+  // 兩張圖並行載入
+  await Promise.all([
+    loadOneTurbliCell(todayCell, flightNo, today, flight.route),
+    loadOneTurbliCell(tomorrowCell, flightNo, tomorrow, flight.route),
+  ]);
 }
 
 // ==========================================
