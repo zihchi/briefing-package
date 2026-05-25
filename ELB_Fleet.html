@@ -949,6 +949,25 @@ function getActionLabel(log) {
   return act.reportingTreeActionLabel || 'Action';
 }
 
+// 從 flightCrewMember 取出 rank + name 清單
+function getCrewList(flight) {
+  const crew = flight.flightCrewMember;
+  if (!Array.isArray(crew)) return [];
+  const inboundId = flight['#InboundCommanderID'];
+  return crew.map(c => ({
+    duty: (c.duty?.[0]?.dutyCode || '').toUpperCase(),
+    name: c.elbUser?.name || '',
+    pid:  c.elbUser?.personnelID || '',
+    isInbound: c.elbUser?.personnelID === inboundId,
+  })).filter(c => c.name);
+}
+function rankColor(duty) {
+  if (/^C/.test(duty))            return '#f59e0b'; // CAP/CP → gold
+  if (/F[O]|SFO|FO/.test(duty))   return '#60a5fa'; // F/O → blue
+  if (/^R/.test(duty))            return '#a855f7'; // RP → purple
+  return '#94a3b8';
+}
+
 // 雜訊：對 title 比對（不是 body）
 const SKIP_TITLE_PATTERNS = [
   /NIL TECHNICAL DEFECT/i,
@@ -1067,12 +1086,25 @@ function updateFlightBar(data) {
   const requiresSig = Array.isArray(st.requiresSignature) && st.requiresSignature.length > 0;
   const hasOpenDef = Array.isArray(st.openDefects) && st.openDefects.length > 0;
   const cpEl = document.getElementById('det-checkpoints');
-  cpEl.innerHTML = `
+  let cpHtml = `
     <span class="ckpt">✓ Fluids</span>
     <span class="ckpt">✓ Checks</span>
     <span class="ckpt ${hasOpenDef ? 'warn' : ''}">${hasOpenDef ? '⚠' : '✓'} Defects</span>
     <span class="ckpt ${requiresSig ? 'warn' : 'muted'}">${requiresSig ? '⚠ Pending' : '○ Certified'}</span>
   `;
+  // Crew chips
+  if (lastFlight) {
+    const crewList = getCrewList(lastFlight).filter(c => !c.isInbound);
+    if (crewList.length) {
+      cpHtml += '<span style="width:100%;height:0;flex-basis:100%"></span>';
+      cpHtml += crewList.map(c =>
+        `<span class="ckpt" style="background:${rankColor(c.duty)}1a;color:${rankColor(c.duty)};border-color:${rankColor(c.duty)}55">
+          ${esc(c.duty)} · ${esc(c.name)}
+        </span>`
+      ).join('');
+    }
+  }
+  cpEl.innerHTML = cpHtml;
 }
 
 // ── Dashboard tab: 6 區塊 ──
@@ -1281,12 +1313,23 @@ function renderHistoryTab(container, data) {
         </div>`;
       }
 
+      // Crew
+      const crewList = getCrewList(flt);
+      const crewHtml = crewList.length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;font-size:11px;">
+          ${crewList.map(c => `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--surface2);padding:3px 8px;border-radius:6px;${c.isInbound?'opacity:0.55':''}" ${c.isInbound?'title="Inbound Commander"':''}>
+            <span style="background:${rankColor(c.duty)}22;color:${rankColor(c.duty)};padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px">${esc(c.duty||'?')}</span>
+            <span style="color:var(--text)">${esc(c.name)}</span>
+          </span>`).join('')}
+        </div>` : '';
+
       html += `<div class="flt-item" style="margin-bottom:12px;">
         <div class="flt-head">
           <span class="flt-num">${esc(num)}</span>
           <span class="flt-route">${esc(orig||'?')} → ${esc(dest||'?')}</span>
           <span class="flt-time">${esc(dt ? dt.slice(0,10) : '')}</span>
         </div>
+        ${crewHtml}
         ${filteredLogs.length ? `<div class="fault-list">${logHtml}</div>` :
           `<div style="font-size:11px;color:var(--dim);font-style:italic;padding:6px 0">無異常紀錄</div>`}
       </div>`;
