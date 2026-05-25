@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ELB 速查">
+    <title>ELB 機隊速查 — 書籤工具</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Noto Sans TC', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px 80px;
+        }
+        .container { width: 100%; max-width: 560px; }
+        .hero { text-align: center; margin-bottom: 36px; }
+        .hero-icon { font-size: 44px; margin-bottom: 10px; }
+        h1 { font-size: 26px; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; }
+        .subtitle {
+            color: var(--muted); font-size: 14px; margin-top: 8px;
+            line-height: 1.7; text-align: center;
+        }
+        .step {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-bottom: 14px;
+        }
+        .step-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .step-num {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--accent); color: white;
+            font-size: 12px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-title { font-size: 15px; font-weight: 700; color: #f8fafc; }
+        .step-body { color: var(--muted); font-size: 13px; line-height: 1.75; padding-left: 38px; }
+        .drag-zone {
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+            margin-top: 16px; padding: 22px 16px;
+            border: 2px dashed var(--border); border-radius: 10px;
+        }
+        #bm-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white; font-size: 15px; font-weight: 700;
+            padding: 13px 28px; border-radius: 10px;
+            text-decoration: none; cursor: grab;
+            box-shadow: 0 4px 18px rgba(59,130,246,0.38);
+            transition: box-shadow 0.2s, transform 0.15s;
+            user-select: none; -webkit-user-drag: auto;
+        }
+        #bm-link:active { cursor: grabbing; transform: scale(0.97); }
+        .drag-hint { color: #475569; font-size: 12px; text-align: center; }
+        code {
+            background: rgba(255,255,255,0.08); padding: 2px 7px;
+            border-radius: 4px; font-family: 'SF Mono', Menlo, monospace;
+            font-size: 12px; color: #7dd3fc;
+        }
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+        .feature-item {
+            background: rgba(255,255,255,0.04); border-radius: 8px;
+            padding: 10px 12px; font-size: 13px; color: var(--muted);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .warning-step { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.05); }
+        .warning-step .step-title { color: #fbbf24; }
+        @media (max-width: 480px) {
+            .feature-grid { grid-template-columns: 1fr; }
+            body { padding: 28px 16px 60px; }
+            h1 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="hero">
+        <div class="hero-icon">✈️</div>
+        <h1>ELB 機隊速查</h1>
+        <p class="subtitle">書籤工具 — 在 ELB 系統快速讀取機隊 Dashboard<br>與單機最近 5 筆歷史資料，無需帳密、即時查詢</p>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step">
+        <div class="step-hdr">
+            <div class="step-num">1</div>
+            <div class="step-title">把書籤拖到瀏覽器書籤列</div>
+        </div>
+        <div class="step-body">
+            用滑鼠「按住拖曳」下方按鈕到瀏覽器上方的書籤列（Bookmarks Bar）。<br>
+            <span style="color:#475569; font-size:12px;">如果書籤列沒顯示，按 ⌘ Shift B（Mac）或 Ctrl Shift B（Windows）開啟。</span>
+        </div>
+        <div class="drag-zone">
+            <a id="bm-link" href="#">🔍&nbsp; ELB 機隊速查</a>
+            <p class="drag-hint">☝️ 按住上方按鈕，拖到書籤列儲存</p>
+        </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+        <div class="step-hdr">
+            <div class="step-num">2</div>
+            <div class="step-title">登入 ELB，開啟 Fleet Dashboard</div>
+        </div>
+        <div class="step-body">
+            前往 <code>elb.starlux-airlines.com/elb/#/dashboard/fleet</code>，<br>
+            確認已登入並看到機隊列表頁面。
+        </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+        <div class="step-hdr">
+            <div class="step-num">3</div>
+            <div class="step-title">點書籤，右側出現速查面板</div>
+        </div>
+        <div class="step-body">
+            點一下書籤，頁面右側出現浮動面板，自動載入機隊狀態與最新缺失。<br>
+            輸入機號（例如 <code>B-58301</code>）查詢單機詳細資料。
+        </div>
+        <div class="feature-grid">
+            <div class="feature-item">🛩️ 全機隊 Dashboard</div>
+            <div class="feature-item">⚠️ 最新 Defects / MEL</div>
+            <div class="feature-item">🔧 近 5 筆維修記錄</div>
+            <div class="feature-item">✈️ 近 5 筆飛行記錄</div>
+        </div>
+    </div>
+
+    <!-- 安全說明 -->
+    <div class="step warning-step">
+        <div class="step-hdr">
+            <span style="font-size:18px;">🔐</span>
+            <div class="step-title">安全說明</div>
+        </div>
+        <div class="step-body">
+            書籤工具完全在你的瀏覽器本地執行，不儲存、不傳送任何帳號密碼。<br>
+            僅使用你已登入的 ELB 工作階段讀取資料，關閉面板即可停止。
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// ELB Fleet Checker Bookmarklet — 以具名函式撰寫
+// 透過 .toString() 擷取 body 後動態生成書籤 href
+// ============================================================
+function elbBookmarklet() {
+    var PANEL_ID = '__elbfc__';
+
+    // 防重複：再次點擊書籤切換顯示 / 隱藏
+    var existing = document.getElementById(PANEL_ID);
+    if (existing) {
+        existing.style.display = existing.style.display === 'none' ? 'flex' : 'none';
+        return;
+    }
+
+    // 驗證網域
+    if (!location.hostname.includes('starlux-airlines.com')) {
+        alert('ELB 機隊速查\n\n請在 ELB 系統 (elb.starlux-airlines.com) 頁面執行此書籤。');
+        return;
+    }
+
+    // 取得 Vue API
+    var appEl = document.getElementById('app');
+    if (!appEl || !appEl.__vue__) {
+        alert('ELB 機隊速查\n\n找不到 Vue 應用程式。\n請確認在 ELB Fleet Dashboard 頁面，重新整理後再試。');
+        return;
+    }
+    var api = null;
+    try { api = appEl.__vue__.$root.$api; } catch(e) {}
+    if (!api) { try { api = appEl.__vue__.$children[0].$api; } catch(e) {} }
+    if (!api) { try { api = appEl.__vue__.$root.$store && appEl.__vue__.$root.$store.getters.api; } catch(e) {} }
+    if (!api) {
+        alert('ELB 機隊速查\n\n無法取得 API 實例，請重新整理 ELB 頁面後再試。');
+        return;
+    }
+
+    // 注入 CSS
+    if (!document.getElementById(PANEL_ID + '_s')) {
+        var s = document.createElement('style');
+        s.id = PANEL_ID + '_s';
+        s.textContent =
+            '#__elbfc__{position:fixed;top:0;right:0;width:380px;max-width:94vw;height:100vh;' +
+            'background:#0f172a;color:#e2e8f0;display:flex;flex-direction:column;' +
+            'z-index:2147483647;box-shadow:-4px 0 28px rgba(0,0,0,.6);}' +
+            '#__elbfc__ *{box-sizing:border-box;margin:0;padding:0;' +
+            'font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;}' +
+            '#__elbfc_hdr{background:#1e293b;padding:12px 14px;display:flex;align-items:center;' +
+            'justify-content:space-between;border-bottom:1px solid #334155;flex-shrink:0;}' +
+            '#__elbfc_hdr h2{font-size:14px;font-weight:700;color:#f8fafc;}' +
+            '#__elbfc_x{background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;' +
+            'padding:0 2px;line-height:1;}' +
+            '#__elbfc_x:hover{color:#f87171;}' +
+            '#__elbfc_srch{padding:9px 12px;background:#1e293b;border-bottom:1px solid #334155;' +
+            'display:flex;gap:7px;flex-shrink:0;}' +
+            '#__elbfc_inp{flex:1;background:#0f172a;border:1px solid #475569;border-radius:6px;' +
+            'color:#e2e8f0;padding:7px 10px;font-size:13px;outline:none;}' +
+            '#__elbfc_inp:focus{border-color:#3b82f6;}' +
+            '#__elbfc_go{background:#3b82f6;border:none;color:#fff;padding:7px 13px;' +
+            'border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;}' +
+            '#__elbfc_go:hover{background:#2563eb;}' +
+            '#__elbfc_body{flex:1;overflow-y:auto;padding:10px;}' +
+            '#__elbfc_body::-webkit-scrollbar{width:3px;}' +
+            '#__elbfc_body::-webkit-scrollbar-thumb{background:#334155;border-radius:2px;}' +
+            '.efc-card{background:#1e293b;border:1px solid #334155;border-radius:8px;' +
+            'padding:11px 13px;margin-bottom:9px;}' +
+            '.efc-hdr{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;' +
+            'letter-spacing:.06em;margin-bottom:7px;}' +
+            '.efc-row{display:flex;justify-content:space-between;align-items:baseline;' +
+            'padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);}' +
+            '.efc-row:last-child{border-bottom:none;}' +
+            '.efc-l{color:#94a3b8;flex-shrink:0;margin-right:8px;font-size:12px;max-width:48%;}' +
+            '.efc-r{color:#e2e8f0;text-align:right;font-size:12px;word-break:break-word;}' +
+            '.efc-acbtn{background:#1e293b;border:1px solid #334155;border-radius:5px;' +
+            'color:#cbd5e1;padding:4px 9px;margin:2px;cursor:pointer;font-size:11px;' +
+            'font-family:inherit;}' +
+            '.efc-acbtn:hover{background:#334155;border-color:#3b82f6;color:#60a5fa;}' +
+            '.efc-spin{text-align:center;color:#475569;padding:28px 0;font-size:13px;}' +
+            '.efc-err{color:#f87171;text-align:center;padding:16px;font-size:12px;line-height:1.7;}' +
+            '.efc-tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 5px;' +
+            'border-radius:3px;vertical-align:middle;margin-left:4px;}' +
+            '.efc-aog{background:rgba(239,68,68,.2);color:#f87171;}' +
+            '.efc-mel{background:rgba(249,115,22,.2);color:#fb923c;}' +
+            '.efc-ntc{background:rgba(245,158,11,.2);color:#fbbf24;}' +
+            '.efc-ok{background:rgba(34,197,94,.2);color:#4ade80;}' +
+            '.efc-empty{color:#475569;text-align:center;padding:8px 0;font-size:12px;}' +
+            '.efc-back{background:none;border:none;color:#60a5fa;cursor:pointer;font-size:12px;' +
+            'padding:2px 0 12px;display:flex;align-items:center;gap:3px;font-family:inherit;}';
+        document.head.appendChild(s);
+    }
+
+    // 建立面板 DOM
+    var panel = document.createElement('div');
+    panel.id = PANEL_ID;
+    panel.innerHTML =
+        '<div id="__elbfc_hdr"><h2>✈️ ELB 機隊速查</h2><button id="__elbfc_x">✕</button></div>' +
+        '<div id="__elbfc_srch"><input id="__elbfc_inp" placeholder="機號，例如 B-58301">' +
+        '<button id="__elbfc_go">查詢</button></div>' +
+        '<div id="__elbfc_body"><div class="efc-spin">⏳ 載入機隊資料中...</div></div>';
+    document.body.appendChild(panel);
+
+    var body = document.getElementById('__elbfc_body');
+    var inp  = document.getElementById('__elbfc_inp');
+
+    document.getElementById('__elbfc_x').addEventListener('click', function() { panel.style.display = 'none'; });
+    document.getElementById('__elbfc_go').addEventListener('click', function() { var v = inp.value.trim(); if (v) searchAircraft(v); });
+    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('__elbfc_go').click(); });
+
+    // 工具函式
+    function esc(v) {
+        if (v === null || v === undefined) return '—';
+        return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function dig(obj, keys) {
+        for (var i = 0; i < keys.length; i++) {
+            if (obj && obj[keys[i]] !== undefined && obj[keys[i]] !== null && obj[keys[i]] !== '') return obj[keys[i]];
+        }
+        return null;
+    }
+    function trunc(str, n) { var s = String(str || ''); return s.length > n ? s.substring(0, n) + '…' : s; }
+    function sevTag(sev) {
+        if (!sev) return '';
+        var u = String(sev).toUpperCase();
+        if (u === 'AOG') return '<span class="efc-tag efc-aog">AOG</span>';
+        if (u.indexOf('MEL') >= 0) return '<span class="efc-tag efc-mel">MEL</span>';
+        if (u.indexOf('NTC') >= 0 || u.indexOf('NOTICE') >= 0) return '<span class="efc-tag efc-ntc">NTC</span>';
+        if (u === 'OK' || u === 'NORMAL') return '<span class="efc-tag efc-ok">OK</span>';
+        return '<span class="efc-tag" style="background:rgba(148,163,184,.15);color:#94a3b8">' + esc(sev) + '</span>';
+    }
+    function card(title, rows) {
+        var h = '<div class="efc-card"><div class="efc-hdr">' + title + '</div>';
+        if (!rows || rows.length === 0) {
+            h += '<div class="efc-empty">— 無資料 —</div>';
+        } else {
+            for (var i = 0; i < rows.length; i++) {
+                h += '<div class="efc-row"><span class="efc-l">' + rows[i][0] + '</span><span class="efc-r">' + rows[i][1] + '</span></div>';
+            }
+        }
+        return h + '</div>';
+    }
+    function arrFrom(data, keys) {
+        var v = dig(data, keys);
+        if (Array.isArray(v)) return v;
+        if (Array.isArray(data)) return data;
+        return [];
+    }
+    function safePro(p) {
+        if (!p || typeof p.then !== 'function') return Promise.resolve({ ok: false, data: null, err: 'API did not return a Promise' });
+        return p.then(function(v) { return { ok: true, data: v, err: null }; })
+                .catch(function(e) { return { ok: false, data: null, err: e && e.message ? e.message : String(e) }; });
+    }
+
+    // Fleet Dashboard
+    function loadFleet() {
+        body.innerHTML = '<div class="efc-spin">⏳ 載入機隊資料中...</div>';
+        var p = null;
+        try { p = api.getAircraftList({ extensions: ['FleetDashboard:RecentDefects', 'FleetDashboard:ColumnConfiguration'] }); }
+        catch(e) { body.innerHTML = '<div class="efc-err">❌ API 呼叫錯誤：' + esc(e.message) + '</div>'; return; }
+        safePro(p).then(function(r) {
+            if (!r.ok) { body.innerHTML = '<div class="efc-err">❌ 載入失敗：' + esc(r.err) + '</div>'; }
+            else { renderFleet(r.data); }
+        });
+    }
+
+    function renderFleet(data) {
+        var html = '';
+        var defects = arrFrom(data, ['recentDefects', 'defects', 'activeDefects']);
+        var defRows = [];
+        for (var i = 0; i < Math.min(defects.length, 10); i++) {
+            var d = defects[i];
+            var ctx = (d && d.context) ? d.context : d;
+            var acId = esc(dig(ctx, ['api.assetId', 'assetId', 'registration', 'aircraftId']) || '—');
+            var desc = dig(ctx, ['faultDescription', 'description', 'defectDescription', 'text']) || '—';
+            var sev  = dig(ctx, ['severity', 'defectType', 'type']) || '';
+            var fl   = ctx['flightLog'];
+            var flt  = (fl && fl['flightNum']) ? ' <span style="color:#475569;font-size:11px">JX' + esc(fl['flightNum']) + '</span>' : '';
+            defRows.push(['<b>' + acId + '</b>' + flt + sevTag(sev), trunc(desc, 55)]);
+        }
+        html += card('⚠️ 最近 Defects (' + defects.length + ')', defRows);
+
+        var acList = arrFrom(data, ['aircraftList', 'aircraft', 'list', 'assets']);
+        if (acList.length > 0) {
+            html += '<div class="efc-card"><div class="efc-hdr">🛩️ 機隊列表（點擊查詢）</div><div style="display:flex;flex-wrap:wrap;">';
+            for (var j = 0; j < acList.length; j++) {
+                var ac = acList[j];
+                var id = dig(ac, ['id', 'registration', 'api.assetId', 'aircraftId', 'tailNumber']) || '';
+                if (id) html += '<button class="efc-acbtn" data-r="' + esc(id) + '">' + esc(id) + '</button>';
+            }
+            html += '</div></div>';
+        }
+        if (!html) html = '<div class="efc-spin">✅ 資料已載入，請輸入機號查詢</div>';
+        body.innerHTML = html;
+
+        var btns = body.querySelectorAll('.efc-acbtn');
+        for (var k = 0; k < btns.length; k++) {
+            (function(btn) {
+                btn.addEventListener('click', function() { inp.value = btn.getAttribute('data-r'); searchAircraft(inp.value); });
+            })(btns[k]);
+        }
+    }
+
+    // 單機查詢
+    function searchAircraft(reg) {
+        if (!reg) return;
+        reg = reg.trim().toUpperCase();
+        body.innerHTML = '<div class="efc-spin">⏳ 查詢 ' + esc(reg) + ' 中...</div>';
+
+        var p1 = null, p2 = null, p3 = null;
+        try { p1 = api.getAircraftState({ id: reg, extensions: ['FleetDashboard:Detail', 'FleetDashboard:RecentDefects', 'MEL', 'NTC', 'ActiveDefects'] }); } catch(e) {}
+        try { p2 = api.getMaintLog({ id: reg, extensions: ['AircraftHistory', 'Recent', 'FlightHistory'] }); } catch(e) {}
+        try { p3 = api.getFlightLog({ id: reg, extensions: ['Recent', 'History'] }); } catch(e) {}
+
+        Promise.all([safePro(p1), safePro(p2), safePro(p3)]).then(function(res) {
+            renderAircraft(reg, res[0], res[1], res[2]);
+        });
+    }
+
+    function renderAircraft(reg, r1, r2, r3) {
+        var html = '<button class="efc-back" id="__elbfc_back">← 返回機隊</button>';
+
+        // 機況摘要
+        var sd = r1.data;
+        var stRows = [];
+        if (sd) {
+            var s = sd.state || sd.aircraftState || sd.detail || sd;
+            var pairs = [
+                ['狀態', ['status', 'aircraftStatus', 'acStatus']],
+                ['飛行階段', ['flightPhase', 'phase', 'flightStatus']],
+                ['Last Station', ['lastStation', 'lastAirport', 'origin']],
+                ['Next Station', ['nextStation', 'destination', 'nextAirport']],
+                ['航班', ['flightNumber', 'flightNum', 'flight']],
+                ['ETA', ['eta', 'ETA', 'arrivalTime']]
+            ];
+            for (var i = 0; i < pairs.length; i++) {
+                var v = dig(s, pairs[i][1]);
+                if (v) stRows.push([pairs[i][0], esc(v)]);
+            }
+        }
+        if (!r1.ok) stRows = [['錯誤', esc(r1.err)]];
+        html += card('🛩️ ' + esc(reg), stRows.length ? stRows : [['狀態', '無結構化資料，請查看下方 Debug']]);
+
+        // Defects / MEL / NTC
+        var defs = arrFrom(sd || {}, ['defects', 'recentDefects', 'activeMel', 'mel', 'activeDefects']);
+        var dRows = [];
+        for (var j = 0; j < Math.min(defs.length, 10); j++) {
+            var d = defs[j];
+            var ctx = (d && d.context) ? d.context : d;
+            var desc = dig(ctx, ['faultDescription', 'description', 'defectDescription', 'melItem', 'text']) || JSON.stringify(d).substring(0, 50);
+            var sev  = dig(ctx, ['severity', 'defectType', 'type']) || '';
+            dRows.push([sevTag(sev) || '—', trunc(desc, 65)]);
+        }
+        html += card('⚠️ Defects / MEL / NTC (' + defs.length + ')', dRows);
+
+        // 近 5 筆維修記錄
+        var md = r2.data;
+        var mList = arrFrom(md || {}, ['history', 'maintHistory', 'logs', 'recentMaintenance', 'records', 'tasks']);
+        var mRows = [];
+        for (var k = 0; k < Math.min(mList.length, 5); k++) {
+            var m = mList[k];
+            var ctx2 = (m && m.context) ? m.context : m;
+            var mdate = dig(ctx2, ['date', 'completedDate', 'workDate', 'timestamp', 'createdDate']) || '—';
+            var mtask = dig(ctx2, ['taskDescription', 'description', 'workDescription', 'task', 'text']) || '—';
+            mRows.push([esc(String(mdate).substring(0, 10)), trunc(mtask, 52)]);
+        }
+        if (!r2.ok) mRows = [['錯誤', esc(r2.err)]];
+        html += card('🔧 近 5 筆維修紀錄', mRows);
+
+        // 近 5 筆飛行記錄
+        var fd = r3.data;
+        var fList = arrFrom(fd || {}, ['history', 'flightHistory', 'logs', 'recentFlights', 'records', 'flights']);
+        var fRows = [];
+        for (var n = 0; n < Math.min(fList.length, 5); n++) {
+            var f = fList[n];
+            var ctx3 = (f && f.context) ? f.context : f;
+            var fnum  = dig(ctx3, ['flightNumber', 'flightNum', 'flight', 'flightNo']) || '—';
+            var dep   = dig(ctx3, ['departureStation', 'dep', 'origin', 'departure']) || '?';
+            var arr   = dig(ctx3, ['arrivalStation', 'arr', 'destination', 'arrival']) || '?';
+            var fdate = dig(ctx3, ['date', 'departureDate', 'timestamp', 'flightDate']) || '—';
+            fRows.push(['JX' + esc(fnum) + '  ' + esc(dep) + ' → ' + esc(arr), esc(String(fdate).substring(0, 10))]);
+        }
+        if (!r3.ok) fRows = [['錯誤', esc(r3.err)]];
+        html += card('✈️ 近 5 筆飛行紀錄', fRows);
+
+        // Debug（折疊）
+        html += '<details style="margin-top:6px;"><summary style="color:#334155;font-size:11px;cursor:pointer;padding:4px 0;">🔬 原始 API 回應（除錯用）</summary>' +
+            '<pre style="background:#020617;color:#64748b;font-size:10px;padding:8px;border-radius:6px;overflow:auto;max-height:220px;white-space:pre-wrap;word-break:break-all;margin-top:6px;">' +
+            esc(JSON.stringify({ state: r1.ok ? r1.data : r1.err, maint: r2.ok ? r2.data : r2.err, flight: r3.ok ? r3.data : r3.err }, null, 2)) +
+            '</pre></details>';
+
+        body.innerHTML = html;
+        document.getElementById('__elbfc_back').addEventListener('click', loadFleet);
+    }
+
+    loadFleet();
+}
+
+// 生成書籤 href（擷取函式 body，不做 URL encode）
+(function() {
+    try {
+        var src = elbBookmarklet.toString();
+        var body = src.slice(src.indexOf('{') + 1, src.lastIndexOf('}'));
+        document.getElementById('bm-link').href = 'javascript:(function(){' + body + '})();';
+    } catch(e) {
+        console.error('Bookmarklet build failed:', e);
+    }
+    document.getElementById('bm-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        alert('📌 請用滑鼠「拖曳」此按鈕到書籤列，不要直接點擊！');
+    });
+})();
+</script>
+</body>
+</html>

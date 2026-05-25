@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v19';
+const CACHE_NAME = 'briefing-v20';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -24,6 +24,7 @@ const LOCAL_FILES = [
   './notam.html',
   './swap.html',
   './time.html',
+  './ELB_Fleet.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
