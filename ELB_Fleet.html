@@ -968,11 +968,15 @@ function renderAircraftDetail(container, tail, data) {
       let logHtml = '';
       for (const log of logs) {
         if (log && !log._error) {
-          const lnum = fmt(log.recordName || log._id);
-          const ldesc = fmt(log.faultDescription || log.description || '');
+          const lnum  = fmt(log.recordName || log._id);
+          const ldesc = fmt(log.comments || log.faultDescription || log.description || '');
+          const ata   = fmt(log.ataNum || '');
+          const typeTag = log._type === 'ML' ? '<span style="background:rgba(245,158,11,0.2);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">ML</span>' :
+                          log._type === 'SV' ? '<span style="background:rgba(59,130,246,0.2);color:#60a5fa;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">SV</span>' :
+                          '';
           if (lnum || ldesc) {
             logHtml += `<div class="fault-row">
-              ${lnum ? `<div class="fault-code">${esc(lnum)}</div>` : ''}
+              <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}</div>
               ${ldesc ? `<div class="fault-desc">${esc(ldesc)}</div>` : ''}
             </div>`;
           }

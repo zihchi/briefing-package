@@ -436,21 +436,28 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
         }
       })),
 
-      // 近 5 航班 + 每個航班的 log entries（用 getFlightLog 不是 getFlight）
+      // 近 5 航班 + 每個航班的 log entries
+      // 分流: maintLogIds → getMaintLog, serviceLogIds → getServiceLog
       Promise.all(closedFs.map(async id => {
         try {
           const flt = await pipe.req('getFlightLog', { id }, 7000);
-          // log entry IDs 在 flightLogChangeIds（不是 maintLogIds）
-          const logIds = Array.isArray(flt?.flightLogChangeIds)
-            ? flt.flightLogChangeIds
-            : (Array.isArray(flt?.maintLogIds) ? flt.maintLogIds : []);
-          flt._logs = await Promise.all(
-            logIds.map(lid =>
+          const mlIds = Array.isArray(flt?.maintLogIds)    ? flt.maintLogIds    : [];
+          const svIds = Array.isArray(flt?.serviceLogIds)  ? flt.serviceLogIds  : [];
+
+          const [mlLogs, svLogs] = await Promise.all([
+            Promise.all(mlIds.map(lid =>
               pipe.req('getMaintLog', { id: lid }, 6000)
-                .then(d => ({ _id: lid, ...d }))
-                .catch(e => ({ _id: lid, _error: e.message }))
-            )
-          );
+                .then(d => ({ _id: lid, _type: 'ML', ...d }))
+                .catch(e => ({ _id: lid, _type: 'ML', _error: e.message }))
+            )),
+            Promise.all(svIds.map(lid =>
+              pipe.req('getServiceLog', { id: lid }, 6000)
+                .then(d => ({ _id: lid, _type: 'SV', ...d }))
+                .catch(e => ({ _id: lid, _type: 'SV', _error: e.message }))
+            )),
+          ]);
+
+          flt._logs = [...mlLogs, ...svLogs];
           return { _id: id, ...flt };
         } catch (e) {
           return { _id: id, _error: e.message };
@@ -579,7 +586,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.5-flightlog', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail-with-flights'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.6-logentries', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'maintlog+servicelog'] }, 200, origin);
     }
 
     try {
