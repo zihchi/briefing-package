@@ -221,6 +221,51 @@ async function handleLogin(request, origin) {
 }
 
 // ──────────────────────────────────────────
+// /api/cookie-login  POST { cookieString }
+// 接收瀏覽器整包 Cookie 字串（從 DevTools 複製來的），打包成 session token
+// 這是繞過 Imperva 的方式：用使用者真實瀏覽器的 cookies
+// ──────────────────────────────────────────
+async function handleCookieLogin(request, origin) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResp({ ok: false, error: '請求格式錯誤' }, 400, origin);
+  }
+  const { cookieString } = body;
+  if (!cookieString) return jsonResp({ ok: false, error: '缺少 cookieString' }, 400, origin);
+
+  // 解析 "key=val; key=val; ..." 字串
+  const cookies = {};
+  for (const part of cookieString.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    const k = part.slice(0, eq).trim();
+    const v = part.slice(eq + 1).trim();
+    if (k && v) cookies[k] = v;
+  }
+
+  if (!cookies.JSESSIONID) {
+    return jsonResp({ ok: false, error: '貼上的 cookie 找不到 JSESSIONID' }, 400, origin);
+  }
+
+  // 即時驗證：開個 WS 試試
+  let validation = { tested: false };
+  try {
+    const ws = await openELBWebSocket(cookies);
+    validation = { tested: true, wsConnected: true };
+    try { ws.close(); } catch {}
+  } catch (e) {
+    validation = { tested: true, wsConnected: false, error: e.message };
+  }
+
+  return jsonResp({
+    ok: true,
+    session: encodeSession(cookies),
+    cookieNames: Object.keys(cookies),
+    validation,
+  }, 200, origin);
+}
+
+// ──────────────────────────────────────────
 // /api/status  GET (X-Session-Token)
 // ──────────────────────────────────────────
 async function handleStatus(request, origin) {
@@ -239,73 +284,243 @@ async function handleStatus(request, origin) {
 }
 
 // ──────────────────────────────────────────
+// WebSocket 客戶端：連到 ELB 的 /logbook-api/session
+// ──────────────────────────────────────────
+async function openELBWebSocket(cookies) {
+  const wsUrl = `${ELB_BASE}/logbook-api/session`;
+
+  const resp = await fetch(wsUrl, {
+    headers: {
+      'Upgrade': 'websocket',
+      'Connection': 'Upgrade',
+      'Cookie': cookieStr(cookies),
+      'User-Agent': UA,
+      'Origin': ELB_BASE,
+      'Sec-WebSocket-Version': '13',
+      'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+    },
+  });
+
+  if (resp.status !== 101) {
+    const body = await resp.text().catch(() => '');
+    throw new Error(`WS upgrade failed: HTTP ${resp.status} — ${body.slice(0, 200)}`);
+  }
+
+  const ws = resp.webSocket;
+  if (!ws) throw new Error('No webSocket in response');
+  ws.accept();
+  return ws;
+}
+
+// 開啟 WS，發送 getAircraftList，等資料回來
+async function fetchFleetViaWS(cookies, timeoutMs = 12000) {
+  const ws = await openELBWebSocket(cookies);
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    let operatorCode = null;
+    let nextId = 0;
+    const trace = [];
+
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      try { ws.close(1000, 'done'); } catch {}
+      resolve({ ...result, trace });
+    };
+
+    const timer = setTimeout(() => {
+      finish({ ok: false, error: `WS timeout after ${timeoutMs}ms` });
+    }, timeoutMs);
+
+    ws.addEventListener('message', (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      trace.push({ dir: '←', preview: JSON.stringify(msg).slice(0, 150) });
+
+      // 第一個有 operatorCode 的訊息 → 是 INIT
+      if (!operatorCode && msg.content && msg.content.operatorCode) {
+        operatorCode = msg.content.operatorCode;
+        const subMsg = {
+          id: nextId++,
+          type: 'sub',
+          func: 'logbookApiEvent',
+          content: { type: 'ML', extensions: ['FleetDashboard:Detail'] },
+        };
+        const reqMsg = {
+          id: nextId++,
+          type: 'req',
+          func: 'getAircraftList',
+          content: {
+            id: operatorCode,
+            extensions: ['FleetDashboard:RecentDefects', 'FleetDashboard:ColumnConfiguration'],
+          },
+        };
+        trace.push({ dir: '→', preview: JSON.stringify(subMsg) });
+        trace.push({ dir: '→', preview: JSON.stringify(reqMsg) });
+        ws.send(JSON.stringify(subMsg));
+        ws.send(JSON.stringify(reqMsg));
+      }
+
+      // getAircraftList 的回應：通常 type=res 且 content 含 aircraft 陣列
+      if (msg.type === 'res' && msg.content && Array.isArray(msg.content.aircraft)) {
+        clearTimeout(timer);
+        finish({ ok: true, data: msg.content, operatorCode });
+      }
+    });
+
+    ws.addEventListener('close', (event) => {
+      clearTimeout(timer);
+      finish({ ok: false, error: `WS closed code=${event.code} reason="${event.reason || ''}"` });
+    });
+
+    ws.addEventListener('error', () => {
+      clearTimeout(timer);
+      finish({ ok: false, error: 'WS error event' });
+    });
+  });
+}
+
+// ──────────────────────────────────────────
 // /api/fleet  GET  X-Session-Token
+// 走 WebSocket 路線
 // ──────────────────────────────────────────
 async function handleFleet(request, origin) {
   const token = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
   if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
 
-  const res = await elbFetch('/elb/services/landingPage/getLandingPageImmediate?dataKeys=DASHBOARD_AIRCRAFT_LIST', token);
-  const ct = res.headers.get('content-type') || '';
-  const text = await res.text();
-
-  if (res.status !== 200) {
-    return jsonResp({ ok: false, error: `fleet HTTP ${res.status}`, bodyPreview: text.slice(0, 200) }, res.status, origin);
-  }
-  if (!ct.includes('json')) {
-    return jsonResp({
-      ok: false,
-      error: 'ELB 回了非 JSON（session 過期？）',
-      contentType: ct,
-      bodyPreview: text.slice(0, 200),
-    }, 401, origin);
-  }
+  const cookies = decodeSession(token) || {};
+  if (!cookies.JSESSIONID) return jsonResp({ ok: false, error: '缺少 JSESSIONID cookie' }, 401, origin);
 
   try {
-    return jsonResp({ ok: true, data: JSON.parse(text) }, 200, origin);
+    const result = await fetchFleetViaWS(cookies);
+    if (!result.ok) {
+      return jsonResp({ ok: false, error: result.error, trace: result.trace }, 502, origin);
+    }
+    return jsonResp({ ok: true, data: result.data, operatorCode: result.operatorCode }, 200, origin);
   } catch (e) {
-    return jsonResp({ ok: false, error: 'JSON 解析失敗', detail: String(e), bodyPreview: text.slice(0, 200) }, 500, origin);
+    return jsonResp({ ok: false, error: 'WS 連線失敗: ' + e.message }, 502, origin);
   }
+}
+
+// 開啟 WS，subscribe 單機，收集回傳的 entity 資料
+async function fetchAircraftViaWS(cookies, tail, timeoutMs = 10000) {
+  const ws = await openELBWebSocket(cookies);
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    let operatorCode = null;
+    let nextId = 0;
+    let subscribed = false;
+    const collected = [];
+    const trace = [];
+
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      try { ws.close(1000, 'done'); } catch {}
+      resolve({ ...result, trace });
+    };
+
+    const timer = setTimeout(() => {
+      // 超時 → 把目前收集到的回應傳回（可能已部分到齊）
+      if (collected.length > 0) {
+        finish({ ok: true, data: collected, partial: true });
+      } else {
+        finish({ ok: false, error: `WS timeout after ${timeoutMs}ms` });
+      }
+    }, timeoutMs);
+
+    // 子收集 timer：收到第一筆 aircraft 訊息後再等 1.5 秒，給多個 extension 機會送來
+    let collectTimer = null;
+
+    ws.addEventListener('message', (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      trace.push({ dir: '←', preview: JSON.stringify(msg).slice(0, 200) });
+
+      if (!operatorCode && msg.content && msg.content.operatorCode) {
+        operatorCode = msg.content.operatorCode;
+
+        const subMsg = {
+          id: nextId++,
+          type: 'sub',
+          func: 'logbookApiEvent',
+          content: {
+            type: 'Aircraft',
+            entityId: tail,
+            extensions: [
+              'FleetDashboard:Detail',
+              'FleetDashboard:MEL',
+              'FleetDashboard:NTC',
+              'FleetDashboard:RecentDefects',
+              'FleetDashboard:FlightLog',
+            ],
+          },
+        };
+        trace.push({ dir: '→', preview: JSON.stringify(subMsg) });
+        ws.send(JSON.stringify(subMsg));
+        subscribed = true;
+        return;
+      }
+
+      // 訊息屬於我們訂閱的那台飛機？
+      if (subscribed && msg.content) {
+        const isThisAircraft =
+          msg.content.aircraftIdentifier === tail ||
+          msg.content.entityId === tail ||
+          (msg.entityId === tail) ||
+          (msg.content.id === tail);
+
+        if (isThisAircraft || msg.type === 'res') {
+          collected.push(msg);
+          // 收到第一筆後再多等 1.5 秒給其他 extension 推資料
+          if (collectTimer) clearTimeout(collectTimer);
+          collectTimer = setTimeout(() => {
+            clearTimeout(timer);
+            finish({ ok: true, data: collected });
+          }, 1500);
+        }
+      }
+    });
+
+    ws.addEventListener('close', (event) => {
+      clearTimeout(timer);
+      if (collectTimer) clearTimeout(collectTimer);
+      if (collected.length > 0) {
+        finish({ ok: true, data: collected });
+      } else {
+        finish({ ok: false, error: `WS closed code=${event.code}` });
+      }
+    });
+
+    ws.addEventListener('error', () => {
+      clearTimeout(timer);
+      finish({ ok: false, error: 'WS error event' });
+    });
+  });
 }
 
 // ──────────────────────────────────────────
 // /api/aircraft/:tail  GET  X-Session-Token
-// 並行戳多個可能的 endpoint
+// WS 路線：訂閱單機 events
 // ──────────────────────────────────────────
 async function handleAircraft(request, tail, origin) {
   const token = request.headers.get('X-Session-Token') || new URL(request.url).searchParams.get('session');
   if (!token) return jsonResp({ ok: false, error: '未登入' }, 401, origin);
 
-  const safe = encodeURIComponent(tail);
-  const probes = [
-    `/elb/services/landingPage/getFleetDataForAircraft/Combined%20Fleet/${safe}`,
-    `/elb/services/aircraft/getAircraftState/${safe}`,
-    `/elb/services/aircraft/getAircraftDefects/${safe}`,
-    `/elb/services/aircraft/getFlightLog/${safe}?extensions=Recent`,
-    `/elb/services/landingPage/getLandingPageImmediate?dataKeys=AIRCRAFT_DETAIL&aircraftId=${safe}`,
-  ];
+  const cookies = decodeSession(token) || {};
+  if (!cookies.JSESSIONID) return jsonResp({ ok: false, error: '缺少 JSESSIONID cookie' }, 401, origin);
 
-  const results = await Promise.all(probes.map(async (p) => {
-    try {
-      const r = await elbFetch(p, token);
-      const text = await r.text();
-      const ct = r.headers.get('content-type') || '';
-      let parsed = null;
-      if (ct.includes('json')) {
-        try { parsed = JSON.parse(text); } catch {}
-      }
-      return {
-        path: p,
-        status: r.status,
-        contentType: ct,
-        body: parsed ?? text.slice(0, 500),
-      };
-    } catch (e) {
-      return { path: p, status: 0, error: String(e) };
+  try {
+    const result = await fetchAircraftViaWS(cookies, tail);
+    if (!result.ok) {
+      return jsonResp({ ok: false, error: result.error, trace: result.trace }, 502, origin);
     }
-  }));
-
-  return jsonResp({ ok: true, probes: results }, 200, origin);
+    return jsonResp({ ok: true, tail, data: result.data, partial: !!result.partial, trace: result.trace }, 200, origin);
+  } catch (e) {
+    return jsonResp({ ok: false, error: 'WS 連線失敗: ' + e.message }, 502, origin);
+  }
 }
 
 // ──────────────────────────────────────────
@@ -344,12 +559,15 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '2.1' }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.0-ws', features: ['websocket-client', 'cookie-paste'] }, 200, origin);
     }
 
     try {
       if (url.pathname === '/api/login' && request.method === 'POST') {
         return await handleLogin(request, origin);
+      }
+      if (url.pathname === '/api/cookie-login' && request.method === 'POST') {
+        return await handleCookieLogin(request, origin);
       }
       if (url.pathname === '/api/status' && request.method === 'GET') {
         return await handleStatus(request, origin);

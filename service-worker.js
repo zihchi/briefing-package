@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v23';
+const CACHE_NAME = 'briefing-v24';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [

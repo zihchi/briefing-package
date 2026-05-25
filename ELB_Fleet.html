@@ -356,23 +356,30 @@
   <!-- Login -->
   <div id="login-screen" style="display:none">
     <div class="login-card">
-      <div class="icon">🔐</div>
-      <h2>登入 ELB</h2>
-      <p class="sub">帳密只傳給本機伺服器，不會離開您的裝置</p>
+      <div class="icon">🍪</div>
+      <h2>連線 ELB</h2>
+      <p class="sub">ELB 有 Imperva 反爬蟲，需要從你已登入的瀏覽器複製 Cookie 一次。</p>
+
       <div class="field-group">
-        <label>ELB 帳號</label>
-        <input id="f-user" type="text" placeholder="員工編號" autocomplete="username" inputmode="numeric">
+        <label>從 ELB 複製整段 Cookie 字串</label>
+        <textarea id="f-cookie" rows="4" placeholder="JSESSIONID=xxx.ELB-Ground; CSRF-TOKEN=...; visid_incap_xxx=..." style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:12px;font-family:monospace;outline:none;resize:vertical;"></textarea>
       </div>
-      <div class="field-group">
-        <label>密碼</label>
-        <input id="f-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <div class="remember-row">
-        <input type="checkbox" id="f-remember">
-        <label for="f-remember">記住帳號（儲存於此裝置）</label>
-      </div>
-      <button id="login-btn" onclick="doLogin()">登入並載入機隊</button>
+
+      <button id="login-btn" onclick="doCookieLogin()">驗證並進入機隊</button>
       <div id="login-error"></div>
+
+      <details style="margin-top:18px; font-size:12px; color:var(--muted);">
+        <summary style="cursor:pointer; padding:4px 0;">📖 怎麼複製 Cookie？（一次性，幾天才需要重做）</summary>
+        <ol style="padding-left:20px; line-height:1.8; margin-top:8px;">
+          <li>另開分頁，到 <code>elb.starlux-airlines.com</code> 登入</li>
+          <li><kbd>⌘+Option+I</kbd> 開 DevTools → 點「網路」分頁</li>
+          <li>隨便點一個 <code>getLoggedUser</code> 之類的請求</li>
+          <li>右邊「標頭」找到「Cookie:」那一行</li>
+          <li>整段複製，貼到上面文字框</li>
+        </ol>
+        <p style="margin-top:10px;">或下載書籤工具：<button onclick="copyBookmarklet()" style="padding:3px 8px;border:none;border-radius:5px;background:var(--gold);color:#000;font-weight:700;cursor:pointer;font-size:11px;">📋 複製 Bookmarklet</button> 在 ELB 頁面點它，自動把 cookie 複製到剪貼簿</p>
+      </details>
+
       <div class="server-hint">
         透過 Cloudflare Worker：<code id="worker-hint">—</code><br>
         <button onclick="promptServerUrl()" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;font-size:11px;">修改 Worker 網址</button>
@@ -555,58 +562,64 @@ function showFleetScreen() {
 // Credentials
 // ─────────────────────────────────────────────
 function restoreCredentials() {
-  const saved = localStorage.getItem('elbUser');
-  if (saved) {
-    document.getElementById('f-user').value = saved;
-    document.getElementById('f-remember').checked = true;
-  }
+  // 不再儲存帳號／cookie 字串本身（敏感）
+  // session 已在 localStorage 由 setSession 處理
 }
 
 // ─────────────────────────────────────────────
 // Login
 // ─────────────────────────────────────────────
-async function doLogin() {
+async function doCookieLogin() {
   const btn = document.getElementById('login-btn');
   const errEl = document.getElementById('login-error');
-  const user = document.getElementById('f-user').value.trim();
-  const pass = document.getElementById('f-pass').value;
-  const remember = document.getElementById('f-remember').checked;
+  const cookieString = document.getElementById('f-cookie').value.trim();
 
   errEl.textContent = '';
-  if (!user || !pass) { errEl.textContent = '請輸入帳號和密碼'; return; }
+  errEl.style.color = '';
+  if (!cookieString) { errEl.textContent = '請貼上 Cookie 字串'; return; }
+  if (!cookieString.includes('JSESSIONID=')) {
+    errEl.textContent = 'Cookie 裡找不到 JSESSIONID，請確認你複製的是 ELB 的 Cookie';
+    return;
+  }
 
   btn.disabled = true;
-  btn.textContent = '登入中…';
+  btn.textContent = '驗證中…';
 
   try {
-    const r = await api('/api/login', {
+    const r = await api('/api/cookie-login', {
       method: 'POST',
-      body: JSON.stringify({ user, pass }),
+      body: JSON.stringify({ cookieString }),
     });
     if (r.ok && r.session) {
       setSession(r.session);
-      if (remember) localStorage.setItem('elbUser', user);
-      else localStorage.removeItem('elbUser');
+      // 不存 cookie 字串本身（敏感），只存 session
       showFleetScreen();
       loadFleet();
-    } else {
-      let msg = r.error || '登入失敗';
-      if (r.debug) {
-        msg += '\n\n[除錯資訊]\n' + JSON.stringify(r.debug, null, 2);
+      // 如果驗證 WS 連線失敗，提示但仍繼續
+      if (r.validation && r.validation.tested && !r.validation.wsConnected) {
+        document.getElementById('fleet-status').textContent =
+          '⚠️ Cookie 接受了，但 WebSocket 試連失敗：' + (r.validation.error || '未知');
       }
-      errEl.textContent = msg;
-      errEl.style.whiteSpace = 'pre-wrap';
-      errEl.style.textAlign = 'left';
-      errEl.style.fontFamily = 'monospace';
-      errEl.style.fontSize = '11px';
+    } else {
+      errEl.textContent = r.error || '驗證失敗';
       btn.disabled = false;
-      btn.textContent = '登入並載入機隊';
+      btn.textContent = '驗證並進入機隊';
     }
   } catch (e) {
     errEl.textContent = '無法呼叫 Worker：' + e.message;
     btn.disabled = false;
-    btn.textContent = '登入並載入機隊';
+    btn.textContent = '驗證並進入機隊';
   }
+}
+
+// Bookmarklet：在 ELB 頁面執行，把 document.cookie 複製到剪貼簿
+function copyBookmarklet() {
+  const code = `(function(){var c=document.cookie;navigator.clipboard.writeText(c).then(function(){alert('✅ 已複製 '+c.split(';').length+' 個 cookie 到剪貼簿\\n貼到 ELB 機隊頁面就行');},function(){prompt('請手動複製：',c);});})()`;
+  const bm = 'javascript:' + encodeURIComponent(code);
+  navigator.clipboard.writeText(bm).then(
+    () => alert('📋 Bookmarklet 已複製！\n\n步驟：\n1. 在書籤列空白處右鍵 → 新增書籤\n2. 名稱：ELB 抓 Cookie\n3. 網址：⌘+V 貼上剛複製的內容\n4. 開 ELB 頁面 → 點這個書籤 → cookie 自動進剪貼簿\n5. 回來這頁 ⌘+V 貼到 Cookie 框'),
+    () => alert('複製失敗，請手動複製：\n\n' + bm)
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -993,9 +1006,9 @@ async function onLogout() {
   showLoginScreen();
 }
 
-// Enter key on login
-document.getElementById('f-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
+// Enter key on cookie textarea (Ctrl/Cmd + Enter)
+document.getElementById('f-cookie').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) doCookieLogin();
 });
 
 // ─────────────────────────────────────────────
