@@ -941,7 +941,12 @@ function getLogBody(log) {
 function getActionBody(log) {
   const act = log._action;
   if (!act) return '';
-  return act.comments || act.actionToClose || '';
+  return act.maintActionDescription || act.comments || act.actionToClose || '';
+}
+function getActionLabel(log) {
+  const act = log._action;
+  if (!act) return '';
+  return act.reportingTreeActionLabel || 'Action';
 }
 
 // 雜訊：對 title 比對（不是 body）
@@ -1272,7 +1277,7 @@ function renderHistoryTab(container, data) {
           <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}${code && code !== ata ? ` <span style="color:var(--dim);font-weight:400">${esc(code)}</span>` : ''}</div>
           ${title ? `<div style="color:var(--text);font-weight:700;font-size:13px;margin-top:4px">${esc(title)}</div>` : ''}
           ${body ? `<div class="fault-desc" style="white-space:pre-wrap">${esc(body)}</div>` : ''}
-          ${action ? `<div style="margin-top:6px;padding:6px 8px;background:rgba(245,158,11,0.08);border-left:2px solid var(--gold);border-radius:4px;font-size:11px;color:var(--muted);line-height:1.5;"><strong style="color:var(--gold)">⚙ Action:</strong> ${esc(action)}</div>` : ''}
+          ${action ? `<div style="margin-top:6px;padding:6px 8px;background:rgba(245,158,11,0.08);border-left:2px solid var(--gold);border-radius:4px;font-size:11px;color:var(--muted);line-height:1.5;"><strong style="color:var(--gold)">⚙ ${esc(getActionLabel(log))}:</strong> ${esc(action)}</div>` : ''}
         </div>`;
       }
 
