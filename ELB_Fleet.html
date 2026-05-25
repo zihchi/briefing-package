@@ -591,15 +591,15 @@ function renderFleet(data) {
         var fk   = fleetSection(fd);
         var acd  = (fk && fk.aircraftData) ? fk.aircraftData : {};
         var acs  = fd.AircraftStatus || fd.aircraftStatus || {};
-        var st   = getStatusClass(
+        var st   = getStatusClass(fmt(
             dig(acd, ['Flight Status', 'flightStatus']) ||
             dig(acs, ['flightState', 'FlightState', 'flightStatus'])
-        );
+        ));
         cnt[st]++;
         cnt.defects += numVal(dig(acd, ['No. of Open Defect (Tech)', 'OpenDefectTech']) ||
-                              dig(acs, ['openDefectCount']));
+                              dig(acs, ['openDefectCount'])) || 0;
         cnt.mel     += numVal(dig(acd, ['No. of DDs (MEL)', 'MelCount']) ||
-                              dig(acs, ['deferredDefectCount']));
+                              dig(acs, ['deferredDefectCount'])) || 0;
     });
 
     $('sum-flight').textContent  = cnt.flight;
@@ -631,6 +631,20 @@ function renderFleet(data) {
     }
 
     html += '<div class="footer-note">GAS 快取最多 4 分鐘 · 🔁 略過快取強制更新</div>';
+
+    /* Debug – raw JSON for first aircraft (helps tune parsing) */
+    var firstTail = metaList.length > 0 ? (metaList[0]['Aircraft.aircraftIdentifier'] || '') : '';
+    if (firstTail && fleetData[firstTail]) {
+        html += '<details style="margin:4px 4px 16px;">' +
+                '<summary style="font-size:10px;color:#1e3a52;cursor:pointer;padding:4px 2px;">' +
+                '🔬 原始資料 Debug (' + esc(firstTail) + ')</summary>' +
+                '<pre style="background:#020617;color:#3b4a5c;font-size:9px;padding:10px;' +
+                'border-radius:8px;overflow:auto;max-height:320px;white-space:pre-wrap;' +
+                'word-break:break-all;margin-top:4px;">' +
+                esc(JSON.stringify(fleetData[firstTail], null, 2)) +
+                '</pre></details>';
+    }
+
     content.innerHTML = html;
 }
 
@@ -657,16 +671,26 @@ function renderCard(meta, fleetData) {
     var acs = fd.AircraftStatus || fd.aircraftStatus || {};
 
     /* ── Extract fields ── */
-    var flightNo = cleanFltNo(
-        dig(acd, ['Flight No.', 'FlightNo', 'flightNumber']) ||
-        dig(acs, ['flightNumber', 'FlightNumber'])
-    );
+    /* Flight No. may be a flightLog object containing route info */
+    var rawFltNo = dig(acd, ['Flight No.', 'FlightNo', 'flightNumber']) ||
+                   dig(acs, ['flightNumber', 'FlightNumber']);
+    var flightNo, fltOrig, fltDest;
+    if (rawFltNo && typeof rawFltNo === 'object' && !Array.isArray(rawFltNo)) {
+        flightNo = valStr(dig(rawFltNo, ['flightNum','flightNumber','number','value','num']));
+        if (flightNo) flightNo = flightNo.replace(/^JX\s*/i, '').trim() || null;
+        fltOrig = valStr(dig(rawFltNo, ['flightOrigin','origin','dep','departure','departureStation','from']));
+        fltDest = valStr(dig(rawFltNo, ['flightDestination','destination','dest','arr','arrival','arrivalStation','to']));
+    } else {
+        flightNo = cleanFltNo(rawFltNo);
+        fltOrig  = null;
+        fltDest  = null;
+    }
     var flightSt = fmt(
         dig(acd, ['Flight Status', 'flightStatus', 'FlightStatus']) ||
         dig(acs, ['flightState', 'FlightState', 'flightStatus'])
     );
-    var origin = fmt(dig(acs, ['flightOrigin', 'FlightOrigin', 'origin', 'dep']));
-    var dest   = fmt(dig(acs, ['flightDestination', 'FlightDestination', 'destination', 'arr']));
+    var origin = fmt(dig(acs, ['flightOrigin', 'FlightOrigin', 'origin', 'dep'])) || fltOrig;
+    var dest   = fmt(dig(acs, ['flightDestination', 'FlightDestination', 'destination', 'arr'])) || fltDest;
 
     var techN  = numVal(dig(acd, ['No. of Open Defect (Tech)',  'OpenDefectTech',  'openDefectTech'])
                      || dig(acs, ['openDefectCount']));
@@ -749,7 +773,8 @@ function renderCard(meta, fleetData) {
 
     /* Restrictions */
     var noRestr = !restr || restr === '0' || restr === '-' ||
-                  restr.toLowerCase() === 'none' || restr.toLowerCase() === 'nil';
+                  restr.toLowerCase() === 'none' || restr.toLowerCase() === 'nil' ||
+                  restr.toLowerCase() === 'n/a' || restr.toLowerCase() === 'no';
     if (!noRestr) {
         h += '<div class="restrict-row"><span>⛔</span><span>' + esc(restr) + '</span></div>';
     }
@@ -803,7 +828,33 @@ function esc(v) {
     if (v == null) return '—';
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function fmt(v) { var s = v == null ? '' : String(v).trim(); return s || null; }
+/* Convert any value (including nested objects) to a usable string */
+function valStr(v) {
+    if (v == null) return null;
+    if (typeof v === 'string') return v.trim() || null;
+    if (typeof v === 'number') return String(v);
+    if (typeof v === 'boolean') return null;
+    if (Array.isArray(v)) { return v.length ? valStr(v[0]) : null; }
+    if (typeof v === 'object') {
+        var probe = ['value','displayValue','displayText','text','label',
+                     'statusLabel','status','statusCode','code','name','description',
+                     'flightNum','flightNumber','typeName','aircraftTypeName'];
+        for (var i = 0; i < probe.length; i++) {
+            var p = v[probe[i]];
+            if (typeof p === 'string' && p.trim()) return p.trim();
+            if (typeof p === 'number' && !isNaN(p)) return String(p);
+        }
+        var strs = [];
+        Object.keys(v).forEach(function(k) {
+            var pv = v[k];
+            if (typeof pv === 'string' && pv.trim()) strs.push(pv.trim());
+        });
+        strs.sort(function(a, b) { return a.length - b.length; });
+        return strs.length ? strs[0] : null;
+    }
+    return null;
+}
+function fmt(v) { return valStr(v); }
 
 function dig(obj, keys) {
     if (!obj) return null;
@@ -816,8 +867,17 @@ function dig(obj, keys) {
 
 function numVal(v) {
     if (v == null) return null;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'object') {
+        var n = v.count !== undefined ? v.count :
+                v.value !== undefined ? v.value :
+                v.total !== undefined ? v.total :
+                v.number !== undefined ? v.number : null;
+        if (n != null) { var r = parseInt(n, 10); return isNaN(r) ? 0 : r; }
+        return null;
+    }
     var n = parseInt(v, 10);
-    return isNaN(n) ? 0 : n;
+    return isNaN(n) ? null : n;
 }
 
 function padZ(n) { return n < 10 ? '0' + n : String(n); }
@@ -852,6 +912,11 @@ function daysUntil(str) {
 
 function cleanFltNo(v) {
     if (!v) return null;
+    if (typeof v === 'object' && !Array.isArray(v)) {
+        /* Flight No. field may be a flightLog object */
+        var fn = v.flightNum || v.flightNumber || v.number || v.value || v.num;
+        return fn ? String(fn).trim().replace(/^JX\s*/i, '') || null : null;
+    }
     var s = String(v).trim().replace(/^JX\s*/i, '');
     return s || null;
 }
