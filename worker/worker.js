@@ -436,11 +436,14 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
         }
       })),
 
-      // 近 5 航班 + 每個航班的 log entries
+      // 近 5 航班 + 每個航班的 log entries（用 getFlightLog 不是 getFlight）
       Promise.all(closedFs.map(async id => {
         try {
-          const flt = await pipe.req('getFlight', { id }, 7000);
-          const logIds = Array.isArray(flt?.maintLogIds) ? flt.maintLogIds : [];
+          const flt = await pipe.req('getFlightLog', { id }, 7000);
+          // log entry IDs 在 flightLogChangeIds（不是 maintLogIds）
+          const logIds = Array.isArray(flt?.flightLogChangeIds)
+            ? flt.flightLogChangeIds
+            : (Array.isArray(flt?.maintLogIds) ? flt.maintLogIds : []);
           flt._logs = await Promise.all(
             logIds.map(lid =>
               pipe.req('getMaintLog', { id: lid }, 6000)
@@ -456,7 +459,7 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
 
       // 目前在飛的航班（基本資訊）
       Promise.all(activeFs.map(id =>
-        pipe.req('getFlight', { id }, 7000)
+        pipe.req('getFlightLog', { id }, 7000)
           .then(d => ({ _id: id, ...d }))
           .catch(e => ({ _id: id, _error: e.message }))
       )),
@@ -576,7 +579,7 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.4-probe', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'ws-probe'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.5-flightlog', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail-with-flights'] }, 200, origin);
     }
 
     try {

@@ -870,13 +870,14 @@ function renderAircraftDetail(container, tail, data) {
   if (currentFlights.length > 0) {
     const f = currentFlights[0];
     if (!f._error) {
-      const num   = fmt(f.flightNumber || f.flightNum || f.flight || '');
-      const orig  = fmt(f.departureAirport || f.origin || f.dep || '');
-      const dest  = fmt(f.arrivalAirport || f.destination || f.arr || '');
+      const num   = fmt(f.flightNum || f.flightNumber || f.flight || '');
+      const orig  = fmt(f.originStationCode || f.departureStationCode || f.departureAirport || f.origin || '');
+      const dest  = fmt(f.destinationStationCode || f.arrivalAirport || f.destination || '');
+      const date  = fmt(f.flightOriginDate || f.startDate || '');
       html += `<div class="det-sec" style="background:rgba(34,197,94,0.08);border-left:3px solid var(--green);padding-left:14px;">
         <div class="det-sec-hdr" style="color:var(--green)">✈ 目前航班</div>
         <div style="font-size:18px;font-weight:800;margin:4px 0;">${esc(num || '—')}</div>
-        <div style="font-size:14px;color:var(--text)">${esc(orig||'?')} → ${esc(dest||'?')}</div>
+        <div style="font-size:14px;color:var(--text)">${esc(orig||'?')} → ${esc(dest||'?')}${date?'  ('+esc(date.slice(0,10))+')':''}</div>
       </div>`;
     }
   }
@@ -958,10 +959,10 @@ function renderAircraftDetail(container, tail, data) {
   } else {
     for (const flt of recentFlights) {
       if (flt._error) { html += `<div class="flt-item"><div class="flt-route" style="color:var(--red)">${esc(flt._id)}: ${esc(flt._error)}</div></div>`; continue; }
-      const num  = fmt(flt.flightNumber || flt.flightNum || flt.flight || flt._id);
-      const orig = fmt(flt.departureAirport || flt.origin || flt.dep || '');
-      const dest = fmt(flt.arrivalAirport || flt.destination || flt.arr || '');
-      const dt   = fmt(flt.startDate || flt.inTime || flt.arrivalTime || flt.date || '');
+      const num  = fmt(flt.flightNum || flt.flightNumber || flt.flight || flt._id);
+      const orig = fmt(flt.originStationCode || flt.departureStationCode || flt.departureAirport || flt.origin || '');
+      const dest = fmt(flt.destinationStationCode || flt.arrivalAirport || flt.destination || '');
+      const dt   = fmt(flt.flightOriginDate || flt.startDate || flt.inTime || '');
       const logs = Array.isArray(flt._logs) ? flt._logs : [];
 
       let logHtml = '';
@@ -969,7 +970,6 @@ function renderAircraftDetail(container, tail, data) {
         if (log && !log._error) {
           const lnum = fmt(log.recordName || log._id);
           const ldesc = fmt(log.faultDescription || log.description || '');
-          const action = log.maintActionId ? '' : ''; // TODO maybe fetch
           if (lnum || ldesc) {
             logHtml += `<div class="fault-row">
               ${lnum ? `<div class="fault-code">${esc(lnum)}</div>` : ''}
