@@ -948,22 +948,28 @@ function isNoiseLog(log) {
   return SKIP_FAULT_PATTERNS.some(p => p.test(desc));
 }
 
-// 從 fuelMeasurement 抓 arrival（最後一筆）總油量
+// 從 fuelMeasurement 抓 typeOfMeasurement="Arrival Fuel" 那筆
 function extractArrivalFuel(fuels) {
   if (!Array.isArray(fuels) || fuels.length === 0) return null;
   for (const fuel of fuels) {
     if (fuel._error) continue;
-    const m = fuel.fuelMeasurement;
-    if (Array.isArray(m) && m.length > 0) {
-      // 按時間排序，取最後一筆
-      const sorted = [...m].sort((a, b) =>
-        new Date(a.originDateTime || 0) - new Date(b.originDateTime || 0));
-      const last = sorted[sorted.length - 1];
-      // 找出 total 或 quantity 欄位
-      const total = last.total || last.totalQuantity || last.quantity || last.fuelQuantity;
-      if (total != null) {
-        return { value: total, time: last.originDateTime, unit: last.unitName || 'kg' };
-      }
+    const measurements = fuel.fuelMeasurement;
+    if (!Array.isArray(measurements) || measurements.length === 0) continue;
+    // 優先找明確標示為 "Arrival Fuel"
+    const arrival = measurements.find(m =>
+      /arrival/i.test(m.typeOfMeasurement || ''));
+    const pick = arrival || measurements[measurements.length - 1];
+    if (!pick) continue;
+    const tfob = pick.totalFuelOnBoard || {};
+    const value = tfob.value;
+    const unit  = tfob.unt || tfob.unit || 'KG';
+    if (value != null) {
+      return {
+        value,
+        unit,
+        type: pick.typeOfMeasurement || 'Fuel',
+        time: pick.originDateTime,
+      };
     }
   }
   return null;
@@ -1195,8 +1201,8 @@ function renderInfoCard(data) {
       fuelHtml = `<div class="fuel-card">
         <div class="fuel-icon">⛽</div>
         <div class="fuel-info">
-          <div class="fuel-label">Arrival Fuel · ${esc(lastFlight.flightNum||'')} ${esc(lastFlight.destinationStationCode||'')}</div>
-          <div class="fuel-value">${(arrivalFuel.value||0).toLocaleString()}<span class="fuel-unit">${esc(arrivalFuel.unit||'kg')}</span></div>
+          <div class="fuel-label">${esc(arrivalFuel.type)} · ${esc(lastFlight.flightNum||'')} ${esc(lastFlight.originStationCode||'')}→${esc(lastFlight.destinationStationCode||'')}</div>
+          <div class="fuel-value">${(arrivalFuel.value||0).toLocaleString()}<span class="fuel-unit"> ${esc(arrivalFuel.unit||'KG')}</span></div>
         </div>
       </div>`;
     }
