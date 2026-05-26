@@ -36,8 +36,21 @@
       padding: 0 16px; height: 52px;
       box-shadow: 0 1px 3px rgba(15,23,42,0.04);
     }
+    #topbar .topbar-left { display: flex; align-items: center; gap: 10px; }
     #topbar .logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: -0.01em; }
     #topbar .logo span { color: var(--text); }
+    #btn-home {
+      width: 36px; height: 36px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 10px;
+      cursor: pointer; font-size: 20px; line-height: 1; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    #btn-home:hover, #btn-home:active {
+      background: var(--gold); border-color: var(--gold); color: #fff;
+    }
     #status-dot {
       display: flex; align-items: center; gap: 7px;
       font-size: 12px; color: var(--muted);
@@ -243,9 +256,20 @@
     }
     .det-flight-bar .tail-row {
       display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+      flex-wrap: wrap;
     }
     .det-flight-bar .tail { font-size: 22px; font-weight: 800; color: var(--text); }
     .det-flight-bar .ac-type { font-size: 11px; color: var(--gold); padding: 2px 8px; border: 1px solid rgba(245,158,11,0.4); border-radius: 5px; }
+    /* Route shown next to tail on wide screens; wraps to new line on narrow */
+    .det-flight-bar .tail-row .tail-route {
+      font-size: 18px; font-weight: 700; color: var(--text);
+      margin-left: auto; padding-left: 8px;
+      letter-spacing: 0.01em;
+    }
+    .det-flight-bar .tail-row .tail-route:empty { display: none; }
+    @media (max-width: 380px) {
+      .det-flight-bar .tail-row .tail-route { font-size: 15px; margin-left: 0; padding-left: 0; }
+    }
     .det-flight-bar .flight-info {
       display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-size: 17px;
     }
@@ -436,7 +460,10 @@
 
 <!-- ── Topbar ── -->
 <div id="topbar">
-  <div class="logo">✈ <span>ELB</span> 機隊</div>
+  <div class="topbar-left">
+    <button id="btn-home" onclick="goHome()" aria-label="返回主選單" title="返回主選單">←</button>
+    <div class="logo">✈ <span>ELB</span> 機隊</div>
+  </div>
   <div id="status-dot"><div class="dot"></div><span id="status-text">連線中…</span></div>
   <div id="topbar-actions">
     <button id="btn-refresh" onclick="onRefresh()" style="display:none">↻ 更新</button>
@@ -521,9 +548,9 @@
       <div class="tail-row">
         <span class="tail" id="det-tail">—</span>
         <span class="ac-type" id="det-actype"></span>
+        <span class="tail-route" id="det-route"></span>
       </div>
       <div class="flight-info">
-        <span class="flight-route" id="det-route">—</span>
         <span class="flight-num" id="det-flightnum"></span>
         <span class="flight-date" id="det-flightdate"></span>
       </div>
@@ -903,10 +930,19 @@ function buildAcObj(tail, a) {
   const ddCnt  = openDefects.length;
   const ntcCnt = notesToCrew.length;
 
-  // 航班路線資訊（會在後續 enrich 階段補上）
-  const origin = '';
-  const dest = '';
-  const flt = '';
+  // 航班路線資訊 — 優先用 active，其次 scheduled，最後 closed
+  let origin = '', dest = '', flt = '';
+  const flights = [
+    ...(Array.isArray(a.activeFlights)    ? a.activeFlights    : []),
+    ...(Array.isArray(a.scheduledFlights) ? a.scheduledFlights : []),
+    ...(Array.isArray(a.closedFlights)    ? a.closedFlights    : []),
+  ];
+  if (flights[0]) {
+    const f = flights[0];
+    origin = fmt(f.originStationCode      || f.departureStationCode || f.origin || '');
+    dest   = fmt(f.destinationStationCode || f.arrivalStationCode   || f.destination || '');
+    flt    = fmt(f.flightNum              || f.flightNumber         || '');
+  }
 
   return {
     tail, type, origin, dest, flt, stBadge, melCnt, ddCnt, ntcCnt,
@@ -988,7 +1024,7 @@ function getCrewList(flight) {
   })).filter(c => c.name);
 }
 function rankColor(duty) {
-  if (/^C/.test(duty))            return '#f59e0b'; // CAP/CP → gold
+  if (/^C/.test(duty))            return '#60a5fa'; // CAP/CP → blue (match FO)
   if (/F[O]|SFO|FO/.test(duty))   return '#60a5fa'; // F/O → blue
   if (/^R/.test(duty))            return '#a855f7'; // RP → purple
   return '#94a3b8';
@@ -1059,8 +1095,11 @@ async function openDetail(tail, cardEl) {
   const ac = fleetData.find(a => a.tail === tail);
   document.getElementById('det-tail').textContent = tail;
   document.getElementById('det-actype').textContent = ac ? ac.type : '';
-  document.getElementById('det-route').textContent = '—';
-  document.getElementById('det-flightnum').textContent = '';
+  // pre-fill route from fleet card data so user sees something while detail loads
+  document.getElementById('det-route').innerHTML = (ac && (ac.origin || ac.dest))
+    ? `${esc(ac.origin||'?')} <span style="color:var(--gold)">→</span> ${esc(ac.dest||'?')}`
+    : '';
+  document.getElementById('det-flightnum').textContent = ac && ac.flt ? ac.flt : '';
   document.getElementById('det-flightdate').textContent = '';
   document.getElementById('det-checkpoints').innerHTML = '';
 
@@ -1118,9 +1157,16 @@ function updateFlightBar(data) {
     <span class="ckpt ${hasOpenDef ? 'warn' : ''}">${hasOpenDef ? '⚠' : '✓'} Defects</span>
     <span class="ckpt ${requiresSig ? 'warn' : 'muted'}">${requiresSig ? '⚠ Pending' : '○ Certified'}</span>
   `;
-  // Crew chips
+  // Crew chips — show all crew (including inbound commander, so CAP doesn't disappear
+  // when their PID happens to match #InboundCommanderID); de-dupe by PID + duty.
   if (lastFlight) {
-    const crewList = getCrewList(lastFlight).filter(c => !c.isInbound);
+    const seen = new Set();
+    const crewList = getCrewList(lastFlight).filter(c => {
+      const key = (c.pid || c.name) + '|' + c.duty;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     if (crewList.length) {
       cpHtml += '<span style="width:100%;height:0;flex-basis:100%"></span>';
       cpHtml += crewList.map(c =>
@@ -1655,6 +1701,14 @@ function toggleDebug(id) {
 // ─────────────────────────────────────────────
 // Actions
 // ─────────────────────────────────────────────
+function goHome() {
+  // Prefer browser back (e.g. came from index.html via link); fallback to index.html
+  if (document.referrer && history.length > 1) {
+    history.back();
+  } else {
+    location.href = 'index.html';
+  }
+}
 function onRefresh() { closeDetail(); loadFleet(); }
 
 async function onLogout() {
