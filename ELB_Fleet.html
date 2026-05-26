@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#f8fafc">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ELB 機隊">
   <title>ELB 機隊 Dashboard</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0f172a; --surface: #1e293b; --surface2: #263348;
-      --border: #334155; --border2: #475569;
-      --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b;
-      --gold: #f59e0b; --gold2: #fbbf24; --gold-dim: #78350f;
-      --green: #22c55e; --red: #ef4444; --orange: #f97316;
-      --blue: #3b82f6; --purple: #a855f7;
-      --aog: #dc2626; --dd: #f97316;
+      --bg: #f8fafc; --surface: #ffffff; --surface2: #f1f5f9;
+      --border: #e2e8f0; --border2: #cbd5e1;
+      --text: #0f172a; --muted: #475569; --dim: #94a3b8;
+      --gold: #d97706; --gold2: #f59e0b; --gold-dim: #fef3c7;
+      --green: #16a34a; --red: #dc2626; --orange: #ea580c;
+      --blue: #2563eb; --purple: #9333ea;
+      --aog: #b91c1c; --dd: #ea580c;
     }
     html, body { height: 100%; }
     body {
@@ -30,10 +30,11 @@
     /* ── Topbar ── */
     #topbar {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(15,23,42,0.92); backdrop-filter: blur(12px);
+      background: rgba(248,250,252,0.92); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 16px; height: 52px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
     }
     #topbar .logo { font-size: 18px; font-weight: 800; color: var(--gold); letter-spacing: -0.01em; }
     #topbar .logo span { color: var(--text); }
@@ -108,20 +109,23 @@
     /* ── Server-offline banner ── */
     #offline-banner {
       display: none;
-      background: linear-gradient(135deg, #7c2d12, #92400e);
-      border: 1px solid #c2410c;
+      background: linear-gradient(135deg, #fff7ed, #fed7aa);
+      border: 1px solid #fdba74;
       border-radius: 14px; padding: 20px;
       margin: 20px 16px 0;
       font-size: 13px; line-height: 1.75;
+      color: #7c2d12;
     }
-    #offline-banner h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #fdba74; }
+    #offline-banner h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #9a3412; }
     #offline-banner code {
       display: inline-block;
-      background: rgba(0,0,0,0.3); padding: 6px 10px;
+      background: rgba(255,255,255,0.7); padding: 6px 10px;
       border-radius: 7px; font-family: 'SF Mono', monospace;
-      font-size: 12px; color: #fde68a; margin: 4px 0;
+      font-size: 12px; color: #7c2d12; margin: 4px 0;
       word-break: break-all;
+      border: 1px solid rgba(249,115,22,0.2);
     }
+    #offline-banner a { color: #9a3412 !important; }
 
     /* ── Fleet Dashboard ── */
     #fleet-screen { display: none; }
@@ -156,12 +160,36 @@
     .ac-card.selected { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(245,158,11,0.25); }
     .ac-card .tail {
       font-size: 17px; font-weight: 800; letter-spacing: 0.02em;
-      color: #f8fafc; margin-bottom: 4px;
+      color: var(--text); margin-bottom: 4px;
     }
+    .ac-card { box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
+    .ac-card:hover { box-shadow: 0 4px 12px rgba(217,119,6,0.12); }
     .ac-card .type-badge {
       font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-      color: var(--gold); opacity: 0.85;
+      color: var(--gold); opacity: 1;
     }
+
+    /* ── Detail: back bar (mobile-friendly) ── */
+    .det-back-bar {
+      display: flex; align-items: center;
+      padding: 10px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text);
+      border-radius: 10px; cursor: pointer;
+      font-size: 14px; font-weight: 700;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-back:hover, .btn-back:active {
+      background: var(--gold); border-color: var(--gold); color: #fff;
+    }
+    .btn-back .arrow { font-size: 16px; line-height: 1; }
     .ac-card .status-row {
       display: flex; align-items: center; gap: 6px;
       margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
@@ -172,13 +200,13 @@
       font-size: 10px; font-weight: 700; padding: 2px 6px;
       border-radius: 5px; white-space: nowrap;
     }
-    .badge.mel  { background: rgba(249,115,22,0.18); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
-    .badge.dd   { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
-    .badge.ntc  { background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
-    .badge.fly  { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
-    .badge.gnd  { background: rgba(148,163,184,0.1); color: var(--muted); border: 1px solid var(--border); }
-    .badge.maint { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
-    .badge.aog  { background: rgba(220,38,38,0.25);  color: #fca5a5; border: 1px solid rgba(220,38,38,0.4); }
+    .badge.mel  { background: rgba(234,88,12,0.10);  color: #c2410c; border: 1px solid rgba(234,88,12,0.3); }
+    .badge.dd   { background: rgba(220,38,38,0.10);  color: #b91c1c; border: 1px solid rgba(220,38,38,0.3); }
+    .badge.ntc  { background: rgba(147,51,234,0.10); color: #7e22ce; border: 1px solid rgba(147,51,234,0.3); }
+    .badge.fly  { background: rgba(22,163,74,0.10);  color: #15803d; border: 1px solid rgba(22,163,74,0.3); }
+    .badge.gnd  { background: rgba(148,163,184,0.10); color: var(--muted); border: 1px solid var(--border); }
+    .badge.maint { background: rgba(217,119,6,0.12); color: #b45309; border: 1px solid rgba(217,119,6,0.3); }
+    .badge.aog  { background: rgba(185,28,28,0.12);  color: #991b1b; border: 1px solid rgba(185,28,28,0.4); font-weight: 800; }
     .loading-spinner {
       display: inline-block; width: 18px; height: 18px;
       border: 2px solid var(--border); border-top-color: var(--gold);
@@ -209,14 +237,14 @@
     /* ── Detail: flight context bar ── */
     .det-flight-bar {
       padding: 14px 16px;
-      background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(38,51,72,0.95));
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .det-flight-bar .tail-row {
       display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
     }
-    .det-flight-bar .tail { font-size: 22px; font-weight: 800; color: #f8fafc; }
+    .det-flight-bar .tail { font-size: 22px; font-weight: 800; color: var(--text); }
     .det-flight-bar .ac-type { font-size: 11px; color: var(--gold); padding: 2px 8px; border: 1px solid rgba(245,158,11,0.4); border-radius: 5px; }
     .det-flight-bar .flight-info {
       display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-size: 17px;
@@ -230,11 +258,11 @@
     .ckpt {
       display: inline-flex; align-items: center; gap: 4px;
       font-size: 11px; padding: 3px 8px; border-radius: 12px;
-      background: rgba(34,197,94,0.12); color: #4ade80;
-      border: 1px solid rgba(34,197,94,0.3);
+      background: rgba(22,163,74,0.10); color: #15803d;
+      border: 1px solid rgba(22,163,74,0.3);
     }
-    .ckpt.warn { background: rgba(245,158,11,0.12); color: var(--gold); border-color: rgba(245,158,11,0.3); }
-    .ckpt.muted { background: var(--surface2); color: var(--dim); border-color: var(--border); }
+    .ckpt.warn { background: rgba(217,119,6,0.12); color: #b45309; border-color: rgba(217,119,6,0.3); }
+    .ckpt.muted { background: var(--surface2); color: var(--muted); border-color: var(--border); }
 
     /* ── Detail: tabs ── */
     .det-tabs {
@@ -268,13 +296,13 @@
       background: var(--surface2); color: var(--muted);
       padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700;
     }
-    .det-card .card-count.nonzero { background: rgba(245,158,11,0.2); color: var(--gold); }
-    .det-card .card-count.alert { background: rgba(239,68,68,0.2); color: #f87171; }
+    .det-card .card-count.nonzero { background: rgba(217,119,6,0.15); color: #b45309; }
+    .det-card .card-count.alert { background: rgba(220,38,38,0.15); color: #b91c1c; }
 
     /* Fuel display */
     .fuel-card {
-      background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.04));
-      border: 1px solid rgba(59,130,246,0.3);
+      background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02));
+      border: 1px solid rgba(37,99,235,0.25);
       padding: 12px 14px; border-radius: 12px;
       display: flex; align-items: center; gap: 12px;
     }
@@ -282,7 +310,7 @@
     .fuel-card .fuel-info { flex: 1; }
     .fuel-card .fuel-label { font-size: 11px; color: var(--muted); }
     .fuel-card .fuel-value {
-      font-size: 22px; font-weight: 800; color: #60a5fa;
+      font-size: 22px; font-weight: 800; color: #1d4ed8;
       font-variant-numeric: tabular-nums;
     }
     .fuel-card .fuel-unit { font-size: 11px; color: var(--dim); margin-left: 2px; }
@@ -293,11 +321,6 @@
     }
     #detail-title { font-size: 20px; font-weight: 800; flex: 1; }
     #detail-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    #btn-close-detail {
-      width: 32px; height: 32px; border: none; background: var(--surface);
-      color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-    }
     #detail-body { flex: 1; overflow-y: auto; padding: 0 0 24px; }
 
     /* Detail sections */
@@ -327,25 +350,25 @@
       font-size: 11px; padding: 2px 7px; border-radius: 5px;
       background: var(--surface2); color: var(--muted);
     }
-    .mel-meta-tag.cat-a { color: #f87171; background: rgba(239,68,68,0.1); }
-    .mel-meta-tag.cat-b { color: #fb923c; background: rgba(249,115,22,0.1); }
-    .mel-meta-tag.cat-c { color: var(--gold2); background: rgba(251,191,36,0.1); }
-    .mel-meta-tag.cat-d { color: #86efac; background: rgba(34,197,94,0.1); }
-    .expiry-ok   { color: #86efac; background: rgba(34,197,94,0.1); font-weight: 700; }
-    .expiry-warn { color: #fbbf24; background: rgba(245,158,11,0.15); font-weight: 700; }
-    .expiry-crit { color: #f87171; background: rgba(239,68,68,0.15); font-weight: 700; }
-    .expiry-exp  { color: #fca5a5; background: rgba(220,38,38,0.2);  font-weight: 700; }
+    .mel-meta-tag.cat-a { color: #b91c1c; background: rgba(220,38,38,0.10); }
+    .mel-meta-tag.cat-b { color: #c2410c; background: rgba(234,88,12,0.10); }
+    .mel-meta-tag.cat-c { color: #b45309; background: rgba(217,119,6,0.12); }
+    .mel-meta-tag.cat-d { color: #15803d; background: rgba(22,163,74,0.10); }
+    .expiry-ok   { color: #15803d; background: rgba(22,163,74,0.10); font-weight: 700; }
+    .expiry-warn { color: #b45309; background: rgba(217,119,6,0.12); font-weight: 700; }
+    .expiry-crit { color: #b91c1c; background: rgba(220,38,38,0.12); font-weight: 700; }
+    .expiry-exp  { color: #991b1b; background: rgba(185,28,28,0.15); font-weight: 700; }
 
     /* NTC item */
     .ntc-item {
-      background: var(--surface); border: 1px solid rgba(168,85,247,0.2);
+      background: var(--surface); border: 1px solid rgba(147,51,234,0.25);
       border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
     }
     .ntc-item .ntc-head { display: flex; align-items: flex-start; gap: 8px; }
-    .ntc-item .ntc-num { font-size: 12px; font-weight: 700; color: #c084fc; flex-shrink: 0; }
+    .ntc-item .ntc-num { font-size: 12px; font-weight: 700; color: #7e22ce; flex-shrink: 0; }
     .ntc-item .ntc-desc { font-size: 13px; color: var(--text); line-height: 1.4; flex: 1; }
     .ntc-toggle {
-      font-size: 11px; color: #c084fc; cursor: pointer; margin-top: 6px;
+      font-size: 11px; color: #7e22ce; cursor: pointer; margin-top: 6px;
       display: inline-block; user-select: none;
     }
     .ntc-content {
@@ -370,7 +393,7 @@
       background: var(--bg); border-radius: 7px; padding: 7px 9px;
       font-size: 12px; line-height: 1.5;
     }
-    .fault-code { color: var(--orange); font-weight: 700; margin-bottom: 2px; }
+    .fault-code { color: var(--orange); font-weight: 700; margin-bottom: 2px; font-size: 12px; }
     .fault-desc { color: var(--text); }
     .fault-action { color: var(--muted); font-style: italic; }
 
@@ -472,9 +495,9 @@
   <!-- Fleet dashboard -->
   <div id="fleet-screen">
     <div id="filter-bar">
-      <button class="flt-btn active" data-type="ALL" onclick="setFilter('ALL', this)">全部</button>
+      <button class="flt-btn" data-type="ALL" onclick="setFilter('ALL', this)">全部</button>
       <button class="flt-btn" data-type="A321" onclick="setFilter('A321', this)">A321neo</button>
-      <button class="flt-btn" data-type="A330" onclick="setFilter('A330', this)">A330-900</button>
+      <button class="flt-btn active" data-type="A330" onclick="setFilter('A330', this)">A330-900</button>
       <button class="flt-btn" data-type="A350" onclick="setFilter('A350', this)">A350</button>
     </div>
     <div id="fleet-status"></div>
@@ -487,21 +510,24 @@
 
 <!-- Detail Panel -->
 <div id="detail-panel">
+  <div class="det-back-bar">
+    <button class="btn-back" onclick="closeDetail()" aria-label="返回機隊列表">
+      <span class="arrow">←</span>
+      <span>返回機隊</span>
+    </button>
+  </div>
   <div id="detail-flight-bar" class="det-flight-bar">
-    <div style="display:flex;align-items:flex-start;gap:10px;">
-      <div style="flex:1">
-        <div class="tail-row">
-          <span class="tail" id="det-tail">—</span>
-          <span class="ac-type" id="det-actype"></span>
-        </div>
-        <div class="flight-info">
-          <span class="flight-route" id="det-route">—</span>
-          <span class="flight-num" id="det-flightnum"></span>
-          <span class="flight-date" id="det-flightdate"></span>
-        </div>
-        <div class="checkpoints" id="det-checkpoints"></div>
+    <div style="flex:1">
+      <div class="tail-row">
+        <span class="tail" id="det-tail">—</span>
+        <span class="ac-type" id="det-actype"></span>
       </div>
-      <button id="btn-close-detail" onclick="closeDetail()" style="background:var(--surface2);border:none;color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
+      <div class="flight-info">
+        <span class="flight-route" id="det-route">—</span>
+        <span class="flight-num" id="det-flightnum"></span>
+        <span class="flight-date" id="det-flightdate"></span>
+      </div>
+      <div class="checkpoints" id="det-checkpoints"></div>
     </div>
   </div>
   <div class="det-tabs">
@@ -541,7 +567,7 @@ function promptServerUrl() {
 // State
 // ─────────────────────────────────────────────
 let fleetData = [];
-let currentFilter = 'ALL';
+let currentFilter = 'A330';
 let selectedTail = null;
 
 // ─────────────────────────────────────────────
