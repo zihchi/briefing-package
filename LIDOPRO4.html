@@ -297,23 +297,21 @@
                         <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                DEFECT / eLB 截圖區
+                                ELB Dashboard / History <span id="elb-frame-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span>
                             </span>
                             <div class="flex items-center gap-3">
-                                <a href="https://elb.starlux-airlines.com/elb/#/dashboard/fleet" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 eLB 系統</a>
-                                <button onclick="clearImage('mel')" class="text-stone-300 hover:text-white transition-colors no-print" title="Clear Image">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                <a href="ELB_Fleet.html" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 開新分頁</a>
+                                <button onclick="reloadElbFrame()" class="text-stone-300 hover:text-white transition-colors no-print" title="重試載入">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                 </button>
                             </div>
                         </div>
-                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[150px] relative">
-                            <div id="mel-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                    <button onclick="pasteFromClipboard('mel')" class="w-full bg-[#8b5a2b]/10 border border-[#8b5a2b]/30 text-[#8b5a2b] py-3 rounded-xl shadow-sm hover:bg-[#8b5a2b]/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
-                                </div>
+                        <div class="bg-[#fbf9f6] relative" style="min-height: 580px;">
+                            <div id="elb-frame-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-stone-400 font-bold text-sm tracking-wide py-8 px-4 text-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                等待擷取航班資料，自動載入該機號的 ELB Dashboard 與 History
                             </div>
-                            <img id="mel-image" src="" alt="MEL Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
+                            <iframe id="elb-frame" src="" class="hidden w-full border-0" style="height: 580px;" loading="lazy" title="ELB Dashboard"></iframe>
                         </div>
                     </div>
                 </div>
@@ -500,7 +498,7 @@
                         <div class="bg-gradient-to-r from-indigo-700 to-indigo-800 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                                Turbli 亂流預測
+                                Turbli 亂流預測 · 今 / 明
                             </span>
                             <div class="flex items-center gap-3">
                                 <a id="turbli-link" href="#" target="_blank" class="hidden bg-indigo-500/20 hover:bg-indigo-500/40 border border-indigo-400/50 text-indigo-100 text-[9px] md:text-[10px] px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1 no-print">
@@ -511,15 +509,15 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex items-center justify-center min-h-[200px] relative">
+                        <div class="p-4 md:p-6 bg-[#fbf9f6] flex-grow flex flex-col gap-4 min-h-[200px]">
                             <div id="turbli-placeholder" class="text-stone-400 font-bold text-sm tracking-wide border-2 border-dashed border-stone-300 rounded-xl w-full h-full flex flex-col items-center justify-center py-8">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-4 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                
-                                <div class="flex gap-4 mb-4 w-full max-w-[320px] no-print">
-                                    <button onclick="pasteFromClipboard('turbli')" class="w-full bg-indigo-50 border border-indigo-200 text-indigo-600 py-3 rounded-xl shadow-sm hover:bg-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 貼上</button>
+                                <div class="text-xs text-stone-400 mb-4">擷取航班後自動載入今、明兩日 chartcache</div>
+                                <div class="flex gap-4 w-full max-w-[320px] no-print">
+                                    <button onclick="pasteFromClipboard('turbli')" class="w-full bg-indigo-50 border border-indigo-200 text-indigo-600 py-3 rounded-xl shadow-sm hover:bg-indigo-100 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm">📋 手動貼上</button>
                                 </div>
                             </div>
-                            
+                            <div id="turbli-auto" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-4 w-full"></div>
                             <img id="turbli-image" src="" alt="Turbli Image" class="hidden w-full h-auto max-h-[600px] object-contain rounded-lg shadow-sm border border-stone-200">
                         </div>
                     </div>
@@ -607,7 +605,9 @@
         })();
 
         // Variables
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwiaVfxZ4zGAZOprcjL4jmv8tG1p865jGtxB2EXOcBpl02WLRXSW1_sZv51LAHHbV32QQ/exec'; 
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwiaVfxZ4zGAZOprcjL4jmv8tG1p865jGtxB2EXOcBpl02WLRXSW1_sZv51LAHHbV32QQ/exec';
+        // ELB Cloudflare Worker — 與 ELB_Fleet.html 共用 session 透過 localStorage
+        const ELB_WORKER_URL = 'https://elb.zihchi.workers.dev';
         const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
@@ -683,17 +683,40 @@
             if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lido-pass').focus(); }
         });
 
-        document.getElementById('lido-connect-btn').addEventListener('click', () => {
+        document.getElementById('lido-connect-btn').addEventListener('click', async () => {
             const user = document.getElementById('lido-user').value.trim();
             const pass = document.getElementById('lido-pass').value.trim();
             if (!user || !pass) return showToast('請完整輸入帳戶憑證', true);
-            
+
             savedLidoUser = user; savedLidoPass = pass;
             loginWrapper.classList.add('hidden');
             mainApp.classList.remove('hidden');
             document.getElementById('target-flight').focus();
             showToast('連線模組就緒，可開始全自動派飛！');
+
+            // 順手做 ELB 背景登入（同帳密），讓 ELB iframe 拿得到 session
+            loginElbInBackground(user, pass);
         });
+
+        async function loginElbInBackground(user, pass) {
+            try {
+                // 寫死 Worker URL，讓 ELB_Fleet.html 在 iframe 內也能讀到
+                localStorage.setItem('elbWorkerUrl', ELB_WORKER_URL);
+                const r = await fetch(ELB_WORKER_URL + '/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass }),
+                });
+                const j = await r.json();
+                if (j.ok && j.session) {
+                    localStorage.setItem('elbSession', j.session);
+                } else {
+                    console.warn('ELB 背景登入失敗:', j.error || '未知錯誤');
+                }
+            } catch (e) {
+                console.warn('ELB 背景登入無法連線:', e.message);
+            }
+        }
 
         document.getElementById('lock-again-btn').addEventListener('click', () => {
             savedLidoUser = ''; savedLidoPass = '';
@@ -1225,7 +1248,9 @@
             const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
             if (rawInput2Placeholder) rawInput2Placeholder.classList.remove('hidden');
             
-            ['profile', 'mel', 'wni', 'sigwx', 'turbli'].forEach(prefix => clearImage(prefix));
+            ['profile', 'wni', 'sigwx', 'turbli'].forEach(prefix => clearImage(prefix));
+            clearElbFrame();
+            clearTurbli2Days();
             parseData();
             parseNotams();
             
@@ -1259,7 +1284,7 @@
                 }
             }
             
-            ['profile', 'mel', 'wni', 'turbli'].forEach(prefix => {
+            ['profile', 'wni', 'turbli'].forEach(prefix => {
                 const savedImg = localStorage.getItem(`dispatch_${prefix}_image`);
                 if (savedImg) showImage(savedImg, prefix, true);
             });
@@ -1443,6 +1468,122 @@
             }
         }
 
+        // ── ELB iframe 嵌入 ──────────────────────────────────────
+        function normalizeReg(reg) {
+            if (!reg || reg === 'N/A' || reg === '----') return '';
+            let r = String(reg).trim().toUpperCase().replace(/\s+/g, '');
+            // B58301 → B-58301
+            if (/^B\d/.test(r)) r = 'B-' + r.slice(1);
+            return r;
+        }
+
+        function loadElbForReg(reg) {
+            const normReg = normalizeReg(reg);
+            const frame = document.getElementById('elb-frame');
+            const placeholder = document.getElementById('elb-frame-placeholder');
+            const headerReg = document.getElementById('elb-frame-reg');
+            if (!normReg) { clearElbFrame(); return; }
+            if (headerReg) headerReg.textContent = normReg;
+            frame.src = `./ELB_Fleet.html?compact=1&tail=${encodeURIComponent(normReg)}`;
+            frame.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+
+        function clearElbFrame() {
+            const frame = document.getElementById('elb-frame');
+            const placeholder = document.getElementById('elb-frame-placeholder');
+            const headerReg = document.getElementById('elb-frame-reg');
+            if (frame) { frame.src = 'about:blank'; frame.classList.add('hidden'); }
+            if (placeholder) placeholder.classList.remove('hidden');
+            if (headerReg) headerReg.textContent = '';
+        }
+
+        function reloadElbFrame() {
+            const frame = document.getElementById('elb-frame');
+            if (frame && frame.src && frame.src !== 'about:blank') {
+                const cur = frame.src; frame.src = 'about:blank';
+                setTimeout(() => { frame.src = cur; }, 50);
+            }
+        }
+
+        // ── Turbli chartcache 自動載 2 日 ─────────────────────────
+        function taipeiDateStrs() {
+            // GitHub Actions 用 Asia/Taipei (UTC+8) 算今/明，這裡跟著走
+            const nowMs = Date.now();
+            const tpe = new Date(nowMs + 8 * 3600 * 1000);
+            const fmt = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+            const today = fmt(tpe);
+            const tmrw  = fmt(new Date(tpe.getTime() + 86400000));
+            return [today, tmrw];
+        }
+
+        function currentRouteForTurbli() {
+            const dep = airportMap[currentDepICAO] || currentDepICAO || '';
+            const arr = airportMap[currentArrICAO] || currentArrICAO || '';
+            if (dep && arr && dep !== '----' && arr !== '----') return `${dep}/${arr}`;
+            return '';
+        }
+
+        function loadTurbli2Days(flightDigits) {
+            const auto = document.getElementById('turbli-auto');
+            const placeholder = document.getElementById('turbli-placeholder');
+            const manualImg = document.getElementById('turbli-image');
+            if (!flightDigits) { clearTurbli2Days(); return; }
+
+            const fNum = String(flightDigits).padStart(3, '0');
+            const [d1, d2] = taipeiDateStrs();
+            const tiles = [
+                { date: d1, label: '今日' },
+                { date: d2, label: '明日' },
+            ];
+
+            auto.innerHTML = '';
+            auto.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            manualImg.classList.add('hidden');
+
+            const turbliFlightForUrl = String(parseInt(flightDigits, 10) || flightDigits);
+            const route = currentRouteForTurbli();
+
+            for (const t of tiles) {
+                const cachePath = `./chartcache/${fNum}-${t.date}.png?v=${Date.now().toString().slice(0,-3)}`;
+                const turbliUrl = route ? `https://turbli.com/${route}/${t.date}/JX-${turbliFlightForUrl}/` : '#';
+
+                const tile = document.createElement('div');
+                tile.className = 'flex flex-col gap-2';
+                tile.innerHTML = `
+                    <div class="flex items-baseline justify-between px-1">
+                        <span class="text-xs font-bold text-indigo-700"><span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded mr-1">${t.label}</span> ${t.date}</span>
+                        <span class="text-[10px] text-stone-400 data-font">JX-${turbliFlightForUrl} · ${fNum}</span>
+                    </div>
+                    <div class="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm relative min-h-[180px] flex items-center justify-center">
+                        <img alt="Turbli ${t.label} ${t.date}" class="w-full h-auto block" data-cache="${cachePath}" data-turbli="${turbliUrl}" data-date="${t.date}">
+                    </div>`;
+                auto.appendChild(tile);
+
+                const img = tile.querySelector('img');
+                img.addEventListener('error', () => {
+                    img.parentElement.innerHTML = `
+                        <div class="flex flex-col items-center justify-center p-6 text-center text-xs text-stone-500 gap-3 w-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <div>chartcache 尚未抓到 ${t.date}</div>
+                            <div class="flex gap-2 no-print">
+                                ${turbliUrl !== '#' ? `<a href="${turbliUrl}" target="_blank" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded text-xs font-bold">🔗 開 turbli</a>` : ''}
+                                <button onclick="pasteFromClipboard('turbli')" class="bg-stone-50 border border-stone-200 text-stone-600 px-3 py-1.5 rounded text-xs font-bold">📋 貼上</button>
+                            </div>
+                        </div>`;
+                }, { once: true });
+                img.src = cachePath;
+            }
+        }
+
+        function clearTurbli2Days() {
+            const auto = document.getElementById('turbli-auto');
+            const placeholder = document.getElementById('turbli-placeholder');
+            if (auto) { auto.innerHTML = ''; auto.classList.add('hidden'); }
+            if (placeholder) placeholder.classList.remove('hidden');
+        }
+
         function clearImage(prefix) {
             localStorage.removeItem(`dispatch_${prefix}_image`);
             if (prefix === 'sigwx') {
@@ -1451,7 +1592,13 @@
                 const img = document.getElementById(`${prefix}-image`);
                 if (img) { img.src = ''; img.classList.add('hidden'); }
             }
-            document.getElementById(`${prefix}-placeholder`).classList.remove('hidden');
+            // 'turbli' 同時清掉今/明自動載的 chartcache tiles
+            if (prefix === 'turbli') {
+                const auto = document.getElementById('turbli-auto');
+                if (auto) { auto.innerHTML = ''; auto.classList.add('hidden'); }
+            }
+            const placeholder = document.getElementById(`${prefix}-placeholder`);
+            if (placeholder) placeholder.classList.remove('hidden');
         }
 
         function extractData(text, keyword) {
@@ -1734,6 +1881,13 @@
                 turbliLink.href = `https://turbli.com/${airportMap[currentDepICAO]||currentDepICAO}/${airportMap[currentArrICAO]||currentArrICAO}/${tDate}/${tFlight}/`;
                 turbliLink.classList.remove('hidden');
             } else { turbliLink.classList.add('hidden'); }
+
+            // 載入該機號的 ELB Dashboard / History（iframe 嵌入 ELB_Fleet.html）
+            loadElbForReg(regVal);
+
+            // 載入今、明兩日的 Turbli chartcache 圖
+            const flightDigits = (valFlight !== '----') ? valFlight.replace(/[^0-9]/g, '') : '';
+            loadTurbli2Days(flightDigits);
 
             const paxMatch = rawText2.match(/PAX\s*:\s*(\d+)\/(\d+)/i);
             if (paxMatch) {
