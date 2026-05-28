@@ -294,6 +294,12 @@
       font-size: 15px; font-weight: 800; color: var(--gold);
       letter-spacing: 0.01em;
     }
+    .inflight-tag {
+      font-size: 10px; font-weight: 700; color: #1d4ed8;
+      background: rgba(37,99,235,0.12); border: 1px solid rgba(37,99,235,0.3);
+      padding: 1px 7px; border-radius: 10px; margin-left: 4px;
+      white-space: nowrap;
+    }
     .bar-line-2 .tail-route {
       font-size: 15px; font-weight: 700; color: var(--text);
       letter-spacing: 0.01em;
@@ -329,6 +335,7 @@
       display: grid; gap: 10px;
       grid-template-columns: 1fr;
       padding: 12px;
+      align-items: start;
     }
     @media (min-width: 480px) {
       .det-section-grid.two-col { grid-template-columns: 1fr 1fr; }
@@ -347,6 +354,19 @@
     }
     .det-card .card-count.nonzero { background: rgba(217,119,6,0.15); color: #b45309; }
     .det-card .card-count.alert { background: rgba(220,38,38,0.15); color: #b91c1c; }
+
+    /* Collapsible (accordion) cards */
+    .det-card.collapsible .card-hdr {
+      cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+      margin-bottom: 0;
+    }
+    .det-card.collapsible .card-chevron {
+      margin-left: auto; color: var(--dim); font-size: 15px; line-height: 1;
+      transition: transform 0.2s; flex-shrink: 0;
+    }
+    .det-card.collapsible.open .card-chevron { transform: rotate(180deg); }
+    .det-card.collapsible .card-body { display: none; }
+    .det-card.collapsible.open .card-body { display: block; margin-top: 8px; }
 
     /* Fuel display */
     .fuel-card {
@@ -1355,8 +1375,11 @@ function setDetTab(name) {
 
 // ── 更新頂部 flight context bar ──
 function updateFlightBar(data) {
-  const recent = (data.recentFlights || []).filter(f => !f._error);
-  const lastFlight = recent[0]; // 最新一筆 closed flight
+  // 優先顯示正在飛的航班（activeFlights），其次最近一筆已落地（closedFlights）
+  const current = (data.currentFlights || []).filter(f => !f._error);
+  const recent  = (data.recentFlights  || []).filter(f => !f._error);
+  const inFlight  = !!current[0];
+  const lastFlight = current[0] || recent[0];
 
   if (lastFlight) {
     const num   = fmt(lastFlight.flightNum || '');
@@ -1364,7 +1387,8 @@ function updateFlightBar(data) {
     const dest  = fmt(lastFlight.destinationStationCode || '');
     const date  = fmt(lastFlight.flightOriginDate || '');
     document.getElementById('det-route').innerHTML = `${esc(orig||'?')} <span style="color:var(--gold)">→</span> ${esc(dest||'?')}`;
-    document.getElementById('det-flightnum').textContent = num;
+    document.getElementById('det-flightnum').innerHTML =
+      esc(num) + (inFlight ? ` <span class="inflight-tag">✈ In Flight</span>` : '');
     document.getElementById('det-flightdate').textContent = date ? date.slice(0,10) : '';
   }
 
@@ -1427,9 +1451,8 @@ function renderDashboardTab(container, data) {
     melsByType[classifyMel(m)].push(m);
   }
 
-  // state.openDefects is just an ID/metadata array — the real ML records
-  // live inside recentFlights[i]._logs. Pull them from there and dedupe.
-  const openDefs = collectOpenDefectLogs(data);
+  // Open defects：worker enrich 的完整記錄，或用 state.openDefects id 對照
+  const openDefs = collectOpenDefects(data);
   const openDefCount = openDefs.length;
 
   let html = `<div class="det-section-grid two-col">`;
@@ -1458,20 +1481,17 @@ function renderDashboardTab(container, data) {
   html += `</div>`;
 
   // 5. Notices to Crew (全寬)
-  html += `<div style="padding:0 12px 8px">`;
-  html += `<div class="det-card">
-    <div class="card-hdr">
-      <span class="card-title" style="color:#c084fc">📢 Notices to Crew</span>
-      <span class="card-count ${ntcs.length>0?'nonzero':''}">${ntcs.length}</span>
-    </div>`;
+  let ntcBody;
   if (!ntcs.length) {
-    html += `<div class="empty-note" style="font-size:12px">無 NTC</div>`;
+    ntcBody = `<div class="empty-note" style="font-size:12px">無 NTC</div>`;
   } else {
-    for (let i = 0; i < ntcs.length; i++) {
-      html += renderNtcMini(ntcs[i], i);
-    }
+    ntcBody = '';
+    for (let i = 0; i < ntcs.length; i++) ntcBody += renderNtcMini(ntcs[i], i);
   }
-  html += `</div></div>`;
+  html += `<div style="padding:0 12px 8px">`;
+  html += renderDashCard('📢 Notices to Crew', ntcs.length, ntcs.length > 0 ? 'nonzero' : '',
+    ntcBody, { titleStyle: 'color:#c084fc', open: ntcs.length > 0 });
+  html += `</div>`;
 
   // 6. Information
   html += `<div style="padding:0 12px 12px">`;
@@ -1481,33 +1501,60 @@ function renderDashboardTab(container, data) {
   container.innerHTML = html;
 }
 
-function renderDashCard(title, count, countCls, bodyHtml) {
-  return `<div class="det-card">
-    <div class="card-hdr">
-      <span class="card-title">${esc(title)}</span>
+// 可收合卡片：有內容(count>0)預設展開，空的預設收合；點標題列切換
+let _dashCardSeq = 0;
+function renderDashCard(title, count, countCls, bodyHtml, opts) {
+  opts = opts || {};
+  const open = (opts.open !== undefined) ? opts.open : (count > 0);
+  const titleStyle = opts.titleStyle ? ` style="${opts.titleStyle}"` : '';
+  return `<div class="det-card collapsible${open ? ' open' : ''}">
+    <div class="card-hdr" onclick="toggleDashCard(this)">
+      <span class="card-title"${titleStyle}>${esc(title)}</span>
       <span class="card-count ${countCls}">${count}</span>
+      <span class="card-chevron">⌄</span>
     </div>
-    ${bodyHtml || ''}
+    <div class="card-body">${bodyHtml || ''}</div>
   </div>`;
 }
 
-// 從 recentFlights[i]._logs 收集 ML (Maintenance Log) 記錄，去除雜訊與重複
-function collectOpenDefectLogs(data) {
-  const flights = (data?.recentFlights || []).filter(f => !f._error);
+function toggleDashCard(hdrEl) {
+  const card = hdrEl.closest('.det-card');
+  if (card) card.classList.toggle('open');
+}
+
+// 取得「進行中缺陷」清單。
+//   首選：worker 已 enrich 的 data.openDefects（完整 ML 記錄）。
+//   後備（worker 尚未重新部署時）：用 state.openDefects 的 id 去
+//   recentFlights[i]._logs 對照出完整記錄。
+function collectOpenDefects(data) {
+  if (Array.isArray(data?.openDefects) && data.openDefects.length) {
+    return data.openDefects.filter(d => d && !d._error);
+  }
+  const st = data?.state || {};
+  const openIds = Array.isArray(st.openDefects) ? st.openDefects : [];
+  if (!openIds.length) return [];
+
+  // index 近期航班裡的所有 log（用 _id 與 recordName 當 key）
+  const index = {};
+  for (const flt of (data?.recentFlights || [])) {
+    if (!flt || flt._error) continue;
+    for (const log of (Array.isArray(flt._logs) ? flt._logs : [])) {
+      if (!log || log._error) continue;
+      if (log._id != null) index[String(log._id)] = log;
+      const rn = fmt(log.recordName || '');
+      if (rn) index[rn] = log;
+    }
+  }
+
   const seen = new Set();
   const result = [];
-  for (const flt of flights) {
-    const logs = Array.isArray(flt._logs) ? flt._logs : [];
-    for (const log of logs) {
-      if (!log || log._error) continue;
-      const num = fmt(log.recordName || log._id || '');
-      if (!num) continue;
-      if (!/^ML/i.test(num)) continue;        // 只看 ML*
-      if (isNoiseLog(log)) continue;            // 跳過 NIL DEFECT / TURNAROUND CHECK 之類
-      if (seen.has(num)) continue;              // 同一 ML 跨多班只算一次
-      seen.add(num);
-      result.push(log);
-    }
+  for (const raw of openIds) {
+    const key = (raw && typeof raw === 'object')
+      ? String(raw._id ?? raw.id ?? fmt(raw))
+      : String(raw);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(index[key] || (typeof raw === 'object' ? raw : { _id: key }));
   }
   return result;
 }

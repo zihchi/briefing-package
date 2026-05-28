@@ -410,11 +410,12 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
 
     const ntcIds   = Array.isArray(state.notesToCrew)     ? state.notesToCrew     : [];
     const melIds   = Array.isArray(state.deferredDefects) ? state.deferredDefects : [];
+    const openIds  = Array.isArray(state.openDefects)     ? state.openDefects     : [];
     const closedFs = Array.isArray(state.closedFlights)   ? state.closedFlights.slice(0, 5) : [];
     const activeFs = Array.isArray(state.activeFlights)   ? state.activeFlights   : [];
 
     // Step 2: 並行抓所有東西
-    const [ntcs, mels, recentFlights, currentFlights] = await Promise.all([
+    const [ntcs, mels, openDefs, recentFlights, currentFlights] = await Promise.all([
       // NTC 全文
       Promise.all(ntcIds.map(id =>
         pipe.req('getNoteToCrew', { id }, 7000)
@@ -429,6 +430,21 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
           const maId = ml?.latestDeferringMaintActionId;
           if (maId) {
             ml._action = await pipe.req('getMaintAction', { id: maId }, 7000).catch(() => null);
+          }
+          return { _id: id, ...ml };
+        } catch (e) {
+          return { _id: id, _error: e.message };
+        }
+      })),
+
+      // Open Defects（state.openDefects 是 maintLog id 清單）— 抓全文 + 維修動作
+      Promise.all(openIds.map(async raw => {
+        const id = (raw && typeof raw === 'object') ? (raw._id || raw.id || raw.recordId) : raw;
+        try {
+          const ml = await pipe.req('getMaintLog', { id }, 7000);
+          const actId = ml?.latestMaintActionId;
+          if (actId) {
+            ml._action = await pipe.req('getMaintAction', { id: actId }, 6000).catch(() => null);
           }
           return { _id: id, ...ml };
         } catch (e) {
@@ -494,6 +510,7 @@ async function fetchAircraftDetailViaWS(cookies, tail, timeoutMs = 30000) {
         state,
         notesToCrew: ntcs,
         deferredDefects: mels,
+        openDefects: openDefs,
         recentFlights,
         currentFlights,
       },
