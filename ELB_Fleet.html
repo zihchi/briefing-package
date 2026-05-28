@@ -207,7 +207,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     #fleet-status { padding: 20px 16px; color: var(--muted); font-size: 14px; text-align: center; }
 
-    /* ── Detail panel ── iPad/iPhone friendly 全螢幕 ── */
+    /* ── Detail panel ── mobile: slide-in / iPad+: inline below grid ── */
     #detail-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: min(560px, 100vw);
@@ -226,37 +226,84 @@
       #detail-panel { padding-top: env(safe-area-inset-top); }
     }
 
-    /* ── Detail: flight context bar ── */
+    /* iPad / desktop: detail flows in-document below the fleet grid */
+    @media (min-width: 769px) {
+      #detail-panel {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-top: 4px solid var(--gold);
+        transform: none;
+        transition: none;
+        z-index: auto;
+        display: none;
+        overflow: visible;
+        padding-top: 0 !important;
+      }
+      #detail-panel.open { display: flex; }
+      #detail-overlay { display: none !important; }
+      #detail-body { overflow-y: visible !important; max-height: none !important; flex: none !important; }
+      #det-close { display: flex !important; }
+    }
+
+    /* Close button (iPad inline mode — replaces overlay tap) */
+    #det-close {
+      position: absolute; top: 10px; right: 10px;
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid var(--border2);
+      border-radius: 50%;
+      font-size: 20px; line-height: 1; font-weight: 700;
+      color: var(--muted); cursor: pointer;
+      display: none;
+      align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      z-index: 2;
+    }
+    #det-close:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+    /* ── Detail: flight context bar (re-layered) ── */
     .det-flight-bar {
-      padding: 14px 16px;
+      padding: 14px 44px 14px 16px;
       background: linear-gradient(135deg, #fffbeb, #fef3c7);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      position: relative;
     }
-    .det-flight-bar .tail-row {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
-      flex-wrap: wrap;
+    .det-bar-content { display: flex; flex-direction: column; gap: 6px; }
+    .bar-line {
+      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      min-height: 0;
     }
-    .det-flight-bar .tail { font-size: 22px; font-weight: 800; color: var(--text); }
-    .det-flight-bar .ac-type { font-size: 11px; color: var(--gold); padding: 2px 8px; border: 1px solid rgba(245,158,11,0.4); border-radius: 5px; }
-    /* Route shown next to tail on wide screens; wraps to new line on narrow */
-    .det-flight-bar .tail-row .tail-route {
-      font-size: 18px; font-weight: 700; color: var(--text);
-      margin-left: auto; padding-left: 8px;
+    .bar-line-1 .tail {
+      font-size: 22px; font-weight: 800; color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .bar-line-1 .ac-type {
+      font-size: 11px; color: var(--gold);
+      padding: 2px 8px; border: 1px solid rgba(245,158,11,0.4);
+      border-radius: 5px;
+      align-self: center;
+    }
+    .bar-line-1 .flight-date {
+      font-size: 12px; color: var(--muted);
+      margin-left: auto;
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-line-2 .flight-num {
+      font-size: 15px; font-weight: 800; color: var(--gold);
       letter-spacing: 0.01em;
     }
-    .det-flight-bar .tail-row .tail-route:empty { display: none; }
-    @media (max-width: 380px) {
-      .det-flight-bar .tail-row .tail-route { font-size: 15px; margin-left: 0; padding-left: 0; }
+    .bar-line-2 .tail-route {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      letter-spacing: 0.01em;
     }
-    .det-flight-bar .flight-info {
-      display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-size: 17px;
-    }
-    .det-flight-bar .flight-route { font-weight: 700; }
-    .det-flight-bar .flight-num { font-size: 13px; color: var(--gold); font-weight: 700; }
-    .det-flight-bar .flight-date { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .bar-line-2 .flight-num:empty,
+    .bar-line-2 .tail-route:empty { display: none; }
+    .bar-line-2:not(:has(*:not(:empty))) { display: none; }
     .det-flight-bar .checkpoints {
-      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+      display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
     }
     .ckpt {
       display: inline-flex; align-items: center; gap: 4px;
@@ -461,10 +508,16 @@
     body.compact-mode #detail-panel {
       position: relative; top: 0; right: 0; bottom: 0;
       width: 100%; height: 100vh;
-      border-left: none;
+      border-left: none; border-top: none !important;
       transform: none !important;
       transition: none;
       padding-top: 0 !important;
+      display: flex !important;
+      overflow: hidden !important;
+    }
+    body.compact-mode #det-close { display: none !important; }
+    body.compact-mode #detail-body {
+      overflow-y: auto !important; flex: 1 !important;
     }
     .compact-msg {
       padding: 28px 20px; text-align: center;
@@ -562,15 +615,16 @@
 <!-- Detail Panel -->
 <div id="detail-panel">
   <div id="detail-flight-bar" class="det-flight-bar">
-    <div style="flex:1">
-      <div class="tail-row">
+    <button id="det-close" onclick="closeDetail()" aria-label="關閉" title="關閉">×</button>
+    <div class="det-bar-content">
+      <div class="bar-line bar-line-1">
         <span class="tail" id="det-tail">—</span>
         <span class="ac-type" id="det-actype"></span>
-        <span class="tail-route" id="det-route"></span>
-      </div>
-      <div class="flight-info">
-        <span class="flight-num" id="det-flightnum"></span>
         <span class="flight-date" id="det-flightdate"></span>
+      </div>
+      <div class="bar-line bar-line-2">
+        <span class="flight-num" id="det-flightnum"></span>
+        <span class="tail-route" id="det-route"></span>
       </div>
       <div class="checkpoints" id="det-checkpoints"></div>
     </div>
@@ -1248,7 +1302,16 @@ async function openDetail(tail, cardEl) {
   const panel = document.getElementById('detail-panel');
   const body  = document.getElementById('detail-body');
   panel.classList.add('open');
-  if (window.innerWidth < 640) document.getElementById('detail-overlay').classList.add('show');
+  // < 640: 手機 — 顯示半透明 overlay
+  // 640~768: 過渡 — 沒 overlay 也沒 inline，靠 slide-in 自己
+  // >= 769: iPad/桌機 — inline 在 grid 下方，平滑捲到詳情
+  if (window.innerWidth < 640) {
+    document.getElementById('detail-overlay').classList.add('show');
+  } else if (window.innerWidth >= 769) {
+    requestAnimationFrame(() => {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 
   // 重置 flight bar 顯示
   const ac = fleetData.find(a => a.tail === tail);
@@ -1364,15 +1427,16 @@ function renderDashboardTab(container, data) {
     melsByType[classifyMel(m)].push(m);
   }
 
-  const openDefCount = Array.isArray(st.openDefects) ? st.openDefects.length : 0;
+  const openDefs = Array.isArray(st.openDefects) ? st.openDefects : [];
+  const openDefCount = openDefs.length;
 
   let html = `<div class="det-section-grid two-col">`;
 
   // 1. Defects & Reporting
-  html += renderDashCard('Defects & Reporting', openDefCount, openDefCount > 0 ? 'alert' : '', `
-    ${openDefCount === 0 ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無進行中缺陷</div>' :
-    '<div style="font-size:12px;color:var(--muted)">' + openDefCount + ' 筆未處理</div>'}
-  `);
+  html += renderDashCard('Defects & Reporting', openDefCount, openDefCount > 0 ? 'alert' : '',
+    openDefCount === 0
+      ? '<div class="empty-note" style="margin-top:4px;font-size:12px">無進行中缺陷</div>'
+      : openDefs.map(renderDefectMini).join(''));
 
   // 2. MEL Deferred Defects
   html += renderDashCard('MEL Deferred Defects', melsByType.mel.length, melsByType.mel.length > 0 ? 'nonzero' : '',
@@ -1422,6 +1486,42 @@ function renderDashCard(title, count, countCls, bodyHtml) {
       <span class="card-count ${countCls}">${count}</span>
     </div>
     ${bodyHtml || ''}
+  </div>`;
+}
+
+// Defects & Reporting 卡片內 — 每筆 open defect 的縮影
+function renderDefectMini(d) {
+  if (d == null) return '';
+  // 偶爾 API 只回 ID 字串
+  if (typeof d === 'string' || typeof d === 'number') {
+    return `<div style="padding:6px 0;border-top:1px solid var(--border);margin-top:6px;font-size:12px;color:#b91c1c;font-weight:700">${esc(String(d))}</div>`;
+  }
+  if (typeof d !== 'object') return '';
+  if (d._error) {
+    return `<div style="padding:6px 0;border-top:1px solid var(--border);margin-top:6px;font-size:11px;color:var(--red)">${esc(d._id||'?')}: ${esc(d._error)}</div>`;
+  }
+  const num   = fmt(d.recordName || d._id || d.faultNumber || d.id || '');
+  const title = fmt(d.faultDescription || d.title || '');
+  const body  = fmt(d.comments || d.description || '');
+  const ata   = fmt(d.ataNum || d.ataCode || '');
+  const code  = fmt(d.faultCode || '');
+  const date  = fmt(d.originDateTime || d.dateReported || d.reportedDate || '');
+  const prefix = (num || '').slice(0, 2).toUpperCase();
+  const typeColor = prefix === 'FL' ? '#22c55e' : prefix === 'ML' ? '#f59e0b' : prefix === 'SV' ? '#3b82f6' : '#b91c1c';
+  const typeBg    = prefix === 'FL' ? 'rgba(34,197,94,0.18)' : prefix === 'ML' ? 'rgba(245,158,11,0.18)' : prefix === 'SV' ? 'rgba(59,130,246,0.18)' : 'rgba(185,28,28,0.12)';
+  const typeTag = ['FL','ML','SV'].includes(prefix)
+    ? `<span style="background:${typeBg};color:${typeColor};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${prefix}</span>`
+    : '';
+  return `<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px;margin-top:6px;">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      ${typeTag}
+      <span style="color:#b91c1c;font-weight:700">${esc(num)}</span>
+      ${ata ? `<span class="mel-meta-tag">ATA:${esc(ata)}</span>` : ''}
+      ${code && code !== ata ? `<span class="mel-meta-tag">${esc(code)}</span>` : ''}
+      ${date ? `<span style="color:var(--dim);font-size:10px;margin-left:auto">${esc(date.slice(0,10))}</span>` : ''}
+    </div>
+    ${title ? `<div style="color:var(--text);margin-top:4px;font-size:12px;font-weight:600;line-height:1.4">${esc(title)}</div>` : ''}
+    ${body ? `<div style="color:var(--muted);margin-top:3px;font-size:11px;line-height:1.5;white-space:pre-wrap">${esc(body.length>220?body.slice(0,220)+'…':body)}</div>` : ''}
   </div>`;
 }
 
