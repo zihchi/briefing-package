@@ -208,8 +208,12 @@
     #fleet-status { padding: 20px 16px; color: var(--muted); font-size: 14px; text-align: center; }
 
     /* ── Detail panel ── mobile: slide-in / iPad+: inline below grid ── */
+    /* Top offset = topbar height (52px) + iOS safe-area, so the flight-bar
+       isn't covered by the sticky topbar (z-index: 100 > panel z-index: 50). */
     #detail-panel {
-      position: fixed; top: 0; right: 0; bottom: 0;
+      position: fixed;
+      top: calc(52px + env(safe-area-inset-top, 0px));
+      right: 0; bottom: 0;
       width: min(560px, 100vw);
       background: var(--bg); border-left: 1px solid var(--border);
       z-index: 50; display: flex; flex-direction: column;
@@ -221,15 +225,11 @@
     }
     #detail-panel.open { transform: translateX(0); }
 
-    /* iPad/iPhone safe-area */
-    @supports (padding: env(safe-area-inset-top)) {
-      #detail-panel { padding-top: env(safe-area-inset-top); }
-    }
-
     /* iPad / desktop: detail flows in-document below the fleet grid */
     @media (min-width: 769px) {
       #detail-panel {
         position: static;
+        top: auto;
         width: 100%;
         height: auto;
         border-left: none;
@@ -239,7 +239,6 @@
         z-index: auto;
         display: none;
         overflow: visible;
-        padding-top: 0 !important;
       }
       #detail-panel.open { display: flex; }
       #detail-overlay { display: none !important; }
@@ -506,7 +505,8 @@
     body.compact-mode #main,
     body.compact-mode #detail-overlay { display: none !important; }
     body.compact-mode #detail-panel {
-      position: relative; top: 0; right: 0; bottom: 0;
+      position: relative;
+      top: 0 !important; right: 0; bottom: 0;
       width: 100%; height: 100vh;
       border-left: none; border-top: none !important;
       transform: none !important;
@@ -1427,7 +1427,9 @@ function renderDashboardTab(container, data) {
     melsByType[classifyMel(m)].push(m);
   }
 
-  const openDefs = Array.isArray(st.openDefects) ? st.openDefects : [];
+  // state.openDefects is just an ID/metadata array — the real ML records
+  // live inside recentFlights[i]._logs. Pull them from there and dedupe.
+  const openDefs = collectOpenDefectLogs(data);
   const openDefCount = openDefs.length;
 
   let html = `<div class="det-section-grid two-col">`;
@@ -1487,6 +1489,27 @@ function renderDashCard(title, count, countCls, bodyHtml) {
     </div>
     ${bodyHtml || ''}
   </div>`;
+}
+
+// 從 recentFlights[i]._logs 收集 ML (Maintenance Log) 記錄，去除雜訊與重複
+function collectOpenDefectLogs(data) {
+  const flights = (data?.recentFlights || []).filter(f => !f._error);
+  const seen = new Set();
+  const result = [];
+  for (const flt of flights) {
+    const logs = Array.isArray(flt._logs) ? flt._logs : [];
+    for (const log of logs) {
+      if (!log || log._error) continue;
+      const num = fmt(log.recordName || log._id || '');
+      if (!num) continue;
+      if (!/^ML/i.test(num)) continue;        // 只看 ML*
+      if (isNoiseLog(log)) continue;            // 跳過 NIL DEFECT / TURNAROUND CHECK 之類
+      if (seen.has(num)) continue;              // 同一 ML 跨多班只算一次
+      seen.add(num);
+      result.push(log);
+    }
+  }
+  return result;
 }
 
 // Defects & Reporting 卡片內 — 每筆 open defect 的縮影
