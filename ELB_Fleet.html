@@ -558,7 +558,7 @@
 <!-- ── Topbar ── -->
 <div id="topbar">
   <div class="topbar-left">
-    <button id="btn-home" onclick="goHome()" aria-label="返回主選單" title="返回主選單">←</button>
+    <button id="btn-home" onclick="goHome()" aria-label="返回機隊列表" title="返回機隊列表" style="display:none">←</button>
     <div class="logo">✈ <span>ELB</span> 機隊</div>
   </div>
   <div id="status-dot"><div class="dot"></div><span id="status-text">連線中…</span></div>
@@ -1322,6 +1322,7 @@ async function openDetail(tail, cardEl) {
   const panel = document.getElementById('detail-panel');
   const body  = document.getElementById('detail-body');
   panel.classList.add('open');
+  document.getElementById('btn-home').style.display = '';  // ← 只在詳情面板開啟時顯示
   // < 640: 手機 — 顯示半透明 overlay
   // 640~768: 過渡 — 沒 overlay 也沒 inline，靠 slide-in 自己
   // >= 769: iPad/桌機 — inline 在 grid 下方，平滑捲到詳情
@@ -1904,6 +1905,7 @@ function closeDetail() {
   document.querySelectorAll('.ac-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('detail-panel').classList.remove('open');
   document.getElementById('detail-overlay').classList.remove('show');
+  document.getElementById('btn-home').style.display = 'none';  // 回到列表後隱藏 ←
 }
 
 function renderDetail(container, tail, stateR, flightR) {
@@ -2056,18 +2058,11 @@ async function copyMelCode(event, el, code) {
 }
 
 function goHome() {
-  // 詳情面板開著時，按 ← 等於回到全機隊列表
+  // ← 只負責關閉詳情面板回到機隊列表。
+  // 在列表頁此鈕本來就隱藏（見 openDetail/closeDetail），
+  // 不再導去 index.html 或做任何頁面跳轉。
   const panel = document.getElementById('detail-panel');
-  if (panel && panel.classList.contains('open')) {
-    closeDetail();
-    return;
-  }
-  // 否則回到主選單頁面（briefing package index）
-  if (document.referrer && history.length > 1) {
-    history.back();
-  } else {
-    location.href = 'index.html';
-  }
+  if (panel && panel.classList.contains('open')) closeDetail();
 }
 function onRefresh() {
   closeDetail();
