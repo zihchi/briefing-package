@@ -1,104 +1,161 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <link rel="manifest" href="./manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Briefing">
   <meta charset="UTF-8">
-  <title>簡報箱</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <title>簡報箱</title>
+  <meta name="description" content="機師飛行簡報箱：整合飛時限制、加油與時間計算、Curfew 倒數、低溫修正、METAR/TAF 與 D-ATIS、Windy 氣象圖與航班亂流查詢的離線 PWA 工具站。">
+  <meta name="theme-color" content="#000000">
+
+  <link rel="manifest" href="./manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Briefing">
+
+  <!-- 社群分享預覽 -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="簡報箱（Briefing Package）">
+  <meta property="og:description" content="機師飛行簡報箱：整合飛時、加油、Curfew、低溫修正、METAR/TAF、Windy 氣象圖等離線工具。">
+  <meta property="og:image" content="./icon-512.png">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
-    body { background-color: #f9f7f3; font-family: "Segoe UI", sans-serif; color: #333; padding: 2em; }
-    h1 { font-size: 1.8em; margin-bottom: 0.5em; }
-    .section { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; margin-bottom: 2em; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; }
-    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; margin-bottom: 15px; justify-content: space-between;}
+    /* =========================================
+       🎨 Design Tokens — 統一設計語言
+       ========================================= */
+    :root {
+      /* 主色 */
+      --brand: #3c79ff;
+      --brand-dark: #2c5edc;
+      --brand-soft: rgba(60,121,255,0.08);
+      /* 中性灰階（冷色，偏專業/科技） */
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      /* 狀態色 */
+      --ok: #2ecc71;
+      --warn: #e67e22;
+      --danger: #e74c3c;
+      /* 圓角 */
+      --radius-card: 16px;
+      --radius-btn: 10px;
+      --radius-pill: 999px;
+      /* 陰影 */
+      --shadow-card: 0 1px 3px rgba(15,23,42,0.06), 0 8px 24px rgba(15,23,42,0.05);
+      --shadow-btn: 0 1px 2px rgba(60,121,255,0.25);
+      --shadow-pop: 0 8px 30px rgba(15,23,42,0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    h1 { font-size: 1.8em; margin-bottom: 0.5em; letter-spacing: -0.02em; }
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.25em;
+      margin-bottom: 1.5em;
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow-x: auto;
+    }
+    .section h2 { font-size: 1.3em; margin-top: 0; display: flex; align-items: center; gap: 0.3em; margin-bottom: 15px; justify-content: space-between; letter-spacing: -0.01em; }
     .section h2 div { display: flex; align-items: center; gap: 0.3em; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .btn { display: inline-block; padding: 0.8em 1.6em; background-color: #3c79ff; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-    .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1em; background-color: #f1f5f9; }
-    
+    .btn { display: inline-block; padding: 0.8em 1.6em; background-color: var(--brand); color: white; border-radius: var(--radius-btn); text-decoration: none; font-weight: bold; box-shadow: var(--shadow-btn); text-align: center; transition: background-color 0.18s, transform 0.18s, box-shadow 0.18s; }
+    .btn:hover { background-color: var(--brand-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(60,121,255,0.3); }
+    .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); margin-bottom: 1em; background-color: #f1f5f9; }
+
     /* 天氣2格圖排列 */
     .img-grid-2col { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
-    .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 100%; height: auto; }
+    .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: var(--shadow-card); max-width: 100%; height: auto; }
     @media (max-width: 768px) { .img-grid-2col img { width: 100%; } }
 
-    /* 顯著天氣 */        
+    /* 顯著天氣 */
     .img-column { text-align: center; }
-    .img-column img { display: block; width: 95%; max-width: 1200px; height: auto; margin: 0 auto 20px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .img-column img { display: block; width: 95%; max-width: 1200px; height: auto; margin: 0 auto 20px auto; border-radius: 8px; box-shadow: var(--shadow-card); }
 
     /* 通用按鈕 */
-    button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: #3c79ff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    
-    .flight-box { border-left: 6px solid #3c79ff; background: #fff; padding: 1em; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    select { font-size: 1em; padding: 0.5em; margin-left: 0.5em; border: 1px solid #ccc; border-radius: 6px; }
-    
-    .windy-section h2 button { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
-    .windy-section h2 button:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
-    
+    button { margin-top: 5px; padding: 0.8em 1.6em; font-size: 1.1em; background: var(--brand); color: #fff; border: none; border-radius: var(--radius-btn); font-weight: bold; cursor: pointer; transition: background-color 0.18s, transform 0.18s; }
+
+    .flight-box { background: var(--surface); border: 1px solid var(--border); padding: 1em; border-radius: 12px; box-shadow: var(--shadow-card); }
+    select { font-size: 1em; padding: 0.5em; margin-left: 0.5em; border: 1px solid var(--border); border-radius: 6px; }
+
+    .windy-section h2 button { background: none; border: 2px solid var(--brand); border-radius: 8px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: var(--brand); font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .windy-section h2 button:hover { background-color: var(--brand-soft); color: var(--brand-dark); }
+
     .checklist { list-style: none; padding: 0; margin: 0 0 1em 0; }
-    .checklist li { padding: 0.5em 0; border-bottom: 1px dashed #ccc; }
+    .checklist li { padding: 0.5em 0; border-bottom: 1px dashed var(--border); }
     .checklist label { font-size: 1em; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .checklist input[type="checkbox"] { width: 18px; height: 18px; accent-color: #3c79ff; }
+    .checklist input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand); }
 
     /* ⛽ Fuel Calculator 區塊 */
     .fuel-box h2 { font-size: 1.3rem; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
-    .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; border-left: 4px solid #e67e22; padding-left: 8px;}
-    .fuel-box .hint { font-size: 0.9rem; color: #555; margin-bottom: 0.8rem; }
+    .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; border-left: 4px solid var(--warn); padding-left: 8px;}
+    .fuel-box .hint { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.8rem; }
     .fuel-box .input-row { margin: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .fuel-box .input-row label { min-width: 8rem; font-weight: bold;}
-    .fuel-box .input-row input[type="range"] { accent-color: #3c79ff; }
+    .fuel-box .input-row input[type="range"] { accent-color: var(--brand); }
     .fuel-box .input-row button { padding: 0.35rem 0.9rem; cursor: pointer; font-size: 0.95rem; }
     .fuel-box #message { margin-top: 0.5rem; font-size: 0.9rem; color: #b00; font-weight: bold;}
-    .fuel-box .note { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
-    .fuel-box table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .fuel-box th, .fuel-box td { border: 1px solid #e0e0e0; padding: 0.6rem 0.8rem; text-align: right; font-size: 0.95rem; }
+    .fuel-box .note { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .fuel-box table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; box-shadow: var(--shadow-card); }
+    .fuel-box th, .fuel-box td { border: 1px solid var(--border); padding: 0.6rem 0.8rem; text-align: right; font-size: 0.95rem; }
     .fuel-box th:first-child, .fuel-box td:first-child { text-align: left; }
-    .fuel-box th { background: #f4f6f9; color: #333; }
+    .fuel-box th { background: #f4f6f9; color: var(--text); }
 
     /* =========================================
        🌍 航空氣象儀表板專用樣式
        ========================================= */
-    #map { height: 650px; width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #eee; z-index: 1; }
-    
+    #map { height: 650px; width: 100%; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); border: 1px solid var(--border); z-index: 1; }
+
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-    #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: 20px; background-color: #34495e; color: white; transition: background-color 0.5s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .status-loaded { background-color: #2ecc71 !important; }
-    .status-error { background-color: #e74c3c !important; }
-    
-    .airport-title { font-size: 16px; font-weight: bold; color: #1a252f; margin-bottom: 15px; border-bottom: 2px solid #34495e; padding-bottom: 8px; }
-    
-    .data-block { border-bottom: 2px dashed #bdc3c7; padding-bottom: 15px; margin-bottom: 15px; }
+    #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: var(--radius-pill); background-color: var(--text); color: white; transition: background-color 0.5s ease; box-shadow: var(--shadow-btn); }
+    .status-loaded { background-color: var(--ok) !important; }
+    .status-error { background-color: var(--danger) !important; }
+
+    .airport-title { font-size: 16px; font-weight: bold; color: var(--text); margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+
+    .data-block { border-bottom: 1px dashed var(--border); padding-bottom: 15px; margin-bottom: 15px; }
     .data-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    .section-title { font-size: 14px; font-weight: bold; color: #e67e22; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
-    
+    .section-title { font-size: 14px; font-weight: bold; color: var(--warn); margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
+
     /* 👇 優化：強制斷行避免爆框 */
-    .raw-text { 
-        font-family: 'Courier New', Courier, monospace; 
-        font-size: 13.5px; line-height: 1.6; background-color: #ebedef; padding: 12px; 
-        border-radius: 6px; white-space: pre-wrap; color: #2c3e50; 
+    .raw-text {
+        font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace;
+        font-size: 13.5px; line-height: 1.6; background-color: #f1f5f9; padding: 12px;
+        border-radius: 8px; white-space: pre-wrap; color: var(--text);
         word-break: break-word; overflow-wrap: anywhere; /* 關鍵防爆框屬性 */
-        border-left: 5px solid #95a5a6;
+        border-left: 4px solid var(--text-faint);
     }
-    
+
     .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; vertical-align: middle; }
-    .bg-vfr { background-color: #2ecc71; } 
-    .bg-mvfr { background-color: #3498db; } 
-    .bg-ifr { background-color: #e74c3c; } 
-    .bg-lifr { background-color: #9b59b6; } 
-    .bg-unk { background-color: #95a5a6; } 
-    
-    .border-vfr { border-left-color: #2ecc71 !important; }
+    .bg-vfr { background-color: var(--ok); }
+    .bg-mvfr { background-color: #3498db; }
+    .bg-ifr { background-color: var(--danger); }
+    .bg-lifr { background-color: #9b59b6; }
+    .bg-unk { background-color: var(--text-faint); }
+
+    .border-vfr { border-left-color: var(--ok) !important; }
     .border-mvfr { border-left-color: #3498db !important; }
-    .border-ifr { border-left-color: #e74c3c !important; }
+    .border-ifr { border-left-color: var(--danger) !important; }
     .border-lifr { border-left-color: #9b59b6 !important; }
-    
-    #btn-refresh-map { background: none; border: 2px solid #3c79ff; border-radius: 6px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: #3c79ff; font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
-    #btn-refresh-map:hover { background-color: rgba(60,121,255,0.1); color: #2c5edc; }
+
+    #btn-refresh-map { background: none; border: 2px solid var(--brand); border-radius: 8px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: var(--brand); font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
+    #btn-refresh-map:hover { background-color: var(--brand-soft); color: var(--brand-dark); }
 
     /* 👇 優化：確保彈出視窗不出界，且隱藏橫向卷軸 */
     .weather-popup { 
@@ -158,11 +215,11 @@
     .app-header-btn { background: none; border: 2px solid #e74c3c; color: #e74c3c; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; padding: 0; margin-top: 0; margin-left: auto;}
     .app-header-btn:hover { background: rgba(231,76,60,0.1); transform: scale(1.05); }
     
-    .app-card { background: #fdfdfd; border-radius: 24px; padding: 1.5em; margin-bottom: 1.5em; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; }
-    .app-result-box { text-align: center; margin-bottom: 1.2em; border-bottom: 1px solid #f0f0f0; padding-bottom: 1.2em; }
+    .app-card { background: var(--surface); border-radius: var(--radius-card); padding: 1.5em; margin-bottom: 1.5em; box-shadow: var(--shadow-card); border: 1px solid var(--border); }
+    .app-result-box { text-align: center; margin-bottom: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 1.2em; }
     .app-result-box:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
-    .app-label { font-size: 0.95em; font-weight: 600; color: #555; margin-bottom: 0.3em; }
-    .app-time-display { font-size: 2.2em; font-family: 'Courier New', Courier, monospace; letter-spacing: 4px; color: #222; font-weight: bold; }
+    .app-label { font-size: 0.95em; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3em; }
+    .app-time-display { font-size: 2.2em; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; letter-spacing: 4px; color: var(--text); font-weight: bold; }
     
     .app-section-title { font-size: 0.9em; font-weight: 600; color: #9ca3af; margin-bottom: 8px; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px;}
     
@@ -174,23 +231,23 @@
     /* 針對 3 選項的切換按鈕調整 Pill 寬度 */
     .app-toggle.tri-toggle .app-toggle-pill { width: calc(33.333% - 4px); }
 
-    .app-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px dashed #eee; }
+    .app-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px dashed var(--border); }
     .app-row:last-child { border-bottom: none; }
-    .app-row-label { font-size: 1.05em; color: #333; font-weight: 500; }
-    
+    .app-row-label { font-size: 1.05em; color: var(--text); font-weight: 500; }
+
     .app-time-input { display: flex; align-items: center; gap: 4px; background: rgba(243,244,246,0.8); border-radius: 10px; padding: 4px 12px; }
-    .app-time-input select, .app-time-input input { 
-        border: none; background: transparent; font-size: 1.1em; font-family: 'Courier New', Courier, monospace; 
-        color: #3c79ff; font-weight: bold; outline: none; padding: 0; margin: 0; text-align: center; cursor: pointer;
+    .app-time-input select, .app-time-input input {
+        border: none; background: transparent; font-size: 1.1em; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace;
+        color: var(--brand); font-weight: bold; outline: none; padding: 0; margin: 0; text-align: center; cursor: pointer;
         -webkit-appearance: none; -moz-appearance: none; appearance: none;
     }
     .app-time-input input { width: 40px; }
-    .app-time-input span { font-family: 'Courier New', Courier, monospace; color: #3c79ff; font-weight: bold; }
+    .app-time-input span { font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; color: var(--brand); font-weight: bold; }
 
-    .app-date-input { background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #3c79ff; font-weight: bold; outline: none; width: 140px;}
-    
+    .app-date-input { background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: var(--brand); font-weight: bold; outline: none; width: 140px;}
+
     /* 確保所有文字輸入框沒有外距干擾排版 */
-    .app-text-input { margin: 0; background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: #333; font-weight: bold; outline: none; width: 100%; box-sizing: border-box; }
+    .app-text-input { margin: 0; background: rgba(243,244,246,0.8); border: none; border-radius: 10px; padding: 8px 12px; font-size: 1.05em; color: var(--text); font-weight: bold; outline: none; width: 100%; box-sizing: border-box; }
 
     /* 雙欄排版設定 (iPad 橫向優化) */
     .app-grid { display: flex; gap: 24px; align-items: stretch; }
@@ -206,7 +263,7 @@
     /* 時間計算器分頁樣式 */
     .time-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 1.5em; gap: 10px;}
     .time-tab-btn { flex: 1; padding: 12px 0; text-align: center; font-size: 1em; font-weight: bold; color: #888; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: 0.3s; margin-top:0; border-radius: 8px 8px 0 0;}
-    .time-tab-btn.active { color: #3c79ff; border-bottom-color: #3c79ff; background: rgba(60,121,255,0.05); }
+    .time-tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); background: var(--brand-soft); }
     .time-tab-content { display: none; }
     .time-tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
     
@@ -225,17 +282,118 @@
     .alt-badge.inactive { color: #ccc; }
     .alt-readonly-input { background: #1e293b; color: #fff; font-weight: bold; border-radius: 8px; text-align: center; padding: 8px; width: 100%; border: none; outline: none; box-sizing: border-box; transition: value 0.3s;}
     
-    .btn-outline { background: #fff; border: 2px solid #e2e8f0; color: #64748b; padding: 8px 16px; border-radius: 20px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 10px auto; display: block;}
-    .btn-outline:hover { border-color: #3c79ff; color: #3c79ff; background: rgba(60,121,255,0.05); }
+    .btn-outline { background: var(--surface); border: 2px solid var(--border); color: var(--text-muted); padding: 8px 16px; border-radius: var(--radius-pill); font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 10px auto; display: block;}
+    .btn-outline:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 
     .alt-notes-box { background: rgba(239,246,255,0.6); border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px; margin-top: 15px; font-size: 0.9em; color: #334155; display: none; }
     .alt-notes-box.active { display: block; animation: fadeIn 0.3s; }
 
+    /* 🛫 Turbli 航班亂流卡片 */
+    .turbli-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) {
+      .turbli-grid { grid-template-columns: 1fr; }
+    }
+    .turbli-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+    }
+    .turbli-cell-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding: 0 4px;
+      flex-wrap: wrap;
+    }
+    .turbli-cell-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .turbli-cell-date { font-weight: 500; color: #64748b; font-size: 13px; margin-left: 4px; }
+    .turbli-cell-age { font-size: 12px; color: #94a3b8; }
+    .turbli-cell-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .turbli-cell-body img { width: 100%; height: auto; display: block; border-radius: 6px; }
+    .turbli-cell-status { color: #94a3b8; font-size: 14px; padding: 30px 10px; text-align: center; }
+    .turbli-cell-status.loading { color: #3c79ff; font-weight: 600; }
+    .turbli-cell-status.empty::before { content: "📭 "; }
+
+    /* =========================================
+       🧭 Sticky 毛玻璃頁首 + Hero
+       ========================================= */
+    .app-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px clamp(1em, 4vw, 2.5em);
+      background: rgba(248,250,252,0.78);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .app-topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: -0.01em; }
+    .app-topbar-brand .logo { font-size: 1.3rem; line-height: 1; }
+    .app-topbar-meta { display: flex; align-items: center; gap: 8px; }
+
+    .app-hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px clamp(1em, 4vw, 2.5em) 8px;
+    }
+    .app-hero h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .app-hero p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    /* 把主要內容收進置中容器，桌面更像產品 */
+    .app-main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 8px clamp(1em, 4vw, 2.5em) 2.5em;
+    }
+
   </style>
 </head>
 <body>
-  
-  <h1>📦 簡報箱（Briefing Package）</h1>
+
+  <header class="app-topbar">
+    <div class="app-topbar-brand"><span class="logo">📦</span> 簡報箱</div>
+    <div class="app-topbar-meta">
+      <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
+      <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
+    </div>
+  </header>
+
+  <div class="app-hero">
+    <h1>Briefing Package</h1>
+    <p>飛行簡報箱 · 飛時 / 加油 / Curfew / 低溫修正 / METAR · TAF / Windy 氣象圖整合工作台</p>
+  </div>
+
+  <div class="app-main">
 
   <div class="section">
     <h2>🗺️ 外部網站連結</h2>
@@ -349,48 +507,6 @@
         </div>
       </div>
     </div>
-
-    <style>
-      .turbli-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      @media (max-width: 768px) {
-        .turbli-grid { grid-template-columns: 1fr; }
-      }
-      .turbli-cell {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        display: flex;
-        flex-direction: column;
-        min-height: 200px;
-      }
-      .turbli-cell-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 8px;
-        margin-bottom: 8px;
-        padding: 0 4px;
-        flex-wrap: wrap;
-      }
-      .turbli-cell-title { font-size: 14px; font-weight: 700; color: #1e293b; }
-      .turbli-cell-date { font-weight: 500; color: #64748b; font-size: 13px; margin-left: 4px; }
-      .turbli-cell-age { font-size: 12px; color: #94a3b8; }
-      .turbli-cell-body {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      .turbli-cell-body img { width: 100%; height: auto; display: block; border-radius: 6px; }
-      .turbli-cell-status { color: #94a3b8; font-size: 14px; padding: 30px 10px; text-align: center; }
-      .turbli-cell-status.loading { color: #3c79ff; font-weight: 600; }
-      .turbli-cell-status.empty::before { content: "📭 "; }
-    </style>
   </div>
 
   <div class="section">
@@ -505,23 +621,16 @@
   <div class="section">
       <h2>🌏 顯著天氣圖</h2>
       <div class="img-column">
-        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya86-0.png">
-        <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png">
-        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya86-0.png" alt="JMA 顯著天氣預測圖（高空）" loading="lazy">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/fbjp/fbjp.png" alt="JMA 國內航空悪天予想図 FBJP" loading="lazy">
+        <img src="https://www.data.jma.go.jp/airinfo/data/pict/ajpn_cmnt/qyya82.png" alt="JMA 顯著天氣預測圖（地面）" loading="lazy">
       </div>
   </div>
 
-  <div id="update-banner" style="display: none; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
-    🚀 新版本已準備就緒，點擊立即更新！
-  </div>
+  </div><!-- /.app-main -->
 
-  <div style="position: fixed; bottom: 10px; right: 10px; display: flex; align-items: center; gap: 10px; z-index: 9000; background: rgba(255,255,255,0.85); padding: 6px 12px; border-radius: 12px; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-    <div id="sys-version" style="font-size: 11px; color: #64748b; font-family: 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">
-      Verifying...
-    </div>
-    <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: #3c79ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      檢查更新
-    </button>
+  <div id="update-banner" style="display: none; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background-color: var(--danger); color: white; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
+    🚀 新版本已準備就緒，點擊立即更新！
   </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -530,7 +639,7 @@
   if ('serviceWorker' in navigator) {
     if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
       const versionEl = document.getElementById('sys-version');
-      if (versionEl) versionEl.innerText = `Build v19 (Preview)`;
+      if (versionEl) versionEl.innerText = `Preview`;
     } else {
       let newWorker;
       const updateBanner = document.getElementById('update-banner');
@@ -640,7 +749,7 @@
           if (!versionResolved) {
             const versionEl = document.getElementById('sys-version');
             if (versionEl && versionEl.innerText.includes('Verifying')) {
-              versionEl.innerText = 'Build v19 (Local/Offline)';
+              versionEl.innerText = 'Local/Offline';
             }
           }
         }, 3000);
