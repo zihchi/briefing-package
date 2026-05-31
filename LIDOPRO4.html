@@ -90,6 +90,30 @@
         @media print {
             .no-print { display: none !important; }
         }
+
+        /* 油量為 0 的列淡化保留 */
+        .fuel-zero { opacity: 0.4; }
+        .fuel-zero .data-font { color: #a8a29e; }
+
+        /* Weight bar chart */
+        .wbar-track { background: #efe6da; border-radius: 999px; height: 8px; overflow: hidden; }
+        .wbar-fill { height: 100%; border-radius: 999px; transition: width .35s ease-out; }
+        .wbar-fill.ok { background: linear-gradient(90deg, #6ea54a, #4d7c3a); }
+        .wbar-fill.warn { background: linear-gradient(90deg, #e8a14b, #c97a1f); }
+        .wbar-fill.over { background: linear-gradient(90deg, #d96f5a, #b03c2a); }
+
+        /* Chinese date — 日醒目 */
+        .zh-date .d-num {
+            color: #ffe6b8; font-weight: 900; font-size: 1.55em;
+            letter-spacing: -0.5px; padding: 0 2px;
+            line-height: 1;
+        }
+        .zh-date .d-sep { color: rgba(255,255,255,0.4); margin: 0 6px; }
+        .zh-date .d-wk  { color: rgba(255,255,255,0.85); font-weight: 700; }
+        .zh-date .d-tag {
+            color: rgba(255,255,255,0.55); font-weight: 700; font-size: 9px;
+            letter-spacing: 1.5px; margin-left: 4px;
+        }
     </style>
 </head>
 <body class="text-stone-800 min-h-screen pt-safe pb-safe antialiased relative">
@@ -162,23 +186,23 @@
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 items-stretch h-full">
                     <div class="lg:col-span-2 w-full flex flex-col border border-stone-300 rounded-2xl overflow-hidden shadow-sm bg-[#fbf9f6] h-full">
-                        <div class="bg-[#785b42] p-4 md:p-5 flex justify-between items-start text-white">
-                            <div class="flex flex-col gap-1.5 z-10">
-                                <div class="flex items-center gap-2">
-                                    <span id="out-utc-date" class="bg-white/20 text-white/90 px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max">---- (UTC)</span>
-                                    <span id="out-local-date" class="bg-[#8b5a2b]/50 text-white px-2 py-0.5 rounded text-[10px] data-font font-bold shadow-sm tracking-widest w-max hidden">---- (Local)</span>
+                        <div class="bg-[#785b42] p-4 md:p-5 flex justify-between items-center gap-3 text-white">
+                            <div class="flex flex-col gap-1.5 z-10 min-w-0 flex-1">
+                                <div id="out-date-block" class="zh-date flex flex-col gap-0.5 leading-tight">
+                                    <span id="out-utc-date" class="text-[13px] md:text-sm">—</span>
+                                    <span id="out-local-date" class="text-[13px] md:text-sm hidden">—</span>
                                 </div>
                                 <div class="text-4xl lg:text-5xl font-black data-font tracking-widest leading-none mt-1" id="out-flight-no">----</div>
                             </div>
 
-                            <div class="flex flex-col gap-1.5 z-10">
-                                <div class="bg-[#5c4431] border border-[#85674f] px-3 py-1 rounded-md text-[10px] shadow-sm flex items-center justify-between gap-6">
-                                    <span class="text-white/70 font-bold uppercase tracking-wider">OFP</span>
-                                    <span class="text-white data-font font-black flex items-center gap-1" id="out-ofp">--</span>
+                            <div class="flex flex-col gap-1 z-10 shrink-0 items-end">
+                                <div class="bg-[#5c4431] border border-[#85674f] rounded-md text-[10px] shadow-sm flex items-center gap-2 px-2.5 py-1 min-w-[78px]">
+                                    <span class="text-white/60 font-bold uppercase tracking-wider text-[9px]">OFP</span>
+                                    <span class="text-white data-font font-black ml-auto" id="out-ofp">--</span>
                                 </div>
-                                <div class="bg-[#5c4431] border border-[#85674f] px-3 py-1 rounded-md text-[10px] shadow-sm flex items-center justify-between gap-6">
-                                    <span class="text-white/70 font-bold uppercase tracking-wider">EFB</span>
-                                    <span class="text-white data-font font-black" id="out-efb">--</span>
+                                <div class="bg-[#5c4431] border border-[#85674f] rounded-md text-[10px] shadow-sm flex items-center gap-2 px-2.5 py-1 min-w-[78px]">
+                                    <span class="text-white/60 font-bold uppercase tracking-wider text-[9px]">EFB</span>
+                                    <span class="text-white data-font font-black ml-auto" id="out-efb">--</span>
                                 </div>
                             </div>
                         </div>
@@ -283,15 +307,6 @@
                     </div>
                 </div>
 
-                <div class="w-full border border-[#e8dfd5] rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
-                    <div class="bg-[#5c4033] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
-                        <span class="flex items-center">MEL / Dispatch Remarks <span id="mel-header-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span></span>
-                    </div>
-                    <div class="p-4 bg-white flex flex-col text-xs md:text-[14px] data-font text-stone-700 mel-scroll overflow-y-auto min-h-[100px] max-h-[500px]" id="out-mel-container">
-                        <div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>
-                    </div>
-                </div>
-
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                         <div class="bg-gradient-to-r from-stone-500 to-stone-600 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
@@ -321,17 +336,46 @@
                     <div class="p-4 lg:p-6 bg-[#fdfaf6] grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch">
                         
                         <div class="flex flex-col gap-4 justify-between h-full">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center h-[90px]">
-                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">TOW</span>
-                                    <span class="data-font font-black text-2xl xl:text-3xl text-[#4a3627] leading-none" id="out-tow">--.-</span>
+                            <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                                <div class="flex items-baseline justify-between mb-1">
+                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Weights</span>
+                                    <span id="out-ac-type-chip" class="text-[10px] data-font font-black text-[#8b5a2b] bg-[#f4ece4] px-2 py-0.5 rounded">---</span>
                                 </div>
-                                <div class="bg-white border border-[#e8dfd5] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center h-[90px]">
-                                    <span class="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-1">LDW</span>
-                                    <span class="data-font font-black text-2xl xl:text-3xl text-[#4a3627] leading-none" id="out-ldw">--.-</span>
+                                <div id="wbar-zfw" class="flex flex-col gap-1">
+                                    <div class="flex items-baseline justify-between">
+                                        <span class="text-[11px] font-bold text-stone-600">ZFW</span>
+                                        <span class="text-[11px] font-black data-font wbar-pct text-stone-400">--%</span>
+                                    </div>
+                                    <div class="wbar-track"><div class="wbar-fill ok" style="width:0%"></div></div>
+                                    <div class="flex items-baseline justify-between text-[10px]">
+                                        <span class="data-font font-bold text-stone-700 wbar-cur">--.-</span>
+                                        <span class="data-font font-bold text-stone-400 wbar-max">MAX --.- MT</span>
+                                    </div>
+                                </div>
+                                <div id="wbar-tow" class="flex flex-col gap-1">
+                                    <div class="flex items-baseline justify-between">
+                                        <span class="text-[11px] font-bold text-stone-600">TOW</span>
+                                        <span class="text-[11px] font-black data-font wbar-pct text-stone-400">--%</span>
+                                    </div>
+                                    <div class="wbar-track"><div class="wbar-fill ok" style="width:0%"></div></div>
+                                    <div class="flex items-baseline justify-between text-[10px]">
+                                        <span class="data-font font-bold text-stone-700 wbar-cur" id="out-tow">--.-</span>
+                                        <span class="data-font font-bold text-stone-400 wbar-max">MAX --.- MT</span>
+                                    </div>
+                                </div>
+                                <div id="wbar-ldw" class="flex flex-col gap-1">
+                                    <div class="flex items-baseline justify-between">
+                                        <span class="text-[11px] font-bold text-stone-600">LDW</span>
+                                        <span class="text-[11px] font-black data-font wbar-pct text-stone-400">--%</span>
+                                    </div>
+                                    <div class="wbar-track"><div class="wbar-fill ok" style="width:0%"></div></div>
+                                    <div class="flex items-baseline justify-between text-[10px]">
+                                        <span class="data-font font-bold text-stone-700 wbar-cur" id="out-ldw">--.-</span>
+                                        <span class="data-font font-bold text-stone-400 wbar-max">MAX --.- MT</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm flex-grow flex justify-between items-end">
+                            <div class="bg-white border border-[#e8dfd5] rounded-xl p-5 shadow-sm flex justify-between items-end">
                                 <div class="text-sm font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
                                 <div class="text-right flex items-baseline gap-2">
                                     <span class="text-xs text-[#8b5a2b] font-bold opacity-70" id="time-total-fuel"></span>
@@ -1251,6 +1295,7 @@
             ['profile', 'wni', 'sigwx', 'turbli'].forEach(prefix => clearImage(prefix));
             clearElbFrame();
             clearTurbli2Days();
+            clearWeightBars();
             parseData();
             parseNotams();
             
@@ -1644,6 +1689,84 @@
             } catch (e) { return 'UTC'; }
         }
 
+        // ── 中文日期 + 機型 + 重量限制 ──────────────────────────
+        const WEEK_ZH = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+        const MONTHS_3 = {JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11};
+
+        // STARLUX 機型重量限制 (MT)
+        // 來源：A330 從 ELB UI 截圖確認；A321/A350 為公開規格值，請依實際 OFP 校對
+        const WEIGHT_LIMITS = {
+            A321: { zfw:  75.6, tow:  93.5, ldw:  79.2 },
+            A330: { zfw: 181.0, tow: 215.0, ldw: 191.0 },
+            A350: { zfw: 195.7, tow: 280.0, ldw: 205.0 },
+        };
+
+        function tailToType(tail) {
+            if (!tail) return null;
+            const t = String(tail).toUpperCase().replace(/\s+/g, '');
+            if (t.startsWith('B-582') || t.startsWith('B582')) return 'A321';
+            if (t.startsWith('B-583') || t.startsWith('B583')) return 'A330';
+            if (t.startsWith('B-584') || t.startsWith('B584') ||
+                t.startsWith('B-585') || t.startsWith('B585')) return 'A350';
+            return null;
+        }
+
+        function parseUtcDateStr(s) {
+            if (!s || s === '----') return null;
+            let m = s.match(/^(\d{4})-([A-Z]{3})-(\d{1,2})$/i);
+            if (m) return { y: +m[1], mo: MONTHS_3[m[2].toUpperCase()], d: +m[3] };
+            m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (m) return { y: +m[1], mo: +m[2] - 1, d: +m[3] };
+            m = s.match(/^(\d{1,2})([A-Z]{3})(\d{2,4})$/i);
+            if (m) { let y = +m[3]; if (y < 100) y += 2000;
+                return { y, mo: MONTHS_3[m[2].toUpperCase()], d: +m[1] }; }
+            return null;
+        }
+
+        function renderChineseDate(dateStr, tag) {
+            const p = parseUtcDateStr(dateStr);
+            if (!p) return `<span class="text-white/70">— ${tag || ''}</span>`;
+            const wk = WEEK_ZH[new Date(Date.UTC(p.y, p.mo, p.d)).getUTCDay()];
+            const tagHtml = tag ? `<span class="d-tag">${tag}</span>` : '';
+            return `<span>${p.y}年${p.mo+1}月</span><span class="d-num">${p.d}</span><span>日</span><span class="d-sep">·</span><span class="d-wk">${wk}</span>${tagHtml}`;
+        }
+
+        function setWeightBar(elId, currentMT, maxMT) {
+            const root = document.getElementById(elId);
+            if (!root) return;
+            const fill = root.querySelector('.wbar-fill');
+            const pct  = root.querySelector('.wbar-pct');
+            const cur  = root.querySelector('.wbar-cur');
+            const mx   = root.querySelector('.wbar-max');
+
+            if (!isFinite(currentMT) || !isFinite(maxMT) || maxMT <= 0) {
+                fill.style.width = '0%';
+                fill.className = 'wbar-fill ok';
+                pct.textContent = '--%';
+                pct.className = 'text-[11px] font-black data-font wbar-pct text-stone-400';
+                if (cur) cur.textContent = isFinite(currentMT) ? currentMT.toFixed(1) : '--.-';
+                mx.textContent = isFinite(maxMT) ? `MAX ${maxMT.toFixed(1)} MT` : 'MAX --.- MT';
+                return;
+            }
+            const ratio = currentMT / maxMT;
+            const pctNum = Math.round(ratio * 100);
+            fill.style.width = Math.min(ratio, 1.05) * 100 + '%';
+            let lvl = 'ok', col = 'text-emerald-600';
+            if (ratio >= 1.0)      { lvl = 'over'; col = 'text-red-600'; }
+            else if (ratio >= 0.95){ lvl = 'warn'; col = 'text-amber-600'; }
+            fill.className = 'wbar-fill ' + lvl;
+            pct.textContent = pctNum + '%';
+            pct.className = 'text-[11px] font-black data-font wbar-pct ' + col;
+            if (cur) cur.textContent = currentMT.toFixed(1);
+            mx.textContent = `MAX ${maxMT.toFixed(1)} MT`;
+        }
+
+        function clearWeightBars() {
+            ['wbar-zfw','wbar-tow','wbar-ldw'].forEach(id => setWeightBar(id, NaN, NaN));
+            const chip = document.getElementById('out-ac-type-chip');
+            if (chip) chip.textContent = '---';
+        }
+
         function calcLocalDate(utcDateStr, zuluStr, icao) {
             if (!utcDateStr || utcDateStr === '----' || !zuluStr || !icao) return null;
             const hh = parseInt(zuluStr.substring(0, 2), 10);
@@ -1718,7 +1841,7 @@
 
             let dateMatch = rawText.match(/\b(\d{4}-[A-Z]{3}-\d{2}|\d{2}[A-Z]{3}\d{2,4}|\d{2}-[A-Z]{3}-\d{4})\b/i);
             currentDateUTC = dateMatch ? dateMatch[0].toUpperCase() : (extractData(rawText, '日期') !== 'N/A' ? extractData(rawText, '日期') : '----');
-            document.getElementById('out-utc-date').textContent = currentDateUTC + ' (UTC)';
+            document.getElementById('out-utc-date').innerHTML = renderChineseDate(currentDateUTC, 'UTC');
             document.getElementById('wx-utc-date').textContent = currentDateUTC;
 
             const rawStd = extractData(rawText, 'STD');
@@ -1730,8 +1853,9 @@
             const elLocalDate = document.getElementById('out-local-date');
             if (currentDateUTC !== '----' && currentDepUTC !== '') {
                 const lclDateStr = calcLocalDate(currentDateUTC, currentDepUTC, currentDepICAO);
-                if (lclDateStr) {
-                    elLocalDate.textContent = lclDateStr + ' (LCL)';
+                // 只在跨日時顯示 LCL 行；同日就藏起來不重複
+                if (lclDateStr && lclDateStr !== currentDateUTC) {
+                    elLocalDate.innerHTML = renderChineseDate(lclDateStr, 'LCL');
                     elLocalDate.classList.remove('hidden');
                 } else {
                     elLocalDate.classList.add('hidden');
@@ -1782,6 +1906,12 @@
                 { id: 'out-spare-fuel', timeId: '', key: 'SPARE Fuel' }
             ];
 
+            // 這些列常為 0,值為 0 時淡化保留；Total/Spare 不淡化
+            const DIMMABLE_FUEL_IDS = new Set([
+                'out-add-wxx','out-dest-hold','out-add-opn','out-add-atc',
+                'out-add-dev','out-cont','out-crit-fuel','out-tankering','out-extra'
+            ]);
+
             fuelItems.forEach(item => {
                 const el = document.getElementById(item.id);
                 const timeEl = document.getElementById(item.timeId);
@@ -1796,6 +1926,15 @@
                 } else {
                     if (el) el.textContent = (val === 'N/A' || val === '') ? '--' : val;
                     if (timeEl) timeEl.textContent = '';
+                }
+
+                // 0 值淡化（只對 dimmable 列）
+                if (el && DIMMABLE_FUEL_IDS.has(item.id)) {
+                    const row = el.closest('.flex.justify-between.items-center');
+                    if (row) {
+                        const num = parseFloat(el.textContent.replace(/[^\d.-]/g, ''));
+                        row.classList.toggle('fuel-zero', !isNaN(num) && num === 0);
+                    }
                 }
             });
 
@@ -1872,8 +2011,24 @@
             if(elCruTemp) elCruTemp.textContent = tempPart;
 
             let regVal = extractData(rawText, '機號');
-            const melHeaderReg = document.getElementById('mel-header-reg');
-            if(melHeaderReg) melHeaderReg.textContent = (regVal !== 'N/A' && regVal !== '') ? regVal : '----';
+
+            // Weight bar chart：抓 ZFW/TOW/LDW + 依機型套 MAX
+            const acType = (regVal !== 'N/A' && regVal !== '') ? tailToType(regVal) : null;
+            const chip = document.getElementById('out-ac-type-chip');
+            if (chip) chip.textContent = acType || '---';
+            const limits = acType ? WEIGHT_LIMITS[acType] : null;
+
+            const parseMT = (s) => {
+                if (s === undefined || s === null || s === 'N/A') return NaN;
+                const n = parseFloat(String(s).replace(/[^\d.]/g, ''));
+                return isFinite(n) ? n : NaN;
+            };
+            const zfwVal = parseMT(extractData(rawText, 'ZFW'));
+            const towVal = parseMT(extractData(rawText, 'TOW'));
+            const ldwVal = parseMT(extractData(rawText, 'LDW'));
+            setWeightBar('wbar-zfw', zfwVal, limits ? limits.zfw : NaN);
+            setWeightBar('wbar-tow', towVal, limits ? limits.tow : NaN);
+            setWeightBar('wbar-ldw', ldwVal, limits ? limits.ldw : NaN);
 
             const turbliLink = document.getElementById('turbli-link');
             const tDate = formatTurbliDate(currentDateUTC), tFlight = formatTurbliFlight(valFlight);
@@ -2014,18 +2169,6 @@
                     if (icao.length === 4 && !currentIcaosToFetch.includes(icao)) currentIcaosToFetch.push(icao);
                 }
             });
-
-            const melMatch = rawText2.match(/MEL:\s*([^]+?)(?=\(\d+\)|BAY:|$)/i);
-            const melContainer = document.getElementById('out-mel-container');
-            if(!melMatch || !melMatch[1].trim() || melMatch[1].trim().toUpperCase() === 'NIL' || melMatch[1].trim().toUpperCase() === 'NONE') {
-                melContainer.innerHTML = `<div class="text-emerald-600 font-bold text-2xl tracking-widest text-center my-auto py-4">NIL</div>`;
-            } else {
-                let htmlObj = '<div class="flex flex-col gap-2">';
-                melMatch[1].trim().replace(/\bB-?\d{5}\b/gi, '').trim().split('\n').map(l => l.trim()).filter(l => l.length > 0).forEach(line => {
-                    htmlObj += `<div class="flex items-start gap-2 border-b border-stone-100 pb-1.5 last:border-0"><span class="text-[#e74c3c] mt-0.5 shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742-2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></span><span class="leading-relaxed text-red-700 font-bold text-xs md:text-sm lg:text-[14px]">${line.replace(/\s{2,}/g, ' ')}</span></div>`;
-                });
-                melContainer.innerHTML = htmlObj + '</div>';
-            }
 
             const edtoMatches = combinedText.match(/^E\.(ENT|ETP\d*|EXT)\s*:.*$/gmi);
             const edtoContainer = document.getElementById('out-edto-container');
