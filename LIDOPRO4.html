@@ -652,8 +652,11 @@
         // LIDO 後端:Google Apps Script (LIDO 防火牆擋 Cloudflare IP,只能走 Google IP)
         // 對應的 GAS 程式碼結構參考 worker-lido/worker.js (邏輯相同,語法是 GAS 版)
         const LIDO_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyUEGkCXK8lxcDZ13Ue1IEXsLxhIexHJQBPIyKPSPZv6INwFNQIMN5SRRJklHpY-ZSIxQ/exec';
-        // ELB Cloudflare Worker — 與 ELB_Fleet.html 共用 session 透過 localStorage
-        const ELB_WORKER_URL = 'https://elb.zihchi.workers.dev';
+        // ELB Cloudflare Worker — 從 briefing-package CF project 自動部署 (worker/worker.js)
+        // 跟 ELB_Fleet.html 共用 session 透過 localStorage.elbWorkerUrl + elbSession
+        const ELB_WORKER_URL = 'https://briefing-package.zihchi.workers.dev';
+        // 每次 LIDOPRO4 載入時都把最新的 URL 推到 localStorage,避免 iframe 用到舊 URL
+        try { localStorage.setItem('elbWorkerUrl', ELB_WORKER_URL); } catch (e) {}
         const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
