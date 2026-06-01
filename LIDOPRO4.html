@@ -958,15 +958,115 @@
         }
 
         const fetchBtn = document.getElementById('fetch-data-btn');
+
+        // 把 fetch 邏輯抽出來,picker 選擇後可以用同函式帶 legId 重新打一次
+        async function performLidoFetch(target, legId) {
+            const body = { username: savedLidoUser, password: savedLidoPass, targetFlight: target };
+            if (legId) body.legId = legId;
+            const response = await fetch(LIDO_BACKEND_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok && response.status !== 200) {
+                throw new Error(`後端回應異常 (HTTP ${response.status})。GAS deployment 可能失效,需重新部署或檢查授權。`);
+            }
+            const textResponse = await response.text();
+            try { return JSON.parse(textResponse); }
+            catch (parseError) {
+                const looksLikeHtml = textResponse.trim().startsWith('<');
+                throw new Error(looksLikeHtml
+                    ? `LIDO 後端端點失效 (回傳 HTML 而非 JSON)。可能 GAS 部署被回收或權限被改,需要重新部署。`
+                    : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
+            }
+        }
+
+        // 顯示候選航班 picker,讓使用者挑
+        function showFlightPicker(candidates, target) {
+            const old = document.getElementById('flight-picker-modal');
+            if (old) old.remove();
+
+            const nowMs = Date.now();
+            const fmtZ = (iso) => {
+                if (!iso) return '----';
+                const d = new Date(iso);
+                return `${String(d.getUTCHours()).padStart(2,'0')}${String(d.getUTCMinutes()).padStart(2,'0')}Z`;
+            };
+            const fmtDate = (iso) => iso ? iso.slice(0, 10) : '----';
+
+            const rows = candidates.map((c, idx) => {
+                const stdMs = c.scheduledDepartureTime ? new Date(c.scheduledDepartureTime).getTime() : 0;
+                const staMs = c.scheduledTimeOfArrival ? new Date(c.scheduledTimeOfArrival).getTime() : 0;
+                const isUpcoming = stdMs >= nowMs;
+                const isFlying   = stdMs < nowMs && staMs >= nowMs;
+                const isDone     = staMs && staMs < nowMs;
+                const tag = isUpcoming ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">即將飛</span>'
+                          : isFlying   ? '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">飛行中</span>'
+                          : isDone     ? '<span class="bg-stone-200 text-stone-500 px-2 py-0.5 rounded text-[10px] font-bold">已結束</span>'
+                                       : '';
+                const route = `${c.originStationCode || c.departureAirportICAO || '----'} → ${c.destinationStationCode || c.destinationAirportICAO || '----'}`;
+                const reg = c.registration || '----';
+                return `
+                  <button data-leg-id="${c.legId}" class="picker-row w-full text-left bg-white hover:bg-amber-50 border border-stone-200 hover:border-amber-400 rounded-xl p-4 transition-all active:scale-[0.99]">
+                    <div class="flex items-baseline justify-between mb-2">
+                      <span class="data-font font-black text-lg text-stone-800">${fmtDate(c.flightOriginDate || c.scheduledDepartureTime)}</span>
+                      <span class="data-font font-bold text-stone-600">STD ${fmtZ(c.scheduledDepartureTime)}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="data-font font-bold text-stone-700">${route}</span>
+                      <span class="flex items-center gap-2">
+                        <span class="data-font font-bold text-stone-600">${reg}</span>
+                        ${tag}
+                      </span>
+                    </div>
+                  </button>`;
+            }).join('');
+
+            const modal = document.createElement('div');
+            modal.id = 'flight-picker-modal';
+            modal.className = 'fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4';
+            modal.innerHTML = `
+              <div class="bg-stone-50 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh]">
+                <div class="bg-gradient-to-r from-[#8b5a2b] to-[#6e4620] text-white px-5 py-3 flex justify-between items-center rounded-t-2xl">
+                  <span class="font-bold text-sm tracking-wider">找到 ${candidates.length} 筆 ${target},請選擇</span>
+                  <button id="picker-close" class="text-white/80 hover:text-white p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div class="p-4 flex flex-col gap-3 overflow-y-auto">
+                  ${rows}
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            document.body.style.overflow = 'hidden';
+
+            const closePicker = () => { modal.remove(); document.body.style.overflow = ''; };
+            modal.querySelector('#picker-close').onclick = closePicker;
+            modal.addEventListener('click', (e) => { if (e.target === modal) closePicker(); });
+
+            modal.querySelectorAll('.picker-row').forEach(btn => {
+                btn.onclick = () => {
+                    const legId = btn.getAttribute('data-leg-id');
+                    closePicker();
+                    // 設定 pending legId,然後重觸發 fetchBtn 主流程
+                    _pendingLegId = legId;
+                    document.getElementById('fetch-data-btn').click();
+                };
+            });
+        }
+
+        // Picker 選擇後待用的 legId,fetchBtn 流程會讀取它
+        let _pendingLegId = null;
+
         fetchBtn.addEventListener('click', async () => {
             let targetRaw = document.getElementById('target-flight').value.trim();
-            targetRaw = targetRaw.replace(/^SJX/i, ''); 
+            targetRaw = targetRaw.replace(/^SJX/i, '');
             const target = 'SJX' + targetRaw;
 
             if (!savedLidoUser || !savedLidoPass || !targetRaw) return showToast('請輸入有效的航班編號', true);
 
             const currentTargetVal = document.getElementById('target-flight').value;
-            clearData(true); 
+            clearData(true);
             document.getElementById('target-flight').value = currentTargetVal;
 
             fetchBtn.disabled = true;
@@ -976,27 +1076,19 @@
             showToast('讀取中...', false, 2000);
 
             try {
-                // 注意: Content-Type 必須是 text/plain,避免 GAS web app 觸發 CORS preflight (它不支援)
-                const response = await fetch(LIDO_BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
-                });
+                // 若有 picker 帶來的 legId 就用,用完清掉
+                const legIdForThisCall = _pendingLegId;
+                _pendingLegId = null;
 
-                if (!response.ok && response.status !== 200) {
-                    throw new Error(`後端回應異常 (HTTP ${response.status})。GAS deployment 可能失效,需重新部署或檢查授權。`);
-                }
+                const responseData = await performLidoFetch(target, legIdForThisCall);
 
-                const textResponse = await response.text();
-                let responseData;
-                try {
-                    responseData = JSON.parse(textResponse);
-                } catch (parseError) {
-                    // 回傳非 JSON = 端點失效 (常見:GAS deployment 被回收、權限改變、URL 變更)
-                    const looksLikeHtml = textResponse.trim().startsWith('<');
-                    throw new Error(looksLikeHtml
-                        ? `LIDO 後端端點失效 (回傳 HTML 而非 JSON)。可能 GAS 部署被回收或權限被改,需要重新部署。`
-                        : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
+                // ★ 多筆同班號 → 跳 picker
+                if (responseData.status === 'multiple' && Array.isArray(responseData.candidates)) {
+                    fetchBtn.disabled = false;
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                    document.getElementById('atc-display').value = '';
+                    showFlightPicker(responseData.candidates, target);
+                    return;
                 }
 
                 if (responseData.status === 'success') {
