@@ -320,6 +320,7 @@
                                 ELB Dashboard / History <span id="elb-frame-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span>
                             </span>
                             <div class="flex items-center gap-3">
+                                <button onclick="openFleetBrowser()" class="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 border border-amber-300/50 px-2 py-1 rounded transition-colors flex items-center gap-1 no-print font-bold">🛩 機隊瀏覽</button>
                                 <a href="ELB_Fleet.html" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 開新分頁</a>
                                 <button onclick="reloadElbFrame()" class="text-stone-300 hover:text-white transition-colors no-print" title="重試載入">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -1579,6 +1580,27 @@
             }
         }
 
+        // ── 機隊瀏覽 modal ─────────────────────────
+        function openFleetBrowser() {
+            const modal = document.getElementById('fleet-modal');
+            const frame = document.getElementById('fleet-modal-frame');
+            // 每次開都重新載入,確保拿最新資料
+            frame.src = './ELB_Fleet.html?embedded=1';
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // 避免背景捲動
+        }
+        function closeFleetBrowser() {
+            const modal = document.getElementById('fleet-modal');
+            const frame = document.getElementById('fleet-modal-frame');
+            modal.classList.add('hidden');
+            frame.src = 'about:blank';
+            document.body.style.overflow = '';
+        }
+        // ESC 關閉
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeFleetBrowser();
+        });
+
         // ── Turbli chartcache 自動載 2 日 ─────────────────────────
         function taipeiDateStrs() {
             // GitHub Actions 用 Asia/Taipei (UTC+8) 算今/明，這裡跟著走
@@ -2519,5 +2541,18 @@
             return `${year}-${month}-${day}`;
         }
     </script>
+
+    <!-- 機隊瀏覽 modal — 內嵌 ELB_Fleet.html 完整 UI -->
+    <div id="fleet-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-stretch justify-center p-2 md:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col overflow-hidden">
+            <div class="bg-gradient-to-r from-stone-700 to-stone-800 text-white px-4 py-2.5 flex justify-between items-center">
+                <span class="font-bold text-sm tracking-wider flex items-center gap-2">🛩 ELB 機隊瀏覽</span>
+                <button onclick="closeFleetBrowser()" class="text-stone-200 hover:text-white p-1 rounded transition-colors" title="關閉">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <iframe id="fleet-modal-frame" src="" class="flex-1 w-full border-0" title="ELB Fleet Browser"></iframe>
+        </div>
+    </div>
 </body>
 </html>
