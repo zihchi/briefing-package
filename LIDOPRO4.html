@@ -1707,12 +1707,12 @@
         const WEEK_ZH = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         const MONTHS_3 = {JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11};
 
-        // STARLUX 機型重量限制 (MT)
-        // 來源：A330 從 ELB UI 截圖確認；A321/A350 為公開規格值，請依實際 OFP 校對
+        // STARLUX 機型重量限制 (MT) — 由使用者從 OFP LIMIT 欄位提供,權威值
         const WEIGHT_LIMITS = {
-            A321: { zfw:  75.6, tow:  93.5, ldw:  79.2 },
-            A330: { zfw: 181.0, tow: 215.0, ldw: 191.0 },
-            A350: { zfw: 195.7, tow: 280.0, ldw: 205.0 },
+            'A321':      { zfw:  75.6, tow:  89.0, ldw:  79.2 },
+            'A330':      { zfw: 181.0, tow: 215.0, ldw: 191.0 },
+            'A350-900':  { zfw: 195.7, tow: 280.0, ldw: 207.0 },
+            'A350-1000': { zfw: 223.0, tow: 260.0, ldw: 236.0 },
         };
 
         function tailToType(tail) {
@@ -1720,8 +1720,8 @@
             const t = String(tail).toUpperCase().replace(/\s+/g, '');
             if (t.startsWith('B-582') || t.startsWith('B582')) return 'A321';
             if (t.startsWith('B-583') || t.startsWith('B583')) return 'A330';
-            if (t.startsWith('B-584') || t.startsWith('B584') ||
-                t.startsWith('B-585') || t.startsWith('B585')) return 'A350';
+            if (t.startsWith('B-584') || t.startsWith('B584')) return 'A350-900';
+            if (t.startsWith('B-585') || t.startsWith('B585')) return 'A350-1000';
             return null;
         }
 
