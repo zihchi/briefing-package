@@ -95,6 +95,7 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
   const initialUrl = `${BASE}/lido/las/login.jsp?DESMON_RESULT_PAGE=${BASE}/briefing/`;
   const r1 = await fetch(initialUrl, { method: 'GET', redirect: 'manual' });
   let cookies = extractCookies(r1.headers);
+  const debug = { step1_status: r1.status, step1_cookies_len: cookies.length, step1_cookie_names: cookieNames(cookies) };
 
   // 2. DWR login POST
   const dwrUrl = `${BASE}/lido/las/dwr/call/plaincall/LoginBean.login.dwr`;
@@ -119,6 +120,9 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
     },
   });
   cookies = combineCookies(cookies, extractCookies(r2.headers));
+  debug.step2_status = r2.status;
+  debug.step2_cookie_names = cookieNames(cookies);
+  debug.step2_body_head = (await r2.clone().text()).slice(0, 200);
 
   // 3. 取航班總表 (now-24h ~ now+24h)
   const now = new Date();
@@ -145,7 +149,11 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
 
   const listResp = await fetch(listUrl, { method: 'GET', headers: makeHeaders('SearchFlights'), redirect: 'manual' });
   if (listResp.status !== 200) {
-    throw new Error(`總表取得失敗,HTTP 狀態碼:${listResp.status}`);
+    const respBody = (await listResp.text()).slice(0, 300);
+    debug.step3_status = listResp.status;
+    debug.step3_body = respBody;
+    debug.step3_csrf_present = !!lidoCsrf;
+    throw new Error(`總表取得失敗,HTTP 狀態碼:${listResp.status} | debug: ${JSON.stringify(debug)}`);
   }
   let flights = JSON.parse(await listResp.text());
   if (!Array.isArray(flights)) flights = [flights];
@@ -239,6 +247,11 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
+function cookieNames(cookieStr) {
+  if (!cookieStr) return [];
+  return cookieStr.split('; ').map(c => c.split('=')[0]).filter(Boolean);
+}
+
 function extractCookies(headers) {
   let raw;
   if (typeof headers.getSetCookie === 'function') {
