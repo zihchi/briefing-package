@@ -649,7 +649,8 @@
         })();
 
         // Variables
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwiaVfxZ4zGAZOprcjL4jmv8tG1p865jGtxB2EXOcBpl02WLRXSW1_sZv51LAHHbV32QQ/exec';
+        // LIDO 後端:Cloudflare Worker (取代原本的 GAS,可在 worker-lido/ 目錄查看)
+        const LIDO_BACKEND_URL = 'https://lido.zihchi.workers.dev';
         // ELB Cloudflare Worker — 與 ELB_Fleet.html 共用 session 透過 localStorage
         const ELB_WORKER_URL = 'https://elb.zihchi.workers.dev';
         const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
@@ -965,18 +966,26 @@
             showToast('讀取中...', false, 2000);
 
             try {
-                const response = await fetch(GAS_WEB_APP_URL, {
+                const response = await fetch(LIDO_BACKEND_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    headers: { 'Content-Type': 'application/json;charset=utf-8' },
                     body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
                 });
+
+                if (!response.ok && response.status !== 200) {
+                    throw new Error(`後端回應異常 (HTTP ${response.status}). 請確認 LIDO Worker 已部署且 URL 正確: ${LIDO_BACKEND_URL}`);
+                }
 
                 const textResponse = await response.text();
                 let responseData;
                 try {
                     responseData = JSON.parse(textResponse);
                 } catch (parseError) {
-                    throw new Error('伺服器回傳了無效的格式。可能是查無此航班資料，或伺服器內部發生錯誤。');
+                    // 回傳非 JSON 通常代表端點掛了 (e.g., Worker 未部署、URL 失效、Google 401 頁等)
+                    const looksLikeHtml = textResponse.trim().startsWith('<');
+                    throw new Error(looksLikeHtml
+                        ? `後端端點失效或未部署 (回傳 HTML 錯誤頁)。請檢查 LIDO_BACKEND_URL 是否正確: ${LIDO_BACKEND_URL}`
+                        : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
                 }
 
                 if (responseData.status === 'success') {

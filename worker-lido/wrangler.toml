@@ -1,0 +1,9 @@
+name = "lido"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+# 此 Worker 純 stateless proxy,不需 KV / R2 / D1 / Durable Objects
+# 機敏值全部走 secrets,不在這個檔案
+
+[observability]
+enabled = true
