@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f8fafc">
+<title>公告欄 · Briefing Package</title>
+<style>
+  /* ===== 採用 briefing-package 既有設計 token，與主站一致 ===== */
+  :root{
+    --bg:#f8fafc;
+    --surface:#ffffff;
+    --brand:#3c79ff;
+    --brand-soft:#e8f0ff;
+    --ink:#1e293b;
+    --ink-soft:#64748b;
+    --ink-faint:#94a3b8;
+    --line:#e2e8f0;
+    --radius-card:16px;
+    --radius-pill:999px;
+    --shadow:0 1px 3px rgba(15,23,42,.06);
+    --shadow-hover:0 6px 22px rgba(15,23,42,.09);
+    --warn:#e67e22;
+    --danger:#e74c3c;
+    --fn:#2563eb;      --fn-bg:#e8f0ff;
+    --outlook:#0f766e; --outlook-bg:#e3f3f0;
+    --teams:#6d28d9;   --teams-bg:#f1ebfd;
+    --other:#64748b;   --other-bg:#f1f5f9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI","Noto Sans TC",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+  .wrap{max-width:760px;margin:0 auto;padding:14px}
+
+  .top{display:flex;align-items:center;gap:10px;margin:2px 2px 6px}
+  .top .count{font-size:12px;color:var(--ink-faint);font-weight:600}
+  .top .refresh{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--brand);
+    background:none;border:0;cursor:pointer;padding:4px 6px}
+  .status{font-size:12px;color:var(--ink-faint);margin:0 2px 12px}
+  .status.err{color:var(--warn)}
+
+  .search{display:flex;align-items:center;gap:8px;background:var(--surface);
+    border:1px solid var(--line);border-radius:12px;padding:10px 13px;box-shadow:var(--shadow)}
+  .search svg{width:16px;height:16px;stroke:var(--ink-faint);flex:0 0 auto}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-size:15px;font-family:inherit}
+  .search input::placeholder{color:var(--ink-faint)}
+
+  .fg{margin-top:12px}
+  .fg-label{font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:1.2px;margin:0 0 7px 2px}
+  .filters{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .filters::-webkit-scrollbar{display:none}
+  .chip-f{flex:0 0 auto;font-size:13px;font-weight:600;padding:7px 14px;border-radius:var(--radius-pill);
+    background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);cursor:pointer;transition:.15s;white-space:nowrap}
+  .chip-f:hover{border-color:var(--brand)}
+  .chip-f.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+  main{margin-top:14px}
+  .card{position:relative;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius-card);padding:15px 17px;margin:11px 0;cursor:pointer;
+    box-shadow:var(--shadow);transition:.18s}
+  .card:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+  .card.important{border-left:3px solid var(--warn)}
+
+  .meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;row-gap:6px}
+  .src{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px;line-height:1.4;white-space:nowrap}
+  .src.fn{color:var(--fn);background:var(--fn-bg)}
+  .src.outlook{color:var(--outlook);background:var(--outlook-bg)}
+  .src.teams{color:var(--teams);background:var(--teams-bg)}
+  .src.others{color:var(--other);background:var(--other-bg)}
+  .code{color:var(--brand);font-size:12px;font-weight:700;font-family:ui-monospace,"SF Mono","Courier New",monospace}
+  .new{color:var(--danger);font-size:11px;font-weight:800;letter-spacing:.5px}
+  .spacer{margin-left:auto}
+  .fleet{color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.5px}
+  .fleet.all{color:var(--ink-faint)}
+  .date{color:var(--ink-faint);font-size:12.5px;font-weight:600;font-family:ui-monospace,"SF Mono","Courier New",monospace}
+
+  .title{margin:11px 0 0;font-size:15.5px;font-weight:600;line-height:1.55;padding-right:20px}
+  .chev{position:absolute;right:15px;top:15px;color:var(--ink-faint);font-size:11px;transition:transform .2s;pointer-events:none}
+  .card.open .chev{transform:rotate(180deg)}
+
+  .body{display:none;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+  .card.open .body{display:block}
+  .content{font-size:14px;line-height:1.7;color:var(--ink-soft);white-space:pre-line;margin:0 0 12px}
+  .foot{display:flex;gap:16px;font-size:12px;color:var(--ink-faint)}
+  .foot b{color:var(--ink-soft);font-weight:600}
+
+  .empty{text-align:center;color:var(--ink-faint);padding:48px 20px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="count" id="count"></span>
+    <button class="refresh" id="refresh">↻ 重新整理</button>
+  </div>
+  <div class="status" id="status">連線中…</div>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="q" type="search" placeholder="搜尋標題、編號、內容…" autocomplete="off">
+  </div>
+
+  <div class="fg">
+    <p class="fg-label">來源</p>
+    <div class="filters" id="srcFilters"></div>
+  </div>
+  <div class="fg">
+    <p class="fg-label">機隊</p>
+    <div class="filters" id="fleetFilters"></div>
+  </div>
+
+  <main id="list"></main>
+</div>
+
+<script>
+/* ======================================================================
+   即時讀取「公告」Google 試算表（已發布到網路）
+   你用表單新增公告 → 試算表更新 → 點「重新整理」即可看到
+   ====================================================================== */
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pub?output=csv";
+
+const FALLBACK = [
+  {日期:"2026/5/20", 來源:"FN-26-0057", 摘要:"WBP R13-TR09 Temporary Revision Issued MAY/21/2026"},
+  {日期:"2026/5/15", 來源:"Outlook",   摘要:"FD PRO 新版本，先不要更新\n請勿自行升級，等 FTS 發布 EFB Update Notice。"},
+  {日期:"2026/5/11", 來源:"Teams",     摘要:"近期 RJFF 16 跑道 ROP/ROW 警報\n條件不利時請選用 BRK MED + MAX REV。"},
+];
+
+function parseCSV(text){
+  const rows=[]; let row=[], field="", inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; }
+      else field+=c;
+    }else{
+      if(c==='"') inQ=true;
+      else if(c===',') { row.push(field); field=""; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+      else if(c!=='\r') field+=c;
+    }
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function csvToData(text){
+  const rows=parseCSV(text).filter(r=>r.some(x=>(x||"").trim()));
+  if(!rows.length) return [];
+  const head=rows[0].map(h=>h.trim());
+  const di=head.indexOf("日期"), si=head.indexOf("來源"), mi=head.indexOf("摘要");
+  return rows.slice(1).map(r=>({日期:(r[di]||"").trim(), 來源:(r[si]||"").trim(), 摘要:(r[mi]||"").trim()}))
+    .filter(x=>x.日期||x.來源||x.摘要);
+}
+
+function classifySource(src){
+  const s=(src||"").trim();
+  if(/^(FN|OR)[-\s]/i.test(s)) return {cat:"Fleet Notice",cls:"fn",label:"Fleet Notice",code:s};
+  if(/outlook/i.test(s))       return {cat:"Outlook",cls:"outlook",label:"Outlook",code:""};
+  if(/teams/i.test(s))         return {cat:"Teams",cls:"teams",label:"Teams",code:""};
+  return {cat:"others",cls:"others",label:(s||"others"),code:""};
+}
+function detectFleet(t){
+  t=t||""; const f=[];
+  if(/A?32[01]\b/.test(t)) f.push("A321");
+  if(/A?330\b|(?<![\d.,])330(?![\d.,])/.test(t)) f.push("A330");
+  if(/A?350\b/.test(t)) f.push("A350");
+  return f.length?f:["ALL"];
+}
+function isImportant(t){ return /嚴禁|禁制|嚴格|DO NOT|must immediately|警報|不要更新|限制/i.test(t||""); }
+function parseDate(d){
+  const m=String(d||"").match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  return m?new Date(+m[1],+m[2]-1,+m[3]):null;
+}
+function normalize(row){
+  const sum=(row.摘要||"").trim(), lines=sum.split("\n"), src=classifySource(row.來源);
+  return {date:row.日期||"",_d:parseDate(row.日期),src,fleet:detectFleet(sum),
+    important:isImportant(sum),title:(lines[0]||"（無標題）").trim(),
+    rest:lines.slice(1).join("\n").trim(),full:sum,source:row.來源||""};
+}
+
+const SRC_FILTERS=["全部","Fleet Notice","Outlook","Teams","others"];
+const FLEET_FILTERS=["全部機隊","A321","A330","A350"];
+let activeSrc="全部", activeFleet="全部機隊", keyword="", DATA=[];
+
+async function loadData(){
+  const st=document.getElementById("status");
+  st.textContent="連線中…"; st.className="status";
+  let data;
+  try{
+    const res=await fetch(CSV_URL,{cache:"no-store"});
+    data=csvToData(await res.text());
+    if(!data.length) throw new Error("empty");
+    st.textContent="✓ 即時連線 Google 試算表";
+  }catch(e){
+    data=FALLBACK;
+    st.textContent="⚠ 暫時無法連線試算表，顯示範例資料";
+    st.className="status err";
+  }
+  DATA=data.map(normalize).sort((a,b)=>(b._d?+b._d:0)-(a._d?+a._d:0));
+  const newest=DATA.map(x=>x._d).filter(Boolean).sort((a,b)=>b-a)[0];
+  if(newest) DATA.forEach(x=> x.isNew=x._d && (newest-x._d)<=3*864e5 );
+  render();
+}
+function matches(it){
+  if(activeSrc!=="全部" && it.src.cat!==activeSrc) return false;
+  if(activeFleet!=="全部機隊" && !(it.fleet.includes(activeFleet)||it.fleet.includes("ALL"))) return false;
+  if(keyword && !it.full.toLowerCase().includes(keyword.toLowerCase()) && !it.source.toLowerCase().includes(keyword.toLowerCase())) return false;
+  return true;
+}
+function metaHTML(it){
+  let h=`<span class="src ${it.src.cls}">${it.src.label}</span>`;
+  if(it.src.code) h+=`<span class="code">${it.src.code}</span>`;
+  if(it.isNew)    h+=`<span class="new">NEW</span>`;
+  h+=`<span class="spacer"></span>`;
+  const ft=it.fleet.includes("ALL")?"全機隊":it.fleet.join(" · ");
+  h+=`<span class="fleet ${it.fleet.includes("ALL")?"all":""}">${ft}</span><span class="date">${it.date}</span>`;
+  return h;
+}
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function bodyHTML(it){
+  let h=it.rest?`<div class="content">${esc(it.rest)}</div>`:`<div class="content" style="color:var(--ink-faint)">（無更多內容）</div>`;
+  h+=`<div class="foot"><span>來源 <b>${esc(it.source)||"—"}</b></span><span>日期 <b>${esc(it.date)||"—"}</b></span></div>`;
+  return h;
+}
+function render(){
+  const list=document.getElementById("list"), rows=DATA.filter(matches);
+  document.getElementById("count").textContent=`${rows.length} 則`;
+  if(!rows.length){ list.innerHTML=`<div class="empty">沒有符合的公告</div>`; return; }
+  list.innerHTML=rows.map(it=>`
+    <div class="card ${it.important?"important":""}">
+      <div class="meta">${metaHTML(it)}</div>
+      <div class="title">${esc(it.title)}</div>
+      <span class="chev">▼</span>
+      <div class="body">${bodyHTML(it)}</div>
+    </div>`).join("");
+  list.querySelectorAll(".card").forEach(c=>c.addEventListener("click",()=>c.classList.toggle("open")));
+}
+function buildFilters(){
+  const mk=(arr,active,boxId,set)=>{
+    const box=document.getElementById(boxId);
+    box.innerHTML=arr.map(f=>`<button class="chip-f ${f===active?"active":""}" data-f="${f}">${f}</button>`).join("");
+    box.querySelectorAll(".chip-f").forEach(b=>b.addEventListener("click",()=>{ set(b.dataset.f); buildFilters(); render(); }));
+  };
+  mk(SRC_FILTERS,activeSrc,"srcFilters",v=>activeSrc=v);
+  mk(FLEET_FILTERS,activeFleet,"fleetFilters",v=>activeFleet=v);
+}
+document.getElementById("q").addEventListener("input",e=>{ keyword=e.target.value; render(); });
+document.getElementById("refresh").addEventListener("click",loadData);
+buildFilters(); loadData();
+</script>
+</body>
+</html>
