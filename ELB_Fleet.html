@@ -551,6 +551,13 @@
       padding: 10px 18px; border-radius: 10px;
       font-size: 13px; font-weight: 700; cursor: pointer;
     }
+
+    /* ── Embedded mode (in LIDOPRO4 modal) — 永遠不顯示 ELB 自己的 login 表單 ── */
+    body.embedded-mode #topbar { display: none !important; }
+    body.embedded-mode #login-screen { display: none !important; }
+    body.embedded-mode #offline-banner { display: none !important; }
+    body.embedded-mode { padding: 0; margin: 0; }
+    body.embedded-mode #main { padding-top: 0 !important; }
   </style>
 </head>
 <body>
@@ -736,6 +743,7 @@ function getQueryParam(key) {
   return m ? decodeURIComponent(m[1]) : '';
 }
 function isCompactMode() { return getQueryParam('compact') === '1'; }
+function isEmbeddedMode() { return getQueryParam('embedded') === '1'; }
 
 function showCompactMsg(title, hint, btnLabel, btnAction) {
   const panel = document.getElementById('detail-panel');
@@ -776,15 +784,31 @@ async function bootCompact() {
 // ─────────────────────────────────────────────
 // Boot
 // ─────────────────────────────────────────────
+// 在 embedded mode 下顯示「未連線」訊息,而不是 ELB 自己的 login 表單
+function showEmbeddedNoSession() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div style="padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;min-height:60vh;justify-content:center;">
+      <div style="font-size:48px;line-height:1">🔒</div>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">ELB 還沒連線</h2>
+      <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.6;max-width:340px">
+        請回 LIDOPRO 主畫面,點「建立背景連線」(輸入 LIDO 帳密),系統會自動以同帳密登入 ELB。
+      </p>
+      <button onclick="location.reload()" style="background:var(--gold);color:#fff;border:none;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">重試</button>
+    </div>`;
+}
+
 async function boot() {
   if (isCompactMode()) return bootCompact();
+  if (isEmbeddedMode()) document.body.classList.add('embedded-mode');
   setStatus('connecting');
   const base = workerUrl();
   document.getElementById('worker-hint').textContent = base || '（未設定）';
 
-  // 沒設定 Worker URL → 顯示一次性部署引導
+  // 沒設定 Worker URL → 顯示一次性部署引導 (embedded mode 走友善訊息)
   if (!base) {
     setStatus('offline');
+    if (isEmbeddedMode()) { showEmbeddedNoSession(); return; }
     showOfflineBanner();
     return;
   }
@@ -809,6 +833,7 @@ async function boot() {
   }
   if (!ping || !ping.ok) {
     setStatus('offline');
+    if (isEmbeddedMode()) { showEmbeddedNoSession(); return; }
     showOfflineBanner();
     return;
   }
@@ -816,7 +841,7 @@ async function boot() {
   setStatus('online');
   hideOfflineBanner();
 
-  // 有 session → 直接看機隊；沒有 → 登入頁
+  // 有 session → 直接看機隊；沒有 → 登入頁 (embedded mode 改為顯示友善訊息,不顯示 login 表單)
   if (sessionToken()) {
     // 驗證 session 還活著
     try {
@@ -828,6 +853,10 @@ async function boot() {
       }
     } catch (_) {}
     setSession(null);
+  }
+  if (isEmbeddedMode()) {
+    showEmbeddedNoSession();
+    return;
   }
   showLoginScreen();
   restoreCredentials();
