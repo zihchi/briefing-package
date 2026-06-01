@@ -1234,7 +1234,15 @@
 
                     let edtoRawStr = edtoData.length > 0 ? edtoData.join('\n') : 'non-EDTO';
 
-                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
+                    // 從 OFP 文字抓 ICAO 機型代碼 (e.g. A350-941, A350-1041, A321-271, A330-941)
+                    // LIDO OFP header 第一行通常是: OFP NN  SJXNNN  DDMONYY  <TYPE>  TR  ...  <REG>  <ROUTE>
+                    let acTypeCode = '';
+                    if (rawTexts['OFP']) {
+                        const m = rawTexts['OFP'].match(/\b(A\d{3}-\d{3,4})\b/);
+                        if (m) acTypeCode = m[1];
+                    }
+
+                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n機型代碼: ${acTypeCode || 'N/A'}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
                     rawBlock += `第一備降機場/跑道: ${alt1Rwy}\n`;
                     if (alt2Rwy !== 'N/A') rawBlock += `第二備降機場/跑道: ${alt2Rwy}\n`;
                     if (alt3Rwy !== 'N/A') rawBlock += `第三備降機場/跑道: ${alt3Rwy}\n`;
@@ -1715,13 +1723,28 @@
             'A350-1000': { zfw: 223.0, tow: 260.0, ldw: 236.0 },
         };
 
+        // ICAO 機型代碼 → WEIGHT_LIMITS key
+        // LIDO OFP 標的是 ICAO 命名: A350-9xx = -900, A350-10xx = -1000, A330-9xx = -900neo, etc.
+        function acTypeCodeToKey(code) {
+            if (!code || code === 'N/A') return null;
+            const c = code.toUpperCase();
+            if (c.startsWith('A321')) return 'A321';
+            if (c.startsWith('A330')) return 'A330';
+            // A350-941 → -900 系列 (9 開頭的 3 碼), A350-1041 → -1000 系列 (10 開頭的 4 碼)
+            if (c.startsWith('A350-10')) return 'A350-1000';
+            if (c.startsWith('A350-9'))  return 'A350-900';
+            if (c.startsWith('A350'))    return 'A350-900'; // 預設 -900
+            return null;
+        }
+
+        // Fallback: 從機號前綴推機型 (適用沒 OFP 文字 / 解析失敗時)
         function tailToType(tail) {
             if (!tail) return null;
             const t = String(tail).toUpperCase().replace(/\s+/g, '');
             if (t.startsWith('B-582') || t.startsWith('B582')) return 'A321';
             if (t.startsWith('B-583') || t.startsWith('B583')) return 'A330';
             if (t.startsWith('B-584') || t.startsWith('B584')) return 'A350-900';
-            if (t.startsWith('B-585') || t.startsWith('B585')) return 'A350-1000';
+            if (t.startsWith('B-585') || t.startsWith('B585')) return 'A350-900'; // 多數還是 -900,真要區分要看 OFP
             return null;
         }
 
@@ -2027,7 +2050,10 @@
             let regVal = extractData(rawText, '機號');
 
             // Weight bar chart：抓 ZFW/TOW/LDW + 依機型套 MAX
-            const acType = (regVal !== 'N/A' && regVal !== '') ? tailToType(regVal) : null;
+            // 優先用 OFP 文字裡的 ICAO 機型代碼 (e.g. A350-941, A350-1041),fallback 才靠 tail prefix
+            const acTypeCodeStr = extractData(rawText, '機型代碼');
+            const acType = acTypeCodeToKey(acTypeCodeStr)
+                        || ((regVal !== 'N/A' && regVal !== '') ? tailToType(regVal) : null);
             const chip = document.getElementById('out-ac-type-chip');
             if (chip) chip.textContent = acType || '---';
             const limits = acType ? WEIGHT_LIMITS[acType] : null;
