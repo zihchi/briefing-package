@@ -700,12 +700,32 @@ async function api(path, opts = {}) {
   const tok = sessionToken();
   if (tok) headers['X-Session-Token'] = tok;
 
-  const res = await fetch(base + path, {
-    method: opts.method || 'GET',
-    headers,
-    body: opts.body,
-  });
-  return res.json();
+  // 內部呼叫:單次 fetch + 安全 JSON 解析
+  const attempt = async () => {
+    const res = await fetch(base + path, {
+      method: opts.method || 'GET',
+      headers,
+      body: opts.body,
+    });
+    const text = await res.text();
+    if (!text) {
+      // 空 body 通常代表 ELB 上游 WS 握手 race condition 或 worker 短暫失敗
+      throw new Error('EMPTY_BODY');
+    }
+    try { return JSON.parse(text); }
+    catch (e) { throw new Error('BAD_JSON: ' + text.slice(0, 80)); }
+  };
+
+  try {
+    return await attempt();
+  } catch (e) {
+    // 第一次失敗 (EMPTY_BODY / BAD_JSON / 網路抖動) 自動重試一次,給 ELB WS 上游時間握手
+    if (e.message === 'EMPTY_BODY' || e.message.startsWith('BAD_JSON') || e.name === 'TypeError') {
+      await new Promise(r => setTimeout(r, 1500));
+      return await attempt();
+    }
+    throw e;
+  }
 }
 
 // ─────────────────────────────────────────────
