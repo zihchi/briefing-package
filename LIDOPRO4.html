@@ -101,6 +101,11 @@
         .wbar-fill.ok { background: linear-gradient(90deg, #6ea54a, #4d7c3a); }
         .wbar-fill.warn { background: linear-gradient(90deg, #e8a14b, #c97a1f); }
         .wbar-fill.over { background: linear-gradient(90deg, #d96f5a, #b03c2a); }
+        /* TOW 高亮 — 起飛重量是 dispatch 最關鍵的數字,放大加深 */
+        #wbar-tow .wbar-track { height: 10px; }
+        #wbar-tow .wbar-cur { font-size: 1.55em; font-weight: 900; color: #6e4620; letter-spacing: -0.5px; }
+        #wbar-tow .wbar-pct { font-size: 1.35em; }
+        #wbar-tow > div:first-child > span:first-child { font-size: 13px; color: #4a3627; }
 
         /* Chinese date — 日醒目 */
         .zh-date .d-num {
@@ -1201,7 +1206,8 @@
                             if (m) bof3 = parseInt(m[1], 10);
                         }
 
-                        var perfBlock = `性能資訊：\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
+                        const zfwMT = zfw > 0 ? (zfw / 1000).toFixed(1) : 'N/A';
+                        var perfBlock = `性能資訊：\nZFW: ${zfwMT}\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
                         perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
                         perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
                         perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
