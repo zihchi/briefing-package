@@ -149,9 +149,12 @@ function csvToData(text){
   const rows=parseCSV(text).filter(r=>r.some(x=>(x||"").trim()));
   if(!rows.length) return [];
   const head=rows[0].map(h=>h.trim());
-  const di=head.indexOf("日期"), si=head.indexOf("來源"), mi=head.indexOf("摘要");
-  return rows.slice(1).map(r=>({日期:(r[di]||"").trim(), 來源:(r[si]||"").trim(), 摘要:(r[mi]||"").trim()}))
-    .filter(x=>x.日期||x.來源||x.摘要);
+  const di=head.indexOf("日期"), si=head.indexOf("來源"), mi=head.indexOf("摘要"),
+        fi=head.indexOf("機隊"), ui=head.indexOf("緊急度");
+  return rows.slice(1).map(r=>({
+      日期:(r[di]||"").trim(), 來源:(r[si]||"").trim(), 摘要:(r[mi]||"").trim(),
+      機隊:(fi>=0?(r[fi]||""):"").trim(), 緊急度:(ui>=0?(r[ui]||""):"").trim()
+    })).filter(x=>x.日期||x.來源||x.摘要);
 }
 
 function classifySource(src){
@@ -175,8 +178,18 @@ function parseDate(d){
 }
 function normalize(row){
   const sum=(row.摘要||"").trim(), lines=sum.split("\n"), src=classifySource(row.來源);
-  return {date:row.日期||"",_d:parseDate(row.日期),src,fleet:detectFleet(sum),
-    important:isImportant(sum),title:(lines[0]||"（無標題）").trim(),
+  // 機隊：優先用「機隊」欄，沒填才從摘要文字偵測
+  let fleet;
+  if(row.機隊){
+    fleet=row.機隊.split(/[,，、\s]+/).filter(Boolean)
+      .map(s=>{s=s.toUpperCase(); return (s==="全機隊"||s==="全部"||s==="ALL")?"ALL":s;});
+    if(!fleet.length) fleet=["ALL"];
+  }else fleet=detectFleet(sum);
+  // 緊急度：只看「緊急度」欄（urgent/important 才標橘色重點），不再用關鍵字猜
+  const urg=(row.緊急度||"").toLowerCase();
+  return {date:row.日期||"",_d:parseDate(row.日期),src,fleet,
+    important:(urg==="urgent"||urg==="important"),urgency:urg,
+    title:(lines[0]||"（無標題）").trim(),
     rest:lines.slice(1).join("\n").trim(),full:sum,source:row.來源||""};
 }
 
@@ -199,8 +212,9 @@ async function loadData(){
     st.className="status err";
   }
   DATA=data.map(normalize).sort((a,b)=>(b._d?+b._d:0)-(a._d?+a._d:0));
-  const newest=DATA.map(x=>x._d).filter(Boolean).sort((a,b)=>b-a)[0];
-  if(newest) DATA.forEach(x=> x.isNew=x._d && (newest-x._d)<=3*864e5 );
+  // NEW：今天起算 7 天內（含未來生效），會自動退場
+  const cutoff=new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate()-6);
+  DATA.forEach(x=> x.isNew = x._d && x._d>=cutoff );
   render();
 }
 function matches(it){
