@@ -649,8 +649,9 @@
         })();
 
         // Variables
-        // LIDO 後端:Cloudflare Worker (取代原本的 GAS,可在 worker-lido/ 目錄查看)
-        const LIDO_BACKEND_URL = 'https://briefing-package.zihchi.workers.dev';
+        // LIDO 後端:Google Apps Script (LIDO 防火牆擋 Cloudflare IP,只能走 Google IP)
+        // 對應的 GAS 程式碼結構參考 worker-lido/worker.js (邏輯相同,語法是 GAS 版)
+        const LIDO_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyUEGkCXK8lxcDZ13Ue1IEXsLxhIexHJQBPIyKPSPZv6INwFNQIMN5SRRJklHpY-ZSIxQ/exec';
         // ELB Cloudflare Worker — 與 ELB_Fleet.html 共用 session 透過 localStorage
         const ELB_WORKER_URL = 'https://elb.zihchi.workers.dev';
         const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
@@ -966,14 +967,15 @@
             showToast('讀取中...', false, 2000);
 
             try {
+                // 注意: Content-Type 必須是 text/plain,避免 GAS web app 觸發 CORS preflight (它不支援)
                 const response = await fetch(LIDO_BACKEND_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json;charset=utf-8' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
                 });
 
                 if (!response.ok && response.status !== 200) {
-                    throw new Error(`後端回應異常 (HTTP ${response.status}). 請確認 LIDO Worker 已部署且 URL 正確: ${LIDO_BACKEND_URL}`);
+                    throw new Error(`後端回應異常 (HTTP ${response.status})。GAS deployment 可能失效,需重新部署或檢查授權。`);
                 }
 
                 const textResponse = await response.text();
@@ -981,10 +983,10 @@
                 try {
                     responseData = JSON.parse(textResponse);
                 } catch (parseError) {
-                    // 回傳非 JSON 通常代表端點掛了 (e.g., Worker 未部署、URL 失效、Google 401 頁等)
+                    // 回傳非 JSON = 端點失效 (常見:GAS deployment 被回收、權限改變、URL 變更)
                     const looksLikeHtml = textResponse.trim().startsWith('<');
                     throw new Error(looksLikeHtml
-                        ? `後端端點失效或未部署 (回傳 HTML 錯誤頁)。請檢查 LIDO_BACKEND_URL 是否正確: ${LIDO_BACKEND_URL}`
+                        ? `LIDO 後端端點失效 (回傳 HTML 而非 JSON)。可能 GAS 部署被回收或權限被改,需要重新部署。`
                         : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
                 }
 
