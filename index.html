@@ -341,7 +341,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 12px clamp(1em, 4vw, 2.5em);
-      background: rgba(248,250,252,0.78);
+      background: rgba(244,236,228,0.82);
       backdrop-filter: saturate(180%) blur(14px);
       -webkit-backdrop-filter: saturate(180%) blur(14px);
       border-bottom: 1px solid var(--border);
@@ -349,6 +349,9 @@
     .app-topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: -0.01em; }
     .app-topbar-brand .logo { font-size: 1.3rem; line-height: 1; }
     .app-topbar-meta { display: flex; align-items: center; gap: 8px; }
+    .app-topbar-utc { display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; }
+    .app-topbar-utc .utc-time { font-size: 0.95rem; font-weight: 800; color: var(--brand); letter-spacing: 0.5px; }
+    .app-topbar-utc .utc-date { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1.5px; }
 
     .app-hero {
       max-width: 1100px;
@@ -382,6 +385,10 @@
 
   <header class="app-topbar">
     <div class="app-topbar-brand"><span class="logo">📦</span> 簡報箱</div>
+    <div class="app-topbar-utc" id="utc-clock" title="UTC / Zulu 時間">
+      <span class="utc-time">--:--:--Z</span>
+      <span class="utc-date">-- --- ----</span>
+    </div>
     <div class="app-topbar-meta">
       <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
       <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
@@ -635,6 +642,19 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js?v=2.0"></script>
 <script>
+  // 置頂 UTC（Zulu）日期時間
+  (function(){
+    var MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    function p(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var d = new Date(), el = document.getElementById('utc-clock');
+      if(!el) return;
+      el.querySelector('.utc-time').textContent = p(d.getUTCHours())+':'+p(d.getUTCMinutes())+':'+p(d.getUTCSeconds())+'Z';
+      el.querySelector('.utc-date').textContent = p(d.getUTCDate())+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear();
+    }
+    tick(); setInterval(tick, 1000);
+  })();
+
   if ('serviceWorker' in navigator) {
     if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
       const versionEl = document.getElementById('sys-version');
