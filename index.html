@@ -940,9 +940,9 @@
       var dates=[today, addDays(today,1)], labels=['今日','明日'];
       lb.innerHTML = '<div class="cap">JX-'+flightNo+'　'+route+'　亂流圖（點背景關閉）</div>' +
         dates.map(function(d,i){ return '<div class="cap">'+labels[i]+' '+d+'</div><img src="chartcache/'+flightNo+'-'+d+'.png" alt="亂流圖" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'cap\',textContent:\'（'+labels[i]+'無快取圖）\'}))">'; }).join('');
+      lb.onclick = function(e){ if(e.target===lb) lb.classList.remove('open'); };
       lb.classList.add('open');
     }
-    document.getElementById('fd-lb').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
 
     function select(flightNo){
       var info=(window.flights||[]).find(function(f){return f.flightNo===flightNo;});
