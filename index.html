@@ -349,10 +349,12 @@
     .app-topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: -0.01em; }
     .app-topbar-brand .logo { font-size: 1.3rem; line-height: 1; }
     .app-topbar-meta { display: flex; align-items: center; gap: 8px; }
-    .app-topbar-utc { display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; }
-    .app-topbar-utc .utc-time { font-size: 0.95rem; font-weight: 800; color: var(--brand); letter-spacing: 0.5px; }
-    .app-topbar-utc .utc-date { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1.5px; }
-    .app-topbar-utc .utc-tpe { font-size: 0.62rem; font-weight: 700; color: var(--text-faint); letter-spacing: 0.5px; }
+    .app-topbar-utc { display: flex; flex-direction: row; align-items: stretch; gap: 14px; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; }
+    .app-topbar-utc .clk { display: flex; flex-direction: column; align-items: center; line-height: 1.12; }
+    .app-topbar-utc .clk + .clk { border-left: 1px solid var(--border); padding-left: 14px; }
+    .app-topbar-utc .clk-label { font-size: 0.52rem; font-weight: 800; letter-spacing: 2px; color: var(--text-faint); }
+    .app-topbar-utc .clk-time { font-size: 0.9rem; font-weight: 800; color: var(--brand); letter-spacing: 0.5px; }
+    .app-topbar-utc .clk-date { font-size: 0.56rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; }
 
     .app-hero {
       max-width: 1100px;
@@ -387,9 +389,16 @@
   <header class="app-topbar">
     <div class="app-topbar-brand"></div>
     <div class="app-topbar-utc" id="utc-clock" title="UTC（Zulu）/ 台北時間">
-      <span class="utc-time">--:--:--Z</span>
-      <span class="utc-date">-- --- ----</span>
-      <span class="utc-tpe">台北 --:--</span>
+      <div class="clk">
+        <span class="clk-label">UTC</span>
+        <span class="clk-time" id="utc-time">--:--:--Z</span>
+        <span class="clk-date" id="utc-date">-- --- ----</span>
+      </div>
+      <div class="clk">
+        <span class="clk-label">台北</span>
+        <span class="clk-time" id="tpe-time">--:--:--</span>
+        <span class="clk-date" id="tpe-date">-- --- ----</span>
+      </div>
     </div>
     <div class="app-topbar-meta">
       <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
@@ -651,9 +660,12 @@
     function tick(){
       var d = new Date(), el = document.getElementById('utc-clock');
       if(!el) return;
-      el.querySelector('.utc-time').textContent = p(d.getUTCHours())+':'+p(d.getUTCMinutes())+':'+p(d.getUTCSeconds())+'Z';
-      el.querySelector('.utc-date').textContent = p(d.getUTCDate())+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear();
-      el.querySelector('.utc-tpe').textContent = '台北 ' + d.toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',hour12:false});
+      var tOpt = {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'};
+      var dOpt = {day:'2-digit', month:'short', year:'numeric'};
+      el.querySelector('#utc-time').textContent = d.toLocaleTimeString('en-GB', Object.assign({timeZone:'UTC'}, tOpt)) + 'Z';
+      el.querySelector('#utc-date').textContent = d.toLocaleDateString('en-GB', Object.assign({timeZone:'UTC'}, dOpt)).toUpperCase();
+      el.querySelector('#tpe-time').textContent = d.toLocaleTimeString('en-GB', Object.assign({timeZone:'Asia/Taipei'}, tOpt));
+      el.querySelector('#tpe-date').textContent = d.toLocaleDateString('en-GB', Object.assign({timeZone:'Asia/Taipei'}, dOpt)).toUpperCase();
     }
     tick(); setInterval(tick, 1000);
   })();
