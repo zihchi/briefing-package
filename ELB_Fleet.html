@@ -1741,11 +1741,20 @@ function renderHistoryTab(container, data) {
         const typeTag = ['FL','ML','SV'].includes(prefix)
           ? `<span style="background:${typeBg};color:${typeColor};padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;margin-right:6px">${prefix}</span>`
           : '';
+        // close 動作只顯示小綠標籤;其他 (defer 等) 保留完整 action 區塊
+        const isClosed = action && /close/i.test(getActionLabel(log));
+        const closedBadge = isClosed
+          ? `<span style="background:rgba(34,197,94,0.15);color:#16a34a;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;margin-left:6px">✓ Closed</span>`
+          : '';
+        // 缺失描述 (title + body) 用橘底顯眼框,這才是要看的東西
+        const defectBlock = (title || body) ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(245,158,11,0.10);border-left:3px solid var(--gold);border-radius:4px;">
+          ${title ? `<div style="color:var(--text);font-weight:700;font-size:13px">${esc(title)}</div>` : ''}
+          ${body ? `<div style="white-space:pre-wrap;color:var(--muted);font-size:12px;margin-top:4px;line-height:1.55">${esc(body)}</div>` : ''}
+        </div>` : '';
         logHtml += `<div class="fault-row" style="background:var(--bg);border:1px solid var(--border);">
-          <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}${code && code !== ata ? ` <span style="color:var(--dim);font-weight:400">${esc(code)}</span>` : ''}</div>
-          ${title ? `<div style="color:var(--text);font-weight:700;font-size:13px;margin-top:4px">${esc(title)}</div>` : ''}
-          ${body ? `<div class="fault-desc" style="white-space:pre-wrap">${esc(body)}</div>` : ''}
-          ${action ? `<div style="margin-top:6px;padding:6px 8px;background:rgba(245,158,11,0.08);border-left:2px solid var(--gold);border-radius:4px;font-size:11px;color:var(--muted);line-height:1.5;"><strong style="color:var(--gold)">⚙ ${esc(getActionLabel(log))}:</strong> ${esc(action)}</div>` : ''}
+          <div class="fault-code">${typeTag}${esc(lnum)}${ata ? ` <span style="color:var(--dim);font-weight:400">ATA:${esc(ata)}</span>` : ''}${code && code !== ata ? ` <span style="color:var(--dim);font-weight:400">${esc(code)}</span>` : ''}${closedBadge}</div>
+          ${defectBlock}
+          ${(action && !isClosed) ? `<div style="margin-top:6px;padding:6px 8px;background:rgba(148,163,184,0.10);border-left:2px solid var(--muted);border-radius:4px;font-size:11px;color:var(--muted);line-height:1.5;"><strong style="color:var(--text)">⚙ ${esc(getActionLabel(log))}:</strong> ${esc(action)}</div>` : ''}
         </div>`;
       }
 
