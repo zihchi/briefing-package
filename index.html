@@ -376,6 +376,39 @@
     .fq-hint { color: var(--text-muted); }
     .fq-err { color: var(--danger); }
 
+    /* 航班儀表板（置頂下拉 + 展開面板） */
+    #fd-select { font-size: 0.85rem; font-weight: 700; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-btn); background: var(--surface); color: var(--text); max-width: 210px; cursor: pointer; }
+    #fd-select:focus { outline: none; border-color: var(--brand); }
+    .fd-panel { background: rgba(244,236,228,0.97); border-bottom: 1px solid var(--border); overflow: hidden; max-height: 0; transition: max-height .32s ease; }
+    .fd-panel.open { max-height: 640px; }
+    .fd-inner { max-width: 1100px; margin: 0 auto; padding: 12px clamp(1em,4vw,2.5em) 16px; }
+    .fd-head { display: flex; align-items: center; gap: 10px; }
+    .fd-no { font-weight: 900; font-size: 1.1rem; color: var(--brand); font-family: ui-monospace,'SF Mono',monospace; }
+    .fd-rt { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: 1px; }
+    .fd-close { margin-left: auto; background: none; border: 0; font-size: 1.15rem; color: var(--text-faint); cursor: pointer; padding: 2px 8px; }
+    .fd-ends { display: flex; align-items: stretch; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .fd-end { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 10px 14px; box-shadow: var(--shadow-card); }
+    .fd-end .ap { font-weight: 900; font-size: 1.25rem; color: var(--brand); letter-spacing: 1px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .fd-end .wx { font-size: 0.88rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+    .fd-end .row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; font-family: ui-monospace,'SF Mono',monospace; }
+    .fd-end .lbl { font-size: 0.56rem; font-weight: 800; color: var(--text-faint); letter-spacing: 1px; width: 28px; flex: 0 0 28px; }
+    .fd-end .tm { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+    .fd-end .dt { font-size: 0.66rem; color: var(--text-muted); font-weight: 700; }
+    .fd-arrowc { display: flex; align-items: center; color: var(--text-faint); font-size: 1.4rem; font-weight: 800; }
+    .fd-fids { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .fd-chip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px 11px; font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .fd-chip b { color: var(--brand); }
+    .fd-chip.st-go { border-color: #bfe6cf; background: #eafaf0; color: #1f7a46; }
+    .fd-chip.st-warn { border-color: #f3d9b0; background: #fdf3e3; color: #9a6212; }
+    .fd-turb { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .fd-turb img { height: 46px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; box-shadow: var(--shadow-card); }
+    .fd-turb .btn { margin: 0; padding: 6px 12px; font-size: 0.8rem; }
+    .fd-note { font-size: 0.75rem; color: var(--text-faint); }
+    .fd-lb { position: fixed; inset: 0; z-index: 2000; background: rgba(40,28,18,0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 20px; overflow: auto; }
+    .fd-lb.open { display: flex; }
+    .fd-lb img { max-width: 96vw; max-height: 42vh; border-radius: 8px; background: #fff; }
+    .fd-lb .cap { color: #f4ece4; font-weight: 700; font-size: 0.85rem; }
+
     .app-hero {
       max-width: 1100px;
       margin: 0 auto;
@@ -407,7 +440,9 @@
 <body>
 
   <header class="app-topbar">
-    <div class="app-topbar-brand"></div>
+    <div class="app-topbar-brand">
+      <select id="fd-select" title="選擇航班顯示資訊"><option value="">✈ 選擇航班…</option></select>
+    </div>
     <div class="app-topbar-utc" id="utc-clock" title="UTC（Zulu）/ 台北時間">
       <div class="clk">
         <span class="clk-label">UTC</span>
@@ -425,6 +460,31 @@
       <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
     </div>
   </header>
+
+  <div id="fd-panel" class="fd-panel">
+    <div class="fd-inner">
+      <div class="fd-head">
+        <span class="fd-no" id="fd-no">—</span>
+        <span class="fd-rt" id="fd-route">—</span>
+        <button class="fd-close" id="fd-close" aria-label="收合">✕</button>
+      </div>
+      <div class="fd-ends">
+        <div class="fd-end">
+          <div class="ap"><span id="fd-dep-ap">—</span><span class="wx" id="fd-dep-wx"></span></div>
+          <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-dep-lt">--:--</span><span class="dt" id="fd-dep-ld"></span></div>
+          <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-dep-ut">--:--Z</span><span class="dt" id="fd-dep-ud"></span></div>
+        </div>
+        <div class="fd-arrowc">→</div>
+        <div class="fd-end">
+          <div class="ap"><span id="fd-arr-ap">—</span><span class="wx" id="fd-arr-wx"></span></div>
+          <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-arr-lt">--:--</span><span class="dt" id="fd-arr-ld"></span></div>
+          <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-arr-ut">--:--Z</span><span class="dt" id="fd-arr-ud"></span></div>
+        </div>
+      </div>
+      <div class="fd-fids" id="fd-fids"></div>
+      <div class="fd-turb" id="fd-turb"></div>
+    </div>
+  </div>
 
   <div class="app-hero">
     <h1>Briefing Package</h1>
@@ -753,6 +813,160 @@
     input.addEventListener('keydown', function(e){ if(e.key==='Enter') query(); });
   })();
 
+  // ===== 航班儀表板（置頂下拉 → 展開面板）=====
+  (function(){
+    var sel = document.getElementById('fd-select');
+    var panel = document.getElementById('fd-panel');
+    if(!sel || !panel) return;
+
+    var SCHED_GAS = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
+    var FIDS_GAS  = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec";
+    // IATA → [緯度, 經度]（星宇航點，取自 app.js coordsDB）
+    var AP = {
+      TPE:[25.0777,121.2328], NRT:[35.7647,140.3863], KIX:[34.4273,135.2440], UKB:[34.6328,135.2239],
+      NGO:[34.8583,136.8053], FUK:[33.5859,130.4507], KMJ:[32.8372,130.8553], CTS:[42.7752,141.6923],
+      HKD:[41.7700,140.8220], SDJ:[38.1397,140.9169], OKA:[26.1958,127.6458], SHI:[24.8267,125.1447],
+      MFM:[22.1496,113.5915], HKG:[22.3089,113.9146], DAD:[16.0439,108.1994], PQC:[10.1656,103.9944],
+      SGN:[10.8188,106.6520], HAN:[21.2212,105.8072], KUL:[2.7456,101.7099], BKK:[13.6811,100.7473],
+      CNX:[18.7668,98.9626], CGK:[-6.1256,106.6558], SIN:[1.3592,103.9893], CEB:[10.3075,123.9794],
+      MNL:[14.5090,121.0194], CRK:[15.1858,120.5599], LAX:[33.9416,-118.4085], ONT:[34.0560,-117.6012],
+      SFO:[37.6189,-122.3750], PHX:[33.4342,-112.0080], SEA:[47.4489,-122.3094]
+    };
+    var MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'], WK=['日','一','二','三','四','五','六'];
+    function p2(n){ return String(n).padStart(2,'0'); }
+    function wxOf(c){
+      if(c===0) return ['☀️','晴'];
+      if(c===1||c===2) return ['🌤️','少雲'];
+      if(c===3) return ['☁️','多雲'];
+      if(c===45||c===48) return ['🌫️','霧'];
+      if(c>=51&&c<=57) return ['🌦️','毛毛雨'];
+      if(c>=61&&c<=67) return ['🌧️','雨'];
+      if(c>=71&&c<=77) return ['❄️','雪'];
+      if(c>=80&&c<=82) return ['🌧️','陣雨'];
+      if(c>=85&&c<=86) return ['🌨️','陣雪'];
+      if(c>=95) return ['⛈️','雷雨'];
+      return ['🌡️','—'];
+    }
+    function fmtAt(utcMs, offSec){ var d=new Date(utcMs+offSec*1000); return {t:p2(d.getUTCHours())+':'+p2(d.getUTCMinutes()), d:p2(d.getUTCDate())+' '+MON[d.getUTCMonth()]+' 週'+WK[d.getUTCDay()]}; }
+    function fmtZ(utcMs){ var d=new Date(utcMs); return {t:p2(d.getUTCHours())+':'+p2(d.getUTCMinutes())+'Z', d:p2(d.getUTCDate())+' '+MON[d.getUTCMonth()]}; }
+    function todayTPE(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}); }
+    function addDays(s,n){ var d=new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+
+    // 建立下拉（與 Turbli 同一份 flightGroups）
+    (function build(){
+      try{
+        var groups = (typeof flightGroups!=='undefined') ? flightGroups : [{region:'航班',flights:(window.flights||[])}];
+        groups.forEach(function(g){
+          var og=document.createElement('optgroup'); og.label=g.region;
+          g.flights.forEach(function(f){ var o=document.createElement('option'); o.value=f.flightNo; o.textContent=f.flightNo+'  ('+f.route+')'; og.appendChild(o); });
+          sel.appendChild(og);
+        });
+      }catch(e){}
+    })();
+
+    function openMeteo(iata){
+      var c=AP[iata]; if(!c) return Promise.resolve(null);
+      return fetch('https://api.open-meteo.com/v1/forecast?latitude='+c[0]+'&longitude='+c[1]+'&current=temperature_2m,weather_code&timezone=auto',{cache:'no-store'})
+        .then(function(r){return r.json();})
+        .then(function(j){ return {off:(j.utc_offset_seconds||0), temp:(j.current?j.current.temperature_2m:null), code:(j.current?j.current.weather_code:null)}; })
+        .catch(function(){ return null; });
+    }
+    function getSchedule(flightNo){
+      return fetch(SCHED_GAS+'?flight=JX'+flightNo,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+        if(!j.ok||!j.schedules||!j.schedules.length) return null;
+        var t=todayTPE();
+        var v=j.schedules.filter(function(s){var a=(s.ScheduleStartDate||'').slice(0,10),b=(s.ScheduleEndDate||'').slice(0,10);return (!a||a<=t)&&(!b||b>=t);});
+        return v[0]||j.schedules[0];
+      }).catch(function(){ return null; });
+    }
+    var _fids=null;
+    function getFids(){ if(_fids) return Promise.resolve(_fids); return fetch(FIDS_GAS,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){_fids=j;return j;}).catch(function(){return {departures:[],arrivals:[]};}); }
+    function findFids(fids, flightNo, tpeIsOrigin){
+      var arr = tpeIsOrigin ? (fids.departures||[]) : (fids.arrivals||[]);
+      var n=parseInt(flightNo,10), t=todayTPE();
+      var m=arr.filter(function(f){return f.AirlineID==='JX' && parseInt(f.FlightNumber,10)===n;});
+      return m.filter(function(f){return f.FlightDate===t;})[0] || m[0] || null;
+    }
+
+    function setTimes(pfx, local, utc){
+      document.getElementById('fd-'+pfx+'-lt').textContent = local?local.t:'--:--';
+      document.getElementById('fd-'+pfx+'-ld').textContent = local?local.d:'';
+      document.getElementById('fd-'+pfx+'-ut').textContent = utc?utc.t:'--:--Z';
+      document.getElementById('fd-'+pfx+'-ud').textContent = utc?utc.d:'';
+    }
+    function setWx(pfx, w){
+      var el=document.getElementById('fd-'+pfx+'-wx');
+      if(!w || w.temp==null){ el.textContent=''; return; }
+      var ic=wxOf(w.code); el.textContent = ic[0]+' '+ic[1]+' '+Math.round(w.temp)+'°C';
+    }
+
+    function renderTimes(sched, wO, wD){
+      if(!sched){ setTimes('dep',null,null); setTimes('arr',null,null); return; }
+      var offO=wO?wO.off:0, offD=wD?wD.off:0;
+      var originNow=new Date(Date.now()+offO*1000);
+      var y=originNow.getUTCFullYear(), mo=originNow.getUTCMonth(), da=originNow.getUTCDate();
+      var dp=(sched.DepartureTime||'00:00').split(':'), ar=(sched.ArrivalTime||'00:00').split(':');
+      var depUtc=Date.UTC(y,mo,da,+dp[0],+dp[1])-offO*1000;
+      var arrUtc=Date.UTC(y,mo,da,+ar[0],+ar[1])-offD*1000;
+      if(arrUtc<=depUtc) arrUtc+=864e5;  // 跨日到達
+      setTimes('dep', fmtAt(depUtc,offO), fmtZ(depUtc));
+      setTimes('arr', fmtAt(arrUtc,offD), fmtZ(arrUtc));
+    }
+    function renderFids(f, tpeIsOrigin){
+      var box=document.getElementById('fd-fids');
+      if(!f){ box.innerHTML='<span class="fd-note">桃機 FIDS 查無今日此航班（可能尚未開放或非今日班）</span>'; return; }
+      var remark = tpeIsOrigin ? (f.DepartureRemark||'') : (f.ArrivalRemark||'');
+      var stCls = /出發|起飛|DEPART|準時|ON TIME/i.test(remark)?'st-go':(/延|DELAY|取消|CANCEL/i.test(remark)?'st-warn':'');
+      var chips=[];
+      chips.push('<span class="fd-chip '+stCls+'">STATUS <b>'+(remark||'—')+'</b></span>');
+      chips.push('<span class="fd-chip">GATE <b>'+((f.Gate||'').trim()||'—')+'</b></span>');
+      chips.push('<span class="fd-chip">航廈 <b>'+(f.Terminal?('T'+f.Terminal):'—')+'</b></span>');
+      if(tpeIsOrigin) chips.push('<span class="fd-chip">櫃檯 <b>'+((f.CheckCounter||'').trim()||'—')+'</b></span>');
+      else chips.push('<span class="fd-chip">Belt <b>'+((f.BaggageClaim||'').trim()||'—')+'</b></span>');
+      box.innerHTML = chips.join('');
+    }
+    function renderTurb(flightNo, route){
+      var box=document.getElementById('fd-turb');
+      var t=todayTPE(), src='chartcache/'+flightNo+'-'+t+'.png';
+      box.innerHTML='<img id="fd-turb-img" alt="亂流縮圖" src="'+src+'"><button class="btn" id="fd-turb-btn">查看亂流圖</button>';
+      var img=document.getElementById('fd-turb-img');
+      img.addEventListener('error', function(){ img.style.display='none'; });
+      function open(){ openLightbox(flightNo, route, t); }
+      img.addEventListener('click', open);
+      document.getElementById('fd-turb-btn').addEventListener('click', open);
+    }
+    function openLightbox(flightNo, route, today){
+      var lb=document.getElementById('fd-lb');
+      var dates=[today, addDays(today,1)], labels=['今日','明日'];
+      lb.innerHTML = '<div class="cap">JX-'+flightNo+'　'+route+'　亂流圖（點背景關閉）</div>' +
+        dates.map(function(d,i){ return '<div class="cap">'+labels[i]+' '+d+'</div><img src="chartcache/'+flightNo+'-'+d+'.png" alt="亂流圖" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'cap\',textContent:\'（'+labels[i]+'無快取圖）\'}))">'; }).join('');
+      lb.classList.add('open');
+    }
+    document.getElementById('fd-lb').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+    function select(flightNo){
+      var info=(window.flights||[]).find(function(f){return f.flightNo===flightNo;});
+      if(!info){ panel.classList.remove('open'); return; }
+      var parts=info.route.split('/'), orig=parts[0], dest=parts[1], tpeIsOrigin=(orig==='TPE');
+      document.getElementById('fd-no').textContent='JX'+flightNo;
+      document.getElementById('fd-route').textContent=orig+' → '+dest;
+      document.getElementById('fd-dep-ap').textContent=orig;
+      document.getElementById('fd-arr-ap').textContent=dest;
+      setTimes('dep',null,null); setTimes('arr',null,null); setWx('dep',null); setWx('arr',null);
+      document.getElementById('fd-fids').innerHTML='<span class="fd-note">載入中…</span>';
+      renderTurb(flightNo, info.route);
+      panel.classList.add('open');
+      Promise.all([ getSchedule(flightNo), openMeteo(orig), openMeteo(dest), getFids() ]).then(function(res){
+        var sched=res[0], wO=res[1], wD=res[2], fids=res[3];
+        setWx('dep',wO); setWx('arr',wD);
+        renderTimes(sched, wO, wD);
+        renderFids(findFids(fids, flightNo, tpeIsOrigin), tpeIsOrigin);
+      });
+    }
+    sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else panel.classList.remove('open'); });
+    document.getElementById('fd-close').addEventListener('click', function(){ panel.classList.remove('open'); sel.value=''; });
+  })();
+
   if ('serviceWorker' in navigator) {
     if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
       const versionEl = document.getElementById('sys-version');
@@ -874,5 +1088,6 @@
     }
   }
 </script>
+<div id="fd-lb" class="fd-lb"></div>
 </body>
 </html>
