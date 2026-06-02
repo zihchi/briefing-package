@@ -383,6 +383,7 @@
   <header class="app-topbar">
     <div class="app-topbar-brand"><span class="logo">📦</span> 簡報箱</div>
     <div class="app-topbar-meta">
+      <button id="btn-reload" onclick="location.reload()" title="重新載入整個頁面" aria-label="重新載入整個頁面" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--surface); color: var(--brand); border: 1.5px solid var(--brand); border-radius: 6px; cursor: pointer; font-weight: bold;">🔄 重新整理</button>
       <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
       <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
     </div>
@@ -466,8 +467,8 @@
   <div class="section">
     <h2>📢 公告欄 </h2>
     <iframe
-      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pubhtml?widget=true&headers=false"
-      style="width:100%; height:480px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
+      src="notices.html"
+      style="width:100%; height:640px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
     ></iframe>
   </div>
 

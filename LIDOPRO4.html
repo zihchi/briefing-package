@@ -101,6 +101,11 @@
         .wbar-fill.ok { background: linear-gradient(90deg, #6ea54a, #4d7c3a); }
         .wbar-fill.warn { background: linear-gradient(90deg, #e8a14b, #c97a1f); }
         .wbar-fill.over { background: linear-gradient(90deg, #d96f5a, #b03c2a); }
+        /* TOW 高亮 — 起飛重量是 dispatch 最關鍵的數字,放大加深 */
+        #wbar-tow .wbar-track { height: 10px; }
+        #wbar-tow .wbar-cur { font-size: 1.55em; font-weight: 900; color: #6e4620; letter-spacing: -0.5px; }
+        #wbar-tow .wbar-pct { font-size: 1.35em; }
+        #wbar-tow > div:first-child > span:first-child { font-size: 13px; color: #4a3627; }
 
         /* Chinese date — 日醒目 */
         .zh-date .d-num {
@@ -315,6 +320,7 @@
                                 ELB Dashboard / History <span id="elb-frame-reg" class="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px] data-font tracking-widest shadow-inner"></span>
                             </span>
                             <div class="flex items-center gap-3">
+                                <button onclick="openFleetBrowser()" class="text-[10px] bg-amber-500/30 hover:bg-amber-500/50 border border-amber-300/50 px-2 py-1 rounded transition-colors flex items-center gap-1 no-print font-bold">🛩 機隊瀏覽</button>
                                 <a href="ELB_Fleet.html" target="_blank" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-white/20 no-print">🔗 開新分頁</a>
                                 <button onclick="reloadElbFrame()" class="text-stone-300 hover:text-white transition-colors no-print" title="重試載入">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -649,10 +655,14 @@
         })();
 
         // Variables
-        // LIDO 後端:Cloudflare Worker (取代原本的 GAS,可在 worker-lido/ 目錄查看)
-        const LIDO_BACKEND_URL = 'https://lido.zihchi.workers.dev';
-        // ELB Cloudflare Worker — 與 ELB_Fleet.html 共用 session 透過 localStorage
-        const ELB_WORKER_URL = 'https://elb.zihchi.workers.dev';
+        // LIDO 後端:Google Apps Script (LIDO 防火牆擋 Cloudflare IP,只能走 Google IP)
+        // 對應的 GAS 程式碼結構參考 worker-lido/worker.js (邏輯相同,語法是 GAS 版)
+        const LIDO_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyUEGkCXK8lxcDZ13Ue1IEXsLxhIexHJQBPIyKPSPZv6INwFNQIMN5SRRJklHpY-ZSIxQ/exec';
+        // ELB Cloudflare Worker — 從 briefing-package CF project 自動部署 (worker/worker.js)
+        // 跟 ELB_Fleet.html 共用 session 透過 localStorage.elbWorkerUrl + elbSession
+        const ELB_WORKER_URL = 'https://briefing-package.zihchi.workers.dev';
+        // 每次 LIDOPRO4 載入時都把最新的 URL 推到 localStorage,避免 iframe 用到舊 URL
+        try { localStorage.setItem('elbWorkerUrl', ELB_WORKER_URL); } catch (e) {}
         const FIDS_GAS_URL = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec"; 
         
         let savedLidoUser = ''; let savedLidoPass = '';
@@ -948,15 +958,115 @@
         }
 
         const fetchBtn = document.getElementById('fetch-data-btn');
+
+        // 把 fetch 邏輯抽出來,picker 選擇後可以用同函式帶 legId 重新打一次
+        async function performLidoFetch(target, legId) {
+            const body = { username: savedLidoUser, password: savedLidoPass, targetFlight: target };
+            if (legId) body.legId = legId;
+            const response = await fetch(LIDO_BACKEND_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body),
+            });
+            if (!response.ok && response.status !== 200) {
+                throw new Error(`後端回應異常 (HTTP ${response.status})。GAS deployment 可能失效,需重新部署或檢查授權。`);
+            }
+            const textResponse = await response.text();
+            try { return JSON.parse(textResponse); }
+            catch (parseError) {
+                const looksLikeHtml = textResponse.trim().startsWith('<');
+                throw new Error(looksLikeHtml
+                    ? `LIDO 後端端點失效 (回傳 HTML 而非 JSON)。可能 GAS 部署被回收或權限被改,需要重新部署。`
+                    : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
+            }
+        }
+
+        // 顯示候選航班 picker,讓使用者挑
+        function showFlightPicker(candidates, target) {
+            const old = document.getElementById('flight-picker-modal');
+            if (old) old.remove();
+
+            const nowMs = Date.now();
+            const fmtZ = (iso) => {
+                if (!iso) return '----';
+                const d = new Date(iso);
+                return `${String(d.getUTCHours()).padStart(2,'0')}${String(d.getUTCMinutes()).padStart(2,'0')}Z`;
+            };
+            const fmtDate = (iso) => iso ? iso.slice(0, 10) : '----';
+
+            const rows = candidates.map((c, idx) => {
+                const stdMs = c.scheduledDepartureTime ? new Date(c.scheduledDepartureTime).getTime() : 0;
+                const staMs = c.scheduledTimeOfArrival ? new Date(c.scheduledTimeOfArrival).getTime() : 0;
+                const isUpcoming = stdMs >= nowMs;
+                const isFlying   = stdMs < nowMs && staMs >= nowMs;
+                const isDone     = staMs && staMs < nowMs;
+                const tag = isUpcoming ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">即將飛</span>'
+                          : isFlying   ? '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">飛行中</span>'
+                          : isDone     ? '<span class="bg-stone-200 text-stone-500 px-2 py-0.5 rounded text-[10px] font-bold">已結束</span>'
+                                       : '';
+                const route = `${c.originStationCode || c.departureAirportICAO || '----'} → ${c.destinationStationCode || c.destinationAirportICAO || '----'}`;
+                const reg = c.registration || '----';
+                return `
+                  <button data-leg-id="${c.legId}" class="picker-row w-full text-left bg-white hover:bg-amber-50 border border-stone-200 hover:border-amber-400 rounded-xl p-4 transition-all active:scale-[0.99]">
+                    <div class="flex items-baseline justify-between mb-2">
+                      <span class="data-font font-black text-lg text-stone-800">${fmtDate(c.flightOriginDate || c.scheduledDepartureTime)}</span>
+                      <span class="data-font font-bold text-stone-600">STD ${fmtZ(c.scheduledDepartureTime)}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="data-font font-bold text-stone-700">${route}</span>
+                      <span class="flex items-center gap-2">
+                        <span class="data-font font-bold text-stone-600">${reg}</span>
+                        ${tag}
+                      </span>
+                    </div>
+                  </button>`;
+            }).join('');
+
+            const modal = document.createElement('div');
+            modal.id = 'flight-picker-modal';
+            modal.className = 'fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4';
+            modal.innerHTML = `
+              <div class="bg-stone-50 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh]">
+                <div class="bg-gradient-to-r from-[#8b5a2b] to-[#6e4620] text-white px-5 py-3 flex justify-between items-center rounded-t-2xl">
+                  <span class="font-bold text-sm tracking-wider">找到 ${candidates.length} 筆 ${target},請選擇</span>
+                  <button id="picker-close" class="text-white/80 hover:text-white p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div class="p-4 flex flex-col gap-3 overflow-y-auto">
+                  ${rows}
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            document.body.style.overflow = 'hidden';
+
+            const closePicker = () => { modal.remove(); document.body.style.overflow = ''; };
+            modal.querySelector('#picker-close').onclick = closePicker;
+            modal.addEventListener('click', (e) => { if (e.target === modal) closePicker(); });
+
+            modal.querySelectorAll('.picker-row').forEach(btn => {
+                btn.onclick = () => {
+                    const legId = btn.getAttribute('data-leg-id');
+                    closePicker();
+                    // 設定 pending legId,然後重觸發 fetchBtn 主流程
+                    _pendingLegId = legId;
+                    document.getElementById('fetch-data-btn').click();
+                };
+            });
+        }
+
+        // Picker 選擇後待用的 legId,fetchBtn 流程會讀取它
+        let _pendingLegId = null;
+
         fetchBtn.addEventListener('click', async () => {
             let targetRaw = document.getElementById('target-flight').value.trim();
-            targetRaw = targetRaw.replace(/^SJX/i, ''); 
+            targetRaw = targetRaw.replace(/^SJX/i, '');
             const target = 'SJX' + targetRaw;
 
             if (!savedLidoUser || !savedLidoPass || !targetRaw) return showToast('請輸入有效的航班編號', true);
 
             const currentTargetVal = document.getElementById('target-flight').value;
-            clearData(true); 
+            clearData(true);
             document.getElementById('target-flight').value = currentTargetVal;
 
             fetchBtn.disabled = true;
@@ -966,26 +1076,19 @@
             showToast('讀取中...', false, 2000);
 
             try {
-                const response = await fetch(LIDO_BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json;charset=utf-8' },
-                    body: JSON.stringify({ username: savedLidoUser, password: savedLidoPass, targetFlight: target })
-                });
+                // 若有 picker 帶來的 legId 就用,用完清掉
+                const legIdForThisCall = _pendingLegId;
+                _pendingLegId = null;
 
-                if (!response.ok && response.status !== 200) {
-                    throw new Error(`後端回應異常 (HTTP ${response.status}). 請確認 LIDO Worker 已部署且 URL 正確: ${LIDO_BACKEND_URL}`);
-                }
+                const responseData = await performLidoFetch(target, legIdForThisCall);
 
-                const textResponse = await response.text();
-                let responseData;
-                try {
-                    responseData = JSON.parse(textResponse);
-                } catch (parseError) {
-                    // 回傳非 JSON 通常代表端點掛了 (e.g., Worker 未部署、URL 失效、Google 401 頁等)
-                    const looksLikeHtml = textResponse.trim().startsWith('<');
-                    throw new Error(looksLikeHtml
-                        ? `後端端點失效或未部署 (回傳 HTML 錯誤頁)。請檢查 LIDO_BACKEND_URL 是否正確: ${LIDO_BACKEND_URL}`
-                        : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
+                // ★ 多筆同班號 → 跳 picker
+                if (responseData.status === 'multiple' && Array.isArray(responseData.candidates)) {
+                    fetchBtn.disabled = false;
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                    document.getElementById('atc-display').value = '';
+                    showFlightPicker(responseData.candidates, target);
+                    return;
                 }
 
                 if (responseData.status === 'success') {
@@ -1196,7 +1299,8 @@
                             if (m) bof3 = parseInt(m[1], 10);
                         }
 
-                        var perfBlock = `性能資訊：\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
+                        const zfwMT = zfw > 0 ? (zfw / 1000).toFixed(1) : 'N/A';
+                        var perfBlock = `性能資訊：\nZFW: ${zfwMT}\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
                         perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
                         perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
                         perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
@@ -1229,7 +1333,15 @@
 
                     let edtoRawStr = edtoData.length > 0 ? edtoData.join('\n') : 'non-EDTO';
 
-                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
+                    // 從 OFP 文字抓 ICAO 機型代碼 (e.g. A350-941, A350-1041, A321-271, A330-941)
+                    // LIDO OFP header 第一行通常是: OFP NN  SJXNNN  DDMONYY  <TYPE>  TR  ...  <REG>  <ROUTE>
+                    let acTypeCode = '';
+                    if (rawTexts['OFP']) {
+                        const m = rawTexts['OFP'].match(/\b(A\d{3}-\d{3,4})\b/);
+                        if (m) acTypeCode = m[1];
+                    }
+
+                    let rawBlock = `基本資訊：\n日期: ${flightDateStr}\nFlight number: ${flightNo}\n機號: ${reg}\n機型代碼: ${acTypeCode || 'N/A'}\n出發地/目的地: ${dep}/${dest}\nSTD: ${stdStr}\nSTA: ${staStr}\nETD: ${etdStr}\nETE: ${eteStr}\n巡航高度: ${cruiseAltStr}\n起飛跑道: ${depRwy}\n落地跑道: ${destRwy}\n`;
                     rawBlock += `第一備降機場/跑道: ${alt1Rwy}\n`;
                     if (alt2Rwy !== 'N/A') rawBlock += `第二備降機場/跑道: ${alt2Rwy}\n`;
                     if (alt3Rwy !== 'N/A') rawBlock += `第三備降機場/跑道: ${alt3Rwy}\n`;
@@ -1560,6 +1672,27 @@
             }
         }
 
+        // ── 機隊瀏覽 modal ─────────────────────────
+        function openFleetBrowser() {
+            const modal = document.getElementById('fleet-modal');
+            const frame = document.getElementById('fleet-modal-frame');
+            // 每次開都重新載入,確保拿最新資料
+            frame.src = './ELB_Fleet.html?embedded=1';
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // 避免背景捲動
+        }
+        function closeFleetBrowser() {
+            const modal = document.getElementById('fleet-modal');
+            const frame = document.getElementById('fleet-modal-frame');
+            modal.classList.add('hidden');
+            frame.src = 'about:blank';
+            document.body.style.overflow = '';
+        }
+        // ESC 關閉
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeFleetBrowser();
+        });
+
         // ── Turbli chartcache 自動載 2 日 ─────────────────────────
         function taipeiDateStrs() {
             // GitHub Actions 用 Asia/Taipei (UTC+8) 算今/明，這裡跟著走
@@ -1702,21 +1835,36 @@
         const WEEK_ZH = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         const MONTHS_3 = {JAN:0, FEB:1, MAR:2, APR:3, MAY:4, JUN:5, JUL:6, AUG:7, SEP:8, OCT:9, NOV:10, DEC:11};
 
-        // STARLUX 機型重量限制 (MT)
-        // 來源：A330 從 ELB UI 截圖確認；A321/A350 為公開規格值，請依實際 OFP 校對
+        // STARLUX 機型重量限制 (MT) — 由使用者從 OFP LIMIT 欄位提供,權威值
         const WEIGHT_LIMITS = {
-            A321: { zfw:  75.6, tow:  93.5, ldw:  79.2 },
-            A330: { zfw: 181.0, tow: 215.0, ldw: 191.0 },
-            A350: { zfw: 195.7, tow: 280.0, ldw: 205.0 },
+            'A321':      { zfw:  75.6, tow:  89.0, ldw:  79.2 },
+            'A330':      { zfw: 181.0, tow: 215.0, ldw: 191.0 },
+            'A350-900':  { zfw: 195.7, tow: 280.0, ldw: 207.0 },
+            'A350-1000': { zfw: 223.0, tow: 260.0, ldw: 236.0 },
         };
 
+        // ICAO 機型代碼 → WEIGHT_LIMITS key
+        // LIDO OFP 標的是 ICAO 命名: A350-9xx = -900, A350-10xx = -1000, A330-9xx = -900neo, etc.
+        function acTypeCodeToKey(code) {
+            if (!code || code === 'N/A') return null;
+            const c = code.toUpperCase();
+            if (c.startsWith('A321')) return 'A321';
+            if (c.startsWith('A330')) return 'A330';
+            // A350-941 → -900 系列 (9 開頭的 3 碼), A350-1041 → -1000 系列 (10 開頭的 4 碼)
+            if (c.startsWith('A350-10')) return 'A350-1000';
+            if (c.startsWith('A350-9'))  return 'A350-900';
+            if (c.startsWith('A350'))    return 'A350-900'; // 預設 -900
+            return null;
+        }
+
+        // Fallback: 從機號前綴推機型 (適用沒 OFP 文字 / 解析失敗時)
         function tailToType(tail) {
             if (!tail) return null;
             const t = String(tail).toUpperCase().replace(/\s+/g, '');
             if (t.startsWith('B-582') || t.startsWith('B582')) return 'A321';
             if (t.startsWith('B-583') || t.startsWith('B583')) return 'A330';
-            if (t.startsWith('B-584') || t.startsWith('B584') ||
-                t.startsWith('B-585') || t.startsWith('B585')) return 'A350';
+            if (t.startsWith('B-584') || t.startsWith('B584')) return 'A350-900';
+            if (t.startsWith('B-585') || t.startsWith('B585')) return 'A350-900'; // 多數還是 -900,真要區分要看 OFP
             return null;
         }
 
@@ -2022,7 +2170,10 @@
             let regVal = extractData(rawText, '機號');
 
             // Weight bar chart：抓 ZFW/TOW/LDW + 依機型套 MAX
-            const acType = (regVal !== 'N/A' && regVal !== '') ? tailToType(regVal) : null;
+            // 優先用 OFP 文字裡的 ICAO 機型代碼 (e.g. A350-941, A350-1041),fallback 才靠 tail prefix
+            const acTypeCodeStr = extractData(rawText, '機型代碼');
+            const acType = acTypeCodeToKey(acTypeCodeStr)
+                        || ((regVal !== 'N/A' && regVal !== '') ? tailToType(regVal) : null);
             const chip = document.getElementById('out-ac-type-chip');
             if (chip) chip.textContent = acType || '---';
             const limits = acType ? WEIGHT_LIMITS[acType] : null;
@@ -2482,5 +2633,18 @@
             return `${year}-${month}-${day}`;
         }
     </script>
+
+    <!-- 機隊瀏覽 modal — 內嵌 ELB_Fleet.html 完整 UI -->
+    <div id="fleet-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-stretch justify-center p-2 md:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col overflow-hidden">
+            <div class="bg-gradient-to-r from-stone-700 to-stone-800 text-white px-4 py-2.5 flex justify-between items-center">
+                <span class="font-bold text-sm tracking-wider flex items-center gap-2">🛩 ELB 機隊瀏覽</span>
+                <button onclick="closeFleetBrowser()" class="text-stone-200 hover:text-white p-1 rounded transition-colors" title="關閉">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <iframe id="fleet-modal-frame" src="" class="flex-1 w-full border-0" title="ELB Fleet Browser"></iframe>
+        </div>
+    </div>
 </body>
 </html>
