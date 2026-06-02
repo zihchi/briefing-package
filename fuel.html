@@ -6,13 +6,61 @@
     <title>Fuel Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: "Segoe UI", sans-serif; background-color: #f9f7f3; }
+        body { font-family: "Segoe UI", sans-serif; background-color: #f4ece4; color: #4a3627; }
         /* 隱藏數字輸入框的上下箭頭 */
-        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
-        
-        .table-row-hover:hover { background-color: #f8fafc; }
+
+        .table-row-hover:hover { background-color: #faf6f0; }
+
+        /* ===================================================== */
+        /*  Coffee / Champagne 主題：覆寫 Tailwind 冷色系工具類別  */
+        /*  （同時套用到 JS 動態產生的 class，JS 邏輯不動）        */
+        /* ===================================================== */
+
+        /* --- 品牌色（藍 → 咖啡棕）--- */
+        .text-blue-600 { color: #8b5a2b !important; }
+        .text-blue-700 { color: #7a4e23 !important; }
+        .border-blue-500 { border-color: #8b5a2b !important; }
+        .border-blue-600 { border-color: #8b5a2b !important; }
+        .border-blue-100 { border-color: #efe4d6 !important; }
+        .bg-blue-50 { background-color: #faf6f0 !important; }
+        .hover\:bg-blue-50:hover { background-color: #f4ece4 !important; }
+        .active\:bg-blue-100:active { background-color: #efe1d2 !important; }
+        .focus\:border-blue-500:focus { border-color: #8b5a2b !important; }
+
+        /* --- 文字灰階 → 暖咖啡色階 --- */
+        .text-gray-800 { color: #4a3627 !important; }
+        .text-gray-700 { color: #4a3627 !important; }
+        .text-gray-600 { color: #78716c !important; }
+        .text-gray-500 { color: #78716c !important; }
+        .text-gray-400 { color: #a8a29e !important; }
+        .text-gray-300 { color: #d8ccbc !important; }
+
+        /* --- 邊框 / 分隔線 → 暖色邊框 --- */
+        .border-gray-100 { border-color: #f0e8dd !important; }
+        .border-gray-200 { border-color: #e7ddd0 !important; }
+        .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #f0e8dd !important; }
+
+        /* --- 中性背景 → 香檳暖底 --- */
+        .bg-gray-50 { background-color: #faf6f0 !important; }
+        .bg-gray-100 { background-color: #f4ece4 !important; }
+
+        /* --- 語意狀態色：略微調暖（綠/紅維持語意）--- */
+        .text-green-600 { color: #2f9e44 !important; }
+        .text-green-700 { color: #2b8a3e !important; }
+        .bg-green-50 { background-color: #f0f7ef !important; }
+        .border-green-100 { border-color: #d8ebd6 !important; }
+        .text-red-500 { color: #d9480f !important; }
+        .bg-red-50 { background-color: #fbeee6 !important; }
+        .border-red-200 { border-color: #f3d9c8 !important; }
+
+        /* --- 響應式：iPhone 直向避免水平溢出，維持可點擊尺寸 --- */
+        input, button { min-height: 44px; }
+        @media (max-width: 640px) {
+            .min-w-\[600px\] { min-width: 540px; } /* 表格仍在 overflow-x:auto 容器內可橫向捲動 */
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">

@@ -1,4 +1,57 @@
- <div class="section curfew-section" id="curfewBox">
+ <style>
+    /* === Curfew 倒數：暖色「咖啡／香檳」主題（scoped to #curfewBox） === */
+    /* 僅覆寫視覺樣式，不影響 HTML 結構與其他工具 */
+
+    /* 醒目的 UTC 數位時鐘：由冷藍改為深咖啡底＋暖琥珀字 */
+    #curfewBox .curfew-clock-container {
+      background: #4a3627;
+      border: 2px solid #7a4e23;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
+    }
+    #curfewBox .curfew-utc-label {
+      color: #d8c4ad;
+    }
+    #curfewBox .curfew-live-clock {
+      color: #e0a96d;
+      text-shadow: 0 0 10px rgba(224,169,109,0.45);
+    }
+
+    /* 切換按鈕（toggle）：暖色底與字色 */
+    #curfewBox .app-toggle { background: #efe6da; }
+    #curfewBox .app-toggle-btn { color: #a8a29e; }
+    #curfewBox .app-toggle-btn.active { color: #4a3627; }
+    #curfewBox .app-toggle-pill {
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(74,54,39,0.14);
+    }
+
+    /* 區塊小標題：暖色 faint */
+    #curfewBox .app-section-title { color: #a8a29e; }
+
+    /* 時間輸入框底色改為暖米色 */
+    #curfewBox .app-time-input { background: #faf6f0; }
+
+    /* === 響應式：iPhone 直向（~390px）不水平溢出、可點按 === */
+    @media (max-width: 768px) {
+      #curfewBox .app-wrapper { padding: 6px 0; }
+    }
+    @media (max-width: 480px) {
+      #curfewBox .app-time-display { font-size: 1.8em; letter-spacing: 2px; }
+      #curfewBox .curfew-live-clock { font-size: 1.5em; letter-spacing: 2px; }
+      #curfewBox .app-row {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px 10px;
+      }
+      #curfewBox .app-row-label { font-size: 1em; }
+      #curfewBox .app-card { padding: 1.1em; }
+      /* 確保下拉選單在窄螢幕仍好點按、不溢出 */
+      #curfewBox .app-time-input { padding: 6px 10px; }
+      #curfewBox .app-time-input select { min-height: 28px; }
+    }
+  </style>
+
+  <div class="section curfew-section" id="curfewBox">
     <h2>
       <div>⏳ Curfew Calculator</div>
       <button id="resetCurfewBtn" class="app-header-btn" title="重設所有數值">
@@ -56,7 +109,7 @@
               <div class="app-row" style="padding: 0; border: none;">
                 <span class="app-row-label">Arrival Curfew</span>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 0.9em; color: #999; font-weight: bold;">UTC</span>
+                  <span style="font-size: 0.9em; color: #78716c; font-weight: bold;">UTC</span>
                   <div class="app-time-input">
                     <select id="curfewHr"></select>
                     <span>:</span>

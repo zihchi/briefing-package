@@ -6,55 +6,68 @@
 <title>時間計算器</title>
 <style>
   /* 基礎佈局與樣式 */
-  body { font-family: system-ui, -apple-system, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
-  .time-calc-section { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-  h2 { display: flex; justify-content: space-between; align-items: center; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-  .app-header-btn { background: none; border: none; cursor: pointer; color: #666; transition: color 0.2s; }
-  .app-header-btn:hover { color: #3c79ff; }
-  
+  body { font-family: system-ui, -apple-system, sans-serif; background-color: #f4ece4; color: #4a3627; padding: 20px; }
+  .time-calc-section { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(74,54,39,0.08); }
+  h2 { display: flex; justify-content: space-between; align-items: center; margin-top: 0; border-bottom: 2px solid #e7ddd0; padding-bottom: 15px; }
+  .app-header-btn { background: none; border: none; cursor: pointer; color: #78716c; transition: color 0.2s; }
+  .app-header-btn:hover { color: #8b5a2b; }
+
   /* 頁籤樣式 */
   .time-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-  .time-tab-btn { flex: 1; padding: 10px; border: none; background: #eee; border-radius: 8px; cursor: pointer; font-weight: bold; color: #555; }
-  .time-tab-btn.active { background: #3c79ff; color: #fff; }
+  .time-tab-btn { flex: 1; padding: 10px; border: none; background: #f4ece4; border-radius: 10px; cursor: pointer; font-weight: bold; color: #78716c; min-height: 40px; transition: background 0.2s, color 0.2s; }
+  .time-tab-btn.active { background: #8b5a2b; color: #ffffff; }
   .time-tab-content { display: none; }
   .time-tab-content.active { display: block; }
-  
+
   /* 卡片與內容區塊 */
-  .app-card { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-  .app-label { font-size: 0.9em; font-weight: bold; color: #555; }
+  .app-card { background: #faf6f0; border: 1px solid #e7ddd0; border-radius: 16px; padding: 15px; margin-bottom: 15px; }
+  .app-label { font-size: 0.9em; font-weight: bold; color: #78716c; }
   .app-time-input { display: flex; align-items: center; gap: 5px; }
-  
+
   /* 🌟 優化：針對 iOS 絲滑輸入框的專屬樣式 🌟 */
-  .app-time-input input[inputmode="numeric"] { 
-    width: 50px; 
-    padding: 8px; 
-    border: 1px solid #ccc; 
-    border-radius: 6px; 
-    text-align: center; 
-    font-size: 1.1em; 
+  .app-time-input input[inputmode="numeric"] {
+    width: 50px;
+    padding: 8px;
+    border: 1px solid #e7ddd0;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1.1em;
+    color: #4a3627;
+    background: #ffffff;
+    min-height: 38px;
+    box-sizing: border-box;
     font-family: monospace; /* 等寬字體讓數字視覺更穩定 */
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
   .app-time-input input[inputmode="numeric"]:focus {
-    border-color: #3c79ff;
+    border-color: #8b5a2b;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(60,121,255,0.2);
+    box-shadow: 0 0 0 2px rgba(139,90,43,0.2);
   }
   #addDays { width: 60px !important; } /* 天數可以寬一點 */
   #simpleH1, #simpleH2 { width: 80px !important; } /* 🎉 更新：純時間的小時寬一點，以支援到萬位數 */
-  
-  .app-date-input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1em; }
-  
+
+  .app-date-input { padding: 8px; border: 1px solid #e7ddd0; border-radius: 10px; text-align: center; font-size: 1em; color: #4a3627; background: #ffffff; min-height: 38px; box-sizing: border-box; }
+
   /* 切換開關 */
-  .app-toggle { position: relative; display: flex; background: #eee; border-radius: 20px; overflow: hidden; padding: 2px; }
-  .app-toggle-btn { flex: 1; border: none; background: transparent; padding: 8px; z-index: 2; position: relative; cursor: pointer; font-weight: bold; color: #666; transition: color 0.3s;}
-  .app-toggle-btn.active { color: #fff; }
-  .app-toggle-pill { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); background: #3c79ff; border-radius: 18px; z-index: 1; transition: transform 0.3s ease; }
-  
+  .app-toggle { position: relative; display: flex; background: #f4ece4; border-radius: 999px; overflow: hidden; padding: 2px; }
+  .app-toggle-btn { flex: 1; border: none; background: transparent; padding: 8px; z-index: 2; position: relative; cursor: pointer; font-weight: bold; color: #78716c; min-height: 36px; transition: color 0.3s;}
+  .app-toggle-btn.active { color: #ffffff; }
+  .app-toggle-pill { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); background: #8b5a2b; border-radius: 999px; z-index: 1; transition: transform 0.3s ease; }
+
   /* 按鈕與結果顯示 */
-  button[onclick^="calc"] { background: #3c79ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-  button[onclick^="calc"]:hover { background: #2a5ddc; }
-  .app-time-display { font-size: 1.5em; font-weight: bold; color: #3c79ff; }
+  button[onclick^="calc"] { background: #8b5a2b; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; min-height: 44px; transition: background 0.2s; }
+  button[onclick^="calc"]:hover { background: #7a4e23; }
+  .app-time-display { font-size: 1.5em; font-weight: bold; color: #8b5a2b; }
+
+  /* 響應式：iPhone 直式避免水平溢出 */
+  @media (max-width: 480px) {
+    body { padding: 12px; }
+    .time-calc-section { padding: 16px; border-radius: 16px; }
+    .time-tabs { gap: 6px; }
+    .time-tab-btn { padding: 10px 6px; font-size: 0.9em; }
+    .app-time-display { font-size: 1.3em; }
+  }
 </style>
 </head>
 <body>
@@ -84,9 +97,9 @@
             <div class="app-time-input" style="justify-content: center;">
               <!-- 🎉 更新：支援到 5 位數輸入 (maxlength="5") -->
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="simpleH1" class="auto-next" data-next="simpleM1" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">時</span>
+              <span style="color:#78716c;">時</span>
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM1" class="auto-next" data-next="simpleH2" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">分</span>
+              <span style="color:#78716c;">分</span>
             </div>
           </div>
           
@@ -104,18 +117,18 @@
             <div class="app-time-input" style="justify-content: center;">
               <!-- 🎉 更新：支援到 5 位數輸入 (maxlength="5") -->
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="simpleH2" class="auto-next" data-next="simpleM2" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">時</span>
+              <span style="color:#78716c;">時</span>
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM2" class="auto-next" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">分</span>
+              <span style="color:#78716c;">分</span>
             </div>
           </div>
         </div>
         
         <button onclick="calculateSimple()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算總時長</button>
         
-        <div id="simpleResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+        <div id="simpleResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #8b5a2b; background: rgba(139,90,43,0.06);">
           <div id="simpleResultText" class="app-time-display"></div>
-          <div id="simpleResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+          <div id="simpleResultDetail" style="color: #78716c; margin-top: 10px; font-weight: bold;"></div>
         </div>
       </div>
 
@@ -149,16 +162,16 @@
 
         <button onclick="calculateTimeDiff()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算時間差</button>
 
-        <div id="diffResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+        <div id="diffResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #8b5a2b; background: rgba(139,90,43,0.06);">
           <div id="diffResultText" class="app-time-display"></div>
-          <div id="diffResultDetail" style="color: #666; margin-top: 10px; font-weight: bold;"></div>
+          <div id="diffResultDetail" style="color: #78716c; margin-top: 10px; font-weight: bold;"></div>
         </div>
       </div>
 
       <!-- 功能三：時間推算 -->
       <div id="tab-addsub" class="time-tab-content">
         <div class="app-card">
-          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border-bottom: 1px dashed #e7ddd0; padding-bottom: 15px; margin-bottom: 15px;">
             <div class="app-label" style="min-width: 80px; margin: 0;">📍 基準</div>
             <input type="date" id="baseDate" class="app-date-input">
             <div class="app-time-input">
@@ -180,21 +193,21 @@
 
             <div class="app-time-input">
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="addDays" class="auto-next" data-next="addHours" placeholder="0" onfocus="this.select()">
-              <span style="color:#555;">天</span>
+              <span style="color:#78716c;">天</span>
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="addHours" class="auto-next" data-next="addMins" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">時</span>
+              <span style="color:#78716c;">時</span>
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="addMins" class="auto-next" placeholder="00" onfocus="this.select()">
-              <span style="color:#555;">分</span>
+              <span style="color:#78716c;">分</span>
             </div>
           </div>
         </div>
 
         <button onclick="calculateAddSub()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">開始推算</button>
 
-        <div id="addsubResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #3c79ff; background: rgba(60,121,255,0.05);">
+        <div id="addsubResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #8b5a2b; background: rgba(139,90,43,0.06);">
           <div id="addsubResultText" class="app-time-display" style="font-size: 1.8em;"></div>
           <!-- 🎉 更新：已將星期幾的顯示區域隱藏 -->
-          <div id="addsubResultDetail" style="display: none; color: #666; margin-top: 10px; font-weight: bold;"></div>
+          <div id="addsubResultDetail" style="display: none; color: #78716c; margin-top: 10px; font-weight: bold;"></div>
         </div>
       </div>
 
