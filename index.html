@@ -379,9 +379,9 @@
     /* 航班儀表板（置頂下拉 + 展開面板） */
     #fd-select { font-size: 0.85rem; font-weight: 700; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-btn); background: var(--surface); color: var(--text); max-width: 210px; cursor: pointer; }
     #fd-select:focus { outline: none; border-color: var(--brand); }
-    .fd-panel { background: rgba(244,236,228,0.97); border-bottom: 1px solid var(--border); overflow: hidden; max-height: 0; transition: max-height .32s ease; }
-    .fd-panel.open { max-height: 640px; }
-    .fd-inner { max-width: 1100px; margin: 0 auto; padding: 12px clamp(1em,4vw,2.5em) 16px; }
+    .fd-panel { overflow: hidden; max-height: 0; transition: max-height .4s ease; }
+    .fd-panel.open { max-height: 720px; }
+    .fd-inner { padding: 12px 0 2px; }
     .fd-head { display: flex; align-items: center; gap: 10px; }
     .fd-no { font-weight: 900; font-size: 1.1rem; color: var(--brand); font-family: ui-monospace,'SF Mono',monospace; }
     .fd-rt { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: 1px; }
@@ -440,9 +440,7 @@
 <body>
 
   <header class="app-topbar">
-    <div class="app-topbar-brand">
-      <select id="fd-select" title="選擇航班顯示資訊"><option value="">✈ 選擇航班…</option></select>
-    </div>
+    <div class="app-topbar-brand"></div>
     <div class="app-topbar-utc" id="utc-clock" title="UTC（Zulu）/ 台北時間">
       <div class="clk">
         <span class="clk-label">UTC</span>
@@ -460,31 +458,6 @@
       <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
     </div>
   </header>
-
-  <div id="fd-panel" class="fd-panel">
-    <div class="fd-inner">
-      <div class="fd-head">
-        <span class="fd-no" id="fd-no">—</span>
-        <span class="fd-rt" id="fd-route">—</span>
-        <button class="fd-close" id="fd-close" aria-label="收合">✕</button>
-      </div>
-      <div class="fd-ends">
-        <div class="fd-end">
-          <div class="ap"><span id="fd-dep-ap">—</span><span class="wx" id="fd-dep-wx"></span></div>
-          <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-dep-lt">--:--</span><span class="dt" id="fd-dep-ld"></span></div>
-          <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-dep-ut">--:--Z</span><span class="dt" id="fd-dep-ud"></span></div>
-        </div>
-        <div class="fd-arrowc">→</div>
-        <div class="fd-end">
-          <div class="ap"><span id="fd-arr-ap">—</span><span class="wx" id="fd-arr-wx"></span></div>
-          <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-arr-lt">--:--</span><span class="dt" id="fd-arr-ld"></span></div>
-          <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-arr-ut">--:--Z</span><span class="dt" id="fd-arr-ud"></span></div>
-        </div>
-      </div>
-      <div class="fd-fids" id="fd-fids"></div>
-      <div class="fd-turb" id="fd-turb"></div>
-    </div>
-  </div>
 
   <div class="app-hero">
     <h1>Briefing Package</h1>
@@ -527,7 +500,8 @@
     <button class="btn" onclick="loadPage('FIDS.html')">🛂 桃機航班</button>    
     <button class="btn" onclick="loadPage('curfew.html')">⏳ Curfew 倒數</button>   
     <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
-    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>   
+    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
+    <button class="btn" onclick="loadPage('schedule.html')">🗓️ 定期航班</button>
     </div>
 </div>
 
@@ -568,17 +542,7 @@
     ></iframe>
   </div>
 
-  <div class="section">
-    <h2><div>✈️ 航班速查</div></h2>
-    <p style="font-size:0.82rem;color:var(--text-muted);margin:-6px 0 12px;">查表定起降時刻（當地時間）。即時狀況請看「桃機航班」。</p>
-    <div class="fq-bar">
-      <input id="fq-input" type="text" placeholder="輸入航班號，例如 JX838" autocomplete="off" autocapitalize="characters">
-      <button class="btn" id="fq-btn">查詢</button>
-    </div>
-    <div id="fq-result"></div>
-  </div>
-
-  <div class="section flex flex-col gap-5">
+  <div class="section flex flex-col gap-5" style="display:none">
     <div class="flex flex-wrap justify-between items-center gap-3">
       <h2 class="!mb-0">🛫 Turbli 航班亂流查詢 (直接出圖)</h2>
       <a href="https://turbli.com/" target="_blank" class="inline-block">
@@ -612,6 +576,35 @@
         <div class="turbli-cell-body">
           <div class="turbli-cell-status">載入中…</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><div>✈️ 航班資訊</div></h2>
+    <select id="fd-select" title="選擇航班顯示資訊"><option value="">✈ 選擇航班…</option></select>
+    <div id="fd-panel" class="fd-panel">
+      <div class="fd-inner">
+        <div class="fd-head">
+          <span class="fd-no" id="fd-no">—</span>
+          <span class="fd-rt" id="fd-route">—</span>
+          <button class="fd-close" id="fd-close" aria-label="收合">✕</button>
+        </div>
+        <div class="fd-ends">
+          <div class="fd-end">
+            <div class="ap"><span id="fd-dep-ap">—</span><span class="wx" id="fd-dep-wx"></span></div>
+            <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-dep-lt">--:--</span><span class="dt" id="fd-dep-ld"></span></div>
+            <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-dep-ut">--:--Z</span><span class="dt" id="fd-dep-ud"></span></div>
+          </div>
+          <div class="fd-arrowc">→</div>
+          <div class="fd-end">
+            <div class="ap"><span id="fd-arr-ap">—</span><span class="wx" id="fd-arr-wx"></span></div>
+            <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-arr-lt">--:--</span><span class="dt" id="fd-arr-ld"></span></div>
+            <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-arr-ut">--:--Z</span><span class="dt" id="fd-arr-ud"></span></div>
+          </div>
+        </div>
+        <div class="fd-fids" id="fd-fids"></div>
+        <div class="fd-turb" id="fd-turb"></div>
       </div>
     </div>
   </div>
@@ -918,10 +911,7 @@
     function renderFids(f, tpeIsOrigin){
       var box=document.getElementById('fd-fids');
       if(!f){ box.innerHTML='<span class="fd-note">桃機 FIDS 查無今日此航班（可能尚未開放或非今日班）</span>'; return; }
-      var remark = tpeIsOrigin ? (f.DepartureRemark||'') : (f.ArrivalRemark||'');
-      var stCls = /出發|起飛|DEPART|準時|ON TIME/i.test(remark)?'st-go':(/延|DELAY|取消|CANCEL/i.test(remark)?'st-warn':'');
       var chips=[];
-      chips.push('<span class="fd-chip '+stCls+'">STATUS <b>'+(remark||'—')+'</b></span>');
       chips.push('<span class="fd-chip">GATE <b>'+((f.Gate||'').trim()||'—')+'</b></span>');
       chips.push('<span class="fd-chip">航廈 <b>'+(f.Terminal?('T'+f.Terminal):'—')+'</b></span>');
       if(tpeIsOrigin) chips.push('<span class="fd-chip">櫃檯 <b>'+((f.CheckCounter||'').trim()||'—')+'</b></span>');

@@ -1,0 +1,63 @@
+<div class="section">
+  <h2><div>🗓️ 定期航班</div></h2>
+  <p style="font-size:0.82rem;color:var(--text-muted);margin:-6px 0 12px;">查 TDX 表定起降時刻（當地時間）。即時狀況請看「桃機航班」。</p>
+  <div class="fq-bar">
+    <input id="fq-input" type="text" placeholder="輸入航班號，例如 JX838" autocomplete="off" autocapitalize="characters">
+    <button class="btn" id="fq-btn">查詢</button>
+  </div>
+  <div id="fq-result"></div>
+</div>
+
+<script>
+(function(){
+  var GAS = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
+  var input = document.getElementById('fq-input');
+  var btn = document.getElementById('fq-btn');
+  var out = document.getElementById('fq-result');
+  if(!btn || !input || !out) return;
+  function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function pick(list){
+    if(!list || !list.length) return null;
+    var today = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'});
+    var valid = list.filter(function(s){
+      var a=(s.ScheduleStartDate||'').slice(0,10), b=(s.ScheduleEndDate||'').slice(0,10);
+      return (!a || a<=today) && (!b || b>=today);
+    });
+    return valid[0] || list[0];
+  }
+  function daysHTML(s){
+    var keys=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], tw=['一','二','三','四','五','六','日'];
+    return '<div class="fq-days">'+keys.map(function(k,i){return '<span class="'+(s[k]?'on':'off')+'">'+tw[i]+'</span>';}).join('')+'</div>';
+  }
+  function render(s, flight){
+    if(!s){ out.innerHTML='<div class="fq-hint">查無「'+esc(flight)+'」的定期時刻表（可能非台灣航班，或需含航空代碼，如 JX838）。</div>'; return; }
+    var cs=(s.CodeShare||[]).map(function(c){return esc((c.AirlineID||'')+(c.FlightNumber||''));}).join('、');
+    out.innerHTML='<div class="fq-card">'+
+      '<div class="fq-route">'+esc(s.DepartureAirportID)+' <span class="arr">→</span> '+esc(s.ArrivalAirportID)+'</div>'+
+      '<div class="fq-times">'+
+        '<div><span class="lbl">表定起飛（當地）</span><span class="val">'+esc(s.DepartureTime||'--:--')+'</span></div>'+
+        '<div><span class="lbl">表定到達（當地）</span><span class="val">'+esc(s.ArrivalTime||'--:--')+'</span></div>'+
+      '</div>'+
+      '<div class="fq-meta">'+
+        '<div>適用星期 '+daysHTML(s)+'</div>'+
+        '<div>班期 <b>'+esc((s.ScheduleStartDate||'').slice(0,10))+' ~ '+esc((s.ScheduleEndDate||'').slice(0,10))+'</b></div>'+
+        (cs?'<div>共掛 <b>'+cs+'</b></div>':'')+
+      '</div>'+
+    '</div>';
+  }
+  function query(){
+    var f=(input.value||'').toUpperCase().replace(/\s+/g,'');
+    if(!f){ input.focus(); return; }
+    out.innerHTML='<div class="fq-hint">查詢中…</div>';
+    fetch(GAS+'?flight='+encodeURIComponent(f), {cache:'no-store'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok){ out.innerHTML='<div class="fq-err">查詢失敗：'+esc(j.error||'未知錯誤')+'</div>'; return; }
+        render(pick(j.schedules), f);
+      })
+      .catch(function(e){ out.innerHTML='<div class="fq-err">連線失敗：'+esc(String(e))+'（稍候再試）</div>'; });
+  }
+  btn.addEventListener('click', query);
+  input.addEventListener('keydown', function(e){ if(e.key==='Enter') query(); });
+})();
+</script>
