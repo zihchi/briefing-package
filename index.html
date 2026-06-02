@@ -352,6 +352,7 @@
     .app-topbar-utc { display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; }
     .app-topbar-utc .utc-time { font-size: 0.95rem; font-weight: 800; color: var(--brand); letter-spacing: 0.5px; }
     .app-topbar-utc .utc-date { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1.5px; }
+    .app-topbar-utc .utc-tpe { font-size: 0.62rem; font-weight: 700; color: var(--text-faint); letter-spacing: 0.5px; }
 
     .app-hero {
       max-width: 1100px;
@@ -384,10 +385,11 @@
 <body>
 
   <header class="app-topbar">
-    <div class="app-topbar-brand"><span class="logo">📦</span> 簡報箱</div>
-    <div class="app-topbar-utc" id="utc-clock" title="UTC / Zulu 時間">
+    <div class="app-topbar-brand"></div>
+    <div class="app-topbar-utc" id="utc-clock" title="UTC（Zulu）/ 台北時間">
       <span class="utc-time">--:--:--Z</span>
       <span class="utc-date">-- --- ----</span>
+      <span class="utc-tpe">台北 --:--</span>
     </div>
     <div class="app-topbar-meta">
       <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
@@ -651,6 +653,7 @@
       if(!el) return;
       el.querySelector('.utc-time').textContent = p(d.getUTCHours())+':'+p(d.getUTCMinutes())+':'+p(d.getUTCSeconds())+'Z';
       el.querySelector('.utc-date').textContent = p(d.getUTCDate())+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear();
+      el.querySelector('.utc-tpe').textContent = '台北 ' + d.toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit',hour12:false});
     }
     tick(); setInterval(tick, 1000);
   })();
@@ -758,7 +761,7 @@
             const versionEl = document.getElementById('sys-version');
             if (versionEl) {
               const displayVer = event.data.version.replace('briefing-', '');
-              versionEl.innerText = `Build ${displayVer}`;
+              versionEl.innerText = displayVer;
             }
           }
         });
