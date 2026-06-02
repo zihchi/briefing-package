@@ -8,24 +8,25 @@
 <style>
   /* ===== 採用 briefing-package 既有設計 token，與主站一致 ===== */
   :root{
-    --bg:#f8fafc;
+    --bg:#f4ece4;
     --surface:#ffffff;
-    --brand:#3c79ff;
-    --brand-soft:#e8f0ff;
-    --ink:#1e293b;
-    --ink-soft:#64748b;
-    --ink-faint:#94a3b8;
-    --line:#e2e8f0;
+    --brand:#8b5a2b;
+    --brand-soft:#f0e7da;
+    --ink:#4a3627;
+    --ink-soft:#78716c;
+    --ink-faint:#a8a29e;
+    --line:#e7ddd0;
     --radius-card:16px;
     --radius-pill:999px;
-    --shadow:0 1px 3px rgba(15,23,42,.06);
-    --shadow-hover:0 6px 22px rgba(15,23,42,.09);
+    --shadow:0 1px 3px rgba(74,54,39,.06);
+    --shadow-hover:0 6px 22px rgba(74,54,39,.10);
     --warn:#e67e22;
     --danger:#e74c3c;
-    --fn:#2563eb;      --fn-bg:#e8f0ff;
-    --outlook:#0f766e; --outlook-bg:#e3f3f0;
-    --teams:#6d28d9;   --teams-bg:#f1ebfd;
-    --other:#64748b;   --other-bg:#f1f5f9;
+    --fn:#d63b2f;      --fn-bg:#fbeae8;
+    --outlook:#2f80c2; --outlook-bg:#e9f2fb;
+    --teams:#8b5cc7;   --teams-bg:#f2eafb;
+    --ln:#1f9d52;      --ln-bg:#e7f6ec;
+    --other:#8a8079;   --other-bg:#efe9e1;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
@@ -69,6 +70,7 @@
   .src.fn{color:var(--fn);background:var(--fn-bg)}
   .src.outlook{color:var(--outlook);background:var(--outlook-bg)}
   .src.teams{color:var(--teams);background:var(--teams-bg)}
+  .src.line{color:var(--ln);background:var(--ln-bg)}
   .src.others{color:var(--other);background:var(--other-bg)}
   .code{color:var(--brand);font-size:12px;font-weight:700;font-family:ui-monospace,"SF Mono","Courier New",monospace}
   .new{color:var(--danger);font-size:11px;font-weight:800;letter-spacing:.5px}
@@ -162,6 +164,7 @@ function classifySource(src){
   if(/^(FN|OR)[-\s]/i.test(s)) return {cat:"Fleet Notice",cls:"fn",label:"Fleet Notice",code:s};
   if(/outlook/i.test(s))       return {cat:"Outlook",cls:"outlook",label:"Outlook",code:""};
   if(/teams/i.test(s))         return {cat:"Teams",cls:"teams",label:"Teams",code:""};
+  if(/line/i.test(s))          return {cat:"others",cls:"line",label:"Line",code:""};
   return {cat:"others",cls:"others",label:(s||"others"),code:""};
 }
 function detectFleet(t){

@@ -26,17 +26,17 @@
        🎨 Design Tokens — 統一設計語言
        ========================================= */
     :root {
-      /* 主色 */
-      --brand: #3c79ff;
-      --brand-dark: #2c5edc;
-      --brand-soft: rgba(60,121,255,0.08);
-      /* 中性灰階（冷色，偏專業/科技） */
-      --bg: #f8fafc;
+      /* 主色（暖色 · 參考 LIDOPRO4 咖啡香檳） */
+      --brand: #8b5a2b;
+      --brand-dark: #7a4e23;
+      --brand-soft: rgba(139,90,43,0.08);
+      /* 中性（暖灰 stone） */
+      --bg: #f4ece4;
       --surface: #ffffff;
-      --border: #e2e8f0;
-      --text: #1e293b;
-      --text-muted: #64748b;
-      --text-faint: #94a3b8;
+      --border: #e7ddd0;
+      --text: #4a3627;
+      --text-muted: #78716c;
+      --text-faint: #a8a29e;
       /* 狀態色 */
       --ok: #2ecc71;
       --warn: #e67e22;
@@ -45,10 +45,10 @@
       --radius-card: 16px;
       --radius-btn: 10px;
       --radius-pill: 999px;
-      /* 陰影 */
-      --shadow-card: 0 1px 3px rgba(15,23,42,0.06), 0 8px 24px rgba(15,23,42,0.05);
-      --shadow-btn: 0 1px 2px rgba(60,121,255,0.25);
-      --shadow-pop: 0 8px 30px rgba(15,23,42,0.12);
+      /* 陰影（暖色調） */
+      --shadow-card: 0 1px 3px rgba(74,54,39,0.06), 0 8px 24px rgba(74,54,39,0.06);
+      --shadow-btn: 0 1px 2px rgba(139,90,43,0.25);
+      --shadow-pop: 0 8px 30px rgba(74,54,39,0.14);
     }
 
     * { box-sizing: border-box; }
@@ -383,7 +383,6 @@
   <header class="app-topbar">
     <div class="app-topbar-brand"><span class="logo">📦</span> 簡報箱</div>
     <div class="app-topbar-meta">
-      <button id="btn-reload" onclick="location.reload()" title="重新載入整個頁面" aria-label="重新載入整個頁面" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--surface); color: var(--brand); border: 1.5px solid var(--brand); border-radius: 6px; cursor: pointer; font-weight: bold;">🔄 重新整理</button>
       <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
       <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
     </div>
@@ -391,7 +390,6 @@
 
   <div class="app-hero">
     <h1>Briefing Package</h1>
-    <p>飛行簡報箱 · 飛時 / 加油 / Curfew / 低溫修正 / METAR · TAF / Windy 氣象圖整合工作台</p>
   </div>
 
   <div class="app-main">
