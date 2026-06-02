@@ -386,23 +386,21 @@
     .fd-no { font-weight: 900; font-size: 1.1rem; color: var(--brand); font-family: ui-monospace,'SF Mono',monospace; }
     .fd-rt { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: 1px; }
     .fd-close { margin-left: auto; background: none; border: 0; font-size: 1.15rem; color: var(--text-faint); cursor: pointer; padding: 2px 8px; }
-    .fd-ends { display: flex; align-items: stretch; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
-    .fd-end { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 10px 14px; box-shadow: var(--shadow-card); }
-    .fd-end .ap { font-weight: 900; font-size: 1.25rem; color: var(--brand); letter-spacing: 1px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .fd-end .wx { font-size: 0.88rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
-    .fd-end .row { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; font-family: ui-monospace,'SF Mono',monospace; }
-    .fd-end .lbl { font-size: 0.56rem; font-weight: 800; color: var(--text-faint); letter-spacing: 1px; width: 28px; flex: 0 0 28px; }
-    .fd-end .tm { font-size: 1.05rem; font-weight: 800; color: var(--text); }
-    .fd-end .dt { font-size: 0.66rem; color: var(--text-muted); font-weight: 700; }
-    .fd-arrowc { display: flex; align-items: center; color: var(--text-faint); font-size: 1.4rem; font-weight: 800; }
-    .fd-fids { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .fd-chip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px 11px; font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .fd-ops { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .fd-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .fd-end { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 9px 12px; box-shadow: var(--shadow-card); min-width: 0; }
+    .fd-end .ap { font-weight: 900; font-size: clamp(1rem,4.5vw,1.2rem); color: var(--brand); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+    .fd-end .wx { font-size: 0.76rem; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+    .fd-end .row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; font-family: ui-monospace,'SF Mono',monospace; }
+    .fd-end .lbl { font-size: 0.52rem; font-weight: 800; color: var(--text-faint); letter-spacing: 0.5px; width: 26px; flex: 0 0 26px; }
+    .fd-end .tm { font-size: clamp(0.95rem,4vw,1.05rem); font-weight: 800; color: var(--text); }
+    .fd-end .dt { font-size: 0.6rem; color: var(--text-muted); font-weight: 700; }
+    .fd-fids { display: contents; }
+    .fd-chip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 10px; font-size: 0.74rem; font-weight: 700; color: var(--text); white-space: nowrap; }
     .fd-chip b { color: var(--brand); }
-    .fd-chip.st-go { border-color: #bfe6cf; background: #eafaf0; color: #1f7a46; }
-    .fd-chip.st-warn { border-color: #f3d9b0; background: #fdf3e3; color: #9a6212; }
-    .fd-turb { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .fd-turb img { height: 46px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; box-shadow: var(--shadow-card); }
-    .fd-turb .btn { margin: 0; padding: 6px 12px; font-size: 0.8rem; }
+    .fd-turb { display: inline-flex; align-items: center; gap: 8px; }
+    .fd-turb img { height: 40px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; box-shadow: var(--shadow-card); }
+    .fd-turb .btn { margin: 0; padding: 5px 11px; font-size: 0.78rem; }
     .fd-note { font-size: 0.75rem; color: var(--text-faint); }
     .fd-lb { position: fixed; inset: 0; z-index: 2000; background: rgba(40,28,18,0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 20px; overflow: auto; }
     .fd-lb.open { display: flex; }
@@ -499,9 +497,9 @@
     <button class="btn" onclick="loadPage('time.html')">⏱️ 時間計算機</button>
     <button class="btn" onclick="loadPage('FIDS.html')">🛂 桃機航班</button>    
     <button class="btn" onclick="loadPage('curfew.html')">⏳ Curfew 倒數</button>   
-    <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
-    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
     <button class="btn" onclick="loadPage('schedule.html')">🗓️ 定期航班</button>
+    <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
+    <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
     </div>
 </div>
 
@@ -581,7 +579,7 @@
   </div>
 
   <div class="section">
-    <h2><div>✈️ 航班資訊</div></h2>
+    <h2><div>✈️ 航班資訊+Turbli</div></h2>
     <select id="fd-select" title="選擇航班顯示資訊"><option value="">✈ 選擇航班…</option></select>
     <div id="fd-panel" class="fd-panel">
       <div class="fd-inner">
@@ -590,21 +588,22 @@
           <span class="fd-rt" id="fd-route">—</span>
           <button class="fd-close" id="fd-close" aria-label="收合">✕</button>
         </div>
+        <div class="fd-ops">
+          <div class="fd-fids" id="fd-fids"></div>
+          <div class="fd-turb" id="fd-turb"></div>
+        </div>
         <div class="fd-ends">
           <div class="fd-end">
             <div class="ap"><span id="fd-dep-ap">—</span><span class="wx" id="fd-dep-wx"></span></div>
             <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-dep-lt">--:--</span><span class="dt" id="fd-dep-ld"></span></div>
             <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-dep-ut">--:--Z</span><span class="dt" id="fd-dep-ud"></span></div>
           </div>
-          <div class="fd-arrowc">→</div>
           <div class="fd-end">
             <div class="ap"><span id="fd-arr-ap">—</span><span class="wx" id="fd-arr-wx"></span></div>
             <div class="row"><span class="lbl">當地</span><span class="tm" id="fd-arr-lt">--:--</span><span class="dt" id="fd-arr-ld"></span></div>
             <div class="row"><span class="lbl">UTC</span><span class="tm" id="fd-arr-ut">--:--Z</span><span class="dt" id="fd-arr-ud"></span></div>
           </div>
         </div>
-        <div class="fd-fids" id="fd-fids"></div>
-        <div class="fd-turb" id="fd-turb"></div>
       </div>
     </div>
   </div>
