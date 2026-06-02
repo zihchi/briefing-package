@@ -900,17 +900,20 @@
       var ic=wxOf(w.code); el.textContent = ic[0]+' '+ic[1]+' '+Math.round(w.temp)+'°C';
     }
 
+    function parseHM(s){ var m=String(s||'').match(/(\d{1,2}):(\d{2})(?:\s*\+\s*(\d+))?/); return m?{h:+m[1],mm:+m[2],plus:m[3]?+m[3]:0}:null; }
     function renderTimes(sched, wO, wD){
       if(!sched){ setTimes('dep',null,null); setTimes('arr',null,null); return; }
       var offO=wO?wO.off:0, offD=wD?wD.off:0;
       var originNow=new Date(Date.now()+offO*1000);
       var y=originNow.getUTCFullYear(), mo=originNow.getUTCMonth(), da=originNow.getUTCDate();
-      var dp=(sched.DepartureTime||'00:00').split(':'), ar=(sched.ArrivalTime||'00:00').split(':');
-      var depUtc=Date.UTC(y,mo,da,+dp[0],+dp[1])-offO*1000;
-      var arrUtc=Date.UTC(y,mo,da,+ar[0],+ar[1])-offD*1000;
-      if(arrUtc<=depUtc) arrUtc+=864e5;  // 跨日到達
-      setTimes('dep', fmtAt(depUtc,offO), fmtZ(depUtc));
-      setTimes('arr', fmtAt(arrUtc,offD), fmtZ(arrUtc));
+      var dpt=parseHM(sched.DepartureTime), art=parseHM(sched.ArrivalTime), depBase=null;
+      if(dpt){ var depUtc=Date.UTC(y,mo,da,dpt.h,dpt.mm)-offO*1000+dpt.plus*864e5; depBase=depUtc; setTimes('dep', fmtAt(depUtc,offO), fmtZ(depUtc)); }
+      else setTimes('dep',null,null);
+      if(art){
+        var arrUtc=Date.UTC(y,mo,da,art.h,art.mm)-offD*1000+art.plus*864e5;
+        if(art.plus===0 && depBase!=null && arrUtc<=depBase) arrUtc+=864e5;  // 無 +N 標記時用啟發式判跨日
+        setTimes('arr', fmtAt(arrUtc,offD), fmtZ(arrUtc));
+      } else setTimes('arr',null,null);
     }
     function renderFids(f, tpeIsOrigin){
       var box=document.getElementById('fd-fids');
@@ -956,11 +959,14 @@
       document.getElementById('fd-fids').innerHTML='<span class="fd-note">載入中…</span>';
       renderTurb(flightNo, info.route);
       panel.classList.add('open');
-      Promise.all([ getSchedule(flightNo), openMeteo(orig), openMeteo(dest), getFids() ]).then(function(res){
-        var sched=res[0], wO=res[1], wD=res[2], fids=res[3];
-        setWx('dep',wO); setWx('arr',wD);
-        renderTimes(sched, wO, wD);
-        renderFids(findFids(fids, flightNo, tpeIsOrigin), tpeIsOrigin);
+      // 時間 + 天氣（一組）
+      Promise.all([ getSchedule(flightNo), openMeteo(orig), openMeteo(dest) ]).then(function(res){
+        try{ setWx('dep',res[1]); setWx('arr',res[2]); renderTimes(res[0], res[1], res[2]); }catch(e){}
+      });
+      // 桃機 FIDS（獨立載入，不被上面卡住）
+      getFids().then(function(fids){
+        try{ renderFids(findFids(fids, flightNo, tpeIsOrigin), tpeIsOrigin); }
+        catch(e){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">FIDS 載入失敗</span>'; }
       });
     }
     sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else panel.classList.remove('open'); });
