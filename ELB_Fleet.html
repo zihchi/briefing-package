@@ -1661,6 +1661,14 @@ function renderMelMini(m) {
   </div>`;
 }
 
+// 把 NTC 內文裡的 IDLE/PERF:x.x/+x.x 抓出來,套成顯眼紅底粗體 — 這是 FMS 性能因子,飛行員必看
+function highlightIdlePerf(escapedText) {
+  return escapedText.replace(
+    /(IDLE\s*\/\s*PERF\s*:\s*[+\-]?\d+(?:\.\d+)?\s*\/\s*[+\-]?\d+(?:\.\d+)?)/gi,
+    '<span style="display:inline-block;background:rgba(220,38,38,0.12);color:#dc2626;font-weight:900;font-size:14px;padding:3px 10px;border-radius:6px;letter-spacing:0.3px;margin:2px 0;">★ $1</span>'
+  );
+}
+
 function renderNtcMini(n, i) {
   if (n._error) return `<div style="color:var(--red);font-size:11px">${esc(n._id)}: ${esc(n._error)}</div>`;
   const num  = fmt(n.recordName || n._id);
@@ -1674,7 +1682,7 @@ function renderNtcMini(n, i) {
       <span style="color:#c084fc;font-weight:700;font-size:14px">${esc(num)}</span>
       ${expDays !== null ? `<span class="mel-meta-tag ${expDays<=7?'expiry-crit':expDays<=14?'expiry-warn':'expiry-ok'}" style="margin-left:auto">Expires ${expDays}d</span>` : ''}
     </div>
-    ${body ? `<div style="margin-top:6px;white-space:pre-wrap;color:var(--muted);font-size:12px;line-height:1.55">${esc(body)}</div>` : ''}
+    ${body ? `<div style="margin-top:6px;white-space:pre-wrap;color:var(--muted);font-size:12px;line-height:1.55">${highlightIdlePerf(esc(body))}</div>` : ''}
   </div>`;
 }
 
@@ -1838,7 +1846,7 @@ function renderAircraftDetail(container, tail, data) {
         </div>
         ${sb ? `<div style="font-size:11px;color:var(--purple);margin-top:4px">SB: ${esc(sb)}</div>` : ''}
         <div class="ntc-toggle" onclick="toggleNtc('${uid}')">▶ 全文</div>
-        <div class="ntc-content" id="${uid}">${esc(text || '（無內容）')}</div>
+        <div class="ntc-content" id="${uid}">${text ? highlightIdlePerf(esc(text)) : '（無內容）'}</div>
       </div>`;
     });
   }
