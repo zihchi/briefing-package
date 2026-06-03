@@ -139,24 +139,40 @@
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* ---- 航路 / 航跡欄位（頁面下方） ---- */
+    /* ---- 航路 / 航跡欄位（頁面下方，下拉式） ---- */
     .notam-routes-panel {
         margin-top: 24px;
         background: #ffffff;
         border: 1px solid #e7ddd0;
         border-radius: 16px;
-        padding: 18px 20px;
+        padding: 6px 20px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .notam-routes-head {
         font-size: 14px;
         font-weight: 800;
         color: #4a3627;
-        margin-bottom: 14px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #8b5a2b;
         letter-spacing: 0.01em;
+        cursor: pointer;
+        list-style: none;
+        padding: 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
     }
+    .notam-routes-head::-webkit-details-marker { display: none; }
+    .notam-routes-caret {
+        color: #8b5a2b;
+        font-size: 11px;
+        transition: transform 0.18s ease;
+    }
+    .notam-routes-details[open] .notam-routes-caret { transform: rotate(90deg); }
+    .notam-routes-details[open] .notam-routes-head {
+        border-bottom: 2px solid #8b5a2b;
+        margin-bottom: 14px;
+    }
+    .notam-routes-list { padding-bottom: 14px; }
     .notam-route-item {
         padding: 12px 14px;
         border: 1px solid #e7ddd0;

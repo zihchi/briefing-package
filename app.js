@@ -1894,20 +1894,18 @@ function buildRings(coords) {
     return rings;
 }
 
-// 換日線處理：相鄰兩點經度跳超過 180° 時，把後續點 ±360° 攤平成連續經度，
-// 讓跨越 180° 的航跡/區域沿換日線走近路，而非橫貫整張地圖
-function unwrapAntimeridian(latlngs) {
-    if (latlngs.length < 2) return latlngs;
-    const out = [latlngs[0].slice()];
-    for (let i = 1; i < latlngs.length; i++) {
-        let lng = latlngs[i][1];
-        const prevLng = out[i - 1][1];
-        while (lng - prevLng > 180) lng -= 360;
-        while (lng - prevLng < -180) lng += 360;
-        out.push([latlngs[i][0], lng]);
-    }
-    return out;
+// 以台灣 (約 121°E) 為基準，把經度攤平到 [REF-180, REF+180]。
+// 使美洲等西經地物顯示在台灣「右側」(如 122°W → 238°)，
+// 地圖以太平洋為中心、範圍緊湊，且自動處理跨換日線的區域連線。
+const NOTAM_REF_LNG = 121;
+function pacifyLng(lng) {
+    let v = lng;
+    while (v - NOTAM_REF_LNG > 180) v -= 360;
+    while (v - NOTAM_REF_LNG < -180) v += 360;
+    return v;
 }
+function pacify(ll) { return [ll[0], pacifyLng(ll[1])]; }
+function pacifyAll(arr) { return arr.map(pacify); }
 
 
 // 把整份 bulletin 依「NOTAM 編號」切成一則一則
@@ -2026,17 +2024,18 @@ function processNotamData() {
         const layers = [];
         let geomLabel = '';
 
+        // ll 傳入原始座標：繪圖位置以台灣為基準攤平 (pacify)，popup 仍顯示原始經緯度
         const mkMarker = (ll, desc) => {
-            const mk = L.circleMarker(ll, { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
+            const mk = L.circleMarker(pacify(ll), { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
             mk.bindPopup(popupHtml(block.id, category, desc, altText, validText, summary, ll));
             return mk;
         };
-        const mkVertex = (ll) => L.circleMarker(ll, { radius: 3, color, fillColor: '#fff', fillOpacity: 1, weight: 1.5 });
+        const mkVertex = (ll) => L.circleMarker(pacify(ll), { radius: 3, color, fillColor: '#fff', fillOpacity: 1, weight: 1.5 });
 
         if (radius) {
             // 圓形範圍
             const center = pickRadiusCenter(block.raw, coords);
-            const circle = L.circle(center, { color, fillColor: color, fillOpacity: 0.2, weight: 2, dashArray: '6,5', radius: radius.meters });
+            const circle = L.circle(pacify(center), { color, fillColor: color, fillOpacity: 0.2, weight: 2, dashArray: '6,5', radius: radius.meters });
             circle.bindPopup(popupHtml(block.id, category, `圓形範圍 · 半徑 ${radius.value} ${radius.unit}`, altText, validText, summary, center));
             layers.push(circle);
             geomLabel = `圓 ${radius.value}${radius.unit}`;
@@ -2050,7 +2049,7 @@ function processNotamData() {
             rings.forEach(ring => {
                 const lls = ring.pts.map(c => [c.lat, c.lng]);
                 if ((ring.closed && lls.length >= 4) || (isArea && lls.length >= 3)) {
-                    const poly = L.polygon(unwrapAntimeridian(lls), { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
+                    const poly = L.polygon(pacifyAll(lls), { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
                     poly.bindPopup(popupHtml(block.id, category, `多邊形 · ${lls.length} 頂點`, altText, validText, summary));
                     layers.push(poly);
                     lls.forEach(ll => layers.push(mkVertex(ll)));
@@ -2159,7 +2158,10 @@ function renderNotamRoutes() {
     }
     box.style.display = '';
 
-    let html = `<div class="notam-routes-head">航路 / 航跡 — ${notamRoutes.length} 則（不繪於地圖，僅列出解析內容）</div>`;
+    // 下拉式 (預設收合)：點擊標題列才展開
+    let html = `<details class="notam-routes-details">`;
+    html += `<summary class="notam-routes-head"><span class="notam-routes-caret">▶</span>航路 / 航跡 — ${notamRoutes.length} 則（不繪於地圖，點此展開）</summary>`;
+    html += `<div class="notam-routes-list">`;
     notamRoutes.forEach(r => {
         html += `<div class="notam-route-item">`;
         html += `<div class="notam-route-meta">`;
@@ -2170,6 +2172,7 @@ function renderNotamRoutes() {
         html += `<div class="notam-route-body">${escNotamHtml(r.text)}</div>`;
         html += `</div>`;
     });
+    html += `</div></details>`;
     box.innerHTML = html;
 }
 
