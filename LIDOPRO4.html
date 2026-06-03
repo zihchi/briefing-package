@@ -212,30 +212,48 @@
                         <div class="p-3 md:p-4 flex-grow grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                             <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#b35900]"></div>
-                                <div class="flex justify-between items-start mb-2 pl-2">
-                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Departure</div>
-                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-dep-utc">UTC</span>
-                                </div>
-                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-dep">----</div>
-                                <div class="mt-auto pl-2">
-                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
-                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STD</span>
-                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-std">--:--</span>
+                                <div class="pl-2 flex flex-col h-full">
+                                    <div class="flex items-start justify-between mb-1">
+                                        <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Departure</div>
+                                        <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-dep-utc">UTC</span>
+                                    </div>
+                                    <div class="text-5xl xl:text-6xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
+                                    <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-dep-icao">----</div>
+                                    <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">當地</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-dep-local-time">--:--</span>
+                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-dep-local-date">--</span>
+                                        </div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">UTC</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-dep-utc-time">--:--Z</span>
+                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-dep-utc-date">--</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex flex-col h-full relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-stone-400"></div>
-                                <div class="flex justify-between items-start mb-2 pl-2">
-                                    <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Arrival</div>
-                                    <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-arr-utc">UTC</span>
-                                </div>
-                                <div class="text-4xl xl:text-5xl font-black text-[#4a3627] data-font leading-none pl-2 mb-6" id="out-arr">----</div>
-                                <div class="mt-auto pl-2">
-                                    <div class="bg-stone-50 rounded-lg p-3 flex flex-col justify-center border border-stone-100/50">
-                                        <span class="text-[9px] font-bold text-stone-500 mb-0.5">STA</span>
-                                        <span class="data-font font-black text-sm md:text-base text-stone-800 tracking-wide" id="out-sta">--:--</span>
+                                <div class="pl-2 flex flex-col h-full">
+                                    <div class="flex items-start justify-between mb-1">
+                                        <div class="text-[10px] font-bold text-stone-400 tracking-widest uppercase">Arrival</div>
+                                        <span class="text-[10px] bg-[#d4c3b3] text-[#4a3627] px-2 py-0.5 rounded font-bold" id="out-arr-utc">UTC</span>
+                                    </div>
+                                    <div class="text-5xl xl:text-6xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
+                                    <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-arr-icao">----</div>
+                                    <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">當地</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-arr-local-time">--:--</span>
+                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-arr-local-date">--</span>
+                                        </div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">UTC</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-arr-utc-time">--:--Z</span>
+                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-arr-utc-date">--</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -296,13 +314,21 @@
                             <div class="w-full h-px bg-stone-100"></div>
                             
                             <div class="grid grid-cols-2 gap-2 mt-1">
-                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50 relative">
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 px-1 border border-amber-100/50 relative">
                                     <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">DEP BAY</span>
                                     <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-dep-bay">--</span>
+                                    <div id="out-pld-dep-term-row" class="hidden mt-0.5 flex items-center gap-1.5 text-[9px] font-bold text-amber-700/80">
+                                        <span>航廈 <span class="text-[#b35900] data-font" id="out-pld-dep-terminal">--</span></span>
+                                        <span class="text-amber-200">|</span>
+                                        <span>櫃檯 <span class="text-[#b35900] data-font" id="out-pld-dep-counter">--</span></span>
+                                    </div>
                                 </div>
-                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 border border-amber-100/50 relative">
+                                <div class="flex flex-col items-center justify-center bg-amber-50/60 rounded-lg py-1.5 px-1 border border-amber-100/50 relative">
                                     <span class="text-[8px] text-amber-700/80 font-bold tracking-wider">ARR BAY</span>
                                     <span class="data-font font-black text-lg text-[#b35900]" id="out-pld-arr-bay">--</span>
+                                    <div id="out-pld-arr-term-row" class="hidden mt-0.5 text-[9px] font-bold text-amber-700/80">
+                                        <span>航廈 <span class="text-[#b35900] data-font" id="out-pld-arr-terminal">--</span></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -381,7 +407,7 @@
                                 <div class="text-sm font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
                                 <div class="text-right flex items-baseline gap-2">
                                     <span class="text-xs text-[#8b5a2b] font-bold opacity-70" id="time-total-fuel"></span>
-                                    <div class="data-font font-black text-4xl text-[#6e4620] leading-none" id="out-total-fuel">----</div>
+                                    <div class="data-font font-black text-3xl text-[#6e4620] leading-none" id="out-total-fuel">----</div>
                                 </div>
                             </div>
                         </div>
@@ -393,7 +419,7 @@
                                     <span class="text-[9px] text-stone-400 font-bold opacity-70 mt-1" id="time-div-fuel"></span>
                                 </div>
                                 <div class="text-right">
-                                    <div class="data-font font-black text-2xl xl:text-3xl text-[#5c4033] tracking-widest" id="out-div-fuel">----</div>
+                                    <div class="data-font font-black text-xl xl:text-2xl text-[#5c4033] tracking-widest" id="out-div-fuel">----</div>
                                 </div>
                             </div>
                             
@@ -403,7 +429,7 @@
                                 <div class="w-full h-px bg-[#e8dfd5] mb-4"></div>
                                 <div class="flex justify-between items-end">
                                     <div class="text-[11px] text-[#8c6b5d] font-bold">Spare Fuel</div>
-                                    <div class="data-font font-black text-3xl text-[#4b6b3e] leading-none" id="out-spare-fuel">----</div>
+                                    <div class="data-font font-black text-2xl text-[#4b6b3e] leading-none" id="out-spare-fuel">----</div>
                                 </div>
                             </div>
                         </div>
@@ -449,10 +475,27 @@
                             等待擷取機場資料，系統將自動解析氣象。
                         </div>
                     </div>
+                    <!-- D-ATIS 子區塊 — 同步顯示起訖地的 D-ATIS -->
+                    <div class="border-t border-stone-200/80">
+                        <div class="bg-stone-100 text-[#3b4c59] px-4 py-2.5 flex justify-between items-center">
+                            <span class="text-[11px] md:text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                📻 D-ATIS
+                                <span class="text-[10px] text-stone-500 normal-case tracking-normal font-semibold">起訖地自動載入</span>
+                            </span>
+                            <button onclick="refreshDAtis()" class="bg-stone-200 hover:bg-stone-300 text-stone-700 p-1.5 rounded-md transition-colors active:scale-95 shadow-sm no-print" title="Refresh D-ATIS">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            </button>
+                        </div>
+                        <div id="datis-blocks-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 md:p-5 bg-[#fbf9f6] min-h-[120px]">
+                            <div class="col-span-1 lg:col-span-2 flex items-center justify-center h-full text-sm text-stone-400 font-bold py-8 text-center">
+                                等待擷取機場資料，系統將自動載入 D-ATIS。
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex flex-col gap-4 md:gap-5 w-full">
-                    
+
                     <div class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col">
                         <div class="bg-gradient-to-r from-stone-600 to-stone-700 text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex justify-between items-center">
                             <span class="flex items-center gap-1.5">
@@ -1923,6 +1966,49 @@
             return `${yr}-${monthNames[parseInt(mo,10)-1]}-${dy}`;
         }
 
+        // 拆 OFP zulu time "1610" → {utc:"16:10Z", local:"00:10"} 給新 dep/arr 卡用
+        function splitZuluLocal(zuluTimeStr, icao) {
+            if (!zuluTimeStr || zuluTimeStr === 'N/A' || zuluTimeStr === '') return { utc: '--:--Z', local: '--:--' };
+            const cleanStr = zuluTimeStr.replace(/[^0-9]/g, '');
+            if (cleanStr.length < 4) return { utc: zuluTimeStr, local: '--:--' };
+            const hh = cleanStr.substring(0, 2), mm = cleanStr.substring(2, 4);
+            const utcStr = `${hh}:${mm}Z`;
+            const tz = tzMapping[icao];
+            if (!tz) return { utc: utcStr, local: '--:--' };
+            const today = new Date();
+            const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), parseInt(hh,10), parseInt(mm,10)));
+            try {
+                const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+                return { utc: utcStr, local: f.format(d) };
+            } catch (e) { return { utc: utcStr, local: '--:--' }; }
+        }
+
+        // "2026-JUN-03" → "03 JUN" 或 "03 JUN 週三"
+        function formatCompactDate(dateStr, withWeek) {
+            const p = parseUtcDateStr(dateStr);
+            if (!p) return '--';
+            const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            const dd = String(p.d).padStart(2, '0');
+            const base = `${dd} ${monthNames[p.mo]}`;
+            if (!withWeek) return base;
+            const wk = WEEK_ZH[new Date(Date.UTC(p.y, p.mo, p.d)).getUTCDay()];
+            return `${base} ${wk}`;
+        }
+
+        // 如果 STA 數值 < STD,代表飛越 UTC 午夜,arr UTC 日期 = dep UTC 日期 + 1
+        function computeArrUtcDate(utcDateStr, stdZulu, staZulu) {
+            if (!utcDateStr || !stdZulu || !staZulu) return utcDateStr;
+            const std = parseInt(String(stdZulu).replace(/[^0-9]/g, '').substring(0,4), 10);
+            const sta = parseInt(String(staZulu).replace(/[^0-9]/g, '').substring(0,4), 10);
+            if (!isFinite(std) || !isFinite(sta) || sta >= std) return utcDateStr;
+            const p = parseUtcDateStr(utcDateStr);
+            if (!p) return utcDateStr;
+            const d = new Date(Date.UTC(p.y, p.mo, p.d));
+            d.setUTCDate(d.getUTCDate() + 1);
+            const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            return `${d.getUTCFullYear()}-${monthNames[d.getUTCMonth()]}-${String(d.getUTCDate()).padStart(2,'0')}`;
+        }
+
         function formatTurbliDate(dateStr) {
             if (!dateStr || dateStr === '----') return '';
             const months = {JAN:'01', FEB:'02', MAR:'03', APR:'04', MAY:'05', JUN:'06', JUL:'07', AUG:'08', SEP:'09', OCT:'10', NOV:'11', DEC:'12'};
@@ -1966,8 +2052,13 @@
             if (routeStr !== 'N/A' && routeStr.includes('/')) {
                 currentDepICAO = routeStr.split('/')[0].trim(); currentArrICAO = routeStr.split('/')[1].trim();
             }
-            document.getElementById('out-dep').textContent = currentDepICAO;
-            document.getElementById('out-arr').textContent = currentArrICAO;
+            // 大字顯示 IATA,小字顯示 ICAO
+            document.getElementById('out-dep').textContent = airportMap[currentDepICAO] || currentDepICAO;
+            document.getElementById('out-arr').textContent = airportMap[currentArrICAO] || currentArrICAO;
+            const elDepIcao = document.getElementById('out-dep-icao');
+            const elArrIcao = document.getElementById('out-arr-icao');
+            if (elDepIcao) elDepIcao.textContent = currentDepICAO;
+            if (elArrIcao) elArrIcao.textContent = currentArrICAO;
             document.getElementById('out-dep-utc').textContent = getUtcOffsetString(currentDepICAO);
             document.getElementById('out-arr-utc').textContent = getUtcOffsetString(currentArrICAO);
 
@@ -2021,8 +2112,28 @@
                 document.getElementById('out-etd').textContent = convertToZuluLocalStr(rawEtd, currentDepICAO);
             }
 
-            document.getElementById('out-std').textContent = convertToZuluLocalStr(rawStd, currentDepICAO);
-            document.getElementById('out-sta').textContent = convertToZuluLocalStr(rawSta, currentArrICAO);
+            // 新 dep/arr 卡:當地 + UTC 時間/日期分開顯示
+            const depTimes = splitZuluLocal(rawStd, currentDepICAO);
+            const arrTimes = splitZuluLocal(rawSta, currentArrICAO);
+            const arrUtcDateStr = computeArrUtcDate(currentDateUTC, rawStd, rawSta);
+            const depLocalDateStr = calcLocalDate(currentDateUTC, currentDepUTC, currentDepICAO) || currentDateUTC;
+            const arrLocalDateStr = calcLocalDate(arrUtcDateStr, currentArrUTC, currentArrICAO) || arrUtcDateStr;
+            const elDepLocalT = document.getElementById('out-dep-local-time');
+            const elDepUtcT = document.getElementById('out-dep-utc-time');
+            const elDepLocalD = document.getElementById('out-dep-local-date');
+            const elDepUtcD = document.getElementById('out-dep-utc-date');
+            const elArrLocalT = document.getElementById('out-arr-local-time');
+            const elArrUtcT = document.getElementById('out-arr-utc-time');
+            const elArrLocalD = document.getElementById('out-arr-local-date');
+            const elArrUtcD = document.getElementById('out-arr-utc-date');
+            if (elDepLocalT) elDepLocalT.textContent = depTimes.local;
+            if (elDepUtcT) elDepUtcT.textContent = depTimes.utc;
+            if (elDepLocalD) elDepLocalD.textContent = formatCompactDate(depLocalDateStr, true);
+            if (elDepUtcD) elDepUtcD.textContent = formatCompactDate(currentDateUTC, false);
+            if (elArrLocalT) elArrLocalT.textContent = arrTimes.local;
+            if (elArrUtcT) elArrUtcT.textContent = arrTimes.utc;
+            if (elArrLocalD) elArrLocalD.textContent = formatCompactDate(arrLocalDateStr, true);
+            if (elArrUtcD) elArrUtcD.textContent = formatCompactDate(arrUtcDateStr, false);
 
             const fuelItems = [
                 { id: 'out-add-wxx', timeId: 'time-add-wxx', key: 'ADD WXX' },
@@ -2209,6 +2320,7 @@
             }
 
             let depBay = '--', arrBay = '--';
+            let depTerminal = '', depCounter = '', arrTerminal = '';
             const bayMatch = rawText2.match(/BAY:\s*([^]+?)(?=\(\d+\)|ADD OPN|$)/i);
             if (bayMatch) {
                 bayMatch[1].trim().split(',').map(s => s.trim()).forEach((b, index) => {
@@ -2283,6 +2395,10 @@
                         }
                         depBay = tdxDep.Gate;
                     }
+                    if (tdxDep) {
+                        if (tdxDep.Terminal) depTerminal = 'T' + tdxDep.Terminal;
+                        if (tdxDep.CheckCounter) depCounter = tdxDep.CheckCounter;
+                    }
                 }
                 if (currentArrICAO === 'RCTP' || currentArrICAO === 'TPE') {
                     const tdxArr = findBestFidsMatch(fidsFlightData.arrivals, targetAirline, targetFlightNum, arrFidsDate);
@@ -2292,11 +2408,34 @@
                         }
                         arrBay = tdxArr.Gate;
                     }
+                    if (tdxArr && tdxArr.Terminal) arrTerminal = 'T' + tdxArr.Terminal;
                 }
             }
 
-            if (document.getElementById('out-pld-dep-bay')) document.getElementById('out-pld-dep-bay').textContent = depBay; 
+            if (document.getElementById('out-pld-dep-bay')) document.getElementById('out-pld-dep-bay').textContent = depBay;
             if (document.getElementById('out-pld-arr-bay')) document.getElementById('out-pld-arr-bay').textContent = arrBay;
+            // RCTP 才會有航廈/櫃檯資訊,有資料才顯示
+            const depTermRow = document.getElementById('out-pld-dep-term-row');
+            if (depTermRow) {
+                if (depTerminal || depCounter) {
+                    depTermRow.classList.remove('hidden');
+                    depTermRow.classList.add('flex');
+                    document.getElementById('out-pld-dep-terminal').textContent = depTerminal || '--';
+                    document.getElementById('out-pld-dep-counter').textContent = depCounter || '--';
+                } else {
+                    depTermRow.classList.add('hidden');
+                    depTermRow.classList.remove('flex');
+                }
+            }
+            const arrTermRow = document.getElementById('out-pld-arr-term-row');
+            if (arrTermRow) {
+                if (arrTerminal) {
+                    arrTermRow.classList.remove('hidden');
+                    document.getElementById('out-pld-arr-terminal').textContent = arrTerminal;
+                } else {
+                    arrTermRow.classList.add('hidden');
+                }
+            }
 
             [alt1, alt2, alt3].forEach(alt => {
                 if (alt !== 'N/A' && alt !== '----' && alt !== '') {
@@ -2410,10 +2549,71 @@
             if (!navigator.onLine) { checkNetworkStatus(); return; }
             if (currentIcaosToFetch && currentIcaosToFetch.length > 0) {
                 fetchAllWeather(currentIcaosToFetch);
+                refreshDAtis();
             } else {
                 const syncLabel = document.getElementById('global-wx-sync');
                 syncLabel.textContent = "NO DATA"; syncLabel.className = "text-[10px] md:text-xs font-bold text-red-300 bg-red-900/50 px-2 py-1 rounded transition-colors";
             }
+        }
+
+        // ─────────────── D-ATIS ───────────────
+        // GAS endpoint(跟 ATIS.html 共用),takes ?icao=XXXX → {arrival, departure}
+        const DATIS_GAS_URL = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec";
+
+        function createDatisBlockHTML(icao) {
+            return `<div class="border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <div class="bg-stone-100/60 px-3 md:px-4 py-2 border-b border-stone-200 flex justify-between items-center">
+                    <span class="text-lg md:text-xl font-bold tracking-widest data-font text-[#3b4c59]">${icao}</span>
+                    <span id="datis-sync-${icao}" class="text-[10px] px-2 py-0.5 rounded bg-stone-300 text-stone-600 font-bold tracking-wider">Loading...</span>
+                </div>
+                <div class="p-3 md:p-4 flex flex-col gap-3">
+                    <div>
+                        <div class="text-[10px] md:text-xs font-bold text-[#3c79ff] mb-1.5 tracking-wide">Arrival ATIS</div>
+                        <div id="datis-arr-${icao}" class="bg-stone-50 p-2.5 md:p-3 rounded-md text-xs md:text-[13px] text-stone-700 data-font border-l-4 border-[#3c79ff] whitespace-pre-wrap leading-relaxed">連線中...</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] md:text-xs font-bold text-[#e67e22] mb-1.5 tracking-wide">Departure ATIS</div>
+                        <div id="datis-dep-${icao}" class="bg-stone-50 p-2.5 md:p-3 rounded-md text-xs md:text-[13px] text-stone-700 data-font border-l-4 border-[#e67e22] whitespace-pre-wrap leading-relaxed">連線中...</div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        async function fetchDatisForIcao(icao) {
+            const arrEl = document.getElementById(`datis-arr-${icao}`);
+            const depEl = document.getElementById(`datis-dep-${icao}`);
+            const syncEl = document.getElementById(`datis-sync-${icao}`);
+            if (!arrEl || !depEl) return;
+            try {
+                const res = await fetch(`${DATIS_GAS_URL}?icao=${icao}`);
+                const data = await res.json();
+                if (data.error) {
+                    arrEl.textContent = `❌ ${data.error}`;
+                    depEl.textContent = `❌ ${data.error}`;
+                    if (syncEl) { syncEl.textContent = 'ERROR'; syncEl.className = 'text-[10px] px-2 py-0.5 rounded bg-red-500 text-white font-bold tracking-wider'; }
+                    return;
+                }
+                arrEl.textContent = data.arrival || '目前無 Arrival ATIS 資料';
+                depEl.textContent = data.departure || '目前無 Departure ATIS 資料';
+                if (syncEl) { syncEl.textContent = 'OK'; syncEl.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-white font-bold tracking-wider'; }
+            } catch (e) {
+                arrEl.textContent = '連線失敗,請重試';
+                depEl.textContent = '連線失敗,請重試';
+                if (syncEl) { syncEl.textContent = 'OFFLINE'; syncEl.className = 'text-[10px] px-2 py-0.5 rounded bg-stone-500 text-white font-bold tracking-wider'; }
+            }
+        }
+
+        function refreshDAtis() {
+            const container = document.getElementById('datis-blocks-container');
+            if (!container) return;
+            const icaos = [currentDepICAO, currentArrICAO].filter(i => i && i !== '----' && i.length === 4);
+            if (icaos.length === 0) {
+                container.innerHTML = `<div class="col-span-1 lg:col-span-2 flex items-center justify-center h-full text-sm text-stone-400 font-bold py-8 text-center">等待擷取機場資料，系統將自動載入 D-ATIS。</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            for (const icao of icaos) container.innerHTML += createDatisBlockHTML(icao);
+            icaos.forEach(icao => fetchDatisForIcao(icao));
         }
 
         async function fetchAllWeather(icaos) {
