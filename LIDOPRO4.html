@@ -446,9 +446,13 @@
                             </div>
 
                             <div class="mt-auto pt-4">
-                                <div class="flex justify-between items-center mb-2.5">
+                                <div class="flex justify-between items-center mb-2">
                                     <span class="text-[11px] text-stone-500 font-bold">Final Reserve Fuel</span>
                                     <span class="data-font text-base font-bold text-stone-600" id="out-frf">----</span>
+                                </div>
+                                <div class="flex justify-between items-baseline mb-2.5">
+                                    <span class="text-[11px] text-stone-500 font-bold">LDG Fuel</span>
+                                    <span class="data-font text-base font-bold text-stone-600"><span id="out-ldg">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span></span>
                                 </div>
                                 <div class="w-full h-px bg-[#e8dfd5] mb-2.5"></div>
                                 <div class="flex justify-between items-baseline mb-3">
@@ -685,6 +689,7 @@
                                         <div><span class="dot" style="background:#ea580c"></span>UAV / 無人機</div>
                                         <div><span class="dot" style="background:#7c3aed"></span>障礙物</div>
                                         <div><span class="dot" style="background:#2563eb"></span>一般區域</div>
+                                        <div><span class="dot" style="background:#0d9488"></span>飛行航線</div>
                                     </div>
                                 </div>
                             </div>
@@ -897,6 +902,56 @@
                 }
             }
             return null;
+        }
+
+        // 度分 (DDMM.m / DDDMM.m) → 十進位度
+        function dmToDeg(numStr) {
+            const dot = numStr.indexOf('.');
+            const intp = dot >= 0 ? numStr.slice(0, dot) : numStr;
+            const deg = parseInt(intp.slice(0, intp.length - 2), 10);
+            const min = parseFloat(numStr.slice(intp.length - 2));
+            return deg + (isNaN(min) ? 0 : min) / 60;
+        }
+
+        // 從 OFP NAVIGATION LOG 抽出航線航點 (依序、含經緯度) → [{n,lat,lng}]
+        function extractRouteWaypoints(ofpText) {
+            if (!ofpText) return [];
+            const navIdx = ofpText.search(/NAVIGATION\s+LOG/i);
+            if (navIdx < 0) return [];
+            let nav = ofpText.slice(navIdx);
+            const rampIdx = nav.search(/RAMP\s+FUEL/i);
+            if (rampIdx > 0) nav = nav.slice(0, rampIdx);
+            const lines = nav.split('\n');
+            const coordRe = /^\s*([NS])(\d{4}\.\d)\s+([EW])(\d{4,5}\.\d)\s*$/;
+            const wpts = [];
+            for (let i = 0; i < lines.length; i++) {
+                const m = lines[i].match(coordRe);
+                if (!m) continue;
+                let lat = dmToDeg(m[2]); if (m[1] === 'S') lat = -lat;
+                let lng = dmToDeg(m[4]); if (m[3] === 'W') lng = -lng;
+                if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) continue;
+                // 名稱：FIR 邊界行 (上一行以 - 開頭) 取其名，否則取上兩行 (WPT 行) 首 token
+                let name = '';
+                const up1 = (lines[i - 1] || '').trim();
+                const up2 = (lines[i - 2] || '').trim();
+                if (up1.startsWith('-')) name = up1.replace(/^-+/, '').split(/\s{2,}|\s+\d/)[0].trim();
+                else name = (up2.split(/\s+/)[0] || '').trim();
+                // 略過連續重複座標 (如 FIR 邊界與相鄰航點同點)
+                const prev = wpts[wpts.length - 1];
+                if (prev && Math.abs(prev.lat - lat) < 1e-4 && Math.abs(prev.lng - lng) < 1e-4) {
+                    if (!prev.n && name) prev.n = name;
+                    continue;
+                }
+                wpts.push({ n: name, lat, lng });
+            }
+            return wpts;
+        }
+
+        function pushFlightRouteToMap() {
+            if (!window.setFlightRoute) return;
+            let wpts = [];
+            try { wpts = JSON.parse(localStorage.getItem('dispatch_route_wpts') || '[]'); } catch (e) { wpts = []; }
+            window.setFlightRoute(wpts);
         }
 
         let parseNotamTimer;
@@ -1407,7 +1462,14 @@
                         perfBlock += `TANKERING: ${formatFuelVal(fw_tank)}\n`;
                         perfBlock += `EXTRA: ${formatFuelVal(fw_extra)}\n`;
                         const baseBof = bof1 > 0 ? bof1 : fw_altn.w;
+                        // LDG Fuel：NAVIGATION LOG 最後航點的 FFREM (落地剩油，公噸)
+                        const ldgMatches = [...ofpText.matchAll(/\.{2,}\/\.{2,}\s+(\d+\.\d)/g)];
+                        const ldgFuel = ldgMatches.length ? ldgMatches[ldgMatches.length - 1][1] : '';
+                        // 航線航點 (依序，含經緯度)，存入 localStorage 供地圖使用
+                        const routeWpts = extractRouteWaypoints(ofpText);
+                        try { localStorage.setItem('dispatch_route_wpts', JSON.stringify(routeWpts)); } catch (e) {}
                         perfBlock += `FINAL RES: ${formatFuelVal(fw_frf)}\n`;
+                        perfBlock += `LDG FUEL: ${ldgFuel || 'N/A'}\n`;
                         perfBlock += `ALT1 BOF: ${baseBof > 0 ? baseBof : 'N/A'}\n`;
                         perfBlock += `ALT2 BOF: ${bof2 > 0 ? bof2 + ' (' + (bof2 - baseBof > 0 ? '+' : '') + (bof2 - baseBof) + ')' : 'N/A'}\n`;
                         perfBlock += `ALT3 BOF: ${bof3 > 0 ? bof3 + ' (' + (bof3 - baseBof > 0 ? '+' : '') + (bof3 - baseBof) + ')' : 'N/A'}\n------------------------------------------------------\n`;
@@ -1473,6 +1535,7 @@
 
                     debouncedParseData();
                     parseNotams();
+                    pushFlightRouteToMap();
                     showToast('資料取得成功！版面已更新。');
                 } else {
                     showToast(`擷取失敗：${responseData.message}`, true);
@@ -1505,6 +1568,8 @@
             localStorage.removeItem('dispatch_rawInput_2');
             localStorage.removeItem('dispatch_notam_input');
             localStorage.removeItem('dispatch_atc_input');
+            localStorage.removeItem('dispatch_route_wpts');
+            if (window.setFlightRoute) window.setFlightRoute([]);
             
             const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
             if (rawInput2Placeholder) rawInput2Placeholder.classList.remove('hidden');
@@ -1556,9 +1621,10 @@
             checkNetworkStatus();
             if (savedInput1 || savedInput2) parseData();
             if (savedNotam) parseNotams();
+            pushFlightRouteToMap();
 
             // 在背景初始化並抓取 TDX 資料 (無 UI)
-            fetchFIDSDataSilent(); 
+            fetchFIDSDataSilent();
         });
 
         window.addEventListener('online', checkNetworkStatus);
@@ -2283,6 +2349,13 @@
                 frfEl.textContent = (frfRaw !== 'N/A' && frfRaw !== '') ? frfRaw.split('/')[0].trim() : '----';
             }
 
+            // === LDG Fuel (落地剩油，公噸) ===
+            const ldgEl = document.getElementById('out-ldg');
+            if (ldgEl) {
+                const ldgRaw = extractData(rawText, 'LDG FUEL');
+                ldgEl.textContent = (ldgRaw !== 'N/A' && ldgRaw !== '') ? ldgRaw.split('/')[0].trim() : '----';
+            }
+
             const eteVal = extractData(rawText, 'ETE');
             const cruVal = extractData(rawText, '巡航高度');
             const elEteCenter = document.getElementById('out-ete-center');
@@ -2483,7 +2556,7 @@
                 }
             }
 
-            [alt1, alt2, alt3].forEach(alt => {
+            altnRwys.forEach(alt => {
                 if (alt !== 'N/A' && alt !== '----' && alt !== '') {
                     const icao = alt.split('/')[0].trim();
                     if (icao.length === 4 && !currentIcaosToFetch.includes(icao)) currentIcaosToFetch.push(icao);
@@ -2885,6 +2958,9 @@
         let notamActiveLayers = [];
         let notamFeatures = [];
         let notamRoutes = [];
+        let notamRouteLayers = [];   // 航線 (flight plan) 圖層
+        let _route = [];             // 航線航點 [{n,lat,lng}]
+        let _notamText = '';         // 目前 NOTAM 文字
 
         function initNotamRadar() {
             if (notamMapInstance !== null) {
@@ -3108,12 +3184,14 @@
 
         function processNotamData(inputText) {
             if (!notamMapInstance) return;
-            const input = inputText != null ? inputText : ((document.getElementById('notamInput') || {}).value || '');
-            if (!input.trim()) return;
+            const input = (inputText != null ? inputText : ((document.getElementById('notamInput') || {}).value || '')).trim();
 
             notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
             notamActiveLayers = [];
             notamFeatures = [];
+            notamRoutes = [];
+
+            if (!input) { renderNotamList(); renderNotamRoutes(); return; }
 
             let blocks = splitBulletin(input);
             if (blocks.length === 0) blocks = [{ id: 'NOTAM', raw: input }];
@@ -3189,13 +3267,6 @@
 
             renderNotamList();
             renderNotamRoutes();
-
-            // 自動縮放只看「目前顯示」的圖徵，避免被離群點拉太遠
-            const b = L.latLngBounds([]);
-            notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
-            if (b.isValid()) {
-                notamMapInstance.fitBounds(b, { padding: [40, 40] });
-            }
         }
 
         // ──────────────────────────────────────────
@@ -3308,21 +3379,59 @@
         }
 
 
-        // 對外唯一入口：把 NOTAM 文字餵入並在地圖上標示
-        window.renderNotamMap = function (text) {
+        // 畫飛行計畫航線 (teal 實線 + 航點)，跨換日線以台灣為基準攤平
+        function drawFlightRoute() {
+            notamRouteLayers.forEach(l => notamMapInstance.removeLayer(l));
+            notamRouteLayers = [];
+            if (_route.length < 2) return;
+            const pts = _route.map(w => pacify([w.lat, w.lng]));
+            const line = L.polyline(pts, { color: '#0d9488', weight: 3, opacity: 0.9 });
+            line.addTo(notamMapInstance);
+            notamRouteLayers.push(line);
+            _route.forEach((w, i) => {
+                const isEnd = (i === 0 || i === _route.length - 1);
+                const mk = L.circleMarker(pacify([w.lat, w.lng]), {
+                    radius: isEnd ? 5 : 2.5, color: '#0d9488',
+                    fillColor: isEnd ? '#0d9488' : '#ffffff', fillOpacity: 1, weight: 1.5
+                });
+                if (w.n) mk.bindPopup(`<b>${w.n}</b><br>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}`);
+                mk.addTo(notamMapInstance);
+                notamRouteLayers.push(mk);
+            });
+        }
+
+        // 統一渲染：NOTAM + 航線共存，並一次性縮放、決定卡片顯示
+        function renderMapAll() {
             const card = document.getElementById('notam-map-card');
-            text = (text || '').trim();
-            if (!text) { if (card) card.style.display = 'none'; return; }
+            const hasRoute = _route.length >= 2;
+            const hasNotam = !!_notamText;
+            if (!hasRoute && !hasNotam) { if (card) card.style.display = 'none'; return; }
             if (card) card.style.display = '';
             if (!notamMapInstance) initNotamRadar();
-            if (notamMapInstance) notamMapInstance.invalidateSize();
-            processNotamData(text);
-            // 整份都無可繪製座標也無航跡 → 收起卡片
-            if (notamFeatures.length === 0 && notamRoutes.length === 0) {
+            notamMapInstance.invalidateSize();
+
+            drawFlightRoute();
+            processNotamData(_notamText);
+
+            // 若 NOTAM 與航線都無實際圖徵 → 收起卡片
+            if (notamFeatures.length === 0 && notamRoutes.length === 0 && notamRouteLayers.length === 0) {
                 if (card) card.style.display = 'none';
-            } else {
-                setTimeout(function () { if (notamMapInstance) notamMapInstance.invalidateSize(); }, 200);
+                return;
             }
+
+            // 一次性縮放：涵蓋 NOTAM 圖徵 + 航線
+            const b = L.latLngBounds([]);
+            notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
+            notamRouteLayers.forEach(l => { if (l.getBounds) { const lb = l.getBounds(); if (lb.isValid()) b.extend(lb); } });
+            if (b.isValid()) notamMapInstance.fitBounds(b, { padding: [40, 40] });
+            setTimeout(function () { if (notamMapInstance) notamMapInstance.invalidateSize(); }, 200);
+        }
+
+        // 對外入口
+        window.renderNotamMap = function (text) { _notamText = (text || '').trim(); renderMapAll(); };
+        window.setFlightRoute = function (wpts) {
+            _route = Array.isArray(wpts) ? wpts.filter(w => w && isFinite(w.lat) && isFinite(w.lng)) : [];
+            renderMapAll();
         };
     })();
     </script>
