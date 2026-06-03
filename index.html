@@ -378,11 +378,11 @@
     .fd-panel { overflow: hidden; max-height: 0; transition: max-height .4s ease; }
     .fd-panel.open { max-height: 720px; }
     .fd-inner { padding: 12px 0 2px; position: relative; }
-    .fd-head { display: flex; align-items: center; gap: 10px; padding-right: 32px; }
+    .fd-head { display: none; }
     .fd-no { font-weight: 900; font-size: 1.1rem; color: var(--brand); font-family: ui-monospace,'SF Mono',monospace; }
     .fd-rt { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: 1px; }
     .fd-close { position: absolute; top: 6px; right: 0; background: none; border: 0; font-size: 1.15rem; color: var(--text-faint); cursor: pointer; padding: 2px 8px; z-index: 1; }
-    .fd-ops { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .fd-ops { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 0; padding-right: 32px; }
     .fd-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
     .fd-end { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 9px 12px; box-shadow: var(--shadow-card); min-width: 0; }
     .fd-end .ap { font-weight: 900; font-size: clamp(1rem,4.5vw,1.2rem); color: var(--brand); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
@@ -403,9 +403,8 @@
     .fd-lb img { max-width: 96vw; max-height: 42vh; border-radius: 8px; background: #fff; }
     .fd-lb .cap { color: #f4ece4; font-weight: 700; font-size: 0.85rem; }
 
-    /* iPad / 寬螢幕：移除冗餘的 JX 標題列，起訖卡與 Gate/航廈/亂流同列，整體更扁 */
+    /* iPad / 寬螢幕：起訖卡與 Gate/航廈/亂流同列，整體更扁 */
     @media (min-width: 720px) {
-      .app-topbar .fd-head { display: none; }
       .app-topbar .fd-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-right: 36px; }
       .app-topbar .fd-ops { display: contents; }
       .app-topbar .fd-ends { display: contents; }
