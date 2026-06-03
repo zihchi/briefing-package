@@ -139,6 +139,59 @@
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
+    /* ---- 航路 / 航跡欄位（頁面下方） ---- */
+    .notam-routes-panel {
+        margin-top: 24px;
+        background: #ffffff;
+        border: 1px solid #e7ddd0;
+        border-radius: 16px;
+        padding: 18px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .notam-routes-head {
+        font-size: 14px;
+        font-weight: 800;
+        color: #4a3627;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #8b5a2b;
+        letter-spacing: 0.01em;
+    }
+    .notam-route-item {
+        padding: 12px 14px;
+        border: 1px solid #e7ddd0;
+        border-left: 4px solid #64748b;
+        border-radius: 10px;
+        background: #faf6f0;
+        margin-bottom: 10px;
+    }
+    .notam-route-item:last-child { margin-bottom: 0; }
+    .notam-route-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        margin-bottom: 8px;
+    }
+    .notam-route-id {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 14px; font-weight: 700; color: #4a3627;
+    }
+    .notam-route-geom {
+        font-size: 12px; font-weight: 600;
+        color: #475569; background: #e2e8f0;
+        padding: 2px 10px; border-radius: 10px;
+    }
+    .notam-route-valid {
+        font-size: 12px; color: #78716c;
+        font-family: 'Monaco', 'Consolas', monospace;
+    }
+    .notam-route-body {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 12.5px; line-height: 1.7; color: #4a3627;
+        white-space: pre-wrap; word-break: break-word;
+    }
+
     /* ---- 響應式：手機直式避免水平溢出，按鈕改為直排全寬 ---- */
     @media (max-width: 640px) {
         .notam-actions {
@@ -146,6 +199,8 @@
         }
         .notam-legend { font-size: 10px !important; }
         .notam-results { max-height: 200px; }
+        .notam-routes-panel { padding: 14px; }
+        .notam-route-body { font-size: 11.5px; }
     }
 </style>
 
@@ -196,10 +251,12 @@
                     <div class="flex items-center mb-2"><span class="dot-restricted w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>限航 / 演習 (Restricted)</div>
                     <div class="flex items-center mb-2"><span class="dot-uav w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>UAV / 無人機</div>
                     <div class="flex items-center mb-2"><span class="dot-obstacle w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>障礙物 (Obstacle)</div>
-                    <div class="flex items-center mb-2"><span class="dot-area w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>一般區域 (Area)</div>
-                    <div class="flex items-center"><span class="dot-route w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>航路/航跡 (預設關閉)</div>
+                    <div class="flex items-center"><span class="dot-area w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>一般區域 (Area)</div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- 航路 / 航跡欄位（PACOTS / NAT 等，不繪於地圖，列出解析內容） -->
+    <div id="notam-routes" class="notam-routes-panel" style="display:none"></div>
 </div>

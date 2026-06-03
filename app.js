@@ -10,6 +10,7 @@ const MONOSPACE_FONT = "font-family: ui-monospace, 'SF Mono', 'SFMono-Regular', 
 let notamMapInstance = null;
 let notamActiveLayers = [];
 let notamFeatures = [];
+let notamRoutes = [];
 let curfewClockInterval = null;
 
 // ✈️ Turbli 航班資料庫
@@ -1782,7 +1783,9 @@ function initNotamRadar() {
 
     notamActiveLayers = [];
     notamFeatures = [];
+    notamRoutes = [];
     renderNotamList();
+    renderNotamRoutes();
 
     const btnProcess = document.getElementById('btn-process-notam');
     if (btnProcess) btnProcess.onclick = processNotamData;
@@ -1853,7 +1856,6 @@ const NOTAM_CATEGORIES = {
     restricted: { label: '限航/演習', color: '#dc2626', keywords: /AIR\s*EXER|\bEXER\b|AIRSPACE\s+BLOCK|BLOCKED\s+AREA|RESTRICT|PROHIBIT|DANGER\s+AREA|FIRING|\bFRNG\b|GUNNERY|\bMIL\b|MILITARY|MISSILE|RESERVATION/i },
     uav:        { label: 'UAV/無人機', color: '#ea580c', keywords: /\bUAV\b|UNMANNED|\bDRONE\b|\bRPAS\b/i },
     obstacle:   { label: '障礙物',     color: '#7c3aed', keywords: /\bCRANE\b|\bOBST\b|OBSTACLE|\bTOWER\b|\bMAST\b|ANTENNA|WINDMILL|WIND\s+TURBINE|\bRIG\b/i },
-    route:      { label: '航路/航跡', color: '#64748b', keywords: null },
     area:       { label: '一般區域',   color: '#2563eb', keywords: null }
 };
 
@@ -2008,13 +2010,18 @@ function processNotamData() {
         const rings = buildRings(coords);
         const hasClosed = rings.some(r => r.closed && r.pts.length >= 4);
         const isArea = NOTAM_AREA_RE.test(block.raw);
-        // 航路/航跡：有航路關鍵字，且不是圓、不是封閉區域、不是障礙物
-        const isRoute = !radius && !hasClosed && catKey !== 'obstacle' && NOTAM_ROUTE_RE.test(block.raw);
+        const validText = extractValidity(block.raw);
 
-        const category = isRoute ? 'route' : catKey;
+        // 航路/航跡 (PACOTS/NAT/CDR…)：不繪於地圖，改收進頁面下方文字欄位
+        const isRoute = !radius && !hasClosed && catKey !== 'obstacle' && NOTAM_ROUTE_RE.test(block.raw);
+        if (isRoute) {
+            notamRoutes.push({ id: block.id, count: coords.length, validText, text: buildRouteText(block.raw, block.id) });
+            return;
+        }
+
+        const category = catKey;
         const color = NOTAM_CATEGORIES[category].color;
         const altText = extractAltitude(block.raw);
-        const validText = extractValidity(block.raw);
         const summary = buildSummary(block.raw, block.id);
         const layers = [];
         let geomLabel = '';
@@ -2037,13 +2044,6 @@ function processNotamData() {
             // 障礙物：每點各自獨立 marker
             coords.forEach((c, i) => layers.push(mkMarker([c.lat, c.lng], `障礙物點 ${i + 1}/${coords.length}`)));
             geomLabel = `障礙物 ×${coords.length}`;
-        } else if (isRoute) {
-            // 航路/航跡：灰色虛線 polyline（預設關閉，避免洋區航跡蓋滿地圖）
-            // 跨換日線時攤平經度，避免線條橫貫整張地圖
-            const line = L.polyline(unwrapAntimeridian(coords.map(c => [c.lat, c.lng])), { color, weight: 2, opacity: 0.85, dashArray: '5,4' });
-            line.bindPopup(popupHtml(block.id, category, `航路/航跡 · ${coords.length} 點`, altText, validText, summary));
-            layers.push(line);
-            geomLabel = `航路 ${coords.length}點`;
         } else {
             // 依封閉環拆分：封閉環或有區域關鍵字 → 多邊形；其餘 → 離散點
             let polyCount = 0, ptCount = 0;
@@ -2064,21 +2064,20 @@ function processNotamData() {
                 : `點位 ×${ptCount}`;
         }
 
-        // 航路預設關閉，其餘預設顯示
-        const visible = category !== 'route';
-        layers.forEach(l => { if (visible) l.addTo(notamMapInstance); notamActiveLayers.push(l); });
+        layers.forEach(l => { l.addTo(notamMapInstance); notamActiveLayers.push(l); });
         const group = L.featureGroup(layers);
-        notamFeatures.push({ id: block.id, category, color, layers, bounds: group.getBounds(), geomLabel, altText, visible });
+        notamFeatures.push({ id: block.id, category, color, layers, bounds: group.getBounds(), geomLabel, altText, visible: true });
     });
 
     renderNotamList();
+    renderNotamRoutes();
 
-    // 自動縮放只看「目前顯示」的圖徵 (排除預設關閉的航路)，避免被洋區航跡拉到全球
+    // 自動縮放只看「目前顯示」的圖徵，避免被離群點拉太遠
     const b = L.latLngBounds([]);
     notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
     if (b.isValid()) {
         notamMapInstance.fitBounds(b, { padding: [40, 40] });
-    } else if (notamFeatures.length === 0) {
+    } else if (notamFeatures.length === 0 && notamRoutes.length === 0) {
         alert('未在文字中偵測到可繪製的座標。');
     }
 }
@@ -2133,6 +2132,47 @@ function toggleNotamFeature(idx, on) {
     f.layers.forEach(l => { if (on) l.addTo(notamMapInstance); else notamMapInstance.removeLayer(l); });
 }
 
+// ──────────────────────────────────────────
+// 航路/航跡文字欄位 (頁面下方，不繪於地圖)
+// ──────────────────────────────────────────
+function escNotamHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 航跡文字：去 HTML 標籤、收斂空白、去掉開頭的編號與 VALID (另外欄位顯示)
+function buildRouteText(raw, id) {
+    let s = raw.replace(/<\/?[a-z][^>]*>/gi, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.startsWith(id)) s = s.slice(id.length).trim();
+    s = s.replace(/^VALID(?:ITY)?:\s*[0-9A-Z]+\s*-\s*[0-9A-Z]+\s*/i, '');
+    return s.length > 800 ? s.slice(0, 800) + '…' : s;
+}
+
+function renderNotamRoutes() {
+    const box = document.getElementById('notam-routes');
+    if (!box) return;
+
+    if (notamRoutes.length === 0) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+    box.style.display = '';
+
+    let html = `<div class="notam-routes-head">航路 / 航跡 — ${notamRoutes.length} 則（不繪於地圖，僅列出解析內容）</div>`;
+    notamRoutes.forEach(r => {
+        html += `<div class="notam-route-item">`;
+        html += `<div class="notam-route-meta">`;
+        html += `<span class="notam-route-id">${escNotamHtml(r.id)}</span>`;
+        html += `<span class="notam-route-geom">航路/航跡 · ${r.count} 點</span>`;
+        if (r.validText) html += `<span class="notam-route-valid">VALID: ${escNotamHtml(r.validText)}</span>`;
+        html += `</div>`;
+        html += `<div class="notam-route-body">${escNotamHtml(r.text)}</div>`;
+        html += `</div>`;
+    });
+    box.innerHTML = html;
+}
+
 function clearNotamAll() {
     if (notamMapInstance) {
         notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
@@ -2140,7 +2180,9 @@ function clearNotamAll() {
     }
     notamActiveLayers = [];
     notamFeatures = [];
+    notamRoutes = [];
     renderNotamList();
+    renderNotamRoutes();
     const inputEl = document.getElementById('notamInput');
     if (inputEl) inputEl.value = '';
 }
