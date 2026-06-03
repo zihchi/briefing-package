@@ -1892,6 +1892,21 @@ function buildRings(coords) {
     return rings;
 }
 
+// 換日線處理：相鄰兩點經度跳超過 180° 時，把後續點 ±360° 攤平成連續經度，
+// 讓跨越 180° 的航跡/區域沿換日線走近路，而非橫貫整張地圖
+function unwrapAntimeridian(latlngs) {
+    if (latlngs.length < 2) return latlngs;
+    const out = [latlngs[0].slice()];
+    for (let i = 1; i < latlngs.length; i++) {
+        let lng = latlngs[i][1];
+        const prevLng = out[i - 1][1];
+        while (lng - prevLng > 180) lng -= 360;
+        while (lng - prevLng < -180) lng += 360;
+        out.push([latlngs[i][0], lng]);
+    }
+    return out;
+}
+
 
 // 把整份 bulletin 依「NOTAM 編號」切成一則一則
 function splitBulletin(text) {
@@ -2024,7 +2039,8 @@ function processNotamData() {
             geomLabel = `障礙物 ×${coords.length}`;
         } else if (isRoute) {
             // 航路/航跡：灰色虛線 polyline（預設關閉，避免洋區航跡蓋滿地圖）
-            const line = L.polyline(coords.map(c => [c.lat, c.lng]), { color, weight: 2, opacity: 0.85, dashArray: '5,4' });
+            // 跨換日線時攤平經度，避免線條橫貫整張地圖
+            const line = L.polyline(unwrapAntimeridian(coords.map(c => [c.lat, c.lng])), { color, weight: 2, opacity: 0.85, dashArray: '5,4' });
             line.bindPopup(popupHtml(block.id, category, `航路/航跡 · ${coords.length} 點`, altText, validText, summary));
             layers.push(line);
             geomLabel = `航路 ${coords.length}點`;
@@ -2034,7 +2050,7 @@ function processNotamData() {
             rings.forEach(ring => {
                 const lls = ring.pts.map(c => [c.lat, c.lng]);
                 if ((ring.closed && lls.length >= 4) || (isArea && lls.length >= 3)) {
-                    const poly = L.polygon(lls, { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
+                    const poly = L.polygon(unwrapAntimeridian(lls), { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
                     poly.bindPopup(popupHtml(block.id, category, `多邊形 · ${lls.length} 頂點`, altText, validText, summary));
                     layers.push(poly);
                     lls.forEach(ll => layers.push(mkVertex(ll)));
