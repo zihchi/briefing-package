@@ -9,6 +9,8 @@ const MONOSPACE_FONT = "font-family: ui-monospace, 'SF Mono', 'SFMono-Regular', 
 
 let notamMapInstance = null;
 let notamActiveLayers = [];
+let notamFeatures = [];
+let notamRoutes = [];
 let curfewClockInterval = null;
 
 // ✈️ Turbli 航班資料庫
@@ -1769,7 +1771,7 @@ function initNotamRadar() {
         notamMapInstance.remove();
         notamMapInstance = null;
     }
-    
+
     const mapContainer = document.getElementById('notam-map');
     if (!mapContainer) return;
 
@@ -1780,218 +1782,410 @@ function initNotamRadar() {
     }).addTo(notamMapInstance);
 
     notamActiveLayers = [];
+    notamFeatures = [];
+    notamRoutes = [];
+    renderNotamList();
+    renderNotamRoutes();
 
     const btnProcess = document.getElementById('btn-process-notam');
     if (btnProcess) btnProcess.onclick = processNotamData;
-    
+
     const btnClear = document.getElementById('btn-clear-notam');
     if (btnClear) btnClear.onclick = clearNotamAll;
 }
 
-function smartToDec(val) {
-    if (!val) return NaN;
-    const cleanVal = val.toUpperCase().replace(/\s+/g, '');
-    const dirMatch = cleanVal.match(/[NSEW]/);
-    if (!dirMatch) return NaN;
-    
-    const dir = dirMatch[0];
-    const nums = cleanVal.replace(/[NSEW]/, "");
-    
+// ──────────────────────────────────────────
+// 座標解讀：DMS / 度分 / 十進位 → 十進位度
+// 支援 DDMMSS.ss 小數秒、DDMM[.mm] 度分、純十進位度
+// ──────────────────────────────────────────
+function dmsToDecimal(numStr, dir) {
+    const isLat = (dir === 'N' || dir === 'S');
+    const nums = String(numStr).replace(/\s+/g, '');
+    const dotIdx = nums.indexOf('.');
+    const intPart = dotIdx === -1 ? nums : nums.slice(0, dotIdx);
+    const frac = dotIdx === -1 ? '' : nums.slice(dotIdx); // 含小數點
+    const degLen = isLat ? 2 : 3;                          // 緯度 DD、經度 DDD
     let dec = NaN;
 
-    if (nums.includes('.') && nums.split('.')[0].length <= 3) {
-       dec = parseFloat(nums);
+    if (intPart.length <= degLen) {
+        // 純度數 (可帶小數)，如 25 / 121.5
+        dec = parseFloat(intPart + frac);
+    } else if (intPart.length <= degLen + 2) {
+        // 度分 DDMM[.mm]
+        const d = parseFloat(intPart.slice(0, degLen));
+        const m = parseFloat(intPart.slice(degLen) + frac);
+        dec = d + m / 60;
     } else {
-       const isLat = (dir === 'N' || dir === 'S');
-       const degLen = isLat ? 2 : 3;
+        // 度分秒 DDMMSS[.ss]
+        const d = parseFloat(intPart.slice(0, degLen));
+        const m = parseFloat(intPart.slice(degLen, degLen + 2));
+        const s = parseFloat(intPart.slice(degLen + 2) + frac);
+        dec = d + m / 60 + s / 3600;
+    }
 
-       if (nums.length >= degLen + 2) {
-           const d = parseFloat(nums.slice(0, degLen));
-           const rest = nums.slice(degLen);
-           
-           if (rest.includes('.')) {
-                 const dotIndex = rest.indexOf('.');
-                 if (dotIndex === 2) { 
-                     const m = parseFloat(rest);
-                     dec = d + (m / 60);
-                 } else if (dotIndex === 4) { 
-                     const m = parseFloat(rest.slice(0, 2));
-                     const s = parseFloat(rest.slice(2));
-                     dec = d + (m / 60) + (s / 3600);
-                 }
-            } else {
-                const m = parseFloat(rest.slice(0, 2));
-                const s = rest.length >= 4 ? parseFloat(rest.slice(2, 4)) : 0;
-                dec = d + (m / 60) + (s / 3600);
-            }
-       }
-    }
-    
-    if (!isNaN(dec)) {
-         return (dir === 'S' || dir === 'W') ? -dec : dec;
-    }
-    return NaN;
+    if (isNaN(dec)) return NaN;
+    return (dir === 'S' || dir === 'W') ? -dec : dec;
 }
 
-function parseCoordinates(text) {
-    let results = parseCoordinatesLegacy(text);
-    if (results.length === 0) {
-        console.log("⚠️ 標準解析未命中，啟動深度特徵萃取備援系統 (Dual-Engine Engaged)...");
-        results = parseCoordinatesAdvanced(text);
-    }
-    return results;
-}
+// 從一段文字萃取所有「成對」座標，回傳含原文位置 index 供圓心定位
+function extractCoordinates(text) {
+    // 換行 / tab 收斂為空白，讓被換行拆開的座標 (lat↵lng) 能接回
+    let s = text.replace(/[\r\n\t]+/g, ' ');
+    // 前置方向格式 N2503 E12130 → 轉為後置 2503N 12130E
+    s = s.replace(/\b([NS])\s*(\d{3,7}(?:\.\d+)?)\s+([EW])\s*(\d{3,7}(?:\.\d+)?)/g, '$2$1 $4$3');
 
-function parseCoordinatesLegacy(text) {
-    const cleanText = text.replace(/[\t\r\n]+/g, " ");
-    let results = [];
-    
-    const universalPattern = /([NS]\s*\d{4,}(?:\.\d+)?|\d{4,}(?:\.\d+)?[NS])[\s/]*([EW]\s*\d{5,}(?:\.\d+)?|\d{5,}(?:\.\d+)?[EW])/gi;
+    const results = [];
+    // 後置方向，允許 lat/lng 之間有空白、逗號、斜線、破折號
+    const pairRe = /(\d{2,6}(?:\.\d+)?)\s*([NS])[\s,/–—-]*(\d{2,7}(?:\.\d+)?)\s*([EW])/g;
     let m;
-    while ((m = universalPattern.exec(cleanText)) !== null) {
-        const lat = smartToDec(m[1]);
-        const lng = smartToDec(m[2]);
-        if (!isNaN(lat) && !isNaN(lng)) results.push([lat, lng]);
-    }
-
-    if (results.length === 0) {
-        const symRegex = /([NS])\s*(\d{1,2})[°\s](\d{2})['’\s](\d{2}(?:\.\d+)?)[”"\s]*([EW])\s*(\d{1,3})[°\s](\d{2})['’\s](\d{2}(?:\.\d+)?)/gi;
-        while ((m = symRegex.exec(cleanText)) !== null) {
-            results.push([
-                parseFloat(m[2]) + parseFloat(m[3])/60 + parseFloat(m[4])/3600 * (m[1].toUpperCase()==='S'?-1:1),
-                parseFloat(m[6]) + parseFloat(m[7])/60 + parseFloat(m[8])/3600 * (m[5].toUpperCase()==='W'?-1:1)
-            ]);
+    while ((m = pairRe.exec(s)) !== null) {
+        const lat = dmsToDecimal(m[1], m[2]);
+        const lng = dmsToDecimal(m[3], m[4]);
+        if (!isNaN(lat) && !isNaN(lng) &&
+            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            results.push({ lat, lng, index: m.index });
         }
     }
     return results;
 }
 
-function parseCoordinatesAdvanced(text) {
-    let cleanText = text.toUpperCase().replace(/[°'"’”/\\,-]/g, " ");
-    cleanText = cleanText.replace(/\b([NSEW])[ \t]*([\d][\d \t.]+)\b/g, "$2$1");
+// ──────────────────────────────────────────
+// NOTAM 分類定義 (顏色 / 標籤 / 偵測關鍵字)
+// ──────────────────────────────────────────
+const NOTAM_CATEGORIES = {
+    restricted: { label: '限航/演習', color: '#dc2626', keywords: /AIR\s*EXER|\bEXER\b|AIRSPACE\s+BLOCK|BLOCKED\s+AREA|RESTRICT|PROHIBIT|DANGER\s+AREA|FIRING|\bFRNG\b|GUNNERY|\bMIL\b|MILITARY|MISSILE|RESERVATION/i },
+    uav:        { label: 'UAV/無人機', color: '#ea580c', keywords: /\bUAV\b|UNMANNED|\bDRONE\b|\bRPAS\b/i },
+    obstacle:   { label: '障礙物',     color: '#7c3aed', keywords: /\bCRANE\b|\bOBST\b|OBSTACLE|\bTOWER\b|\bMAST\b|ANTENNA|WINDMILL|WIND\s+TURBINE|\bRIG\b/i },
+    area:       { label: '一般區域',   color: '#2563eb', keywords: null }
+};
 
-    const coordRegex = /(?:\b|^)([\d]{2}[\d \t.]+)([NSEW])\b/g;
-    let match;
-    let tokens = [];
+// 航路/航跡：PACOTS、NAT track、CDR 等，不應填成多邊形
+const NOTAM_ROUTE_RE = /\bPACOTS\b|\bTDM\b|\bTRK\b|\bTRACK\b|FLEX\s+ROUTE|\bNAR\b|\bCDR\b|RTS\//i;
+// 區域關鍵字：用於判斷未封閉的座標串是否仍應視為區域
+const NOTAM_AREA_RE = /\bAREA\b|BOUNDED\s+BY|AIRSPACE|DEFINED\s+AS|LATERAL|RESERVATION|\bLIMITS\b/i;
 
-    while ((match = coordRegex.exec(cleanText)) !== null) {
-        let numStr = match[1].replace(/[ \t]+/g, "");
-        let dir = match[2];
-        if (numStr.length < 4 && !numStr.includes('.')) continue;
-        tokens.push({ numStr, dir });
+function categorizeNotam(text) {
+    for (const key of ['restricted', 'uav', 'obstacle']) {
+        if (NOTAM_CATEGORIES[key].keywords.test(text)) return key;
     }
+    return 'area';
+}
 
-    let results = [];
-    let currentLat = null;
+// 兩點是否幾乎相同 (用於封閉環偵測)
+function coordsNear(a, b) {
+    return Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lng - b.lng) < 1e-4;
+}
 
-    tokens.forEach(token => {
-        const { numStr, dir } = token;
-        let dec = NaN;
-
-        if (numStr.includes('.') && numStr.indexOf('.') <= 3) {
-            dec = parseFloat(numStr);
+// 把座標串切成多個環：遇到「回到環起點」即封閉並另起新環
+// 可正確拆出一則 NOTAM 內的多個區塊 (如 BLOCK1 / BLOCK2)
+function buildRings(coords) {
+    const rings = [];
+    let cur = [];
+    for (const c of coords) {
+        if (cur.length >= 3 && coordsNear(c, cur[0])) {
+            cur.push(c);
+            rings.push({ closed: true, pts: cur });
+            cur = [];
         } else {
-            let parts = numStr.split('.');
-            let main = parts[0];
-            let fraction = parts[1] ? "." + parts[1] : "";
-            let d = 0, m = 0, s = 0;
-
-            if (main.length === 4 || main.length === 5) {
-                m = parseFloat(main.slice(-2) + fraction);
-                d = parseFloat(main.slice(0, -2));
-            } else if (main.length >= 6) {
-                s = parseFloat(main.slice(-2) + fraction);
-                m = parseFloat(main.slice(-4, -2));
-                d = parseFloat(main.slice(0, -4));
-            }
-
-            if (!isNaN(d)) {
-                dec = d + (m / 60) + (s / 3600);
-            }
+            cur.push(c);
         }
+    }
+    if (cur.length) rings.push({ closed: false, pts: cur });
+    return rings;
+}
 
-        if (!isNaN(dec)) {
-            dec = dec * ((dir === 'S' || dir === 'W') ? -1 : 1);
-            const isLat = (dir === 'N' || dir === 'S');
+// 以台灣 (約 121°E) 為基準，把經度攤平到 [REF-180, REF+180]。
+// 使美洲等西經地物顯示在台灣「右側」(如 122°W → 238°)，
+// 地圖以太平洋為中心、範圍緊湊，且自動處理跨換日線的區域連線。
+const NOTAM_REF_LNG = 121;
+function pacifyLng(lng) {
+    let v = lng;
+    while (v - NOTAM_REF_LNG > 180) v -= 360;
+    while (v - NOTAM_REF_LNG < -180) v += 360;
+    return v;
+}
+function pacify(ll) { return [ll[0], pacifyLng(ll[1])]; }
+function pacifyAll(arr) { return arr.map(pacify); }
 
-            if (isLat) {
-                if (dec >= -90 && dec <= 90) currentLat = dec;
-            } else if (!isLat && currentLat !== null) {
-                if (dec >= -180 && dec <= 180) {
-                    results.push([currentLat, dec]);
-                }
-                currentLat = null;
-            }
+
+// 把整份 bulletin 依「NOTAM 編號」切成一則一則
+function splitBulletin(text) {
+    const lines = text.split(/\r?\n/);
+    const idRe = /^\s*((?:[A-Z]{1,2}|\d[A-Z])\d{1,4}\/\d{2})\b/;
+    const blocks = [];
+    let cur = null;
+    for (const line of lines) {
+        const m = line.match(idRe);
+        if (m) {
+            if (cur) blocks.push(cur);
+            cur = { id: m[1], lines: [line] };
+        } else if (cur) {
+            cur.lines.push(line);
         }
-    });
-    return results;
+    }
+    if (cur) blocks.push(cur);
+    return blocks.map(b => ({ id: b.id, raw: b.lines.join('\n') }));
+}
+
+// 偵測半徑 (5NM RADIUS / RADIUS OF 5NM / 5 KM RDS)
+function detectRadius(block) {
+    const re = /(\d+(?:\.\d+)?)\s*(NM|KM)\s*(?:RADIUS|RDS)|(?:RADIUS|RDS)\s*(?:OF\s*)?(\d+(?:\.\d+)?)\s*(NM|KM)/i;
+    const m = re.exec(block);
+    if (!m) return null;
+    const value = parseFloat(m[1] || m[3]);
+    const unit = (m[2] || m[4]).toUpperCase();
+    return { value, unit, meters: value * (unit === 'NM' ? 1852 : 1000) };
+}
+
+// 圓心：優先取 "CENTRED/CENTERED ON/AT、CENTER" 之後的座標，否則第一個座標
+function pickRadiusCenter(block, coords) {
+    const norm = block.replace(/[\r\n\t]+/g, ' ');
+    const idx = norm.search(/CENT[A-Z]*\s+(?:ON|AT)?\s*\d{2,}[NS]/i);
+    if (idx >= 0) {
+        const after = coords.filter(c => c.index >= idx);
+        if (after.length) return [after[0].lat, after[0].lng];
+    }
+    return [coords[0].lat, coords[0].lng];
+}
+
+// 高度帶：F) 下限 G) 上限，或 SFC-FL450 / SFC-10000FT
+function extractAltitude(block) {
+    const fg = block.match(/F\)\s*([A-Z0-9]+(?:\s+(?:AMSL|AGL|MSL))?)\s+G\)\s*([A-Z0-9]+(?:\s+(?:AMSL|AGL|MSL))?)/i);
+    if (fg) return `${fg[1].trim()} ～ ${fg[2].trim()}`;
+    const band = block.match(/\b(SFC|GND|\d{2,5}\s*FT(?:\s*(?:AMSL|AGL))?|FL\d{2,3})\s*[-–]\s*(\d{2,5}\s*FT(?:\s*(?:AMSL|AGL))?|FL\d{2,3})\b/i);
+    if (band) return `${band[1].replace(/\s+/g, '').trim()} ～ ${band[2].replace(/\s+/g, '').trim()}`;
+    return '';
+}
+
+// 生效時間
+function extractValidity(block) {
+    const m = block.match(/VALID(?:ITY)?:\s*([0-9A-Z]{4,12}\s*-\s*[0-9A-Z]{3,12})/i);
+    return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+}
+
+// 摘要：去 HTML 標籤與座標、收斂空白後取前段
+function buildSummary(raw, id) {
+    let s = raw.replace(/<\/?[a-z][^>]*>/gi, ' ');
+    s = s.replace(/\b\d{2,7}(?:\.\d+)?[NS][\s,/–—-]*\d{2,7}(?:\.\d+)?[EW]\b/g, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.startsWith(id)) s = s.slice(id.length).trim();
+    return s.length > 120 ? s.slice(0, 120) + '…' : s;
+}
+
+function popupHtml(id, category, geomDesc, altText, validText, summary, ll) {
+    const cat = NOTAM_CATEGORIES[category];
+    let h = `<div style="min-width:210px">`;
+    h += `<div style="font-weight:700;font-size:14px;color:#4a3627;margin-bottom:4px">${id}`;
+    h += ` <span style="background:${cat.color};color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px">${cat.label}</span></div>`;
+    h += `<div style="font-size:12px;color:#6b5847">${geomDesc}</div>`;
+    if (ll) h += `<div style="font-size:11px;color:#8b7355">中心: ${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}</div>`;
+    if (altText) h += `<div style="font-size:12px;color:#6b5847">高度: ${altText}</div>`;
+    if (validText) h += `<div style="font-size:11px;color:#8b7355">生效: ${validText}</div>`;
+    if (summary) h += `<div style="font-size:11px;color:#78716c;margin-top:5px;line-height:1.5;border-top:1px solid #eee;padding-top:5px">${summary}</div>`;
+    h += `</div>`;
+    return h;
 }
 
 function processNotamData() {
     const inputEl = document.getElementById('notamInput');
-    if (!inputEl) return;
+    if (!inputEl || !notamMapInstance) return;
     const input = inputEl.value;
-    if (!input.trim() || !notamMapInstance) return;
+    if (!input.trim()) return;
 
     notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
     notamActiveLayers = [];
+    notamFeatures = [];
 
-    const blocks = input.split(/(?=\d\.\s*FLT AREA|AREA\s+\d+|1\.THE AREA)/i);
+    let blocks = splitBulletin(input);
+    if (blocks.length === 0) blocks = [{ id: 'NOTAM', raw: input }];
 
-    blocks.forEach((block, index) => {
-        const coords = parseCoordinates(block);
+    blocks.forEach(block => {
+        const coords = extractCoordinates(block.raw);
         if (coords.length === 0) return;
 
-        const cleanBlock = block.replace(/\s+/g, " ");
-        
-        const radiusRegex = /(?:RADIUS\s+(?:OF\s+)?(\d+(?:\.\d+)?)\s*(NM|KM))|(\d+(?:\.\d+)?)\s*(NM|KM)\s*RADIUS/gi;
-        let radiusMatches = [...cleanBlock.matchAll(radiusRegex)];
+        const radius = detectRadius(block.raw);
+        const catKey = categorizeNotam(block.raw);             // restricted/uav/obstacle/area
+        const rings = buildRings(coords);
+        const hasClosed = rings.some(r => r.closed && r.pts.length >= 4);
+        const isArea = NOTAM_AREA_RE.test(block.raw);
+        const validText = extractValidity(block.raw);
 
-        if (radiusMatches.length > 0) {
-            radiusMatches.forEach(match => {
-                const rValue = parseFloat(match[1] || match[3]);
-                const rUnit = (match[2] || match[4]).toUpperCase();
-                const meters = rValue * (rUnit === "NM" ? 1852 : 1000);
-                const center = coords[0]; 
-
-                const circle = L.circle(center, {
-                    color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: meters, weight: 2, dashArray: '5, 5'
-                }).addTo(notamMapInstance);
-                notamActiveLayers.push(circle);
-                circle.bindPopup(`<b>Radius Area</b><br>中心: ${center[0].toFixed(4)}, ${center[1].toFixed(4)}<br>半徑: ${rValue} ${rUnit}`);
-            });
-        } 
-        
-        if (coords.length >= 3) {
-            const poly = L.polygon(coords, {
-                color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 3
-            }).addTo(notamMapInstance);
-            notamActiveLayers.push(poly);
-            poly.bindPopup(`<b>Polygon Area</b><br>頂點數: ${coords.length}`);
-        } 
-        
-        if (radiusMatches.length === 0 && coords.length < 3) {
-            coords.forEach(c => {
-                const marker = L.circleMarker(c, { radius: 6, color: '#f43f5e', fillOpacity: 0.8 }).addTo(notamMapInstance);
-                notamActiveLayers.push(marker);
-                marker.bindPopup(`<b>Waypoint</b><br>${c[0].toFixed(5)}, ${c[1].toFixed(5)}`);
-            });
+        // 航路/航跡 (PACOTS/NAT/CDR…)：不繪於地圖，改收進頁面下方文字欄位
+        const isRoute = !radius && !hasClosed && catKey !== 'obstacle' && NOTAM_ROUTE_RE.test(block.raw);
+        if (isRoute) {
+            notamRoutes.push({ id: block.id, count: coords.length, validText, text: buildRouteText(block.raw, block.id) });
+            return;
         }
+
+        const category = catKey;
+        const color = NOTAM_CATEGORIES[category].color;
+        const altText = extractAltitude(block.raw);
+        const summary = buildSummary(block.raw, block.id);
+        const layers = [];
+        let geomLabel = '';
+
+        // ll 傳入原始座標：繪圖位置以台灣為基準攤平 (pacify)，popup 仍顯示原始經緯度
+        const mkMarker = (ll, desc) => {
+            const mk = L.circleMarker(pacify(ll), { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
+            mk.bindPopup(popupHtml(block.id, category, desc, altText, validText, summary, ll));
+            return mk;
+        };
+        const mkVertex = (ll) => L.circleMarker(pacify(ll), { radius: 3, color, fillColor: '#fff', fillOpacity: 1, weight: 1.5 });
+
+        if (radius) {
+            // 圓形範圍
+            const center = pickRadiusCenter(block.raw, coords);
+            const circle = L.circle(pacify(center), { color, fillColor: color, fillOpacity: 0.2, weight: 2, dashArray: '6,5', radius: radius.meters });
+            circle.bindPopup(popupHtml(block.id, category, `圓形範圍 · 半徑 ${radius.value} ${radius.unit}`, altText, validText, summary, center));
+            layers.push(circle);
+            geomLabel = `圓 ${radius.value}${radius.unit}`;
+        } else if (catKey === 'obstacle') {
+            // 障礙物：每點各自獨立 marker
+            coords.forEach((c, i) => layers.push(mkMarker([c.lat, c.lng], `障礙物點 ${i + 1}/${coords.length}`)));
+            geomLabel = `障礙物 ×${coords.length}`;
+        } else {
+            // 依封閉環拆分：封閉環或有區域關鍵字 → 多邊形；其餘 → 離散點
+            let polyCount = 0, ptCount = 0;
+            rings.forEach(ring => {
+                const lls = ring.pts.map(c => [c.lat, c.lng]);
+                if ((ring.closed && lls.length >= 4) || (isArea && lls.length >= 3)) {
+                    const poly = L.polygon(pacifyAll(lls), { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
+                    poly.bindPopup(popupHtml(block.id, category, `多邊形 · ${lls.length} 頂點`, altText, validText, summary));
+                    layers.push(poly);
+                    lls.forEach(ll => layers.push(mkVertex(ll)));
+                    polyCount++;
+                } else {
+                    lls.forEach((ll, i) => { layers.push(mkMarker(ll, `點位 ${i + 1}`)); ptCount++; });
+                }
+            });
+            geomLabel = polyCount && ptCount ? `多邊形 ×${polyCount} + 點 ×${ptCount}`
+                : polyCount ? (polyCount > 1 ? `多邊形 ×${polyCount}` : `多邊形 ${rings[0].pts.length}點`)
+                : `點位 ×${ptCount}`;
+        }
+
+        layers.forEach(l => { l.addTo(notamMapInstance); notamActiveLayers.push(l); });
+        const group = L.featureGroup(layers);
+        notamFeatures.push({ id: block.id, category, color, layers, bounds: group.getBounds(), geomLabel, altText, visible: true });
     });
 
-    if (notamActiveLayers.length > 0) {
-        const group = new L.featureGroup(notamActiveLayers);
-        notamMapInstance.fitBounds(group.getBounds(), { padding: [40, 40] });
+    renderNotamList();
+    renderNotamRoutes();
+
+    // 自動縮放只看「目前顯示」的圖徵，避免被離群點拉太遠
+    const b = L.latLngBounds([]);
+    notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
+    if (b.isValid()) {
+        notamMapInstance.fitBounds(b, { padding: [40, 40] });
+    } else if (notamFeatures.length === 0 && notamRoutes.length === 0) {
+        alert('未在文字中偵測到可繪製的座標。');
     }
 }
 
+// ──────────────────────────────────────────
+// 已偵測 NOTAM 清單側欄
+// ──────────────────────────────────────────
+function renderNotamList() {
+    const box = document.getElementById('notam-results');
+    if (!box) return;
+
+    if (notamFeatures.length === 0) {
+        box.innerHTML = `<div class="notam-results-empty">尚無偵測結果。貼上 NOTAM 文本後按「座標掃描」。</div>`;
+        return;
+    }
+
+    let html = `<div class="notam-results-head">已偵測 ${notamFeatures.length} 則可繪製 NOTAM</div>`;
+    notamFeatures.forEach((f, i) => {
+        html += `<div class="notam-result-item" data-idx="${i}">`;
+        html += `<input type="checkbox" class="notam-result-chk" data-idx="${i}" ${f.visible ? 'checked' : ''}>`;
+        html += `<span class="notam-result-dot" style="background:${f.color}"></span>`;
+        html += `<span class="notam-result-id">${f.id}</span>`;
+        html += `<span class="notam-result-geom">${f.geomLabel}${f.altText ? ' · ' + f.altText : ''}</span>`;
+        html += `</div>`;
+    });
+    box.innerHTML = html;
+
+    box.querySelectorAll('.notam-result-item').forEach(el => {
+        el.addEventListener('click', e => {
+            if (e.target.classList.contains('notam-result-chk')) return;
+            focusNotamFeature(parseInt(el.dataset.idx, 10));
+        });
+    });
+    box.querySelectorAll('.notam-result-chk').forEach(chk => {
+        chk.addEventListener('change', () => toggleNotamFeature(parseInt(chk.dataset.idx, 10), chk.checked));
+    });
+}
+
+function focusNotamFeature(idx) {
+    const f = notamFeatures[idx];
+    if (!f || !notamMapInstance || !f.bounds || !f.bounds.isValid()) return;
+    if (!f.visible) { f.visible = true; f.layers.forEach(l => l.addTo(notamMapInstance)); renderNotamList(); }
+    notamMapInstance.fitBounds(f.bounds, { padding: [60, 60], maxZoom: 12 });
+    const first = f.layers[0];
+    if (first && first.openPopup) first.openPopup();
+}
+
+function toggleNotamFeature(idx, on) {
+    const f = notamFeatures[idx];
+    if (!f) return;
+    f.visible = on;
+    f.layers.forEach(l => { if (on) l.addTo(notamMapInstance); else notamMapInstance.removeLayer(l); });
+}
+
+// ──────────────────────────────────────────
+// 航路/航跡文字欄位 (頁面下方，不繪於地圖)
+// ──────────────────────────────────────────
+function escNotamHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 航跡文字：去 HTML 標籤、收斂空白、去掉開頭的編號與 VALID (另外欄位顯示)
+function buildRouteText(raw, id) {
+    let s = raw.replace(/<\/?[a-z][^>]*>/gi, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.startsWith(id)) s = s.slice(id.length).trim();
+    s = s.replace(/^VALID(?:ITY)?:\s*[0-9A-Z]+\s*-\s*[0-9A-Z]+\s*/i, '');
+    return s.length > 800 ? s.slice(0, 800) + '…' : s;
+}
+
+function renderNotamRoutes() {
+    const box = document.getElementById('notam-routes');
+    if (!box) return;
+
+    if (notamRoutes.length === 0) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+    box.style.display = '';
+
+    // 下拉式 (預設收合)：點擊標題列才展開
+    let html = `<details class="notam-routes-details">`;
+    html += `<summary class="notam-routes-head"><span class="notam-routes-caret">▶</span>航路 / 航跡 — ${notamRoutes.length} 則（不繪於地圖，點此展開）</summary>`;
+    html += `<div class="notam-routes-list">`;
+    notamRoutes.forEach(r => {
+        html += `<div class="notam-route-item">`;
+        html += `<div class="notam-route-meta">`;
+        html += `<span class="notam-route-id">${escNotamHtml(r.id)}</span>`;
+        html += `<span class="notam-route-geom">航路/航跡 · ${r.count} 點</span>`;
+        if (r.validText) html += `<span class="notam-route-valid">VALID: ${escNotamHtml(r.validText)}</span>`;
+        html += `</div>`;
+        html += `<div class="notam-route-body">${escNotamHtml(r.text)}</div>`;
+        html += `</div>`;
+    });
+    html += `</div></details>`;
+    box.innerHTML = html;
+}
+
 function clearNotamAll() {
-    if(notamMapInstance) {
+    if (notamMapInstance) {
         notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
         notamMapInstance.setView([25.03, 121.5], 6);
     }
     notamActiveLayers = [];
-    
+    notamFeatures = [];
+    notamRoutes = [];
+    renderNotamList();
+    renderNotamRoutes();
     const inputEl = document.getElementById('notamInput');
-    if (inputEl) inputEl.value = "";
+    if (inputEl) inputEl.value = '';
 }
