@@ -1850,11 +1850,17 @@ function extractCoordinates(text) {
 // NOTAM 分類定義 (顏色 / 標籤 / 偵測關鍵字)
 // ──────────────────────────────────────────
 const NOTAM_CATEGORIES = {
-    restricted: { label: '限航/演習', color: '#dc2626', keywords: /AIR\s*EXER|AIRSPACE\s+BLOCK|RESTRICT|PROHIBIT|DANGER\s+AREA|FIRING|GUNNERY|MILITARY|BLOCKED\s+AREA/i },
+    restricted: { label: '限航/演習', color: '#dc2626', keywords: /AIR\s*EXER|\bEXER\b|AIRSPACE\s+BLOCK|BLOCKED\s+AREA|RESTRICT|PROHIBIT|DANGER\s+AREA|FIRING|\bFRNG\b|GUNNERY|\bMIL\b|MILITARY|MISSILE|RESERVATION/i },
     uav:        { label: 'UAV/無人機', color: '#ea580c', keywords: /\bUAV\b|UNMANNED|\bDRONE\b|\bRPAS\b/i },
-    obstacle:   { label: '障礙物',     color: '#7c3aed', keywords: /\bCRANE\b|\bOBST\b|OBSTACLE|\bTOWER\b|\bMAST\b|ANTENNA|WINDMILL|WIND\s+TURBINE/i },
+    obstacle:   { label: '障礙物',     color: '#7c3aed', keywords: /\bCRANE\b|\bOBST\b|OBSTACLE|\bTOWER\b|\bMAST\b|ANTENNA|WINDMILL|WIND\s+TURBINE|\bRIG\b/i },
+    route:      { label: '航路/航跡', color: '#64748b', keywords: null },
     area:       { label: '一般區域',   color: '#2563eb', keywords: null }
 };
+
+// 航路/航跡：PACOTS、NAT track、CDR 等，不應填成多邊形
+const NOTAM_ROUTE_RE = /\bPACOTS\b|\bTDM\b|\bTRK\b|\bTRACK\b|FLEX\s+ROUTE|\bNAR\b|\bCDR\b|RTS\//i;
+// 區域關鍵字：用於判斷未封閉的座標串是否仍應視為區域
+const NOTAM_AREA_RE = /\bAREA\b|BOUNDED\s+BY|AIRSPACE|DEFINED\s+AS|LATERAL|RESERVATION|\bLIMITS\b/i;
 
 function categorizeNotam(text) {
     for (const key of ['restricted', 'uav', 'obstacle']) {
@@ -1862,6 +1868,30 @@ function categorizeNotam(text) {
     }
     return 'area';
 }
+
+// 兩點是否幾乎相同 (用於封閉環偵測)
+function coordsNear(a, b) {
+    return Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lng - b.lng) < 1e-4;
+}
+
+// 把座標串切成多個環：遇到「回到環起點」即封閉並另起新環
+// 可正確拆出一則 NOTAM 內的多個區塊 (如 BLOCK1 / BLOCK2)
+function buildRings(coords) {
+    const rings = [];
+    let cur = [];
+    for (const c of coords) {
+        if (cur.length >= 3 && coordsNear(c, cur[0])) {
+            cur.push(c);
+            rings.push({ closed: true, pts: cur });
+            cur = [];
+        } else {
+            cur.push(c);
+        }
+    }
+    if (cur.length) rings.push({ closed: false, pts: cur });
+    return rings;
+}
+
 
 // 把整份 bulletin 依「NOTAM 編號」切成一則一則
 function splitBulletin(text) {
@@ -1892,10 +1922,10 @@ function detectRadius(block) {
     return { value, unit, meters: value * (unit === 'NM' ? 1852 : 1000) };
 }
 
-// 圓心：優先取 "CENTRED/CENTERED ON" 之後的座標，否則第一個座標
+// 圓心：優先取 "CENTRED/CENTERED ON/AT、CENTER" 之後的座標，否則第一個座標
 function pickRadiusCenter(block, coords) {
     const norm = block.replace(/[\r\n\t]+/g, ' ');
-    const idx = norm.search(/CENT(?:RE|ER)D?\s+ON/i);
+    const idx = norm.search(/CENT[A-Z]*\s+(?:ON|AT)?\s*\d{2,}[NS]/i);
     if (idx >= 0) {
         const after = coords.filter(c => c.index >= idx);
         if (after.length) return [after[0].lat, after[0].lng];
@@ -1958,56 +1988,81 @@ function processNotamData() {
         const coords = extractCoordinates(block.raw);
         if (coords.length === 0) return;
 
-        const category = categorizeNotam(block.raw);
+        const radius = detectRadius(block.raw);
+        const catKey = categorizeNotam(block.raw);             // restricted/uav/obstacle/area
+        const rings = buildRings(coords);
+        const hasClosed = rings.some(r => r.closed && r.pts.length >= 4);
+        const isArea = NOTAM_AREA_RE.test(block.raw);
+        // 航路/航跡：有航路關鍵字，且不是圓、不是封閉區域、不是障礙物
+        const isRoute = !radius && !hasClosed && catKey !== 'obstacle' && NOTAM_ROUTE_RE.test(block.raw);
+
+        const category = isRoute ? 'route' : catKey;
         const color = NOTAM_CATEGORIES[category].color;
         const altText = extractAltitude(block.raw);
         const validText = extractValidity(block.raw);
         const summary = buildSummary(block.raw, block.id);
-        const radius = detectRadius(block.raw);
-        const latlngs = coords.map(c => [c.lat, c.lng]);
         const layers = [];
         let geomLabel = '';
 
-        if (category === 'obstacle' && !radius) {
-            // 障礙物：每點各自獨立 marker
-            latlngs.forEach((ll, i) => {
-                const mk = L.circleMarker(ll, { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
-                mk.bindPopup(popupHtml(block.id, category, `障礙物點 ${i + 1}/${latlngs.length}`, altText, validText, summary, ll));
-                layers.push(mk);
-            });
-            geomLabel = `障礙物 ×${latlngs.length}`;
-        } else if (radius) {
+        const mkMarker = (ll, desc) => {
+            const mk = L.circleMarker(ll, { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
+            mk.bindPopup(popupHtml(block.id, category, desc, altText, validText, summary, ll));
+            return mk;
+        };
+        const mkVertex = (ll) => L.circleMarker(ll, { radius: 3, color, fillColor: '#fff', fillOpacity: 1, weight: 1.5 });
+
+        if (radius) {
+            // 圓形範圍
             const center = pickRadiusCenter(block.raw, coords);
             const circle = L.circle(center, { color, fillColor: color, fillOpacity: 0.2, weight: 2, dashArray: '6,5', radius: radius.meters });
             circle.bindPopup(popupHtml(block.id, category, `圓形範圍 · 半徑 ${radius.value} ${radius.unit}`, altText, validText, summary, center));
             layers.push(circle);
             geomLabel = `圓 ${radius.value}${radius.unit}`;
-        } else if (latlngs.length >= 3) {
-            const poly = L.polygon(latlngs, { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
-            poly.bindPopup(popupHtml(block.id, category, `多邊形 · ${latlngs.length} 頂點`, altText, validText, summary));
-            layers.push(poly);
-            latlngs.forEach(ll => layers.push(L.circleMarker(ll, { radius: 3, color, fillColor: '#fff', fillOpacity: 1, weight: 1.5 })));
-            geomLabel = `多邊形 ${latlngs.length}點`;
+        } else if (catKey === 'obstacle') {
+            // 障礙物：每點各自獨立 marker
+            coords.forEach((c, i) => layers.push(mkMarker([c.lat, c.lng], `障礙物點 ${i + 1}/${coords.length}`)));
+            geomLabel = `障礙物 ×${coords.length}`;
+        } else if (isRoute) {
+            // 航路/航跡：灰色虛線 polyline（預設關閉，避免洋區航跡蓋滿地圖）
+            const line = L.polyline(coords.map(c => [c.lat, c.lng]), { color, weight: 2, opacity: 0.85, dashArray: '5,4' });
+            line.bindPopup(popupHtml(block.id, category, `航路/航跡 · ${coords.length} 點`, altText, validText, summary));
+            layers.push(line);
+            geomLabel = `航路 ${coords.length}點`;
         } else {
-            latlngs.forEach((ll, i) => {
-                const mk = L.circleMarker(ll, { radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 2 });
-                mk.bindPopup(popupHtml(block.id, category, `航點 ${i + 1}`, altText, validText, summary, ll));
-                layers.push(mk);
+            // 依封閉環拆分：封閉環或有區域關鍵字 → 多邊形；其餘 → 離散點
+            let polyCount = 0, ptCount = 0;
+            rings.forEach(ring => {
+                const lls = ring.pts.map(c => [c.lat, c.lng]);
+                if ((ring.closed && lls.length >= 4) || (isArea && lls.length >= 3)) {
+                    const poly = L.polygon(lls, { color, fillColor: color, fillOpacity: 0.18, weight: 2.5 });
+                    poly.bindPopup(popupHtml(block.id, category, `多邊形 · ${lls.length} 頂點`, altText, validText, summary));
+                    layers.push(poly);
+                    lls.forEach(ll => layers.push(mkVertex(ll)));
+                    polyCount++;
+                } else {
+                    lls.forEach((ll, i) => { layers.push(mkMarker(ll, `點位 ${i + 1}`)); ptCount++; });
+                }
             });
-            geomLabel = `航點 ×${latlngs.length}`;
+            geomLabel = polyCount && ptCount ? `多邊形 ×${polyCount} + 點 ×${ptCount}`
+                : polyCount ? (polyCount > 1 ? `多邊形 ×${polyCount}` : `多邊形 ${rings[0].pts.length}點`)
+                : `點位 ×${ptCount}`;
         }
 
-        layers.forEach(l => { l.addTo(notamMapInstance); notamActiveLayers.push(l); });
+        // 航路預設關閉，其餘預設顯示
+        const visible = category !== 'route';
+        layers.forEach(l => { if (visible) l.addTo(notamMapInstance); notamActiveLayers.push(l); });
         const group = L.featureGroup(layers);
-        notamFeatures.push({ id: block.id, category, color, layers, bounds: group.getBounds(), geomLabel, altText, visible: true });
+        notamFeatures.push({ id: block.id, category, color, layers, bounds: group.getBounds(), geomLabel, altText, visible });
     });
 
     renderNotamList();
 
-    if (notamActiveLayers.length > 0) {
-        const all = L.featureGroup(notamActiveLayers);
-        notamMapInstance.fitBounds(all.getBounds(), { padding: [40, 40] });
-    } else {
+    // 自動縮放只看「目前顯示」的圖徵 (排除預設關閉的航路)，避免被洋區航跡拉到全球
+    const b = L.latLngBounds([]);
+    notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
+    if (b.isValid()) {
+        notamMapInstance.fitBounds(b, { padding: [40, 40] });
+    } else if (notamFeatures.length === 0) {
         alert('未在文字中偵測到可繪製的座標。');
     }
 }
