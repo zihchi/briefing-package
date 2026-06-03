@@ -84,6 +84,59 @@
     }
     .notam-legend .dot-polygon { background: #8b5a2b !important; }
     .notam-legend .dot-radius { background: #2ecc71 !important; }
+    .notam-legend .dot-restricted { background: #dc2626 !important; }
+    .notam-legend .dot-uav { background: #ea580c !important; }
+    .notam-legend .dot-obstacle { background: #7c3aed !important; }
+    .notam-legend .dot-area { background: #2563eb !important; }
+
+    /* ---- 已偵測 NOTAM 清單側欄 ---- */
+    .notam-results {
+        margin-top: 14px;
+        flex-shrink: 0;
+        max-height: 240px;
+        overflow-y: auto;
+        border-top: 1px solid #e7ddd0;
+        padding-top: 12px;
+    }
+    .notam-results-empty {
+        font-size: 12px;
+        color: #a8a29e;
+        text-align: center;
+        padding: 14px 8px;
+        line-height: 1.6;
+    }
+    .notam-results-head {
+        font-size: 12px;
+        font-weight: 700;
+        color: #8b5a2b;
+        margin-bottom: 8px;
+        letter-spacing: 0.02em;
+    }
+    .notam-result-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .notam-result-item:hover { background: #faf6f0; }
+    .notam-result-chk { cursor: pointer; accent-color: #8b5a2b; flex-shrink: 0; }
+    .notam-result-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        flex-shrink: 0; box-shadow: 0 0 0 2px rgba(0,0,0,0.04);
+    }
+    .notam-result-id {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 12px; font-weight: 700; color: #4a3627;
+        flex-shrink: 0;
+    }
+    .notam-result-geom {
+        font-size: 11px; color: #78716c;
+        margin-left: auto; text-align: right;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
 
     /* ---- 響應式：手機直式避免水平溢出，按鈕改為直排全寬 ---- */
     @media (max-width: 640px) {
@@ -91,6 +144,7 @@
             grid-template-columns: 1fr !important;
         }
         .notam-legend { font-size: 10px !important; }
+        .notam-results { max-height: 200px; }
     }
 </style>
 
@@ -111,8 +165,8 @@
                     貼入 NOTAM / AIP 原始文本
                 </label>
                 <textarea id="notamInput"
-                    class="notam-textarea w-full flex-grow min-h-[300px] p-4 text-sm font-mono border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none bg-slate-50 transition-all text-slate-700 placeholder-slate-400"
-                    placeholder="例如: &#10;A1234/24 NOTAMN&#10;Q) RJJJ/QWLW/IV/M/W/000/040/&#10;B) 2412250100 C) 2412250400&#10;E) ACFT ACROBATIC FLT AREA:&#10;351234N 1394567E ..."></textarea>
+                    class="notam-textarea w-full flex-grow min-h-[180px] p-4 text-sm font-mono border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none bg-slate-50 transition-all text-slate-700 placeholder-slate-400"
+                    placeholder="貼入整份 LIDO / NOTAM bulletin，可一次多則。&#10;系統會自動切割每則 NOTAM 並各自繪製：&#10;  • 多邊形區域（封閉座標環）&#10;  • 圓形範圍（RADIUS CENTRED ON…）&#10;  • 障礙物點（CRANE / OBST…）&#10;例如:&#10;1A1278/26&#10;  5NM RADIUS CENTRED ON 241554N 1203715E&#10;  F) SFC G) 10000FT AMSL"></textarea>
 
                 <div class="notam-actions grid grid-cols-2 gap-3 mt-4">
                     <button id="btn-process-notam" class="notam-btn-primary bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-blue-200 flex items-center justify-center">
@@ -122,6 +176,11 @@
                     <button id="btn-clear-notam" class="notam-btn-secondary bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold py-3 px-4 rounded-xl transition-all duration-200">
                         清空重置
                     </button>
+                </div>
+
+                <!-- 已偵測 NOTAM 清單（可勾選開關 / 點擊跳到該區） -->
+                <div id="notam-results" class="notam-results">
+                    <div class="notam-results-empty">尚無偵測結果。貼上 NOTAM 文本後按「座標掃描」。</div>
                 </div>
             </div>
         </div>
@@ -133,8 +192,10 @@
             <!-- 懸浮圖例 (Legend) -->
             <div class="absolute top-4 right-4 z-[1000] space-y-2 pointer-events-none">
                 <div class="notam-legend bg-white/80 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-white/50 text-[11px] text-slate-700 font-medium tracking-wide">
-                    <div class="flex items-center mb-2"><span class="dot-polygon w-3 h-3 bg-blue-500 rounded-full mr-2.5 shadow-sm"></span>多邊形區域 (Polygon)</div>
-                    <div class="flex items-center"><span class="dot-radius w-3 h-3 bg-emerald-500 rounded-full mr-2.5 shadow-sm"></span>半徑範圍 (Radius)</div>
+                    <div class="flex items-center mb-2"><span class="dot-restricted w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>限航 / 演習 (Restricted)</div>
+                    <div class="flex items-center mb-2"><span class="dot-uav w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>UAV / 無人機</div>
+                    <div class="flex items-center mb-2"><span class="dot-obstacle w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>障礙物 (Obstacle)</div>
+                    <div class="flex items-center"><span class="dot-area w-3 h-3 rounded-full mr-2.5 shadow-sm"></span>一般區域 (Area)</div>
                 </div>
             </div>
         </div>
