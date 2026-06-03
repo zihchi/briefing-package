@@ -221,14 +221,14 @@
                                     <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-dep-icao">----</div>
                                     <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
                                         <div class="flex items-baseline gap-2">
-                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">當地</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-dep-local-time">--:--</span>
-                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-dep-local-date">--</span>
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">當地</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide leading-none whitespace-nowrap" id="out-dep-local-time">--:--</span>
+                                            <span class="data-font text-[10px] text-stone-500 font-bold tracking-wide whitespace-nowrap leading-tight ml-auto" id="out-dep-local-date">--</span>
                                         </div>
                                         <div class="flex items-baseline gap-2">
-                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">UTC</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-dep-utc-time">--:--Z</span>
-                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-dep-utc-date">--</span>
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">UTC</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide leading-none whitespace-nowrap" id="out-dep-utc-time">--:--Z</span>
+                                            <span class="data-font text-[10px] text-stone-500 font-bold tracking-wide whitespace-nowrap leading-tight ml-auto" id="out-dep-utc-date">--</span>
                                         </div>
                                     </div>
                                 </div>
@@ -245,14 +245,14 @@
                                     <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-arr-icao">----</div>
                                     <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
                                         <div class="flex items-baseline gap-2">
-                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">當地</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-arr-local-time">--:--</span>
-                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-arr-local-date">--</span>
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">當地</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide leading-none whitespace-nowrap" id="out-arr-local-time">--:--</span>
+                                            <span class="data-font text-[10px] text-stone-500 font-bold tracking-wide whitespace-nowrap leading-tight ml-auto" id="out-arr-local-date">--</span>
                                         </div>
                                         <div class="flex items-baseline gap-2">
-                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-9">UTC</span>
-                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide" id="out-arr-utc-time">--:--Z</span>
-                                            <span class="data-font text-[11px] text-stone-500 font-bold tracking-wide" id="out-arr-utc-date">--</span>
+                                            <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">UTC</span>
+                                            <span class="data-font font-black text-xl md:text-2xl text-stone-800 tracking-wide leading-none whitespace-nowrap" id="out-arr-utc-time">--:--Z</span>
+                                            <span class="data-font text-[10px] text-stone-500 font-bold tracking-wide whitespace-nowrap leading-tight ml-auto" id="out-arr-utc-date">--</span>
                                         </div>
                                     </div>
                                 </div>
@@ -407,7 +407,7 @@
                                 <div class="text-sm font-bold text-[#8b5a2b] mb-1">Total Fuel</div>
                                 <div class="text-right flex items-baseline gap-2">
                                     <span class="text-xs text-[#8b5a2b] font-bold opacity-70" id="time-total-fuel"></span>
-                                    <div class="data-font font-black text-3xl text-[#6e4620] leading-none" id="out-total-fuel">----</div>
+                                    <div class="data-font font-black text-2xl text-[#6e4620] leading-none" id="out-total-fuel">----</div>
                                 </div>
                             </div>
                         </div>
@@ -2463,6 +2463,8 @@
             Object.keys(runwayMap).forEach(icao => { if (!currentIcaosToFetch.includes(icao)) currentIcaosToFetch.push(icao); });
             if (currentIcaosToFetch.length === 0 && currentDepICAO !== '----') { currentIcaosToFetch.push(currentDepICAO); if (currentArrICAO !== '----') currentIcaosToFetch.push(currentArrICAO); }
             if(currentIcaosToFetch.length > 0) fetchAllWeather(currentIcaosToFetch);
+            // D-ATIS 一定要跟著 weather 一起重抓,不能只靠按鈕觸發
+            refreshDAtis();
         }
 
         async function fetchSimpleWeather(icao, isArrival = false, baseDate = null, targetZulu = null, depZulu = null) {
@@ -2560,6 +2562,23 @@
         // GAS endpoint(跟 ATIS.html 共用),takes ?icao=XXXX → {arrival, departure}
         const DATIS_GAS_URL = "https://script.google.com/macros/s/AKfycbwgSjLlF8GvVbBAdjkBdIQVDBYhdz5WIzbm8K8f4NAY5_s5cH0xxTf9J4Kv1cMceCPzMQ/exec";
 
+        // ATIS 內文裡會有 "0830Z" 之類發佈時間,拿來算到現在多久
+        function calculateAtisAge(rawText) {
+            if (!rawText) return '';
+            const m = rawText.match(/\b(?:\d{2})?(\d{2})(\d{2})Z\b/);
+            if (!m) return '';
+            const atisMins = parseInt(m[1],10)*60 + parseInt(m[2],10);
+            const now = new Date();
+            let nowMins = now.getUTCHours()*60 + now.getUTCMinutes();
+            if (nowMins < atisMins && parseInt(m[1],10) >= 22 && now.getUTCHours() <= 2) nowMins += 1440;
+            const diff = nowMins - atisMins;
+            if (diff < 0 || diff > 1440) return '';
+            const expired = diff > 30;
+            const cls = expired ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-emerald-100 text-emerald-700 border border-emerald-300';
+            const prefix = expired ? '⚠ ' : '✓ ';
+            return `<span class="${cls} text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">${prefix}${diff} min ago</span>`;
+        }
+
         function createDatisBlockHTML(icao) {
             return `<div class="border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white">
                 <div class="bg-stone-100/60 px-3 md:px-4 py-2 border-b border-stone-200 flex justify-between items-center">
@@ -2568,11 +2587,11 @@
                 </div>
                 <div class="p-3 md:p-4 flex flex-col gap-3">
                     <div>
-                        <div class="text-[10px] md:text-xs font-bold text-[#3c79ff] mb-1.5 tracking-wide">Arrival ATIS</div>
+                        <div class="text-[10px] md:text-xs font-bold text-[#3c79ff] mb-1.5 tracking-wide flex items-center"><span>Arrival ATIS</span><span id="datis-arr-age-${icao}"></span></div>
                         <div id="datis-arr-${icao}" class="bg-stone-50 p-2.5 md:p-3 rounded-md text-xs md:text-[13px] text-stone-700 data-font border-l-4 border-[#3c79ff] whitespace-pre-wrap leading-relaxed">連線中...</div>
                     </div>
                     <div>
-                        <div class="text-[10px] md:text-xs font-bold text-[#e67e22] mb-1.5 tracking-wide">Departure ATIS</div>
+                        <div class="text-[10px] md:text-xs font-bold text-[#e67e22] mb-1.5 tracking-wide flex items-center"><span>Departure ATIS</span><span id="datis-dep-age-${icao}"></span></div>
                         <div id="datis-dep-${icao}" class="bg-stone-50 p-2.5 md:p-3 rounded-md text-xs md:text-[13px] text-stone-700 data-font border-l-4 border-[#e67e22] whitespace-pre-wrap leading-relaxed">連線中...</div>
                     </div>
                 </div>
@@ -2582,6 +2601,8 @@
         async function fetchDatisForIcao(icao) {
             const arrEl = document.getElementById(`datis-arr-${icao}`);
             const depEl = document.getElementById(`datis-dep-${icao}`);
+            const arrAge = document.getElementById(`datis-arr-age-${icao}`);
+            const depAge = document.getElementById(`datis-dep-age-${icao}`);
             const syncEl = document.getElementById(`datis-sync-${icao}`);
             if (!arrEl || !depEl) return;
             try {
@@ -2595,6 +2616,8 @@
                 }
                 arrEl.textContent = data.arrival || '目前無 Arrival ATIS 資料';
                 depEl.textContent = data.departure || '目前無 Departure ATIS 資料';
+                if (arrAge) arrAge.innerHTML = calculateAtisAge(data.arrival);
+                if (depAge) depAge.innerHTML = calculateAtisAge(data.departure);
                 if (syncEl) { syncEl.textContent = 'OK'; syncEl.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500 text-white font-bold tracking-wider'; }
             } catch (e) {
                 arrEl.textContent = '連線失敗,請重試';
