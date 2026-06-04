@@ -1969,7 +1969,7 @@ function buildSummary(raw, id) {
     s = s.replace(/\b\d{2,7}(?:\.\d+)?[NS][\s,/–—-]*\d{2,7}(?:\.\d+)?[EW]\b/g, ' ');
     s = s.replace(/\s+/g, ' ').trim();
     if (s.startsWith(id)) s = s.slice(id.length).trim();
-    return s.length > 120 ? s.slice(0, 120) + '…' : s;
+    return s;
 }
 
 function popupHtml(id, category, geomDesc, altText, validText, summary, ll) {
@@ -1981,7 +1981,7 @@ function popupHtml(id, category, geomDesc, altText, validText, summary, ll) {
     if (ll) h += `<div style="font-size:11px;color:#8b7355">中心: ${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}</div>`;
     if (altText) h += `<div style="font-size:12px;color:#6b5847">高度: ${altText}</div>`;
     if (validText) h += `<div style="font-size:11px;color:#8b7355">生效: ${validText}</div>`;
-    if (summary) h += `<div style="font-size:11px;color:#78716c;margin-top:5px;line-height:1.5;border-top:1px solid #eee;padding-top:5px">${summary}</div>`;
+    if (summary) h += `<div style="font-size:11px;color:#78716c;margin-top:5px;line-height:1.5;border-top:1px solid #eee;padding-top:5px;max-height:4.6em;overflow-y:auto;-webkit-overflow-scrolling:touch">${summary}</div>`;
     h += `</div>`;
     return h;
 }
