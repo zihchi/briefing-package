@@ -446,9 +446,9 @@
                             </div>
 
                             <div class="mt-auto pt-4">
-                                <div class="flex justify-between items-center mb-2">
+                                <div class="flex justify-between items-baseline mb-2">
                                     <span class="text-[11px] text-stone-500 font-bold">Final Reserve Fuel</span>
-                                    <span class="data-font text-base font-bold text-stone-600" id="out-frf">----</span>
+                                    <span class="data-font text-base font-bold text-stone-600"><span id="out-frf">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span></span>
                                 </div>
                                 <div class="flex justify-between items-baseline mb-2">
                                     <span class="text-[11px] text-stone-500 font-bold">Min DIV Fuel</span>
@@ -459,9 +459,13 @@
                                     <span class="data-font text-base font-bold text-stone-600"><span id="out-ldg">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span></span>
                                 </div>
                                 <div class="w-full h-px bg-[#e8dfd5] mb-2.5"></div>
-                                <div class="flex justify-between items-baseline mb-3">
+                                <div class="flex justify-between items-baseline mb-2">
                                     <span class="text-[11px] text-[#8c6b5d] font-bold">Spare Fuel</span>
                                     <span class="data-font font-black text-xl text-[#4b6b3e] leading-none" id="out-spare-fuel">----</span>
+                                </div>
+                                <div class="flex justify-between items-baseline mb-3">
+                                    <span class="text-[11px] text-stone-500 font-bold">Trip Fuel</span>
+                                    <span class="data-font text-base font-bold text-stone-600 whitespace-nowrap"><span id="out-trip">----</span> <span class="text-[10px] text-stone-400 font-bold" id="out-trip-hr"></span></span>
                                 </div>
                                 <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3.5 py-3 flex justify-between items-end">
                                     <span class="text-sm font-bold text-[#8b5a2b]">Total Fuel</span>
@@ -1414,6 +1418,7 @@
                         };
 
                         const fw_total = getFuelExtended('TOTAL'); totalFuel = fw_total.w > 0 ? fw_total.w : 'N/A';
+                        const fw_trip = getFuelExtended('TRIP(?:\\s+FUEL)?');
                         const fw_altn = getFuelExtended('ALTN(?:\\s+[A-Z0-9]{3,4})?');
                         const fw_frf = getFuelExtended('FINAL RES');
                         divFuelCalc = `${fw_altn.w} + ${fw_frf.w} = ${fw_altn.w + fw_frf.w}`;
@@ -1456,6 +1461,7 @@
                         var perfBlock = `性能資訊：\nZFW: ${zfwMT}\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
                         perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
                         perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
+                        perfBlock += `TRIP FUEL: ${formatFuelVal(fw_trip)}\n`;
                         perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
                         perfBlock += `DEST HOLD: ${formatFuelVal(fw_destHold)}\n`;
                         perfBlock += `ADD OPN: ${formatFuelVal(fw_addOpn)}\n`;
@@ -2322,35 +2328,44 @@
             const ordLabels = ['1st', '2nd', '3rd'];
             const altnListEl = document.getElementById('altn-fuel-list');
 
+            // 百位無條件進位 → 公噸 (與 Min DIV Fuel 一致)
+            const toDivT = (kg) => Math.ceil(kg / 100) / 10;
+
             if (altnListEl) {
                 let rowsHtml = '';
                 let shown = 0;
+                let baseT = 0;
                 for (let i = 0; i < 3; i++) {
                     const rwy = altnRwys[i];
                     const bof = altnBofs[i];
                     if (rwy === 'N/A' || rwy === '----' || rwy === '' || bof === 'N/A' || bof === '') continue;
-                    const m = bof.match(/(\d+)(?:\s*\(([-+]\d+)\))?/);
+                    const m = bof.match(/(\d+)/);
                     if (!m) continue;
-                    const fuel = m[1];
+                    const tVal = toDivT(parseInt(m[1], 10));
+                    if (shown === 0) baseT = tVal;
                     let diffHtml = '';
-                    if (shown > 0 && m[2]) {
-                        const diffColor = parseInt(m[2], 10) > 0 ? 'text-red-500' : 'text-emerald-600';
-                        diffHtml = ` <span class="${diffColor} text-[11px] font-bold">(${m[2]})</span>`;
+                    if (shown > 0) {
+                        const d = Math.round((tVal - baseT) * 10) / 10;   // 先換算後再相減
+                        if (d !== 0) {
+                            const diffColor = d > 0 ? 'text-red-500' : 'text-emerald-600';
+                            diffHtml = ` <span class="${diffColor} text-[11px] font-bold">(${d > 0 ? '+' : ''}${d.toFixed(1)})</span>`;
+                        }
                     }
                     rowsHtml += `<div class="flex justify-between items-center">
                         <span class="flex items-center gap-1.5 text-[11px] font-bold text-[#8c6b5d]"><span class="text-stone-400 text-[10px] w-6 inline-block">${ordLabels[i]}</span>ALTN <span class="bg-amber-200 text-amber-900 border border-amber-400 px-1.5 py-0.5 rounded shadow-sm">${rwy}</span></span>
-                        <span class="data-font text-base font-bold text-stone-700 whitespace-nowrap">${fuel}${diffHtml}</span>
+                        <span class="data-font text-base font-bold text-stone-700 whitespace-nowrap">${tVal.toFixed(1)}<span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span>${diffHtml}</span>
                     </div>`;
                     shown++;
                 }
                 altnListEl.innerHTML = rowsHtml || '<div class="text-[11px] text-stone-400 font-bold text-center py-3">無備降油量資料</div>';
             }
 
-            // === Final Reserve Fuel ===
+            // === Final Reserve Fuel (公噸，百位無條件進位) ===
             const frfEl = document.getElementById('out-frf');
             if (frfEl) {
                 const frfRaw = extractData(rawText, 'FINAL RES');
-                frfEl.textContent = (frfRaw !== 'N/A' && frfRaw !== '') ? frfRaw.split('/')[0].trim() : '----';
+                const frfVal = parseFloat((frfRaw || '').split('/')[0].replace(/[^\d.]/g, ''));
+                frfEl.textContent = (isFinite(frfVal) && frfVal > 0) ? toDivT(frfVal).toFixed(1) : '----';
             }
 
             // === Min DIV Fuel = 1st ALTN + Final Reserve，各自於百位數無條件進位後相加 (公噸) ===
@@ -2371,6 +2386,27 @@
             if (ldgEl) {
                 const ldgRaw = extractData(rawText, 'LDG FUEL');
                 ldgEl.textContent = (ldgRaw !== 'N/A' && ldgRaw !== '') ? ldgRaw.split('/')[0].trim() : '----';
+            }
+
+            // === Trip Fuel (完整 kg) + 括號顯示每小時用油 (Trip ÷ 時間) ===
+            const tripEl = document.getElementById('out-trip');
+            const tripHrEl = document.getElementById('out-trip-hr');
+            if (tripEl) {
+                const tripRaw = extractData(rawText, 'TRIP FUEL');
+                if (tripRaw !== 'N/A' && tripRaw !== '') {
+                    const parts = tripRaw.split('/');
+                    const w = parseFloat((parts[0] || '').replace(/[^\d.]/g, ''));
+                    let hrs = 0;
+                    if (parts[1]) {
+                        const tm = parts[1].trim().match(/(\d{1,2})[:.](\d{2})/);
+                        if (tm) hrs = parseInt(tm[1], 10) + parseInt(tm[2], 10) / 60;
+                    }
+                    tripEl.textContent = (isFinite(w) && w > 0) ? String(Math.round(w)) : '----';
+                    if (tripHrEl) tripHrEl.textContent = (isFinite(w) && w > 0 && hrs > 0) ? `(${Math.round(w / hrs)}/HR)` : '';
+                } else {
+                    tripEl.textContent = '----';
+                    if (tripHrEl) tripHrEl.textContent = '';
+                }
             }
 
             const eteVal = extractData(rawText, 'ETE');
