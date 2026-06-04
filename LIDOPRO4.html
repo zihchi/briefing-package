@@ -450,6 +450,10 @@
                                     <span class="text-[11px] text-stone-500 font-bold">Final Reserve Fuel</span>
                                     <span class="data-font text-base font-bold text-stone-600" id="out-frf">----</span>
                                 </div>
+                                <div class="flex justify-between items-baseline mb-2">
+                                    <span class="text-[11px] text-stone-500 font-bold">Min DIV Fuel</span>
+                                    <span class="data-font text-base font-bold text-stone-600"><span id="out-mindiv">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span></span>
+                                </div>
                                 <div class="flex justify-between items-baseline mb-2.5">
                                     <span class="text-[11px] text-stone-500 font-bold">LDG Fuel</span>
                                     <span class="data-font text-base font-bold text-stone-600"><span id="out-ldg">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span></span>
@@ -2349,6 +2353,19 @@
                 frfEl.textContent = (frfRaw !== 'N/A' && frfRaw !== '') ? frfRaw.split('/')[0].trim() : '----';
             }
 
+            // === Min DIV Fuel = 1st ALTN + Final Reserve，各自於百位數無條件進位後相加 (公噸) ===
+            const minDivEl = document.getElementById('out-mindiv');
+            if (minDivEl) {
+                const a1 = parseFloat((extractData(rawText, 'ALT1 BOF') || '').replace(/[^\d.]/g, ''));
+                const frf = parseFloat((extractData(rawText, 'FINAL RES') || '').split('/')[0].replace(/[^\d.]/g, ''));
+                if (isFinite(a1) && isFinite(frf) && a1 > 0 && frf > 0) {
+                    const t = Math.ceil(a1 / 100) / 10 + Math.ceil(frf / 100) / 10;
+                    minDivEl.textContent = t.toFixed(1);
+                } else {
+                    minDivEl.textContent = '----';
+                }
+            }
+
             // === LDG Fuel (落地剩油，公噸) ===
             const ldgEl = document.getElementById('out-ldg');
             if (ldgEl) {
@@ -3165,7 +3182,7 @@
             s = s.replace(/\b\d{2,7}(?:\.\d+)?[NS][\s,/–—-]*\d{2,7}(?:\.\d+)?[EW]\b/g, ' ');
             s = s.replace(/\s+/g, ' ').trim();
             if (s.startsWith(id)) s = s.slice(id.length).trim();
-            return s.length > 120 ? s.slice(0, 120) + '…' : s;
+            return s;
         }
 
         function popupHtml(id, category, geomDesc, altText, validText, summary, ll) {
@@ -3177,7 +3194,7 @@
             if (ll) h += `<div style="font-size:11px;color:#8b7355">中心: ${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}</div>`;
             if (altText) h += `<div style="font-size:12px;color:#6b5847">高度: ${altText}</div>`;
             if (validText) h += `<div style="font-size:11px;color:#8b7355">生效: ${validText}</div>`;
-            if (summary) h += `<div style="font-size:11px;color:#78716c;margin-top:5px;line-height:1.5;border-top:1px solid #eee;padding-top:5px">${summary}</div>`;
+            if (summary) h += `<div style="font-size:11px;color:#78716c;margin-top:5px;line-height:1.5;border-top:1px solid #eee;padding-top:5px;max-height:4.6em;overflow-y:auto;-webkit-overflow-scrolling:touch">${summary}</div>`;
             h += `</div>`;
             return h;
         }
