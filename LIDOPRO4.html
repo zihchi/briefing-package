@@ -461,17 +461,17 @@
                                 <div class="w-full h-px bg-[#e8dfd5] mb-2.5"></div>
                                 <div class="flex justify-between items-baseline mb-2">
                                     <span class="text-[11px] text-[#8c6b5d] font-bold">Spare Fuel</span>
-                                    <span class="data-font font-black text-xl text-[#4b6b3e] leading-none" id="out-spare-fuel">----</span>
+                                    <span class="data-font font-black text-xl text-[#4b6b3e] leading-none"><span id="out-spare-fuel">----</span><span class="text-xs font-bold ml-0.5 opacity-70">T</span></span>
                                 </div>
                                 <div class="flex justify-between items-baseline mb-3">
                                     <span class="text-[11px] text-stone-500 font-bold">Trip Fuel</span>
-                                    <span class="data-font text-base font-bold text-stone-600 whitespace-nowrap"><span id="out-trip">----</span> <span class="text-[10px] text-stone-400 font-bold" id="out-trip-hr"></span></span>
+                                    <span class="data-font text-base font-bold text-stone-600 whitespace-nowrap"><span id="out-trip">----</span><span class="text-[10px] text-stone-400 font-bold ml-0.5">T</span> <span class="text-[10px] text-stone-400 font-bold" id="out-trip-hr"></span></span>
                                 </div>
                                 <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3.5 py-3 flex justify-between items-end">
                                     <span class="text-sm font-bold text-[#8b5a2b]">Total Fuel</span>
                                     <div class="flex items-baseline gap-2">
                                         <span class="text-[10px] text-[#8b5a2b] font-bold opacity-70" id="time-total-fuel"></span>
-                                        <span class="data-font font-black text-2xl text-[#6e4620] leading-none" id="out-total-fuel">----</span>
+                                        <span class="data-font font-black text-2xl text-[#6e4620] leading-none"><span id="out-total-fuel">----</span><span class="text-sm font-bold ml-0.5 opacity-60">T</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -2388,7 +2388,7 @@
                 ldgEl.textContent = (ldgRaw !== 'N/A' && ldgRaw !== '') ? ldgRaw.split('/')[0].trim() : '----';
             }
 
-            // === Trip Fuel (完整 kg) + 括號顯示每小時用油 (Trip ÷ 時間) ===
+            // === Trip Fuel (公噸) + 括號顯示每小時用油 (完整 Trip ÷ 時間，再換算公噸) ===
             const tripEl = document.getElementById('out-trip');
             const tripHrEl = document.getElementById('out-trip-hr');
             if (tripEl) {
@@ -2401,12 +2401,24 @@
                         const tm = parts[1].trim().match(/(\d{1,2})[:.](\d{2})/);
                         if (tm) hrs = parseInt(tm[1], 10) + parseInt(tm[2], 10) / 60;
                     }
-                    tripEl.textContent = (isFinite(w) && w > 0) ? String(Math.round(w)) : '----';
-                    if (tripHrEl) tripHrEl.textContent = (isFinite(w) && w > 0 && hrs > 0) ? `(${Math.round(w / hrs)}/HR)` : '';
+                    tripEl.textContent = (isFinite(w) && w > 0) ? toDivT(w).toFixed(1) : '----';
+                    if (tripHrEl) tripHrEl.textContent = (isFinite(w) && w > 0 && hrs > 0) ? `(${toDivT(w / hrs).toFixed(1)}/HR)` : '';
                 } else {
                     tripEl.textContent = '----';
                     if (tripHrEl) tripHrEl.textContent = '';
                 }
+            }
+
+            // === Spare / Total Fuel → 公噸 (Min DIV 計算：百位無條件進位)，覆寫前面 fuel 迴圈設的原始 kg ===
+            const spareTEl = document.getElementById('out-spare-fuel');
+            if (spareTEl) {
+                const v = parseFloat((extractData(rawText, 'SPARE Fuel') || '').split('/')[0].replace(/[^\d.]/g, ''));
+                spareTEl.textContent = isFinite(v) ? toDivT(v).toFixed(1) : '----';
+            }
+            const totalTEl = document.getElementById('out-total-fuel');
+            if (totalTEl) {
+                const v = parseFloat((extractData(rawText, 'Total Fuel') || '').split('/')[0].replace(/[^\d.]/g, ''));
+                totalTEl.textContent = (isFinite(v) && v > 0) ? toDivT(v).toFixed(1) : '----';
             }
 
             const eteVal = extractData(rawText, 'ETE');
