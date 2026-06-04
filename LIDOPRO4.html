@@ -1418,7 +1418,6 @@
                         };
 
                         const fw_total = getFuelExtended('TOTAL'); totalFuel = fw_total.w > 0 ? fw_total.w : 'N/A';
-                        const fw_trip = getFuelExtended('TRIP(?:\\s+FUEL)?');
                         const fw_altn = getFuelExtended('ALTN(?:\\s+[A-Z0-9]{3,4})?');
                         const fw_frf = getFuelExtended('FINAL RES');
                         divFuelCalc = `${fw_altn.w} + ${fw_frf.w} = ${fw_altn.w + fw_frf.w}`;
@@ -1461,7 +1460,7 @@
                         var perfBlock = `性能資訊：\nZFW: ${zfwMT}\nTOW: ${tow}\nLDW: ${ldw}\nTotal Fuel: ${formatFuelVal(fw_total)}\n`;
                         perfBlock += `Division Fuel (${altnLabel}+FRF): ${divFuelCalc}${t_divFuel}\n`;
                         perfBlock += `SPARE Fuel: ${spareFuelCalc}\n`;
-                        perfBlock += `TRIP FUEL: ${formatFuelVal(fw_trip)}\n`;
+                        perfBlock += `TRIP FUEL: ${tripFuel > 0 ? tripFuel + (eteStr !== 'N/A' ? ' / ' + eteStr.replace('.', ':') : '') : 'N/A'}\n`;
                         perfBlock += `ADD WXX: ${formatFuelVal(fw_addWxx)}\n`;
                         perfBlock += `DEST HOLD: ${formatFuelVal(fw_destHold)}\n`;
                         perfBlock += `ADD OPN: ${formatFuelVal(fw_addOpn)}\n`;
