@@ -402,6 +402,8 @@
     .fd-lb.open { display: flex; }
     .fd-lb img { max-width: 96vw; max-height: 42vh; border-radius: 8px; background: #fff; }
     .fd-lb .cap { color: #f4ece4; font-weight: 700; font-size: 0.85rem; }
+    .fd-lb .cap-link { color: #8ec5ff; font-weight: 700; font-size: 0.9rem; text-decoration: underline; padding: 16px 10px; display: inline-block; }
+    .fd-lb .cap-link:hover { color: #c7e2ff; }
 
     /* iPad / 寬螢幕：起訖卡與 Gate/航廈/亂流同列，整體更扁 */
     @media (min-width: 720px) {
@@ -905,8 +907,14 @@
     function openLightbox(flightNo, route, today){
       var lb=document.getElementById('fd-lb');
       var dates=[today, addDays(today,1)], labels=['今日','明日'];
+      var fno=String(parseInt(flightNo,10)||flightNo); // turbli 用無前導零航班號
       lb.innerHTML = '<div class="cap">JX-'+flightNo+'　'+route+'　亂流圖（點背景關閉）</div>' +
-        dates.map(function(d,i){ return '<div class="cap">'+labels[i]+' '+d+'</div><img src="chartcache/'+flightNo+'-'+d+'.png" alt="亂流圖" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'cap\',textContent:\'（'+labels[i]+'無快取圖）\'}))">'; }).join('');
+        dates.map(function(d,i){
+          var turbliUrl='https://turbli.com/'+route+'/'+d+'/JX-'+fno+'/';
+          return '<div class="cap">'+labels[i]+' '+d+'</div>'
+            + '<img src="chartcache/'+flightNo+'-'+d+'.png" alt="亂流圖" '
+            + 'onerror="this.replaceWith(Object.assign(document.createElement(\'a\'),{className:\'cap-link\',href:\''+turbliUrl+'\',target:\'_blank\',rel:\'noopener\',textContent:\'（'+labels[i]+'無快取圖，點此開啟 Turbli ↗）\'}))">';
+        }).join('');
       lb.onclick = function(e){ if(e.target===lb) lb.classList.remove('open'); };
       lb.classList.add('open');
     }
