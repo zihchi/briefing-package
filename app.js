@@ -1233,29 +1233,44 @@ function initAviationMap() {
 
     fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
 
-    // iOS Safari 的 touch 不會發 dblclick,Leaflet 預設的 doubleClickZoom 因此失效
-    // 手動偵測連續兩次 click (350ms / 40px 內) 當作雙擊,以該點為中心放大一級
-    // map.on('click') 不會吃到 marker click — Leaflet 不會把 marker 的 click 冒泡到 map
-    let _lastClickTs = 0;
-    let _lastClickXY = null;
-    window.aviationMapInstance.on('click', function(e) {
-        const now = Date.now();
-        const cp = e.containerPoint;
-        if (_lastClickXY && (now - _lastClickTs) < 350) {
-            const dx = cp.x - _lastClickXY.x;
-            const dy = cp.y - _lastClickXY.y;
-            if (dx*dx + dy*dy < 40*40) {
-                const map = window.aviationMapInstance;
-                const target = Math.min(map.getZoom() + 1, map.getMaxZoom());
-                map.setView(e.latlng, target, { animate: true });
-                _lastClickTs = 0;
-                _lastClickXY = null;
-                return;
+    // iOS Safari 的 touch 不會自動 fire dblclick,Leaflet 內建 doubleClickZoom 因此失效;
+    // 連 Leaflet 的 'click' 在連續快 tap 下也常被 tap recognizer 重置,沒辦法穩定偵測。
+    // 改成直接綁原生 touchend 事件,自己算連續兩次 tap (400ms / 50px 內 + 同一點落地)。
+    // - 多指 / pinch 不算
+    // - tap 在 marker 上不算 (讓 marker 單擊照常開 popup)
+    // - 桌面瀏覽器有 dblclick 事件,Leaflet 內建 doubleClickZoom 仍會運作 — 兩條路不衝突
+    const mapEl = document.getElementById('map');
+    if (mapEl && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        let _lastTapTs = 0;
+        let _lastTapXY = null;
+        mapEl.addEventListener('touchend', function(e) {
+            if (e.touches.length > 0 || e.changedTouches.length !== 1) {
+                _lastTapTs = 0; _lastTapXY = null; return;
             }
-        }
-        _lastClickTs = now;
-        _lastClickXY = cp;
-    });
+            if (e.target && e.target.closest && e.target.closest('.leaflet-marker-pane')) {
+                _lastTapTs = 0; _lastTapXY = null; return;
+            }
+            const t = e.changedTouches[0];
+            const now = Date.now();
+            if (_lastTapXY && (now - _lastTapTs) < 400) {
+                const dx = t.clientX - _lastTapXY.x;
+                const dy = t.clientY - _lastTapXY.y;
+                if (dx*dx + dy*dy < 50*50) {
+                    const map = window.aviationMapInstance;
+                    const rect = mapEl.getBoundingClientRect();
+                    const x = t.clientX - rect.left;
+                    const y = t.clientY - rect.top;
+                    const latlng = map.containerPointToLatLng([x, y]);
+                    map.setView(latlng, Math.min(map.getZoom() + 1, map.getMaxZoom()), { animate: true });
+                    _lastTapTs = 0; _lastTapXY = null;
+                    e.preventDefault();
+                    return;
+                }
+            }
+            _lastTapTs = now;
+            _lastTapXY = { x: t.clientX, y: t.clientY };
+        }, { passive: false });
+    }
 
     // 綁定機隊切換按鈕
     document.querySelectorAll('.fleet-btn').forEach(btn => {
