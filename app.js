@@ -715,29 +715,37 @@ window.fetchHistoryMetarPopup = async function(icao) {
     try {
         const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
 
-        const executeFetch = async (url, ms) => {
+        const fetchWithTimeout = async (url, ms, label) => {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), ms);
             try {
-                const res = await fetch(url, { signal: controller.signal });
+                const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
                 clearTimeout(id);
-                if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-                return await res.json();
+                if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
+                const text = await res.text();
+                if (!text || !text.trim()) throw new Error(`${label}: empty body`);
+                const arr = JSON.parse(text);
+                if (!Array.isArray(arr)) throw new Error(`${label}: not array`);
+                return arr;
             } catch (err) {
                 clearTimeout(id);
                 throw err;
             }
         };
 
+        // 4 條路並行 race,第一個成功就用
         let data;
         try {
-            data = await executeFetch(cleanUrl, 4500); // 官方主鏈路
-        } catch (errorA) {
-            try {
-                data = await executeFetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 5500); // 備援 A
-            } catch (errorB) {
-                data = await executeFetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 6000); // 備援 B
-            }
+            data = await Promise.any([
+                fetchWithTimeout(cleanUrl, 8000, 'direct'),
+                fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy'),
+                fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
+                fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 9000, 'allorigins'),
+            ]);
+        } catch (e) {
+            const reasons = (e && e.errors) ? e.errors.map(x => (x && x.message) || String(x)).join(' | ') : String(e);
+            console.error(`[history METAR ${icao}] all racers failed: ${reasons}`);
+            throw new Error('無法連接至氣象資料庫');
         }
 
         if (!data || data.length === 0) {
@@ -1035,45 +1043,43 @@ const weatherCache = {};
 let currentFleet = "A330"; 
 let fleetMarkersLayer;
 
-// 🌍 全域共用：具備多重備援防線的資料擷取器
+// 🌍 全域共用：並行 race 多條 proxy 鏈路,第一個拿到資料就回傳 — 比序列備援快 + 不會被單條卡住
 const fetchBulkWeatherFast = async (icaoList, type) => {
     if(!icaoList) return [];
     const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
 
-    const executeFetch = async (targetUrl, timeoutMs) => {
+    const fetchWithTimeout = async (url, timeoutMs, label) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeoutMs);
         try {
-            const res = await fetch(targetUrl, { signal: controller.signal });
+            const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
             clearTimeout(id);
-            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-            return await res.json();
+            if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
+            const text = await res.text();
+            if (!text || !text.trim()) throw new Error(`${label}: empty body`);
+            const data = JSON.parse(text);
+            if (!Array.isArray(data)) throw new Error(`${label}: not array`);
+            return data;
         } catch (err) {
             clearTimeout(id);
             throw err;
         }
     };
 
+    const racers = [
+        fetchWithTimeout(cleanUrl, 8000, 'direct'),
+        fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy'),
+        fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
+        fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 9000, 'allorigins'),
+    ];
+
     try {
-        const data = await executeFetch(cleanUrl, 4500);
-        return Array.isArray(data) ? data : [];
-    } catch (errorA) {
-        console.warn(`[主鏈路失效] ${type.toUpperCase()} 直連受阻，啟動備援系統 A...`);
-        try {
-            const proxyA = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`;
-            const dataA = await executeFetch(proxyA, 5500);
-            return Array.isArray(dataA) ? dataA : [];
-        } catch (errorB) {
-            console.warn(`[系統 A 失效] ${type.toUpperCase()} 備援 A 受阻，切換至最後防線 B...`);
-            try {
-                const proxyB = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
-                const dataB = await executeFetch(proxyB, 6000);
-                return Array.isArray(dataB) ? dataB : [];
-            } catch (errorC) {
-                console.error(`[全面失效] 無法為 ${type.toUpperCase()} 建立任何資料鏈路。`);
-                throw new Error(`無法連接至氣象資料庫`); 
-            }
-        }
+        return await Promise.any(racers);
+    } catch (e) {
+        // Promise.any 失敗會帶 AggregateError,把每條的錯誤訊息列出來給 console 看
+        const reasons = (e && e.errors) ? e.errors.map(x => (x && x.message) || String(x)).join(' | ') : String(e);
+        console.error(`[fetchBulkWeatherFast ${type}] all racers failed: ${reasons}`);
+        throw new Error(`無法連接至氣象資料庫`);
     }
 };
 
