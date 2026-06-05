@@ -1357,12 +1357,18 @@
 
                     let efbVer = 'N/A';
                     if (rawTexts['CREWINFO']) {
-                        const efbMatches = [...rawTexts['CREWINFO'].matchAll(/SJX-IOS-(R\d{3,4})/ig)];
-                        if (efbMatches.length > 0) {
-                            const versions = efbMatches.map(m => parseInt(m[1].replace('R', ''), 10));
-                            const maxVer = Math.max(...versions);
-                            efbVer = 'R' + maxVer;
+                        // 從 leg.scheduledDepartureTime (ISO UTC) 拆出 yyyy-MMM-dd / HHMM 給判讀用
+                        let depDateStr = null, depZuluStr = null;
+                        if (leg.scheduledDepartureTime) {
+                            const d = new Date(leg.scheduledDepartureTime);
+                            if (!isNaN(d.getTime())) {
+                                const MONS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+                                depDateStr = `${d.getUTCFullYear()}-${MONS[d.getUTCMonth()]}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                                depZuluStr = `${String(d.getUTCHours()).padStart(2,'0')}${String(d.getUTCMinutes()).padStart(2,'0')}`;
+                            }
                         }
+                        const v = extractEfbVersion(rawTexts['CREWINFO'], dep, depDateStr, depZuluStr);
+                        if (v) efbVer = v;
                     }
 
                     let cruiseAltStr = 'N/A', wc = 'N/A', mxsh = 'N/A';
@@ -2028,6 +2034,77 @@
             if (m) { let y = +m[3]; if (y < 100) y += 2000;
                 return { y, mo: MONTHS_3[m[2].toUpperCase()], d: +m[1] }; }
             return null;
+        }
+
+        // ── EFB 版本判讀 ──────────────────────────────────────
+        // CREWINFO 區段可能長這樣:
+        //   AFTER  2026.JUN.03 1800Z EFB VER. SJX-IOS-R383
+        //   //ACFT DEP FM USA//
+        //   BEFORE 2026.JUN.04 1000Z EFB VER. SJX-IOS-R382
+        //   AFTER  2026.JUN.04 1000Z EFB VER. SJX-IOS-R383
+        // 規則:
+        //   1. 用 //CONDITION// 切 section,第一段是無條件預設
+        //   2. //ACFT DEP FM USA// 那段只在起飛地 ICAO 是 K*/PA*/PH*/PG*/PJ*/TJ*/TI* (FAA 範圍) 才生效
+        //   3. 同 section 內,挑 boundary 時間最新且仍適用 (AFTER ≤ flight time ; BEFORE > flight time) 的那筆
+        //   4. 多 section 都有適用 rule 時,後面的 (條件式) 蓋掉前面的 (預設)
+        //   5. 全部都不適用 → 回傳所有版本中數字最大者當保底
+        function extractEfbVersion(text, depICAO, depDateUtcStr, depZuluStr) {
+            if (!text) return null;
+            const ALL_RE = /SJX-IOS-(R\d{3,4})/ig;
+            const fallback = () => {
+                const all = [...text.matchAll(ALL_RE)].map(m => parseInt(m[1].replace('R',''), 10));
+                return all.length ? 'R' + Math.max(...all) : null;
+            };
+
+            // flight 起飛 UTC 時間 (ms)
+            const p = parseUtcDateStr(depDateUtcStr);
+            const clean = String(depZuluStr || '').replace(/[^0-9]/g, '');
+            if (!p || clean.length < 4) return fallback();
+            const flightUtcMs = Date.UTC(p.y, p.mo, p.d, parseInt(clean.substring(0,2),10), parseInt(clean.substring(2,4),10));
+
+            // FAA 範圍 (K=本土, PA=阿拉斯加, PH=夏威夷, PG=關島, PJ=北馬里亞納, TJ=波多黎各, TI=美屬維京)
+            const isUsaDep = /^(K|PA|PH|PG|PJ|TJ|TI)/i.test(depICAO || '');
+
+            // 切 section by //...//
+            const sections = [];
+            const condRe = /\/\/([^\/\n]+)\/\//g;
+            let last = 0, curCond = null, mc;
+            while ((mc = condRe.exec(text)) !== null) {
+                sections.push({ cond: curCond, body: text.slice(last, mc.index) });
+                curCond = mc[1].trim();
+                last = mc.index + mc[0].length;
+            }
+            sections.push({ cond: curCond, body: text.slice(last) });
+
+            // 過濾出對本航班適用的 section
+            const applicable = sections.filter(s => {
+                if (!s.cond) return true;
+                if (/ACFT\s+DEP\s+FM\s+USA/i.test(s.cond)) return isUsaDep;
+                return false; // 不認識的 condition 保守跳過
+            });
+
+            // 在 section 內找符合 flight time 的 rule, boundary 最新者勝
+            const findInSection = (body) => {
+                const RULE_RE = /(AFTER|BEFORE)\s+(\d{4})\.([A-Z]{3})\.(\d{1,2})\s+(\d{4})Z[^\n]*?SJX-IOS-(R\d{3,4})/gi;
+                let r, best = null, bestBoundary = -Infinity;
+                while ((r = RULE_RE.exec(body)) !== null) {
+                    const type = r[1].toUpperCase();
+                    const mo = MONTHS_3[r[3].toUpperCase()];
+                    if (mo === undefined) continue;
+                    const boundary = Date.UTC(+r[2], mo, +r[4], parseInt(r[5].substring(0,2),10), parseInt(r[5].substring(2,4),10));
+                    const applies = (type === 'AFTER' && flightUtcMs >= boundary) ||
+                                    (type === 'BEFORE' && flightUtcMs <  boundary);
+                    if (applies && boundary > bestBoundary) { best = r[6]; bestBoundary = boundary; }
+                }
+                return best;
+            };
+
+            // 條件式 section (後面) 優先蓋掉預設 (前面)
+            for (let i = applicable.length - 1; i >= 0; i--) {
+                const hit = findInSection(applicable[i].body);
+                if (hit) return hit;
+            }
+            return fallback();
         }
 
         function renderChineseDate(dateStr, tag) {
