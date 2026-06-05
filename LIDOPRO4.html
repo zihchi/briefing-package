@@ -2947,19 +2947,71 @@
             const cacheKey = `wx_cache_${type}_${icao}`;
             if (!navigator.onLine) {
                 const cachedData = localStorage.getItem(cacheKey);
-                if (cachedData) return cachedData; throw new Error('Offline');
+                if (cachedData) return cachedData;
+                throw new Error('Offline');
             }
-            const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json`, textUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}`;
-            const controller = new AbortController(), timeoutId = setTimeout(() => controller.abort(), 6000);
-            
-            const fetchJSON = async (url) => { const res = await fetch(url, { signal: controller.signal }); const data = await res.json(); return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw); };
-            const fetchText = async (url) => { const text = await (await fetch(url, { signal: controller.signal })).text(); return text.trim(); };
-            
-            const racers = [ fetchJSON(cleanUrl), fetchText(textUrl), fetchJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`), fetchText(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`) ];
-            if (type === 'metar') racers.push((async () => { const text = await (await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { signal: controller.signal })).text(); return text.trim(); })());
+            const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icao}&format=json`;
+            const textUrl  = `https://aviationweather.gov/api/data/${type}?ids=${icao}`;
 
-            try { const result = await Promise.any(racers); clearTimeout(timeoutId); localStorage.setItem(cacheKey, result); return result; } 
-            catch (error) { clearTimeout(timeoutId); throw new Error(`Fetch Failed`); }
+            // 從 JSON array 拿到第一筆 raw 文字,沒資料就視為失敗讓其他 racer 接手
+            const pickFromJson = (data) => {
+                if (!Array.isArray(data) || data.length === 0) throw new Error('empty array');
+                const item = data[0];
+                if (!item) throw new Error('no item');
+                const raw = type === 'metar' ? (item.rawOb || item.raw) : (item.rawTAF || item.raw);
+                if (!raw || !String(raw).trim()) throw new Error('no raw text');
+                return String(raw).trim();
+            };
+
+            // 每條 racer 自己一個 AbortController,timeout 也獨立
+            const jsonRacer = async (url, ms, label) => {
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), ms);
+                try {
+                    const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+                    clearTimeout(tid);
+                    if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
+                    const body = await res.text();
+                    if (!body || !body.trim()) throw new Error(`${label}: empty body`);
+                    return pickFromJson(JSON.parse(body));
+                } catch (e) { clearTimeout(tid); throw new Error(`${label}: ${e.message || e}`); }
+            };
+            const textRacer = async (url, ms, label) => {
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), ms);
+                try {
+                    const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+                    clearTimeout(tid);
+                    if (!res.ok) throw new Error(`${label}: HTTP ${res.status}`);
+                    const text = (await res.text()).trim();
+                    if (!text) throw new Error(`${label}: empty`);
+                    if (text.startsWith('<')) throw new Error(`${label}: html error page`);
+                    return text;
+                } catch (e) { clearTimeout(tid); throw new Error(`${label}: ${e.message || e}`); }
+            };
+
+            const racers = [
+                jsonRacer(cleanUrl, 8000, 'direct-json'),
+                textRacer(textUrl, 8000, 'direct-text'),
+                jsonRacer(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy-json'),
+                textRacer(`https://corsproxy.io/?${encodeURIComponent(textUrl)}`, 9000, 'corsproxy-text'),
+                jsonRacer(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs-json'),
+                textRacer(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(textUrl)}`, 9000, 'codetabs-text'),
+                jsonRacer(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 9000, 'allorigins-json'),
+            ];
+            if (type === 'metar') {
+                racers.push(textRacer(`https://metar.vatsim.net/metar.php?id=${icao}`, 8000, 'vatsim'));
+            }
+
+            try {
+                const result = await Promise.any(racers);
+                localStorage.setItem(cacheKey, result);
+                return result;
+            } catch (err) {
+                const reasons = (err && err.errors) ? err.errors.map(x => (x && x.message) || String(x)).join(' | ') : String(err);
+                console.error(`[fetchAWCData ${type} ${icao}] all racers failed: ${reasons}`);
+                throw new Error('Fetch Failed');
+            }
         }
 
         async function fetchSingleAirportWeather(icao) {
