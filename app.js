@@ -1233,6 +1233,30 @@ function initAviationMap() {
 
     fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
 
+    // iOS Safari 的 touch 不會發 dblclick,Leaflet 預設的 doubleClickZoom 因此失效
+    // 手動偵測連續兩次 click (350ms / 40px 內) 當作雙擊,以該點為中心放大一級
+    // map.on('click') 不會吃到 marker click — Leaflet 不會把 marker 的 click 冒泡到 map
+    let _lastClickTs = 0;
+    let _lastClickXY = null;
+    window.aviationMapInstance.on('click', function(e) {
+        const now = Date.now();
+        const cp = e.containerPoint;
+        if (_lastClickXY && (now - _lastClickTs) < 350) {
+            const dx = cp.x - _lastClickXY.x;
+            const dy = cp.y - _lastClickXY.y;
+            if (dx*dx + dy*dy < 40*40) {
+                const map = window.aviationMapInstance;
+                const target = Math.min(map.getZoom() + 1, map.getMaxZoom());
+                map.setView(e.latlng, target, { animate: true });
+                _lastClickTs = 0;
+                _lastClickXY = null;
+                return;
+            }
+        }
+        _lastClickTs = now;
+        _lastClickXY = cp;
+    });
+
     // 綁定機隊切換按鈕
     document.querySelectorAll('.fleet-btn').forEach(btn => {
         btn.addEventListener('click', function() {
