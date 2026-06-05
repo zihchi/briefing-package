@@ -1083,16 +1083,41 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
     }
 };
 
-const syncFleetWeather = async (fleetName, forceRefresh = false) => {
-    const statusIndicator = document.getElementById('sync-status');
-    if (statusIndicator) {
-        statusIndicator.className = "px-3 py-1 rounded-full text-sm font-semibold text-white";
-        statusIndicator.style.backgroundColor = "#f39c12"; 
-        statusIndicator.innerText = `🚀 同步 ${fleetName} 機隊氣象資料中...`;
+// 更新右上角狀態膠囊 (現在它本身就是「重新整理」按鈕)
+const setSyncStatus = (state, fleetName) => {
+    const el = document.getElementById('sync-status');
+    if (!el) return;
+    el.classList.remove('status-loaded', 'status-error');
+    el.style.opacity = '1';
+    el.style.cursor = 'pointer';
+    el.disabled = false;
+    el.style.backgroundColor = '';
+    if (state === 'syncing') {
+        el.innerText = `🚀 同步 ${fleetName} 機隊中...`;
+        el.style.backgroundColor = '#f39c12';
+        el.style.cursor = 'progress';
+        el.style.opacity = '0.85';
+        el.disabled = true;
+        el.title = '同步中,請稍候';
+    } else if (state === 'loaded') {
+        el.innerText = `✅ ${fleetName} 氣象就緒 · ⟳`;
+        el.classList.add('status-loaded');
+        el.title = '點一下重新整理目前機隊氣象';
+    } else if (state === 'error') {
+        el.innerText = '❌ 氣象同步失敗 · 點此重試';
+        el.classList.add('status-error');
+        el.title = '點一下重試';
+    } else if (state === 'idle') {
+        el.innerText = '⏸️ 系統初始化中...';
+        el.title = '';
     }
-    
+};
+
+const syncFleetWeather = async (fleetName, forceRefresh = false, _retried = false) => {
+    setSyncStatus('syncing', fleetName);
+
     const airports = fleets[fleetName];
-    
+
     if (forceRefresh) {
         airports.forEach(a => { delete weatherCache[a.icao]; });
     }
@@ -1117,32 +1142,26 @@ const syncFleetWeather = async (fleetName, forceRefresh = false) => {
                     if(!weatherCache[icao]) weatherCache[icao] = { metar: "", taf: "" };
                 });
 
-                metars.forEach(m => { 
-                    if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw; 
+                metars.forEach(m => {
+                    if(m.icaoId && weatherCache[m.icaoId]) weatherCache[m.icaoId].metar = m.rawOb || m.raw;
                 });
-                tafs.forEach(t => { 
-                    if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw; 
+                tafs.forEach(t => {
+                    if(t.icaoId && weatherCache[t.icaoId]) weatherCache[t.icaoId].taf = t.rawTAF || t.raw;
                 });
             }
         }
 
-        if (statusIndicator) {
-            statusIndicator.innerText = `✅ ${fleetName} 氣象就緒`;
-            statusIndicator.classList.remove('status-error');
-            statusIndicator.classList.add('status-loaded');
-            statusIndicator.style.backgroundColor = ""; 
-        }
-        
+        setSyncStatus('loaded', fleetName);
         renderFleetMarkers(fleetName);
 
     } catch (error) {
-        console.error("同步程序中斷：", error.message);
-        if (statusIndicator) {
-            statusIndicator.innerText = "❌ 氣象同步失敗 (請檢查連線)";
-            statusIndicator.classList.remove('status-loaded');
-            statusIndicator.classList.add('status-error');
-            statusIndicator.style.backgroundColor = "";
+        console.error('同步程序中斷:', error.message);
+        // 第一次失敗自動重試一次 (forceRefresh),解決機隊切換冷啟動 race
+        if (!_retried) {
+            console.warn('[syncFleetWeather] auto-retry with forceRefresh');
+            return syncFleetWeather(fleetName, true, true);
         }
+        setSyncStatus('error', fleetName);
     }
 };
 
@@ -1227,23 +1246,13 @@ function initAviationMap() {
         });
     });
 
-    const refreshBtn = document.getElementById('btn-refresh-map');
-    if(refreshBtn) {
-        refreshBtn.onclick = () => {
-            refreshBtn.disabled = true;
-            refreshBtn.style.opacity = "0.5";
-            refreshBtn.style.cursor = "not-allowed";
-            refreshBtn.innerText = "⏳ 同步中...";
-            
-            syncFleetWeather(currentFleet, true).finally(() => {
-                setTimeout(() => {
-                    refreshBtn.disabled = false;
-                    refreshBtn.style.opacity = "1";
-                    refreshBtn.style.cursor = "pointer";
-                    refreshBtn.innerText = "🔄 更新目前機隊";
-                }, 1000);
-            });
-        };
+    // 右上角狀態膠囊現在也是「重新整理」按鈕
+    const statusBtn = document.getElementById('sync-status');
+    if (statusBtn) {
+        statusBtn.addEventListener('click', () => {
+            if (statusBtn.disabled) return; // 同步中時 setSyncStatus 已 disable
+            syncFleetWeather(currentFleet, true);
+        });
     }
 
     // 自訂 ICAO 搜尋功能

@@ -120,7 +120,7 @@
     /* =========================================
        🌍 航空氣象儀表板專用樣式
        ========================================= */
-    #map { height: 650px; width: 100%; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); border: 1px solid var(--border); z-index: 1; }
+    #map { height: 650px; width: 100%; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); border: 1px solid var(--border); z-index: 1; touch-action: manipulation; }
 
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
     #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: var(--radius-pill); background-color: var(--text); color: white; transition: background-color 0.5s ease; box-shadow: var(--shadow-btn); }
@@ -154,8 +154,9 @@
     .border-ifr { border-left-color: var(--danger) !important; }
     .border-lifr { border-left-color: #9b59b6 !important; }
 
-    #btn-refresh-map { background: none; border: 2px solid var(--brand); border-radius: 8px; padding: 4px 10px; margin-left: 12px; font-size: 0.9em; color: var(--brand); font-weight: bold; cursor: pointer; transition: background-color 0.2s, color 0.2s; margin-top:0; }
-    #btn-refresh-map:hover { background-color: var(--brand-soft); color: var(--brand-dark); }
+    /* sync-status 兼任「重新整理」按鈕 — hover 微微抬高提示可點 */
+    #sync-status:hover:not(:disabled) { filter: brightness(1.1); }
+    #sync-status:active:not(:disabled) { transform: scale(0.97); }
 
     /* 👇 優化：確保彈出視窗不出界，且隱藏橫向卷軸 */
     .weather-popup { 
@@ -609,9 +610,9 @@
           <h2 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: #1e293b;">
               🌍 NOAA AWC METAR/TAF & D-ATIS
           </h2>
-          <div id="sync-status" style="background-color: #34495e; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">
+          <button id="sync-status" title="點一下重新整理目前機隊氣象" style="background-color: #34495e; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.3s ease, opacity 0.2s; margin: 0;">
               ⏸️ 系統初始化中...
-          </div>
+          </button>
       </div>
 
       <div id="fleet-selector" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 0;">
@@ -627,8 +628,6 @@
               <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 65px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
               <button id="btn-search-icao" style="margin: 0; padding: 4px 8px; background: #8e44ad; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 12px;">🔍 ICAO搜尋</button>
           </div>
-          
-          <button id="btn-refresh-map" style="background: transparent; border: 1.5px solid #3c79ff; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #3c79ff; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 0;">🔄 手動更新</button>
       </div>
 
     </div>
@@ -727,7 +726,7 @@
   </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="app.js?v=2.1"></script>
+<script src="app.js?v=2.2"></script>
 <script>
   // 航班速查（TDX 定期時刻表，經 Apps Script 代理）
   (function(){
