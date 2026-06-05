@@ -921,7 +921,9 @@
             return deg + (isNaN(min) ? 0 : min) / 60;
         }
 
-        // 從 OFP NAVIGATION LOG 抽出航線航點 (依序、含經緯度) → [{n,lat,lng}]
+        // 從 OFP NAVIGATION LOG 抽出航線航點 (依序、含經緯度、ATGO) → [{n,lat,lng,ete}]
+        // ete 為 4 位數 HHMM 字串 (e.g. "0002" = 2 分鐘),從座標行往上掃 3 行
+        // 取最後一個有效 HHMM (mm < 60) 的 4 位數 — 排掉 track/heading 干擾
         function extractRouteWaypoints(ofpText) {
             if (!ofpText) return [];
             const navIdx = ofpText.search(/NAVIGATION\s+LOG/i);
@@ -944,13 +946,25 @@
                 const up2 = (lines[i - 2] || '').trim();
                 if (up1.startsWith('-')) name = up1.replace(/^-+/, '').split(/\s{2,}|\s+\d/)[0].trim();
                 else name = (up2.split(/\s+/)[0] || '').trim();
+                // 抓 ATGO/ETE (4 位 HHMM):往上 1-3 行找,後段優先,mm<60 才當有效時間
+                let ete = null;
+                for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+                    const fours = (lines[j] || '').match(/\b\d{4}\b/g);
+                    if (!fours) continue;
+                    for (let k = fours.length - 1; k >= 0; k--) {
+                        const mm = parseInt(fours[k].slice(2), 10);
+                        if (mm < 60) { ete = fours[k]; break; }
+                    }
+                    if (ete) break;
+                }
                 // 略過連續重複座標 (如 FIR 邊界與相鄰航點同點)
                 const prev = wpts[wpts.length - 1];
                 if (prev && Math.abs(prev.lat - lat) < 1e-4 && Math.abs(prev.lng - lng) < 1e-4) {
                     if (!prev.n && name) prev.n = name;
+                    if (!prev.ete && ete) prev.ete = ete;
                     continue;
                 }
-                wpts.push({ n: name, lat, lng });
+                wpts.push({ n: name, lat, lng, ete });
             }
             return wpts;
         }
@@ -3587,7 +3601,12 @@
                     radius: isEnd ? 5 : 2.5, color: '#0d9488',
                     fillColor: isEnd ? '#0d9488' : '#ffffff', fillOpacity: 1, weight: 1.5
                 });
-                if (w.n) mk.bindPopup(`<b>${w.n}</b><br>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}`);
+                if (w.n) {
+                    const eteHtml = w.ete && /^\d{4}$/.test(w.ete)
+                        ? ` <span style="color:#0d9488;font-size:11px;font-weight:600;letter-spacing:0.5px">ATGO ${w.ete.slice(0,2)}:${w.ete.slice(2)}</span>`
+                        : '';
+                    mk.bindPopup(`<b>${w.n}</b>${eteHtml}<br>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}`);
+                }
                 mk.addTo(notamMapInstance);
                 notamRouteLayers.push(mk);
             });
