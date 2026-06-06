@@ -46,9 +46,21 @@ jobs:
           git add chartcache/
           if git diff --staged --quiet; then
             echo "📭 沒有檔案變動，跳過 commit"
-          else
-            COUNT=$(git diff --staged --name-only | wc -l | tr -d ' ')
-            git commit -m "chore(chartcache): refresh ${COUNT} turbulence charts [skip ci]"
-            git push
-            echo "📤 已推送 ${COUNT} 張圖更新"
+            exit 0
           fi
+          COUNT=$(git diff --staged --name-only | wc -l | tr -d ' ')
+          git commit -m "chore(chartcache): refresh ${COUNT} turbulence charts [skip ci]"
+
+          # 這個 job 會跑十幾分鐘，期間 main 可能已被其他 push 推進，
+          # 直接 push 會因 non-fast-forward 被拒。先 rebase 再 push，並重試。
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "📤 已推送 ${COUNT} 張圖更新"
+              exit 0
+            fi
+            echo "⚠️  push 被拒（第 ${attempt} 次），先 git pull --rebase 再重試…"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          done
+
+          echo "❌ 重試 5 次仍無法 push"
+          exit 1
