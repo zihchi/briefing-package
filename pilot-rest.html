@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pilot Rest">
+<meta name="theme-color" content="#f4ece4">
+<link rel="manifest" href="./manifest.json">
+<title>Pilot Rest · 機上輪休</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4ece4; --bg2:#efe6da;
+    --card:#fffdfb; --card2:#faf4ec;
+    --ink:#4a3627; --soft:#8a7560; --faint:#b0a08d;
+    --line:#e6dac9; --line2:#d4c3b3;
+    --brand:#8b5a2b; --brand-d:#7a4e23; --brand-l:#b37a4c;
+    --accent:#b35900; --accent-bg:rgba(179,89,0,.10);
+    --gold:#c9982f; --gold-band:rgba(201,152,47,.20); --gold-line:rgba(201,152,47,.65);
+    --green:#4d7c3a; --red:#c0392b;
+    --restbg:rgba(139,90,43,.08); --restbd:rgba(139,90,43,.30);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 34px);max-width:580px;margin:0 auto}
+  .mono{font-family:"JetBrains Mono",ui-monospace,"SFMono-Regular",monospace;font-variant-numeric:tabular-nums}
+  .wrap{padding:0 15px}
+
+  header{padding:18px 15px 8px;display:flex;align-items:center;gap:10px}
+  .back{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--card2);border:1.5px solid var(--line2);color:var(--brand);font-size:20px;font-weight:900;text-decoration:none;flex:0 0 auto}
+  .back:active{background:var(--bg2)}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-l));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;box-shadow:0 3px 10px rgba(139,90,43,.3)}
+  h1{font-size:20px;font-weight:900;margin:0;letter-spacing:.3px;color:var(--ink)}
+  header .sub{font-size:11.5px;color:var(--faint);font-weight:700;margin-left:auto}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:11px 0;box-shadow:0 1px 3px rgba(74,54,39,.05)}
+  .lbl{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:1.2px;text-transform:uppercase;margin:0 0 9px 2px}
+
+  .seg{display:flex;background:var(--bg2);border-radius:11px;padding:3px;gap:3px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--soft);font-weight:800;font-size:14px;padding:9px 6px;border-radius:9px;cursor:pointer;font-family:inherit;transition:.15s}
+  .seg button.on{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(139,90,43,.3)}
+  .seg.sm button{font-size:12.5px;padding:7px 4px}
+
+  .grid{display:grid;gap:10px}.g2{grid-template-columns:1fr 1fr}
+  .field label{display:block;font-size:11.5px;color:var(--soft);font-weight:700;margin:0 0 5px 2px}
+  .field input{width:100%;background:var(--card2);border:1.5px solid var(--line);border-radius:10px;color:var(--ink);font-size:17px;font-weight:800;padding:11px 12px;font-family:"JetBrains Mono",monospace;text-align:center;letter-spacing:1px}
+  .field input:focus{outline:0;border-color:var(--brand)}
+  .field input::placeholder{color:var(--faint);font-weight:600;letter-spacing:0}
+  .hint{font-size:11.5px;color:var(--faint);margin:7px 2px 0;line-height:1.6}.hint b{color:var(--brand)}
+
+  .derived{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .chip{font-size:12px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--card2);color:var(--soft);border:1px solid var(--line)}
+  .chip b{color:var(--ink)}
+  .chip.hi{background:var(--accent-bg);border-color:rgba(179,89,0,.35);color:var(--accent)}.chip.hi b{color:var(--accent)}
+
+  .sel{width:100%;background:var(--card2);border:1.5px solid var(--line);border-radius:11px;color:var(--ink);font-size:15px;font-weight:800;padding:12px;font-family:inherit;cursor:pointer;
+    appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b5a2b' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 13px center;padding-right:38px}
+  .sel:focus{outline:0;border-color:var(--brand)}
+  .note{font-size:12.5px;color:var(--ink);line-height:1.65;margin-top:10px;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:9px;padding:10px 12px}
+  .note .t{font-weight:900;color:var(--brand)}
+
+  .crew-row{display:flex;align-items:center;gap:9px;margin:8px 0}
+  .crew-row input.nm{flex:1;background:var(--card2);border:1.5px solid var(--line);border-radius:10px;color:var(--ink);font-size:15px;font-weight:700;padding:10px 12px;font-family:inherit}
+  .crew-row input.nm:focus{outline:0;border-color:var(--brand)}
+  .roles{display:flex;gap:4px}
+  .roles button{border:1.5px solid var(--line);background:var(--card2);color:var(--soft);font-size:12px;font-weight:800;padding:9px 10px;border-radius:9px;cursor:pointer;font-family:inherit;min-width:42px}
+  .roles button.on.pf{background:var(--brand);border-color:var(--brand);color:#fff}
+  .roles button.on.pm{background:var(--brand-l);border-color:var(--brand-l);color:#fff}
+  .roles button.on.rel{background:var(--bg2);border-color:var(--line2);color:var(--ink)}
+
+  .warn{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:600;line-height:1.55;margin:11px 0}
+  .warn.bad{background:rgba(192,57,43,.09);border:1px solid rgba(192,57,43,.3);color:#8e2d22}
+  .warn.ok{background:rgba(77,124,58,.1);border:1px solid rgba(77,124,58,.3);color:#3c5e2d}
+
+  .crewcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin:9px 0}
+  .crewcard.pf{border:1.5px solid var(--restbd);background:linear-gradient(180deg,rgba(139,90,43,.05),var(--card))}
+  .cc-top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .cc-nm{font-size:16px;font-weight:900}
+  .bdg{font-size:10.5px;font-weight:900;letter-spacing:.5px;padding:3px 8px;border-radius:7px}
+  .bdg.pf{background:var(--brand);color:#fff}.bdg.pm{background:var(--brand-l);color:#fff}
+  .bdg.rel{background:var(--bg2);color:var(--soft);border:1px solid var(--line)}
+  .bdg.ok{background:rgba(77,124,58,.15);color:var(--green);margin-left:auto}
+  .bdg.no{background:rgba(192,57,43,.13);color:var(--red);margin-left:auto}
+  .blk{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+  .blk:first-of-type{border-top:0}
+  .blk .tag{width:30px;flex:0 0 auto;text-align:center;font-size:11px;font-weight:900;border-radius:7px;padding:4px 0}
+  .blk .tag.L{background:var(--brand);color:#fff}.blk .tag.S{background:var(--bg2);color:var(--brand);border:1px solid var(--line2)}
+  .blk .rng{flex:1;font-size:15px;font-weight:800}.blk .rng .z{color:var(--accent)}
+  .blk .meta{font-size:11px;color:var(--faint);margin-top:1px;font-weight:600}.blk .meta .wo{color:var(--gold);font-weight:800}
+  .blk .dur{font-size:14px;font-weight:900;color:#fff;background:var(--brand);padding:6px 10px;border-radius:8px;flex:0 0 auto}
+  .cc-cd{font-size:11.5px;color:var(--soft);margin-top:9px;border-top:1px dashed var(--line);padding-top:8px;font-weight:700}.cc-cd b{color:var(--green)}
+
+  .tlwrap{display:flex;gap:10px;margin-top:6px}
+  .tl-axis{width:46px;flex:0 0 auto;position:relative}
+  .tl-axis .tick{position:absolute;right:0;transform:translateY(-50%);font-size:11px;font-weight:800;color:var(--accent);white-space:nowrap}
+  .tl-axis .tick.tod{color:var(--brand)}
+  .tl-track{flex:1;position:relative;border-radius:12px;background:var(--card2);border:1px solid var(--line);overflow:hidden}
+  .tl-seg{position:absolute;left:6px;right:6px;background:var(--restbg);border:1px solid var(--restbd);border-radius:9px;padding:5px 9px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .tl-seg.lc{border-color:var(--brand);background:rgba(139,90,43,.13)}
+  .tl-seg .who{font-size:12.5px;font-weight:800;line-height:1.25}
+  .tl-seg .who small{font-weight:700;color:var(--brand)}
+  .tl-seg .sd{font-size:10px;color:var(--soft);font-weight:700;margin-top:1px}
+  .tl-wocl{position:absolute;left:0;right:0;background:var(--gold-band);border-top:1.5px dashed var(--gold-line);border-bottom:1.5px dashed var(--gold-line);pointer-events:none;z-index:3}
+  .tl-wocl .tag2{position:absolute;top:3px;right:6px;font-size:9.5px;font-weight:900;color:#8a6d18;background:rgba(255,255,255,.6);padding:1px 6px;border-radius:5px;letter-spacing:.5px}
+  .legend{font-size:11px;color:var(--faint);margin-top:11px;line-height:1.8;font-weight:600}
+  .legend i{font-style:normal;display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+  .disc{font-size:11px;color:var(--faint);text-align:center;margin:18px 8px 0;line-height:1.6}
+  .empty{color:var(--faint);font-size:13px;text-align:center;padding:22px 8px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back" title="返回簡報箱">←</a>
+  <div class="logo">🛏</div><h1>Pilot Rest</h1><span class="sub">機上輪休 · UTC</span>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <p class="lbl">階段</p>
+    <div class="seg" id="modeSeg"><button data-v="ground" class="on">🛫 地面規劃</button><button data-v="air">🧭 機上實際</button></div>
+  </div>
+
+  <div class="card">
+    <p class="lbl">時間（UTC）</p>
+    <div id="groundBox" class="grid g2">
+      <div class="field"><label>推出 ETD</label><input id="etd" inputmode="numeric" placeholder="1600" maxlength="5"></div>
+      <div class="field"><label>滑行（分）</label><input id="taxi" inputmode="numeric" placeholder="15" maxlength="3"></div>
+      <div class="field"><label>飛行時間 FT</label><input id="ft" inputmode="numeric" placeholder="13:00" maxlength="5"></div>
+      <div class="field"><label>下降保留 (TOD→落地)</label><input id="bd" inputmode="numeric" placeholder="1:00" maxlength="5"></div>
+    </div>
+    <div id="airBox" style="display:none">
+      <div class="grid g2">
+        <div class="field"><label>輪休開始 Start</label><input id="astart" inputmode="numeric" placeholder="1620" maxlength="5"></div>
+        <div class="field"><label>飛行時間 FT</label><input id="aft" inputmode="numeric" placeholder="13:00" maxlength="5"></div>
+      </div>
+      <p class="lbl" style="margin:14px 0 8px">結束依據</p>
+      <div class="seg sm" id="endSeg"><button data-v="tod" class="on">TOD 直接輸入</button><button data-v="land">落地時間回推</button></div>
+      <div class="grid g2" style="margin-top:10px">
+        <div class="field" id="todField"><label>TOD（全員到齊）</label><input id="atod" inputmode="numeric" placeholder="0415" maxlength="5"></div>
+        <div class="field" id="landField" style="display:none"><label>落地時間</label><input id="aland" inputmode="numeric" placeholder="0515" maxlength="5"></div>
+        <div class="field" id="abdField" style="display:none"><label>下降保留</label><input id="abd" inputmode="numeric" placeholder="1:00" maxlength="5"></div>
+      </div>
+    </div>
+    <div class="hint">時間填 4 碼（如 <b>1600</b>）或 H:MM。TOD = 全員必須回座的最終時間；提早多久起床留給組員自行判斷。下降保留可調。</div>
+    <div class="derived" id="derived"></div>
+  </div>
+
+  <div class="card">
+    <p class="lbl">組員與休息方式</p>
+    <div class="seg" id="crewSeg"><button data-v="3" class="on">3 pilot</button><button data-v="4">4 pilot</button></div>
+    <div id="patWrap">
+      <p class="lbl" style="margin:15px 0 8px">休息型態</p>
+      <select id="patSel" class="sel"></select>
+      <div id="patNote" class="note"></div>
+    </div>
+    <p class="lbl" style="margin:16px 0 8px">指派角色（點選 PF / PM）</p>
+    <div id="crewList"></div>
+    <div class="hint">落地 <b>PF</b> 優先權最高、需連續休 ≥ 2:00；<b>PM</b> ≥ 1:30（飛行時間 ≥ 7 小時時適用）。PF＋PM 同組一起休、加派同組一起休，兩組輪替。名稱可點欄位修改。</div>
+  </div>
+
+  <div id="out"></div>
+  <p class="disc">⚠️ 僅供規劃參考，一切以公司手冊（CAR 07-02A）與機長判斷為準。WOCL 採台北身體時鐘 02:00–06:00（= 18:00–22:00Z）。</p>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const DAY=1440, WOCL_S=18*60, WOCL_E=22*60, FT_GATE=420, MIN_PF=120, MIN_PM=90, SHORT=120, SLEEP_BUF=15;
+const PATS4=['even','SSLL','LLSS','SLLS','LSSL'];
+const patName=p=>p==='even'?'總時間均分':p;
+
+const state={mode:'ground',endMode:'tod',crew:3,pattern:null,pilots:null};
+function defaultPilots(n){return [{nm:'機長',role:'PF'},{nm:'副機長',role:'PM'},{nm:'加派 A',role:'REL'},{nm:'加派 B',role:'REL'}].slice(0,n).map(p=>({...p}));}
+state.pilots=defaultPilots(3);
+
+const pad=n=>String(n).padStart(2,'0');
+function parseClock(s){if(s==null)return null;s=String(s).trim().replace('：',':').replace(':','');if(!/^\d{3,4}$/.test(s))return null;s=s.padStart(4,'0');const h=+s.slice(0,2),m=+s.slice(2);return(h>23||m>59)?null:h*60+m;}
+function parseDur(s){if(s==null)return null;s=String(s).trim().replace('：',':');if(s.includes(':')){const[a,b]=s.split(':');return(b===''||isNaN(a)||isNaN(b))?null:(+a)*60+(+b);}if(/^\d{1,3}$/.test(s))return +s;if(/^\d{4}$/.test(s))return(+s.slice(0,2))*60+(+s.slice(2));return null;}
+const fmtDur=m=>{m=Math.round(m);return Math.floor(m/60)+':'+pad(((m%60)+60)%60);};
+const fmtZ=a=>{let m=Math.round(((a%DAY)+DAY)%DAY);return pad(Math.floor(m/60))+':'+pad(m%60);};
+function woclOverlap(a,b){let t=0;for(let k=-1;k<=2;k++){const s=WOCL_S+k*DAY,e=WOCL_E+k*DAY;t+=Math.max(0,Math.min(b,e)-Math.max(a,s));}return t;}
+function woclIntervals(a,b){const o=[];for(let k=-1;k<=2;k++){const s=WOCL_S+k*DAY,e=WOCL_E+k*DAY,lo=Math.max(a,s),hi=Math.min(b,e);if(hi-lo>1)o.push([lo,hi]);}return o;}
+function waterfill(W,floors){let a=floors.slice(),rem=W-a.reduce((x,y)=>x+y,0),g=0;if(rem<-0.01)return null;while(rem>0.02&&g++<2000){const mn=Math.min(...a);const idx=a.map((v,i)=>v<=mn+0.01?i:-1).filter(i=>i>=0);const hi=a.filter(v=>v>mn+0.01);const nx=hi.length?Math.min(...hi):Infinity;const r=nx===Infinity?rem/idx.length:Math.min(nx-mn,rem/idx.length);idx.forEach(i=>a[i]+=r);rem-=r*idx.length;}return a;}
+
+/* ---------- engine ---------- */
+function roleIdx(p){const pf=p.findIndex(x=>x.role==='PF'),pm=p.findIndex(x=>x.role==='PM');return{pf,pm,others:p.map((x,i)=>i).filter(i=>i!==pf&&i!==pm)};}
+function patternLens(pattern,W,gate){
+  if(pattern==='even')return [W/4,W/4,W/4,W/4];
+  let half=W/2,S=Math.min(SHORT,half-30);if(S<30)S=half/2;let L=half-S; // 短休固定 2:00、長休吸收其餘
+  return ({SSLL:[S,S,L,L],LLSS:[L,L,S,S],SLLS:[S,L,L,S],LSSL:[L,S,S,L]})[pattern]||[W/4,W/4,W/4,W/4];
+}
+// 4 pilot: 落地組(PF+PM)同休 seg1,seg3；加派同休 seg0,seg2；兩組輪替（每人兩段）
+function buildSchedule(W,pilots,pattern,gate){
+  const N=pilots.length,{pf,pm,others}=roleIdx(pilots);const tl=[],per={};
+  const add=(i,o,d)=>{(per[i]=per[i]||[]).push({offStart:o,offEnd:o+d,dur:d});};
+  if(N===3){
+    if(pattern==='split'&&W/3-SHORT>=30){ // 每人兩段：一段 2:00 + 餘段；PF 的 2:00 收在最後（最清醒）
+      const rem=W/3-SHORT;let c=0;
+      [[others[0],rem],[pm,rem],[pf,rem],[others[0],SHORT],[pm,SHORT],[pf,SHORT]].forEach(([i,d])=>{tl.push({offStart:c,offEnd:c+d,dur:d,resters:[i]});add(i,c,d);c+=d;});
+      const pfMax=Math.max(...per[pf].map(b=>b.dur)),pmMax=Math.max(...per[pm].map(b=>b.dur));
+      return {tl,per,pfWarn:gate&&pfMax<MIN_PF-0.5,pmWarn:gate&&pmMax<MIN_PM-0.5,infeasible:gate&&pfMax<MIN_PF-0.5};
+    }
+    let durs=waterfill(W,[gate?MIN_PF:0,gate?MIN_PM:0,0]);let infe=false;
+    if(!durs){durs=[W/3,W/3,W/3];infe=gate;}
+    let c=0;[[others[0],durs[2]],[pm,durs[1]],[pf,durs[0]]].forEach(([i,d])=>{tl.push({offStart:c,offEnd:c+d,dur:d,resters:[i]});add(i,c,d);c+=d;});
+    return {tl,per,pfWarn:gate&&durs[0]<MIN_PF-0.5,pmWarn:gate&&durs[1]<MIN_PM-0.5,infeasible:infe||(gate&&durs[0]<MIN_PF-0.5)};
+  }
+  const lens=patternLens(pattern,W,gate);let c=0;
+  lens.forEach((d,idx)=>{const o=c;c+=d;const resters=(idx===1||idx===3)?[pf,pm]:others;tl.push({offStart:o,offEnd:o+d,dur:d,resters});resters.forEach(i=>add(i,o,d));});
+  const pfMax=Math.max(...per[pf].map(b=>b.dur)),pmMax=Math.max(...per[pm].map(b=>b.dur));
+  return {tl,per,pfWarn:gate&&pfMax<MIN_PF-0.5,pmWarn:gate&&pmMax<MIN_PM-0.5,infeasible:gate&&(W/2<MIN_PF-0.5)};
+}
+function scorePattern(W,pilots,pat,gate,rs){
+  const {pf,pm}=roleIdx(pilots),s=buildSchedule(W,pilots,pat,gate);let sc=0;
+  const pfL=(s.per[pf]||[]).reduce((m,b)=>(!m||b.dur>m.dur)?b:m,null),pmL=(s.per[pm]||[]).reduce((m,b)=>(!m||b.dur>m.dur)?b:m,null);
+  if(pfL)sc+=(pfL.offEnd/W)*1000; if(pmL)sc+=(pmL.offEnd/W)*150;
+  Object.keys(s.per).forEach(i=>s.per[i].forEach(b=>{sc+=woclOverlap(rs+b.offStart,rs+b.offEnd)*(+i===pf?2.2:+i===pm?1.6:1);}));
+  if(s.pfWarn)sc-=1e5; if(s.pmWarn)sc-=5e4; if(s.infeasible)sc-=2e5; return sc;
+}
+function recommend(W,pilots,gate,rs){const opts=pilots.length===3?['even','split']:PATS4;let best=opts[0],bs=-1e15;opts.forEach(p=>{const v=scorePattern(W,pilots,p,gate,rs);if(v>bs){bs=v;best=p;}});return best;}
+
+/* ---------- window ---------- */
+function computeWindow(){
+  if(state.mode==='ground'){
+    const etd=parseClock($('#etd').value),taxi=parseDur($('#taxi').value)??0,ft=parseDur($('#ft').value),bd=parseDur($('#bd').value)??60;
+    if(etd==null||ft==null)return{err:'請填入 ETD 與飛行時間'};
+    const air=etd+taxi,rs=air+5,land=air+ft,tod=land-bd,W=tod-rs;
+    if(W<=0)return{err:'可休時間為 0 或負值，請檢查飛行時間 / 下降保留'};
+    return{restStart:((rs%DAY)+DAY)%DAY,W,ft,derived:[['離地',air],['輪休開始',rs],['落地',land],['TOD',tod]]};
+  }
+  const rs=parseClock($('#astart').value),ft=parseDur($('#aft').value);
+  if(rs==null)return{err:'請填入輪休開始 Start'};
+  let tod;
+  if(state.endMode==='tod'){tod=parseClock($('#atod').value);if(tod==null)return{err:'請填入 TOD'};}
+  else{const land=parseClock($('#aland').value),bd=parseDur($('#abd').value)??60;if(land==null)return{err:'請填入落地時間'};tod=land-bd;}
+  let W=tod-rs;if(W<=0)W+=DAY;
+  return{restStart:rs,W,ft:ft??0,derived:[['輪休開始',rs],['TOD',tod]]};
+}
+
+/* ---------- countdown ---------- */
+function anchorStartMs(restStart,W){const now=Date.now(),d=new Date(now),mid=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());for(let k=-1;k<=1;k++){const s=mid+(restStart+k*DAY)*60000;if(now>=s&&now<=s+W*60000)return s;}const up=[];for(let k=-1;k<=2;k++){const s=mid+(restStart+k*DAY)*60000;if(s>=now)up.push(s);}if(up.length)return Math.min(...up);const arr=[];for(let k=-2;k<=1;k++)arr.push(mid+(restStart+k*DAY)*60000);return Math.max(...arr);}
+let cdTimer=null;
+function tickCD(){$$('[data-cd]').forEach(el=>{const t=+el.getAttribute('data-cd'),diff=t-Date.now(),base=el.getAttribute('data-base')||'';if(diff<=0){el.innerHTML=base+'　<b style="color:var(--accent)">該起床了 / 進行中</b>';return;}const s=Math.floor(diff/1000);el.innerHTML=base+'　距叫醒 <b>'+Math.floor(s/3600)+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60)+'</b>';});}
+
+/* ---------- pattern UI ---------- */
+const PAT3=[['even','均分（一段）'],['split','短＋長（兩段）']];
+function patLabel(p){return state.crew===3?(P3MAP[p]||p):patName(p);}
+const P3MAP={even:'均分（一段）',split:'短＋長（兩段）'};
+function renderPattern(rec){
+  const sel=$('#patSel');sel.style.display='block';
+  const opts=state.crew===3?PAT3:PATS4.map(p=>[p,patName(p)]);
+  const cur=state.pattern||rec;
+  sel.innerHTML=opts.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${l}${v===rec?'（建議）':''}</option>`).join('');
+}
+
+/* ---------- render ---------- */
+function render(){
+  const w=computeWindow();const dv=$('#derived');dv.innerHTML='';
+  if(!w.err){
+    w.derived.forEach(([k,v])=>{const c=document.createElement('span');c.className='chip';c.innerHTML=k+' <b class="mono">'+fmtZ(v)+'z</b>';dv.appendChild(c);});
+    const c=document.createElement('span');c.className='chip hi';c.innerHTML='可休 <b class="mono">'+fmtDur(w.W)+'</b>';dv.appendChild(c);
+    if(w.ft){const f=document.createElement('span');f.className='chip';f.innerHTML='FT '+fmtDur(w.ft)+(w.ft>=FT_GATE?' · <b>適用規定</b>':' · 未達 7h');dv.appendChild(f);}
+  }
+  if(w.err){renderPattern('even');$('#out').innerHTML='<div class="empty">'+w.err+'</div>';if(cdTimer)clearInterval(cdTimer);return;}
+
+  const gate=w.ft>=FT_GATE, {pf,pm}=roleIdx(state.pilots);
+  const rec=recommend(w.W,state.pilots,gate,w.restStart);renderPattern(rec);
+  const pattern=state.pattern||rec;
+  const sch=buildSchedule(w.W,state.pilots,pattern,gate);
+  const Z=o=>fmtZ(w.restStart+o), startMs=anchorStartMs(w.restStart,w.W);
+
+  {
+    const rsch=buildSchedule(w.W,state.pilots,rec,gate);
+    const pfb=(rsch.per[pf]||[]).slice().sort((a,b)=>a.offStart-b.offStart);
+    const lng=pfb.reduce((m,b)=>b.dur>m.dur?b:m,pfb[0]), srt=pfb.find(b=>b!==lng);
+    const tot=Object.keys(rsch.per).reduce((s,i)=>s+rsch.per[i].reduce((x,b)=>x+woclOverlap(w.restStart+b.offStart,w.restStart+b.offEnd),0),0);
+    const last=Math.abs(lng.offEnd-w.W)<1;
+    let t='<span class="t">建議「'+patLabel(rec)+'」</span>　落地 PF 主睡 '+Z(lng.offStart)+'–'+Z(lng.offEnd)+'z（'+fmtDur(lng.dur)+'）'+(last?'，收在 TOD 前最清醒':'，下降前留清醒緩衝');
+    if(srt)t+='；另一段 '+Z(srt.offStart)+'–'+Z(srt.offEnd)+'z（'+fmtDur(srt.dur)+'）';
+    t+='。全機組 WOCL 覆蓋約 '+fmtDur(tot)+'；綜合落地清醒度與生理低谷，此型態最佳。';
+    if(pattern!==rec)t='<span style="color:var(--accent);font-weight:800">目前選「'+patLabel(pattern)+'」。</span>'+t;
+    $('#patNote').innerHTML=t;
+  }
+
+  let html='';
+  if(sch.infeasible)html+='<div class="warn bad"><span>⚠️</span><div>可休時間太短，無法讓落地 PF 取得連續 2:00。請增加飛行時間、減少下降保留，或評估派遣。</div></div>';
+  else if(gate)html+='<div class="warn ok"><span>✅</span><div>已套用手冊輪休規定：落地 PF 連續 ≥ 2:00、PM ≥ 1:30，依優先權與平均原則分配。</div></div>';
+  const inertia='<div class="note" style="margin:2px 0 11px;border-left-color:var(--accent)"><span class="t" style="color:var(--accent)">⏰ 注意睡眠慣性</span>　每段休息結束前，建議提前 <b>10–15 分鐘</b>起床清醒，再上座 / briefing。卡片「建議叫醒」已含 15 分緩衝。</div>';
+
+  // ===== 時間軸（上）=====
+  const H=Math.max(300,Math.min(560,Math.round(w.W*0.78)));
+  let axis='<div class="tick" style="top:0">'+Z(0)+'z</div>',track='';
+  sch.tl.forEach(s=>{
+    const top=(s.offStart/w.W)*H,h=(s.dur/w.W)*H;
+    const isLC=s.resters.some(i=>state.pilots[i].role==='PF');
+    const who=s.resters.map(i=>{const r=state.pilots[i].role;return esc(state.pilots[i].nm)+(r!=='REL'?' <small>'+r+'</small>':'');}).join(' ＋ ');
+    track+='<div class="tl-seg '+(isLC?'lc':'')+'" style="top:'+top+'px;height:'+(h-6)+'px"><div class="who">🛏 '+who+'</div><div class="sd mono">'+Z(s.offStart)+'–'+Z(s.offEnd)+'z · '+fmtDur(s.dur)+'</div></div>';
+    if(s.offEnd<w.W-0.5)axis+='<div class="tick" style="top:'+((s.offEnd/w.W)*H)+'px">'+Z(s.offEnd)+'z</div>';
+  });
+  axis+='<div class="tick tod" style="top:'+H+'px">'+Z(w.W)+'z<br>TOD</div>';
+  woclIntervals(w.restStart,w.restStart+w.W).forEach(([a,bb])=>{const top=((a-w.restStart)/w.W)*H,h=((bb-a)/w.W)*H;track+='<div class="tl-wocl" style="top:'+top+'px;height:'+h+'px"><span class="tag2">☾ WOCL '+fmtZ(a)+'–'+fmtZ(bb)+'z</span></div>';});
+  html+='<div class="card"><p class="lbl">輪休時間軸（等比例 · UTC）</p>'+inertia+'<div class="tlwrap"><div class="tl-axis" style="height:'+H+'px">'+axis+'</div><div class="tl-track" style="height:'+H+'px">'+track+'</div></div>';
+  html+='<div class="legend"><i style="background:var(--restbg);border:1px solid var(--restbd)"></i>休息段　<i style="background:rgba(139,90,43,.13);border:1px solid var(--brand)"></i>落地組 PF/PM　<i style="background:var(--gold-band);border:1px dashed var(--gold-line)"></i>WOCL　·　回座前提前 10–15 分起床、由值勤組員 briefing</div></div>';
+
+  // ===== 每位組員的休息（下）=====
+  html+='<div class="card"><p class="lbl">每位組員的休息</p>'+inertia;
+  state.pilots.forEach((p,i)=>{
+    const blks=(sch.per[i]||[]).slice().sort((a,b)=>a.offStart-b.offStart);if(!blks.length)return;
+    const isPF=p.role==='PF',isPM=p.role==='PM';
+    const maxD=Math.max(...blks.map(b=>b.dur)),totD=blks.reduce((s,b)=>s+b.dur,0);
+    let bd2='';
+    if(gate&&isPF)bd2=maxD>=MIN_PF-0.5?'<span class="bdg ok">連續 '+fmtDur(maxD)+' ✓</span>':'<span class="bdg no">未達 2:00 ✗</span>';
+    if(gate&&isPM)bd2=maxD>=MIN_PM-0.5?'<span class="bdg ok">連續 '+fmtDur(maxD)+' ✓</span>':'<span class="bdg no">未達 1:30 ✗</span>';
+    const rb=isPF?'pf':isPM?'pm':'rel',rt=isPF?'落地 PF':isPM?'落地 PM':'加派';
+    html+='<div class="crewcard '+(isPF?'pf':'')+'"><div class="cc-top"><span class="cc-nm">'+esc(p.nm)+'</span><span class="bdg '+rb+'">'+rt+'</span>'+bd2+'</div>';
+    blks.forEach(b=>{
+      const wo=woclOverlap(w.restStart+b.offStart,w.restStart+b.offEnd);
+      const isLong=blks.length>1&&b.dur>=maxD-0.5;
+      html+='<div class="blk"><span class="tag '+(blks.length>1?(isLong?'L':'S'):'')+'">'+(blks.length>1?(isLong?'長':'短'):'🛏')+'</span>';
+      html+='<div class="rng"><span class="z mono">'+Z(b.offStart)+'</span>–<span class="z mono">'+Z(b.offEnd)+'z</span><div class="meta">'+(wo>1?'涵蓋 <span class="wo">WOCL '+fmtDur(wo)+'</span>':'未經 WOCL')+'</div></div>';
+      html+='<span class="dur mono">'+fmtDur(b.dur)+'</span></div>';
+    });
+    const lastEnd=blks[blks.length-1].offEnd, wakeOff=lastEnd-SLEEP_BUF, wakeMs=startMs+wakeOff*60000;
+    const totTxt='總休 '+fmtDur(totD)+(blks.length>1?'（'+blks.length+' 段）':'');
+    html+= state.mode==='air'
+      ? '<div class="cc-cd mono" data-cd="'+wakeMs+'" data-base="'+totTxt+' · 建議叫醒 '+Z(wakeOff)+'z⏰"></div></div>'
+      : '<div class="cc-cd mono">'+totTxt+'　建議叫醒 <b style="color:var(--accent)">'+Z(wakeOff)+'z</b>⏰（回座 '+Z(lastEnd)+'z）</div></div>';
+  });
+  html+='</div>';
+
+  $('#out').innerHTML=html;
+  if(cdTimer)clearInterval(cdTimer);tickCD();cdTimer=setInterval(tickCD,1000);save();
+}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ---------- crew list ---------- */
+function renderCrew(){
+  const box=$('#crewList');box.innerHTML='';
+  state.pilots.forEach((p,i)=>{
+    const row=document.createElement('div');row.className='crew-row';
+    const nm=document.createElement('input');nm.className='nm';nm.value=p.nm;nm.oninput=()=>{p.nm=nm.value;render();};
+    const roles=document.createElement('div');roles.className='roles';
+    [['PF','pf','PF'],['PM','pm','PM'],['加派','rel','REL']].forEach(([txt,cls,val])=>{const b=document.createElement('button');b.textContent=txt;b.className=cls;if(p.role===val)b.classList.add('on');b.onclick=()=>setRole(i,val);roles.appendChild(b);});
+    row.appendChild(nm);row.appendChild(roles);box.appendChild(row);
+  });
+}
+function setRole(i,val){
+  if(val==='PF'||val==='PM')state.pilots.forEach((p,j)=>{if(j!==i&&p.role===val)p.role='REL';});
+  state.pilots[i].role=val;
+  ['PF','PM'].forEach(r=>{if(!state.pilots.some(p=>p.role===r)){const c=state.pilots.find(p=>p.role==='REL');if(c)c.role=r;}});
+  renderCrew();render();
+}
+
+/* ---------- wiring ---------- */
+function segWire(id,key,after){$$('#'+id+' button').forEach(b=>b.onclick=()=>{$$('#'+id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');state[key]=b.dataset.v;if(after)after();render();});}
+segWire('modeSeg','mode',()=>{$('#groundBox').style.display=state.mode==='ground'?'grid':'none';$('#airBox').style.display=state.mode==='ground'?'none':'block';});
+segWire('endSeg','endMode',()=>{const t=state.endMode==='tod';$('#todField').style.display=t?'block':'none';$('#landField').style.display=t?'none':'block';$('#abdField').style.display=t?'none':'block';});
+segWire('crewSeg','crew',()=>{state.crew=+state.crew;state.pilots=defaultPilots(state.crew);state.pattern=null;renderCrew();});
+$('#patSel').onchange=e=>{state.pattern=e.target.value;render();};
+$$('input').forEach(inp=>inp.addEventListener('input',render));
+
+/* ---------- persistence ---------- */
+const KEY='pilotRest.v3';
+function save(){try{localStorage.setItem(KEY,JSON.stringify({mode:state.mode,endMode:state.endMode,crew:state.crew,pattern:state.pattern,pilots:state.pilots,f:{etd:$('#etd').value,taxi:$('#taxi').value,ft:$('#ft').value,bd:$('#bd').value,astart:$('#astart').value,aft:$('#aft').value,atod:$('#atod').value,aland:$('#aland').value,abd:$('#abd').value}}));}catch(e){}}
+function load(){let d;try{d=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+  if(!d){for(const ok of ['pilotRest.v2','pilotRest.v1']){let o;try{o=JSON.parse(localStorage.getItem(ok));}catch(e){}if(o&&o.f){for(const k in o.f){const el=$('#'+k);if(el)el.value=o.f[k];}break;}}return;}
+  Object.assign(state,{mode:d.mode||'ground',endMode:d.endMode||'tod',crew:+d.crew||3,pattern:d.pattern||null,pilots:d.pilots||defaultPilots(+d.crew||3)});
+  if(d.f)for(const k in d.f){const el=$('#'+k);if(el)el.value=d.f[k];}
+  const setSeg=(id,v)=>$$('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v==String(v)));
+  setSeg('modeSeg',state.mode);setSeg('endSeg',state.endMode);setSeg('crewSeg',state.crew);
+  $('#groundBox').style.display=state.mode==='ground'?'grid':'none';$('#airBox').style.display=state.mode==='ground'?'none':'block';
+  const t=state.endMode==='tod';$('#todField').style.display=t?'block':'none';$('#landField').style.display=t?'none':'block';$('#abdField').style.display=t?'none':'block';
+}
+load();renderCrew();render();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(function(){});}
+</script>
+</body>
+</html>
