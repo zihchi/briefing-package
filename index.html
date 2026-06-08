@@ -657,11 +657,11 @@
     <div class="windy-4grid">
       <div class="w4-cell">
         <div class="w4-label"><span>🌧️ 即時雷達</span><button onclick="refreshIframe('windyRadar')">↻</button></div>
-        <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"></iframe>
+        <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=radar"></iframe>
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌤️ 衛星雲圖</span><button onclick="refreshIframe('windySatellite')">↻</button></div>
-        <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"></iframe>
+        <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite"></iframe>
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌬️ 地面風 (Surface)</span><button onclick="refreshIframe('windyWindSurface')">↻</button></div>
@@ -676,9 +676,7 @@
 
   <!-- NCDR 各國颱風路徑（全寬，位於 Windy 之下、雷達之上）-->
   <div class="section windy-section">
-    <h2>🌀 NCDR 各國颱風路徑（動畫直接播放）
-      <button onclick="refreshIframe('ncdrTyphoon')">重新整理</button>
-    </h2>
+    <h2>🌀 NCDR 各國颱風路徑</h2>
     <!-- w_01 是 NCDR「各國颱風路徑」的獨立播放頁（內含一段 autoplay/loop 的 MP4）。
          它是固定 1100px 寬的桌面版面，故用 transform:scale() 等比縮放塞進卡片，並裁掉下方下載表。 -->
     <div id="ncdrTyphoonBox" style="position:relative; width:100%; overflow:hidden; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
@@ -710,23 +708,17 @@
   <!-- 即時圖：雷達 + 衛星（unibrief 來源）並列 -->
   <div class="windy-grid">
     <div class="section windy-section">
-      <h2>🌧️ 雷達回波圖
-        <button onclick="reloadImg('ubRadar')">重新整理</button>
-      </h2>
+      <h2>🌧️ 雷達回波圖</h2>
       <img id="ubRadar" class="ub-chart" data-base="https://unibrief.de.r.appspot.com/chart/radar" alt="雷達回波圖" loading="lazy">
     </div>
     <div class="section windy-section">
-      <h2>🛰️ 紅外線衛星雲圖
-        <button onclick="reloadImg('ubSat')">重新整理</button>
-      </h2>
+      <h2>🛰️ 紅外線衛星雲圖</h2>
       <img id="ubSat" class="ub-chart" data-base="https://unibrief.de.r.appspot.com/chart/sat-ir" alt="紅外線衛星雲圖" loading="lazy">
     </div>
   </div>
 
   <div class="section windy-section">
-    <h2>🌐 地面天氣分析圖（中央氣象署 Surface Analysis）
-      <button onclick="reloadImg('ubSurface')">重新整理</button>
-    </h2>
+    <h2>🌐 地面天氣分析圖</h2>
     <img id="ubSurface" class="ub-chart" data-base="https://www.cwa.gov.tw/Data/fcst_img/FI04.png" alt="中央氣象署 地面天氣分析圖" loading="lazy">
   </div>
 
