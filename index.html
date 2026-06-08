@@ -79,6 +79,22 @@
     .btn:hover { background-color: var(--brand-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(60,121,255,0.3); }
     .windy-section iframe { width: 100%; height: 600px; border: none; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); margin-bottom: 1em; background-color: #f1f5f9; }
 
+    /* Windy／颱風 兩兩並列：iPad 橫向(≥1024px)以上 2 欄，窄螢幕(手機/iPad 直向) 1 欄 */
+    .windy-grid { display: grid; grid-template-columns: 1fr; gap: 1.5em; margin-bottom: 1.5em; align-items: start; }
+    .windy-grid > .section { margin-bottom: 0; }
+    @media (min-width: 1024px) { .windy-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* unibrief 即時圖（雷達／衛星／地面分析）*/
+    .ub-chart { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); background: #0b1020; margin-top: 4px; }
+
+    /* Windy 四宮格：緊湊 2×2（iPad 直向以上即並列），iframe 較矮以減少留白 */
+    .windy-4grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 768px) { .windy-4grid { grid-template-columns: 1fr 1fr; } }
+    .w4-cell { display: flex; flex-direction: column; min-width: 0; }
+    .w4-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .w4-label button { margin: 0; padding: 2px 12px; font-size: 0.85rem; line-height: 1.4; background: none; border: 2px solid var(--brand); color: var(--brand); border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .windy-4grid iframe { width: 100%; height: 360px; border: none; border-radius: 8px; box-shadow: var(--shadow-card); background: #f1f5f9; }
+
     /* 天氣2格圖排列 */
     .img-grid-2col { display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; }
     .img-grid-2col img { width: calc(100% / 2 - 1em); border-radius: 12px; box-shadow: var(--shadow-card); max-width: 100%; height: auto; }
@@ -635,75 +651,95 @@
     <div id="map"></div>
   </div>
 
+  <!-- Windy 四宮格：即時雷達 / 衛星 / 地面風 / FL390 風（緊湊 2×2，減少留白）-->
+  <div class="section">
+    <h2 style="margin-bottom:12px;">🌬️ Windy 氣象圖（四宮格）</h2>
+    <div class="windy-4grid">
+      <div class="w4-cell">
+        <div class="w4-label"><span>🌧️ 即時雷達</span><button onclick="refreshIframe('windyRadar')">↻</button></div>
+        <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"></iframe>
+      </div>
+      <div class="w4-cell">
+        <div class="w4-label"><span>🌤️ 衛星雲圖</span><button onclick="refreshIframe('windySatellite')">↻</button></div>
+        <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"></iframe>
+      </div>
+      <div class="w4-cell">
+        <div class="w4-label"><span>🌬️ 地面風 (Surface)</span><button onclick="refreshIframe('windyWindSurface')">↻</button></div>
+        <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"></iframe>
+      </div>
+      <div class="w4-cell">
+        <div class="w4-label"><span>🌬️ 高空風 (FL390)</span><button onclick="refreshIframe('windyWindFL390')">↻</button></div>
+        <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- NCDR 各國颱風路徑（全寬，位於 Windy 之下、雷達之上）-->
   <div class="section windy-section">
-    <h2>🌧️ Windy 即時雷達圖 
-      <button onclick="refreshIframe('windyRadar')">重新整理</button>
+    <h2>🌀 NCDR 各國颱風路徑（動畫直接播放）
+      <button onclick="refreshIframe('ncdrTyphoon')">重新整理</button>
     </h2>
-    <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=7&level=surface&overlay=radar"
-      
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+    <!-- w_01 是 NCDR「各國颱風路徑」的獨立播放頁（內含一段 autoplay/loop 的 MP4）。
+         它是固定 1100px 寬的桌面版面，故用 transform:scale() 等比縮放塞進卡片，並裁掉下方下載表。 -->
+    <div id="ncdrTyphoonBox" style="position:relative; width:100%; overflow:hidden; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
+      <iframe id="ncdrTyphoon" src="https://watch.ncdr.nat.gov.tw/w_01" scrolling="no" loading="lazy"
+        title="NCDR 各國颱風路徑動畫"
+        style="position:absolute; top:0; left:0; width:1100px; height:575px; border:0; transform-origin:top left;"></iframe>
+    </div>
+    <script>
+      (function(){
+        var box=document.getElementById('ncdrTyphoonBox');
+        var fr=document.getElementById('ncdrTyphoon');
+        if(!box||!fr) return;
+        var DW=1100, DH=575, lastW=0;   // w_01 影片區的原始尺寸（1100×約573）
+        function fit(){
+          var w=box.clientWidth;
+          if(w===lastW) return;          // 寬度沒變就不動，避免 ResizeObserver 迴圈
+          lastW=w;
+          var s=w/DW;
+          fr.style.transform='scale('+s+')';
+          box.style.height=(DH*s)+'px';
+        }
+        fit();
+        if(window.ResizeObserver){ new ResizeObserver(fit).observe(box); }
+        window.addEventListener('resize', fit);
+      })();
+    </script>
+  </div>
+
+  <!-- 即時圖：雷達 + 衛星（unibrief 來源）並列 -->
+  <div class="windy-grid">
+    <div class="section windy-section">
+      <h2>🌧️ 雷達回波圖
+        <button onclick="reloadImg('ubRadar')">重新整理</button>
+      </h2>
+      <img id="ubRadar" class="ub-chart" data-base="https://unibrief.de.r.appspot.com/chart/radar" alt="雷達回波圖" loading="lazy">
+    </div>
+    <div class="section windy-section">
+      <h2>🛰️ 紅外線衛星雲圖
+        <button onclick="reloadImg('ubSat')">重新整理</button>
+      </h2>
+      <img id="ubSat" class="ub-chart" data-base="https://unibrief.de.r.appspot.com/chart/sat-ir" alt="紅外線衛星雲圖" loading="lazy">
+    </div>
   </div>
 
   <div class="section windy-section">
-    <h2>🌤️ Windy 衛星雲圖
-      <button onclick="refreshIframe('windySatellite')">重新整理</button>
+    <h2>🌐 地面天氣分析圖（中央氣象署 Surface Analysis）
+      <button onclick="reloadImg('ubSurface')">重新整理</button>
     </h2>
-    <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&detailLat=23.5&detailLon=120.9&metricWind=kt&metricTemp=C&radarRange=-1"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
+    <img id="ubSurface" class="ub-chart" data-base="https://www.cwa.gov.tw/Data/fcst_img/FI04.png" alt="中央氣象署 地面天氣分析圖" loading="lazy">
   </div>
 
-  <div class="section windy-section">
-  <h2>☁️ Windy 雲頂高度圖 
-    <button onclick="refreshIframe('windyCloudTop')">重新整理</button>
-  </h2>
-  <iframe id="windyCloudTop" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=cloudtop"
-    style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-</div>
+  <script>
+    // 即時圖：固定網址加時間戳抓最新
+    function reloadImg(id){
+      var el=document.getElementById(id); if(!el) return;
+      var base=el.getAttribute('data-base')||el.src.split('?')[0];
+      el.src=base+'?'+Date.now();
+    }
+    (function(){ ['ubRadar','ubSat','ubSurface'].forEach(function(id){ reloadImg(id); }); })();
+  </script>
 
-  <div class="section windy-section">
-    <h2>🌬️ Windy 風速圖 (Surface Wind) 
-      <button onclick="refreshIframe('windyWindSurface')">重新整理</button>
-    </h2>
-    <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-     stream
-    </iframe>
-  </div>
-
-  <div class="section windy-section">
-    <h2>🌬️ Windy 風速圖 (FL390) 
-      <button onclick="refreshIframe('windyWindFL390')">重新整理</button>
-    </h2>
-    <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-    </iframe>
-  </div>
-
-  <div class="section windy-section">
-    <h2>✈️ Windy 晴空亂流圖 (FL340) 
-      <button onclick="refreshIframe('windyTurbFL340')">重新整理</button>
-    </h2>
-    <iframe id="windyTurbFL340" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=250h&overlay=turbulence"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-  </div>
-
-  <div class="section windy-section">
-    <h2>✈️ Windy 晴空亂流圖 (FL390) 
-      <button onclick="refreshIframe('windyTurbFL390')">重新整理</button>
-    </h2>
-    <iframe id="windyTurbFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=turbulence"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);"></iframe>
-  </div>
-
-  <div class="section windy-section">
-    <h2>🌀 中央氣象署 颱風路徑圖 
-      <button onclick="refreshIframe('typhoonMap')">重新整理</button>
-    </h2>
-    <iframe id="typhoonMap" src="https://app.cwa.gov.tw/web/obsmap/typhoon.html"
-      style="width:100%;height:600px;border:none;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-    </iframe>
-  </div>
-   
   <div class="section">
     <h2>🌏 天氣圖概況圖</h2>
     <div class="img-grid-2col">
