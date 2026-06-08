@@ -605,10 +605,96 @@ async function handleProxy(request, origin) {
 }
 
 // ──────────────────────────────────────────
+// /api/aerodatabox?flight=JX123&date=2026-06-08  GET
+// 用 AeroDataBox (RapidAPI 免費額度) 查非桃園機場的 gate/terminal
+//   · API key 走 secret env.AERODATABOX_KEY,不入前端、不入 git
+//   · 伺服器端 Cloudflare Cache 快取 1 小時,跨裝置共用、省免費額度
+//   · 回傳精簡欄位,單次查詢同時涵蓋 dep + arr 兩側機坪
+// ──────────────────────────────────────────
+async function handleAeroDataBox(request, origin, env, ctx) {
+  // 只服務 allowlist 來源(瀏覽器會帶 Origin),擋掉非預期的額度消耗
+  const okOrigin = ALLOWED_ORIGINS.includes(origin) || (origin && origin.startsWith('http://192.168.'));
+  if (!okOrigin) return jsonResp({ ok: false, error: '來源不被允許' }, 403, origin);
+
+  const key = env && env.AERODATABOX_KEY;
+  if (!key) return jsonResp({ ok: false, error: 'AERODATABOX_KEY 未設定 (請 wrangler secret put AERODATABOX_KEY)' }, 500, origin);
+
+  const url = new URL(request.url);
+  const flight = (url.searchParams.get('flight') || '').replace(/\s+/g, '').toUpperCase();
+  const date = url.searchParams.get('date') || '';
+  if (!/^[A-Z0-9]{3,8}$/.test(flight)) return jsonResp({ ok: false, error: 'flight 參數無效' }, 400, origin);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return jsonResp({ ok: false, error: 'date 需為 YYYY-MM-DD' }, 400, origin);
+
+  // 伺服器端快取(與來源無關的 key,跨裝置共用)
+  const cache = caches.default;
+  const cacheKey = new Request(`https://adb-cache.internal/flights/${flight}/${date}`);
+  const cachedResp = await cache.match(cacheKey);
+  if (cachedResp) {
+    const slim = await cachedResp.json();
+    return jsonResp({ ok: true, cached: true, flights: slim }, 200, origin);
+  }
+
+  const api = `https://aerodatabox.p.rapidapi.com/flights/number/${encodeURIComponent(flight)}/${date}?withAircraftImage=false&withLocation=false`;
+  let res;
+  try {
+    res = await fetch(api, {
+      headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' },
+    });
+  } catch (e) {
+    return jsonResp({ ok: false, error: 'AeroDataBox 連線失敗: ' + String(e) }, 502, origin);
+  }
+
+  // 該日無此班 → 正常空結果(也快取空結果,避免同班重複打 API)
+  if (res.status === 204 || res.status === 404) {
+    putAdbCache(ctx, cache, cacheKey, []);
+    return jsonResp({ ok: true, flights: [] }, 200, origin);
+  }
+  if (res.status === 429) {
+    return jsonResp({ ok: false, rateLimited: true, error: 'AeroDataBox 額度用罄或被限流 (HTTP 429)' }, 429, origin);
+  }
+  if (res.status !== 200) {
+    const t = await res.text().catch(() => '');
+    return jsonResp({ ok: false, error: `AeroDataBox HTTP ${res.status}`, detail: t.slice(0, 200) }, 502, origin);
+  }
+
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+  const list = Array.isArray(data) ? data : (data ? [data] : []);
+  const slim = list.map(f => ({
+    number: f.number || '',
+    status: f.status || '',
+    departure: f.departure ? {
+      icao: f.departure.airport?.icao || '',
+      iata: f.departure.airport?.iata || '',
+      terminal: f.departure.terminal || '',
+      gate: f.departure.gate || '',
+    } : null,
+    arrival: f.arrival ? {
+      icao: f.arrival.airport?.icao || '',
+      iata: f.arrival.airport?.iata || '',
+      terminal: f.arrival.terminal || '',
+      gate: f.arrival.gate || '',
+      baggageBelt: f.arrival.baggageBelt || '',
+    } : null,
+  }));
+
+  putAdbCache(ctx, cache, cacheKey, slim);
+  return jsonResp({ ok: true, flights: slim }, 200, origin);
+}
+
+function putAdbCache(ctx, cache, cacheKey, slim) {
+  const toCache = new Response(JSON.stringify(slim), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' },
+  });
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(cache.put(cacheKey, toCache));
+  else cache.put(cacheKey, toCache);
+}
+
+// ──────────────────────────────────────────
 // Router
 // ──────────────────────────────────────────
 export default {
-  async fetch(request) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
 
@@ -617,10 +703,13 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.8-title-action', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records', 'log-actions'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.9-aerodatabox', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records', 'log-actions', 'aerodatabox-gates'] }, 200, origin);
     }
 
     try {
+      if (url.pathname === '/api/aerodatabox' && request.method === 'GET') {
+        return await handleAeroDataBox(request, origin, env, ctx);
+      }
       if (url.pathname === '/api/login' && request.method === 'POST') {
         return await handleLogin(request, origin);
       }
