@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f2547">
+<title>航空綜合計算機 · Aviation Calculator</title>
+<style>
+  :root{
+    --bg:#f4f2ec;
+    --bg2:#ece9e1;
+    --card:#ffffff;
+    --navy:#1f2547;
+    --navy-2:#2b3263;
+    --gold:#b89160;
+    --gold-soft:#d8c39c;
+    --gold-bg:#f6efe2;
+    --ink:#23283f;
+    --ink-2:#5b6075;
+    --line:#e6e2d8;
+    --line-2:#efece4;
+    --good:#1f7a55;
+    --warn:#b4452f;
+    --shadow:0 10px 30px rgba(31,37,71,.08), 0 2px 8px rgba(31,37,71,.05);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang TC","Helvetica Neue",
+      "Microsoft JhengHei",Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(184,145,96,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 0%, rgba(31,37,71,.07), transparent 55%),
+      var(--bg);
+    -webkit-text-size-adjust:100%;
+    line-height:1.5;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px;}
+
+  /* Header */
+  header.app{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;border-radius:var(--radius);padding:24px 26px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  header.app::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+    background:linear-gradient(90deg,transparent,var(--gold),var(--gold-soft),var(--gold),transparent);
+  }
+  header.app .badge{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--gold-soft);font-weight:600;
+  }
+  header.app .badge::before{content:"✦";color:var(--gold);}
+  header.app h1{margin:8px 0 4px;font-size:clamp(22px,4vw,30px);font-weight:700;letter-spacing:.5px;}
+  header.app p{margin:0;color:#c9cce0;font-size:14px;}
+
+  /* 分頁 Tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+  .tabs .tab{
+    border:1.5px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;
+    font-size:14px;padding:10px 16px;border-radius:11px;cursor:pointer;transition:all .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tabs .tab:hover{border-color:var(--gold-soft);color:var(--navy);}
+  .tabs .tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  /* 模組分頁容器：每次只顯示一個、滿版 */
+  .grid{ margin-top:16px; }
+  .card.panel{ display:none; }
+  .card.panel.active{ display:flex; }
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px 20px 22px;display:flex;flex-direction:column;
+  }
+  .card h2{
+    margin:0 0 16px;font-size:17px;font-weight:700;color:var(--navy);
+    display:flex;align-items:center;gap:10px;
+  }
+  .card h2 .num{
+    width:26px;height:26px;flex:0 0 26px;border-radius:8px;
+    background:var(--gold-bg);color:var(--gold);font-size:14px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;border:1px solid var(--gold-soft);
+  }
+  .card h2 .ttl{flex:1 1 auto;}
+  .reset{
+    flex:0 0 auto;width:32px;height:32px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--ink-2);
+    display:flex;align-items:center;justify-content:center;transition:all .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .reset:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-bg);}
+  .reset:active{transform:rotate(-90deg);}
+  .reset svg{width:17px;height:17px;display:block;}
+
+  .seclabel{font-size:12.5px;font-weight:700;color:var(--navy);margin:2px 0 8px;}
+  .seclabel.gap{margin-top:16px;}
+
+  /* Field rows */
+  .fields{display:grid;gap:12px;}
+  .fields.two{grid-template-columns:1fr 1fr;}
+  .fields.three{grid-template-columns:1fr 1fr 1fr;}
+  @media (max-width:430px){ .fields.three{grid-template-columns:1fr 1fr;} }
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12.5px;font-weight:600;color:var(--ink-2);}
+  .field label .en{color:#9aa0b5;font-weight:500;}
+  .inputbox{
+    position:relative;display:flex;align-items:center;
+    border:1.5px solid var(--line);border-radius:11px;background:#fcfbf8;
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .inputbox:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,145,96,.16);background:#fff;}
+  .inputbox input{
+    width:100%;border:0;background:transparent;outline:none;
+    font-size:17px;font-weight:600;color:var(--ink);padding:11px 12px;
+    font-variant-numeric:tabular-nums;letter-spacing:.2px;border-radius:11px;min-width:0;
+  }
+  .inputbox input::placeholder{color:#bdbfc9;font-weight:500;}
+  .inputbox .unit{
+    padding:0 12px;font-size:12px;color:var(--ink-2);font-weight:600;white-space:nowrap;
+    border-left:1px solid var(--line-2);align-self:stretch;display:flex;align-items:center;
+  }
+
+  /* Results / stat blocks */
+  .results{margin-top:16px;display:grid;gap:10px;}
+  .statrow{display:grid;gap:10px;grid-template-columns:1fr 1fr;}
+  .statrow.one{grid-template-columns:1fr;}
+  .stat{
+    background:var(--gold-bg);border:1px solid var(--gold-soft);border-radius:12px;
+    padding:11px 13px;display:flex;flex-direction:column;gap:2px;
+  }
+  .stat .k{font-size:11.5px;color:#8a6f44;font-weight:600;letter-spacing:.02em;}
+  .stat .v{font-size:19px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .stat .v small{font-size:12px;font-weight:600;color:var(--ink-2);margin-left:3px;}
+  .stat.lhi{background:#eef6f1;border-color:#cce3d6;} .stat.lhi .v{color:var(--good);}
+
+  .note{
+    margin-top:14px;font-size:11.5px;color:var(--ink-2);background:var(--line-2);
+    border-radius:10px;padding:9px 11px;line-height:1.55;
+  }
+  .note b{color:var(--navy);}
+
+  /* Wind module (圖在上、數據在下) */
+  .wind-svg{width:100%;max-width:280px;margin:6px auto 14px;display:block;}
+  .wind-chips{display:grid;gap:10px;grid-template-columns:1fr 1fr;}
+  @media (max-width:380px){ .wind-chips{grid-template-columns:1fr;} }
+  .chip{
+    border-radius:12px;padding:11px 14px;border:1px solid var(--line);min-width:0;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .chip .lab{font-size:14px;font-weight:800;color:var(--ink-2);line-height:1.2;flex:0 0 auto;letter-spacing:.03em;}
+  .chip .lab .en{display:block;font-size:10.5px;color:#9aa0b5;font-weight:500;}
+  .chip .val{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;min-width:0;
+    display:flex;flex-direction:column;align-items:flex-end;line-height:1.12;}
+  .chip .val small{font-size:11px;font-weight:700;color:#9a7fc0;margin-top:1px;}
+  .chip.hw{background:#eef6f1;border-color:#cce3d6;} .chip.hw .val{color:var(--good);}
+  .chip.tw{background:#fbeeea;border-color:#f0d3c9;} .chip.tw .val{color:var(--warn);}
+  .chip.xw{background:#f1ebfa;border-color:#d9c9f0;} .chip.xw .val{color:#7a4fb5;}
+  .vrbpair{display:flex;align-items:center;gap:6px;}
+  .vrbpair input{flex:1;width:100%;min-width:0;border:1.5px solid var(--line);border-radius:11px;background:#fcfbf8;
+    font-size:17px;font-weight:600;color:var(--ink);padding:11px 8px;text-align:center;font-variant-numeric:tabular-nums;
+    outline:none;transition:border-color .15s,box-shadow .15s,background .15s;}
+  .vrbpair input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,145,96,.16);background:#fff;}
+  .vrbpair input::placeholder{color:#bdbfc9;font-weight:500;}
+  .vrbpair .vsep{font-weight:800;color:var(--ink-2);font-size:15px;flex:0 0 auto;}
+
+  /* Zone A/B 判定 + 變動範圍最差風 */
+  .zone{margin-top:12px;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+  .zone .zdot{width:38px;height:38px;flex:0 0 38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;}
+  .zone .zwrap{display:flex;flex-direction:column;gap:1px;}
+  .zone .zt{font-size:15.5px;font-weight:800;}
+  .zone .zs{font-size:11.5px;font-weight:600;line-height:1.4;}
+  .zone.a{background:#eef6f1;border:1px solid #cce3d6;} .zone.a .zdot{background:#1f7a55;} .zone.a .zt{color:#1f7a55;} .zone.a .zs{color:#3f7a5e;}
+  .zone.b{background:#fbeeea;border:1px solid #f0d3c9;} .zone.b .zdot{background:#b4452f;} .zone.b .zt{color:#b4452f;} .zone.b .zs{color:#8a4030;}
+  .vrb{margin-top:10px;border:1px dashed var(--gold-soft);border-radius:12px;padding:11px 13px;background:var(--gold-bg);}
+  .vrb .vh{font-size:12px;font-weight:700;color:#8a6f44;margin-bottom:6px;letter-spacing:.02em;}
+  .vrb .vrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;padding:3px 0;}
+  .vrb .vrow .vl{color:var(--ink-2);font-weight:600;}
+  .vrb .vrow .vv{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  /* 變動範圍最差風（顯眼版）*/
+  .vrb2{margin-top:14px;}
+  .vrb2-h{font-size:13px;font-weight:800;color:#8a6f44;margin-bottom:9px;letter-spacing:.02em;}
+  .vrb2-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  @media (max-width:360px){ .vrb2-grid{grid-template-columns:1fr;} }
+  .vc{border-radius:14px;padding:13px 15px;border:1.5px solid;display:flex;flex-direction:column;gap:3px;}
+  .vc-k{font-size:12px;font-weight:700;}
+  .vc-v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;}
+  .vc-d{font-size:11.5px;font-weight:600;color:var(--ink-2);}
+  .vc.tw{background:#fbeeea;border-color:#eab9aa;} .vc.tw .vc-k{color:#a8432c;} .vc.tw .vc-v{color:#b4452f;}
+  .vc.hw{background:#eef6f1;border-color:#bcdcc9;} .vc.hw .vc-k{color:#2f7a5e;} .vc.hw .vc-v{color:#1f7a55;}
+  .vc.xw{background:#f1ebfa;border-color:#cdb8ec;} .vc.xw .vc-k{color:#6a4aa3;} .vc.xw .vc-v{color:#7a4fb5;}
+  /* 變動範圍最差風（表格版）*/
+  .wtab{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-top:2px;}
+  .wtab th{font-size:11px;color:var(--ink-2);font-weight:600;text-align:right;padding:7px 9px;border-bottom:2px solid var(--line);}
+  .wtab th:first-child{text-align:left;}
+  .wtab td{font-size:13.5px;padding:11px 9px;border-bottom:1px solid var(--line-2);text-align:right;}
+  .wtab td:first-child{text-align:left;font-weight:700;}
+  .wtab td.dir{color:var(--ink-2);font-weight:700;}
+  .wtab td.spd{font-weight:800;font-size:18px;white-space:nowrap;}
+  .wtab tbody tr:last-child td{border-bottom:0;}
+  .wtab tr.tw-row td:first-child,.wtab tr.tw-row td.spd{color:#b4452f;}
+  .wtab tr.hw-row td:first-child,.wtab tr.hw-row td.spd{color:#1f7a55;}
+  .wtab tr.xw-row td:first-child,.wtab tr.xw-row td.spd{color:#7a4fb5;}
+
+  /* Lead distance table */
+  table.lead{width:100%;border-collapse:collapse;margin-top:14px;font-variant-numeric:tabular-nums;}
+  table.lead th,table.lead td{padding:9px 8px;text-align:right;font-size:13.5px;}
+  table.lead th{color:var(--ink-2);font-weight:600;font-size:12px;border-bottom:2px solid var(--line);}
+  table.lead td{border-bottom:1px solid var(--line-2);}
+  table.lead td:first-child,table.lead th:first-child{text-align:left;font-weight:700;color:var(--navy);}
+  table.lead tr.custom td{background:var(--gold-bg);}
+  table.lead .big{font-weight:800;color:var(--navy);font-size:15px;}
+
+  /* 模組 6：起落航線（滿版） */
+  .card.span{grid-column:1/-1;}
+  .pattern-body{display:grid;grid-template-columns:minmax(320px,500px) 1fr;gap:22px;margin-top:4px;align-items:start;}
+  .pattern-body>*{min-width:0;}
+  @media (max-width:780px){ .pattern-body{grid-template-columns:1fr;} }
+  .pattern-svg{width:100%;max-width:500px;margin:0 auto;display:block;border:1px solid var(--line);border-radius:14px;background:#fbfaf6;}
+  .dstat-in{width:3.2em;border:0;border-bottom:1.5px dashed var(--gold-soft);background:transparent;
+    font-size:17px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;outline:none;padding:0 0 1px;}
+  .dstat-in:focus{border-bottom-color:var(--gold);}
+  .dstat-in::placeholder{color:#bdbfc9;font-weight:600;font-size:13px;}
+  .toggle{display:inline-flex;border:1.5px solid var(--line);border-radius:11px;overflow:hidden;width:100%;}
+  .toggle button{flex:1;border:0;background:#fff;color:var(--ink-2);font-weight:700;font-size:13.5px;padding:11px 8px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+  .toggle button.active{background:var(--navy);color:#fff;}
+  table.mini{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+  table.mini th,table.mini td{padding:7px 5px;font-size:12.5px;text-align:right;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+  table.mini th{color:var(--ink-2);font-weight:600;font-size:11px;border-bottom:2px solid var(--line);}
+  table.mini td:first-child,table.mini th:first-child{text-align:left;font-weight:700;color:var(--navy);}
+  table.mini td.hl{font-weight:800;color:var(--navy);}
+  table.mini td small{display:block;font-size:10px;font-weight:600;color:var(--ink-2);}
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:9px;}
+  .statgrid .stat{background:var(--gold-bg);border:1px solid var(--gold-soft);border-radius:11px;padding:9px 11px;}
+  .statgrid .stat.lhi{background:#eef6f1;border-color:#cce3d6;}
+  .statgrid .stat .k{font-size:11px;color:#8a6f44;font-weight:600;}
+  .statgrid .stat.lhi .k{color:#3f7a5e;}
+  .statgrid .stat .v{font-size:17px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .statgrid .stat.lhi .v{color:var(--good);}
+  .statgrid .stat .v small{font-size:11px;font-weight:600;color:var(--ink-2);margin-left:2px;}
+  .statgrid .stat .kn{font-size:10px;font-weight:600;color:var(--ink-2);margin-top:2px;opacity:.85;}
+
+  footer.app{margin-top:26px;text-align:center;color:#9aa0b5;font-size:11.5px;line-height:1.6;}
+  .pill{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-radius:999px;
+    padding:2px 10px;margin:0 3px;color:var(--ink-2);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <span class="badge">STARLUX · Flight Tools</span>
+    <h1>航空綜合計算機</h1>
+  </header>
+
+  <div class="tabs" id="tabbar">
+    <button type="button" class="tab active" data-tab="m1">高度爬升率</button>
+    <button type="button" class="tab" data-tab="m2">單位轉換</button>
+    <button type="button" class="tab" data-tab="m3">跑道側風</button>
+    <button type="button" class="tab" data-tab="m4">轉彎提前量</button>
+    <button type="button" class="tab" data-tab="m5">側風修正</button>
+    <button type="button" class="tab" data-tab="p">起落航線</button>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===================== 模組 1：高度 / 距離 / 爬升率 ===================== -->
+    <section class="card panel active" id="card-m1">
+      <h2><span class="num">1</span><span class="ttl">高度、距離與爬升率</span>
+        <button class="reset" data-card="m1" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+      <div class="fields two">
+        <div class="field"><label>高度差 <span class="en">Height</span></label>
+          <div class="inputbox"><input id="m1-height" type="text" inputmode="decimal" placeholder="例 3000"><span class="unit">ft</span></div></div>
+        <div class="field"><label>距離 <span class="en">Distance</span></label>
+          <div class="inputbox"><input id="m1-dist" type="text" inputmode="decimal" placeholder="例 10"><span class="unit">nm</span></div></div>
+        <div class="field"><label>角度 <span class="en">Angle</span></label>
+          <div class="inputbox"><input id="m1-angle" type="text" inputmode="decimal" placeholder="例 3"><span class="unit">deg</span></div></div>
+        <div class="field"><label>梯度 <span class="en">Gradient</span></label>
+          <div class="inputbox"><input id="m1-grad" type="text" inputmode="decimal" placeholder="例 5.2"><span class="unit">%</span></div></div>
+        <div class="field"><label>地速 <span class="en">Ground Speed</span></label>
+          <div class="inputbox"><input id="m1-gs" type="text" inputmode="decimal" placeholder="例 140"><span class="unit">kt</span></div></div>
+        <div class="field"><label>升/降率 <span class="en">Rate</span></label>
+          <div class="inputbox"><input id="m1-fpm" type="text" inputmode="decimal" placeholder="例 -743"><span class="unit">fpm</span></div></div>
+      </div>
+    </section>
+
+    <!-- ===================== 模組 2：單位轉換 ===================== -->
+    <section class="card panel" id="card-m2">
+      <h2><span class="num">2</span><span class="ttl">基礎單位轉換</span>
+        <button class="reset" data-card="m2" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+
+      <div class="seclabel">溫度 Temperature</div>
+      <div class="fields two">
+        <div class="field"><label>攝氏 <span class="en">Celsius</span></label>
+          <div class="inputbox"><input id="m2-c" type="text" inputmode="decimal" placeholder="例 15"><span class="unit">°C</span></div></div>
+        <div class="field"><label>華氏 <span class="en">Fahrenheit</span></label>
+          <div class="inputbox"><input id="m2-f" type="text" inputmode="decimal" placeholder="例 59"><span class="unit">°F</span></div></div>
+      </div>
+
+      <div class="seclabel gap">長度 / 距離 Length</div>
+      <div class="fields three">
+        <div class="field"><label>海里 <span class="en">NM</span></label>
+          <div class="inputbox"><input id="m2-nm" type="text" inputmode="decimal" placeholder="0"><span class="unit">nm</span></div></div>
+        <div class="field"><label>法定英里 <span class="en">SM</span></label>
+          <div class="inputbox"><input id="m2-sm" type="text" inputmode="decimal" placeholder="0"><span class="unit">sm</span></div></div>
+        <div class="field"><label>英尺 <span class="en">Feet</span></label>
+          <div class="inputbox"><input id="m2-ft" type="text" inputmode="decimal" placeholder="0"><span class="unit">ft</span></div></div>
+        <div class="field"><label>公里 <span class="en">KM</span></label>
+          <div class="inputbox"><input id="m2-km" type="text" inputmode="decimal" placeholder="0"><span class="unit">km</span></div></div>
+        <div class="field"><label>公尺 <span class="en">Meter</span></label>
+          <div class="inputbox"><input id="m2-m" type="text" inputmode="decimal" placeholder="0"><span class="unit">m</span></div></div>
+      </div>
+    </section>
+
+    <!-- ===================== 模組 3：跑道側風 ===================== -->
+    <section class="card panel" id="card-m3">
+      <h2><span class="num">3</span><span class="ttl">跑道風向風速</span>
+        <button class="reset" data-card="m3" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+      <div class="field" style="margin-bottom:12px;">
+        <label>貼上 METAR / TAF <span class="en">自動解析風向風速與變動範圍</span></label>
+        <div class="inputbox"><input id="m3-metar" type="text" placeholder="例 RCSS 010000Z 12015G25KT 120V200 9999 ..."><span class="unit">⤵</span></div>
+      </div>
+      <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr));">
+        <div class="field"><label>跑道方位 <span class="en">RWY</span></label>
+          <div class="inputbox"><input id="m3-rwy" type="text" inputmode="numeric" placeholder="例 054"><span class="unit">°</span></div></div>
+        <div class="field"><label>風向 <span class="en">Wind Dir</span></label>
+          <div class="inputbox"><input id="m3-wdir" type="text" inputmode="numeric" placeholder="例 120"><span class="unit">°</span></div></div>
+        <div class="field"><label>風速 <span class="en">Wind Spd</span></label>
+          <div class="inputbox"><input id="m3-wspd" type="text" inputmode="decimal" placeholder="例 15"><span class="unit">kt</span></div></div>
+        <div class="field"><label>陣風 <span class="en">Gust</span></label>
+          <div class="inputbox"><input id="m3-gust" type="text" inputmode="decimal" placeholder="無則留空"><span class="unit">kt</span></div></div>
+        <div class="field"><label>變動範圍 <span class="en">Variation</span></label>
+          <div class="vrbpair">
+            <input id="m3-vrb-d1" type="text" inputmode="numeric" placeholder="120">
+            <span class="vsep">V</span>
+            <input id="m3-vrb-d2" type="text" inputmode="numeric" placeholder="200">
+          </div></div>
+      </div>
+
+      <svg id="m3-svg" class="wind-svg" viewBox="-8 -8 236 236" aria-label="正北朝上的跑道與風向分量圖"></svg>
+
+      <div class="wind-chips">
+        <div class="chip hw" id="m3-chip-along">
+          <span class="lab" id="m3-along-lab">HW</span>
+          <span class="val" id="m3-along-val">—</span>
+        </div>
+        <div class="chip xw" id="m3-chip-cross">
+          <span class="lab" id="m3-cross-lab">XW</span>
+          <span class="val" id="m3-cross-val">—</span>
+        </div>
+      </div>
+
+      <div id="m3-zone" class="zone" style="display:none;"></div>
+
+      <div id="m3-vrb" class="vrb2" style="display:none;">
+        <div class="vrb2-h">Worst-case in Variation</div>
+        <table class="wtab">
+          <thead><tr><th></th><th>Bearing</th><th>Component</th></tr></thead>
+          <tbody>
+            <tr id="m3-vrb-along" class="tw-row"><td id="m3-vrb-along-l">Max TW</td><td class="dir" id="m3-vrb-along-d">—</td><td class="spd" id="m3-vrb-along-v">—</td></tr>
+            <tr class="xw-row"><td id="m3-vrb-cross-l">Max XW</td><td class="dir" id="m3-vrb-cross-d">—</td><td class="spd" id="m3-vrb-cross-v">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 模組 4：轉彎提前量 ===================== -->
+    <section class="card panel" id="card-m4">
+      <h2><span class="num">4</span><span class="ttl">轉彎提前量</span>
+        <button class="reset" data-card="m4" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+      <div class="fields two">
+        <div class="field"><label>指示空速 <span class="en">IAS</span></label>
+          <div class="inputbox"><input id="m4-gs" type="text" inputmode="decimal" placeholder="例 250"><span class="unit">kt</span></div></div>
+        <div class="field"><label>坡度 <span class="en">Bank（固定）</span></label>
+          <div class="inputbox"><input value="25" disabled style="color:var(--ink-2);"><span class="unit">deg</span></div></div>
+      </div>
+
+      <div class="results">
+        <div class="statrow">
+          <div class="stat"><span class="k">轉彎半徑 Radius</span><span class="v" id="m4-rnm">—<small>nm</small></span></div>
+          <div class="stat"><span class="k">轉彎半徑 Radius</span><span class="v" id="m4-rft">—<small>ft</small></span></div>
+        </div>
+        <div class="statrow one">
+          <div class="stat"><span class="k">轉彎率 Rate of Turn</span><span class="v" id="m4-rot">—<small>°/s</small></span></div>
+        </div>
+      </div>
+
+      <table class="lead">
+        <thead><tr><th>轉彎角</th><th>提前量 (nm)</th><th>提前量 (ft)</th><th>耗時 (s)</th></tr></thead>
+        <tbody>
+          <tr><td>90°</td><td class="big" id="m4-l90">—</td><td id="m4-f90">—</td><td id="m4-t90">—</td></tr>
+          <tr><td>45°</td><td class="big" id="m4-l45">—</td><td id="m4-f45">—</td><td id="m4-t45">—</td></tr>
+          <tr><td>30°</td><td class="big" id="m4-l30">—</td><td id="m4-f30">—</td><td id="m4-t30">—</td></tr>
+          <tr class="custom">
+            <td><div class="inputbox" style="max-width:118px;"><input id="m4-cangle" type="text" inputmode="decimal" placeholder="自訂" style="font-size:14px;padding:7px 10px;"><span class="unit">°</span></div></td>
+            <td class="big" id="m4-lc">—</td><td id="m4-fc">—</td><td id="m4-tc">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ===================== 模組 5：側風修正（航向修正角） ===================== -->
+    <section class="card panel" id="card-m5">
+      <h2><span class="num">5</span><span class="ttl">側風修正 (Crab Angle)</span>
+        <button class="reset" data-card="m5" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+      <div class="fields two">
+        <div class="field"><label>預定航跡 <span class="en">Track</span></label>
+          <div class="inputbox"><input id="m5-track" type="text" inputmode="numeric" placeholder="例 090"><span class="unit">°</span></div></div>
+        <div class="field"><label>真空速 <span class="en">TAS</span></label>
+          <div class="inputbox"><input id="m5-tas" type="text" inputmode="decimal" placeholder="例 250"><span class="unit">kt</span></div></div>
+        <div class="field"><label>風向 <span class="en">Wind Dir</span></label>
+          <div class="inputbox"><input id="m5-wdir" type="text" inputmode="numeric" placeholder="例 120"><span class="unit">°</span></div></div>
+        <div class="field"><label>風速 <span class="en">Wind Spd</span></label>
+          <div class="inputbox"><input id="m5-wspd" type="text" inputmode="decimal" placeholder="例 30"><span class="unit">kt</span></div></div>
+      </div>
+
+      <div class="results">
+        <div class="statrow">
+          <div class="stat lhi"><span class="k">修正角 WCA</span><span class="v" id="m5-wca">—<small>°</small></span></div>
+          <div class="stat"><span class="k">應飛航向 Heading</span><span class="v" id="m5-hdg">—<small>°</small></span></div>
+        </div>
+        <div class="statrow">
+          <div class="stat"><span class="k">預期地速 GS</span><span class="v" id="m5-gs">—<small>kt</small></span></div>
+          <div class="stat"><span class="k">側風分量 Crosswind</span><span class="v" id="m5-xw">—<small>kt</small></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 模組 6：目視起落航線 ===================== -->
+    <section class="card span panel" id="card-p">
+      <h2><span class="num">6</span><span class="ttl">目視起落航線 (Visual Pattern)</span>
+        <button class="reset" data-card="p" title="清除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </h2>
+
+      <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(138px,1fr));">
+        <div class="field"><label>指示空速 <span class="en">IAS</span></label>
+          <div class="inputbox"><input id="p-ias" type="text" inputmode="decimal" placeholder="例 120"><span class="unit">kt</span></div></div>
+        <div class="field"><label>跑道方位 <span class="en">RWY Track</span></label>
+          <div class="inputbox"><input id="p-rwy" type="text" inputmode="numeric" placeholder="例 090"><span class="unit">°</span></div></div>
+        <div class="field"><label>地面風向 <span class="en">Wind Dir</span></label>
+          <div class="inputbox"><input id="p-wdir" type="text" inputmode="numeric" placeholder="例 120"><span class="unit">°</span></div></div>
+        <div class="field"><label>地面風速 <span class="en">Wind Spd</span></label>
+          <div class="inputbox"><input id="p-wspd" type="text" inputmode="decimal" placeholder="例 10"><span class="unit">kt</span></div></div>
+        <div class="field"><label>指示高度 <span class="en">MSL</span></label>
+          <div class="inputbox"><input id="p-msl" type="text" inputmode="decimal" placeholder="例 1500"><span class="unit">ft</span></div></div>
+        <div class="field"><label>機場海拔 <span class="en">Elevation</span></label>
+          <div class="inputbox"><input id="p-elev" type="text" inputmode="decimal" placeholder="例 0"><span class="unit">ft</span></div></div>
+        <div class="field"><label>航線寬度 <span class="en">Width</span></label>
+          <div class="inputbox"><input id="p-width" type="text" inputmode="decimal" value="2.5" placeholder="2.5"><span class="unit">nm</span></div></div>
+        <div class="field"><label>航線側別 <span class="en">Traffic</span></label>
+          <div class="toggle" id="p-toggle">
+            <button type="button" data-side="L" class="active">左 Left</button>
+            <button type="button" data-side="R">右 Right</button>
+          </div></div>
+      </div>
+
+      <div class="pattern-body">
+        <svg id="p-svg" class="pattern-svg" viewBox="0 0 340 360" aria-label="起落航線示意圖"></svg>
+
+        <div>
+          <div class="seclabel">① 航向與側風修正　Track &amp; WCA</div>
+          <div class="tscroll">
+          <table class="mini">
+            <thead><tr><th>航段</th><th>Track</th><th>HDG</th><th>WCA</th><th>GS</th><th>頭/尾</th><th>側風</th></tr></thead>
+            <tbody>
+              <tr><td>三邊 Downwind</td><td id="p-dw-trk">—</td><td class="hl" id="p-dw-hdg">—</td><td id="p-dw-wca">—</td><td class="hl" id="p-dw-gs">—</td><td id="p-dw-w">—</td><td id="p-dw-xw">—</td></tr>
+              <tr><td>四邊 Base</td><td id="p-bs-trk">—</td><td class="hl" id="p-bs-hdg">—</td><td id="p-bs-wca">—</td><td class="hl" id="p-bs-gs">—</td><td id="p-bs-w">—</td><td id="p-bs-xw">—</td></tr>
+              <tr><td>五邊 Final</td><td id="p-fn-trk">—</td><td class="hl" id="p-fn-hdg">—</td><td id="p-fn-wca">—</td><td class="hl" id="p-fn-gs">—</td><td id="p-fn-w">—</td><td id="p-fn-xw">—</td></tr>
+            </tbody>
+          </table>
+          </div>
+
+          <div class="seclabel gap">② 轉 Final 提前量（含側風）　Turn to Final</div>
+          <div class="statgrid">
+            <div class="stat lhi"><span class="k">提前量 Lead</span><div class="v" id="p-tf-r">—<small>nm</small></div></div>
+            <div class="stat"><span class="k">實際轉彎角</span><div class="v" id="p-tf-ang">—<small>°</small></div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-2);margin-top:7px;line-height:1.5;">
+            實際轉彎角 = Base HDG 與 Final HDG 之差，已含兩邊側風修正。
+          </div>
+
+          <div class="seclabel gap">③ 下降剖面與計時　Descent &amp; Timer</div>
+          <div class="statgrid">
+            <div class="stat"><span class="k">AGL</span><div class="v" id="p-agl">—<small>ft</small></div></div>
+            <div class="stat lhi"><span class="k">計時</span><div class="v" id="p-timer">—<small>s</small></div></div>
+            <div class="stat"><span class="k">距離 D（可輸入）</span><div class="v"><input id="p-d-in" class="dstat-in" type="text" inputmode="decimal" placeholder="自動"><small>nm</small></div><div class="kn">Timing to Turn Base</div></div>
+            <div class="stat"><span class="k">總距離</span><div class="v" id="p-total">—<small>nm</small></div><div class="kn">D + 寬度</div></div>
+          </div>
+          <div class="tscroll" style="margin-top:12px;">
+          <table class="mini">
+            <thead><tr><th>Descent</th><th>角</th><th>梯度</th><th>ROD四</th><th>ROD五</th><th>起點</th></tr></thead>
+            <tbody>
+              <tr><td>from Turn Base</td><td id="p-d1-ang">—</td><td id="p-d1-grad">—</td><td class="hl" id="p-d1-r4">—</td><td class="hl" id="p-d1-r5">—</td><td>Turn Base</td></tr>
+              <tr><td>for 3°</td><td>3°</td><td id="p-d3-grad">—</td><td class="hl" id="p-d3-r4">—</td><td class="hl" id="p-d3-r5">—</td><td id="p-d3-start">—</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.5;">ROD 單位 fpm，四邊／五邊＝各邊地速 × 梯度。</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 共用常數與工具 ----------
+  var FT_PER_NM = 6076.11549;   // 1 海里 = 6076.12 英尺
+  var FPM_K     = FT_PER_NM/60; // ≈ 101.2686，爬升率係數
+  var G         = 9.80665;      // m/s²
+  var KT_MS     = 0.5144444;    // 1 kt = 0.5144 m/s
+  var M_PER_NM  = 1852;
+  var FT_PER_M  = 3.2808399;
+  var BANK_DEG  = 25;
+  var BANK_TAN  = Math.tan(BANK_DEG*Math.PI/180);
+  var DEC       = 1;            // 全站小數位數：一位
+
+  function $(id){ return document.getElementById(id); }
+  function rad(d){ return d*Math.PI/180; }
+  function deg(r){ return r*180/Math.PI; }
+  function norm360(x){ x%=360; if(x<0) x+=360; return x; }
+  // 統一的轉彎半徑(nm)：R = V²/(g·tan25°)（SI 嚴算），速度用 kt
+  function turnRnm(spd){ if(!(isFinite(spd)&&spd>0)) return NaN; var V=spd*KT_MS; return V*V/(G*BANK_TAN)/M_PER_NM; }
+
+  function fmt(v,dec){
+    if(dec===undefined) dec=DEC;
+    if(v===null || v===undefined || !isFinite(v)) return "";
+    if(Math.abs(v)<1e-12) v=0;
+    var s=v.toFixed(dec);
+    if(s.indexOf(".")>=0){ s=s.replace(/0+$/,"").replace(/\.$/,""); }
+    return s;
+  }
+  // 讀值：欄位顯示只有 1 位小數，但連動計算需全精度 —— 若該欄位仍是程式算出的值
+  // （顯示字串 === 全精度值的四捨五入），就回傳暫存的全精度，避免逐步累積誤差
+  function num(id){
+    var el=$(id); if(!el) return NaN;
+    var s=el.value.trim();
+    if(s==="" || s==="-" || s==="." || s==="-.") return NaN;
+    var disp=parseFloat(s); if(!isFinite(disp)) return NaN;
+    if(el._full!==undefined && isFinite(el._full) && fmt(el._full,DEC)===s) return el._full;
+    return disp;
+  }
+  function set(id,v){ var el=$(id); if(!el || document.activeElement===el) return; el._full=v; el.value=fmt(v,DEC); }
+  function on(id,fn){ var el=$(id); if(el) el.addEventListener("input",fn); }
+
+  // =====================================================================
+  //  模組 1：高度 / 距離 / 角度 / 梯度 / 地速 / 升降率
+  //  樞紐 R = tan(角) = 梯度/100 = 高ft/(距nm*FT_PER_NM)；fpm = GS*R*FPM_K
+  //  幾何錨=距離、速率錨=GS，最後編輯欄位為準反算其餘
+  // =====================================================================
+  function currentR(){
+    var g=num("m1-grad"); if(isFinite(g)) return g/100;
+    var a=num("m1-angle"); if(isFinite(a)) return Math.tan(rad(a));
+    return null;
+  }
+  function applyR(R){
+    set("m1-angle", deg(Math.atan(R)));
+    set("m1-grad",  R*100);
+    var d=num("m1-dist"); if(isFinite(d)) set("m1-height", R*d*FT_PER_NM);
+    var gs=num("m1-gs"); if(isFinite(gs)) set("m1-fpm", gs*R*FPM_K);
+  }
+  on("m1-height",function(){
+    var h=num("m1-height"); if(!isFinite(h)) return;
+    var d=num("m1-dist");
+    if(isFinite(d) && d>0){
+      var R=h/(d*FT_PER_NM);
+      set("m1-angle",deg(Math.atan(R))); set("m1-grad",R*100);
+      var gs=num("m1-gs"); if(isFinite(gs)) set("m1-fpm",gs*R*FPM_K);
+    }else{ var R2=currentR(); if(R2!==null && R2!==0) set("m1-dist", h/(R2*FT_PER_NM)); }
+  });
+  on("m1-dist",function(){
+    var d=num("m1-dist"); if(!isFinite(d)) return;
+    var h=num("m1-height");
+    if(isFinite(h) && d>0){
+      var R=h/(d*FT_PER_NM);
+      set("m1-angle",deg(Math.atan(R))); set("m1-grad",R*100);
+      var gs=num("m1-gs"); if(isFinite(gs)) set("m1-fpm",gs*R*FPM_K);
+    }else{ var R2=currentR(); if(R2!==null && d>0) set("m1-height", R2*d*FT_PER_NM); }
+  });
+  on("m1-angle",function(){
+    var a=num("m1-angle"); if(!isFinite(a)) return;
+    var R=Math.tan(rad(a));
+    set("m1-grad",R*100);
+    var d=num("m1-dist"); if(isFinite(d)) set("m1-height",R*d*FT_PER_NM);
+    var gs=num("m1-gs");  if(isFinite(gs)) set("m1-fpm",gs*R*FPM_K);
+  });
+  on("m1-grad",function(){
+    var g=num("m1-grad"); if(!isFinite(g)) return;
+    var R=g/100;
+    set("m1-angle",deg(Math.atan(R)));
+    var d=num("m1-dist"); if(isFinite(d)) set("m1-height",R*d*FT_PER_NM);
+    var gs=num("m1-gs");  if(isFinite(gs)) set("m1-fpm",gs*R*FPM_K);
+  });
+  on("m1-gs",function(){
+    var gs=num("m1-gs"); if(!isFinite(gs)) return;
+    var R=currentR();
+    if(R!==null){ set("m1-fpm", gs*R*FPM_K); }
+    else{ var fpm=num("m1-fpm"); if(isFinite(fpm) && gs!==0) applyR(fpm/(gs*FPM_K)); }
+  });
+  on("m1-fpm",function(){
+    var fpm=num("m1-fpm"); if(!isFinite(fpm)) return;
+    var gs=num("m1-gs");
+    if(isFinite(gs) && gs!==0){ applyR(fpm/(gs*FPM_K)); }
+    else{ var R=currentR(); if(R!==null && R!==0) set("m1-gs", fpm/(R*FPM_K)); }
+  });
+
+  // =====================================================================
+  //  模組 2：單位轉換
+  // =====================================================================
+  on("m2-c",function(){ var c=num("m2-c"); if(!isFinite(c)) return; set("m2-f", c*9/5+32); });
+  on("m2-f",function(){ var f=num("m2-f"); if(!isFinite(f)) return; set("m2-c", (f-32)*5/9); });
+
+  var L_FACT = { "m2-nm":1852, "m2-sm":1609.344, "m2-ft":0.3048, "m2-km":1000, "m2-m":1 };
+  function lenHandler(srcId){
+    return function(){
+      var v=num(srcId); if(!isFinite(v)) return;
+      var meters=v*L_FACT[srcId];
+      for(var id in L_FACT){ if(id===srcId) continue; set(id, meters/L_FACT[id]); }
+    };
+  }
+  for(var lid in L_FACT){ on(lid, lenHandler(lid)); }
+
+  // =====================================================================
+  //  模組 3：跑道側風（正北朝上 + 真實磁方位 + 分量箭頭）
+  // =====================================================================
+  var CX=110, CY=110, RING=92, RWL=68, RWW=11;   // 圓心、羅盤半徑、跑道半長/半寬
+  function desig(d){ var n=Math.round(norm360(d)/10); if(n===0) n=36; return (n<10?"0":"")+n; }
+  function px(b,r){ return [CX + r*Math.sin(rad(b)), CY - r*Math.cos(rad(b))]; }
+  function r1(n){ return Math.round(n*10)/10; }
+  function arrow(x1,y1,x2,y2,color,w,dash){
+    var ang=Math.atan2(y2-y1,x2-x1), ah=9;
+    var p1=[x2+ah*Math.cos(ang+2.6), y2+ah*Math.sin(ang+2.6)];
+    var p2=[x2+ah*Math.cos(ang-2.6), y2+ah*Math.sin(ang-2.6)];
+    return '<line x1="'+r1(x1)+'" y1="'+r1(y1)+'" x2="'+r1(x2)+'" y2="'+r1(y2)+'" stroke="'+color+
+      '" stroke-width="'+w+'" stroke-linecap="round"'+(dash?' stroke-dasharray="4 4"':'')+'/>'+
+      '<polygon points="'+r1(x2)+','+r1(y2)+' '+r1(p1[0])+','+r1(p1[1])+' '+r1(p2[0])+','+r1(p2[1])+'" fill="'+color+'"/>';
+  }
+  // 解析 METAR / TAF 風組，自動帶入風向/風速/變動範圍
+  function parseMetar(txt){
+    if(!txt) return;
+    var t=txt.toUpperCase();
+    var wm=t.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS)\b/);
+    if(wm){
+      var spd=parseInt(wm[2],10), g=wm[3]?parseInt(wm[3],10):NaN;
+      if(wm[4]==="MPS"){ spd=spd*1.94384; if(isFinite(g)) g=g*1.94384; }
+      if(wm[1]!=="VRB"){ var dd=parseInt(wm[1],10); if(dd<=360) $("m3-wdir").value=String(dd); }
+      if(isFinite(spd)) $("m3-wspd").value=fmt(spd);
+      $("m3-gust").value = isFinite(g)?fmt(g):"";
+    }
+    var vm=t.match(/\b(\d{3})V(\d{3})\b/);
+    if(vm){ $("m3-vrb-d1").value=String(parseInt(vm[1],10)); $("m3-vrb-d2").value=String(parseInt(vm[2],10)); }
+  }
+
+  function computeWind(){
+    var rwy=num("m3-rwy"), wdir=num("m3-wdir"), wspd=num("m3-wspd"), gust=num("m3-gust");
+    var s=[];
+
+    // 羅盤底圖：外圈 + 四方位刻度 + N 標
+    s.push('<circle cx="110" cy="110" r="92" fill="#fbfaf6" stroke="#e6e2d8" stroke-width="1.5"/>');
+    [0,90,180,270].forEach(function(b){
+      var a=px(b,92), c=px(b,84);
+      s.push('<line x1="'+r1(a[0])+'" y1="'+r1(a[1])+'" x2="'+r1(c[0])+'" y2="'+r1(c[1])+'" stroke="#cdc9bd" stroke-width="2"/>');
+    });
+    s.push('<text x="110" y="20" text-anchor="middle" font-size="12" font-weight="800" fill="#5b6075">N</text>');
+
+    var haveRwy = isFinite(rwy);
+    var B = haveRwy ? rwy : 0;
+    var ax=Math.sin(rad(B)), ay=-Math.cos(rad(B));        // 沿跑道（朝 B）
+    var pxv=Math.sin(rad(B+90)), pyv=-Math.cos(rad(B+90)); // 垂直（右側）
+
+    if(haveRwy){
+      // 跑道矩形
+      var c1=[CX+RWL*ax+RWW*pxv, CY+RWL*ay+RWW*pyv];
+      var c2=[CX+RWL*ax-RWW*pxv, CY+RWL*ay-RWW*pyv];
+      var c3=[CX-RWL*ax-RWW*pxv, CY-RWL*ay-RWW*pyv];
+      var c4=[CX-RWL*ax+RWW*pxv, CY-RWL*ay+RWW*pyv];
+      s.push('<polygon points="'+r1(c1[0])+','+r1(c1[1])+' '+r1(c2[0])+','+r1(c2[1])+' '+
+        r1(c3[0])+','+r1(c3[1])+' '+r1(c4[0])+','+r1(c4[1])+'" fill="#aab2cc"/>');
+      // 中線虛線（白）
+      s.push('<line x1="'+r1(CX-(RWL-12)*ax)+'" y1="'+r1(CY-(RWL-12)*ay)+'" x2="'+r1(CX+(RWL-12)*ax)+
+        '" y2="'+r1(CY+(RWL-12)*ay)+'" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 5"/>');
+      // 跑道編號（直立）：近端(−軸)= 你落地的跑道號
+      var nNear=px(B+180,RWL+15), nFar=px(B,RWL+15);
+      s.push('<text x="'+r1(nNear[0])+'" y="'+r1(nNear[1]+4)+'" text-anchor="middle" font-size="13" font-weight="800" fill="#1f2547">'+desig(B)+'</text>');
+      s.push('<text x="'+r1(nFar[0])+'" y="'+r1(nFar[1]+4)+'" text-anchor="middle" font-size="13" font-weight="800" fill="#1f2547">'+desig(B+180)+'</text>');
+    }
+
+    var full = isFinite(rwy) && isFinite(wdir) && isFinite(wspd);
+    if(!full){
+      $("m3-svg").innerHTML = s.join("");
+      $("m3-along-val").textContent="—"; $("m3-cross-val").textContent="—";
+      $("m3-along-lab").textContent="HW"; $("m3-chip-along").className="chip hw";
+      $("m3-cross-lab").textContent="XW";
+      $("m3-zone").style.display="none"; $("m3-vrb").style.display="none";
+      return;
+    }
+
+    var rel=wdir-rwy;
+    var hw=wspd*Math.cos(rad(rel));   // + 頂風 / − 尾風
+    var xw=wspd*Math.sin(rad(rel));   // + 來自右 / − 來自左
+    var gustSpd=(isFinite(gust)&&gust>wspd)?gust:wspd;   // 側風判定用陣風（無則用穩定風）；尾風判定仍用穩定風
+
+    // 變動範圍：兩格輸入 → 順時針方向弧（每 1°）
+    var vd1=num("m3-vrb-d1"), vd2=num("m3-vrb-d2");
+    var vrb=(isFinite(vd1)&&isFinite(vd2)&&vd1>=0&&vd1<=360&&vd2>=0&&vd2<=360)?{d1:norm360(vd1),d2:norm360(vd2)}:null;
+    var arc=[];
+    if(vrb){ var span=norm360(vrb.d2-vrb.d1); for(var i=0;i<=span;i++) arc.push(norm360(vrb.d1+i)); }
+
+    // 金弧 + 兩端度數標示
+    if(arc.length>1){
+      var pts=[];
+      for(var ai=0; ai<arc.length; ai+=3){ var pa=px(arc[ai],RING); pts.push(r1(pa[0])+","+r1(pa[1])); }
+      var peP=px(arc[arc.length-1],RING); pts.push(r1(peP[0])+","+r1(peP[1]));
+      s.push('<polyline points="'+pts.join(" ")+'" fill="none" stroke="#caa86a" stroke-width="4" stroke-linecap="round" opacity="0.9"/>');
+      [vrb.d1,vrb.d2].forEach(function(b){
+        var o=px(b,RING+5),iN=px(b,RING-7); s.push('<line x1="'+r1(o[0])+'" y1="'+r1(o[1])+'" x2="'+r1(iN[0])+'" y2="'+r1(iN[1])+'" stroke="#b89160" stroke-width="2"/>');
+        var lp=px(b,RING+16); s.push('<text x="'+r1(lp[0])+'" y="'+r1(lp[1]+3)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9a7637">'+pad3(b)+'°</text>');
+      });
+    }
+
+    // 灰色虛線：平均風吹來的方向 + 風速數字（標在外端）
+    var src=px(wdir,RING-2), srcIn=px(wdir,40);
+    s.push(arrow(src[0],src[1],srcIn[0],srcIn[1],"#9aa0b5",2,true));
+    var wsl=px(wdir,RING+15);
+    s.push('<text x="'+r1(wsl[0])+'" y="'+r1(wsl[1]+3)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#7d8398">'+fmt(wspd)+'</text>');
+
+    // 分量箭頭：尾端在「風來向」那一側、箭頭指向中心（右側風＝由右往左）
+    var k=56/Math.max(Math.abs(hw),Math.abs(xw),0.001);
+    // 側風（紫）
+    if(Math.abs(xw)>0.1){
+      var xt=[CX+xw*k*pxv, CY+xw*k*pyv];
+      s.push(arrow(xt[0],xt[1],CX,CY,"#7a4fb5",4,false));
+      var xlab=[CX+xw*k*pxv*1.16, CY+xw*k*pyv*1.16];
+      s.push('<text x="'+r1(xlab[0])+'" y="'+r1(xlab[1]+3)+'" text-anchor="middle" font-size="11" font-weight="800" fill="#7a4fb5">'+fmt(Math.abs(xw))+'</text>');
+    }
+    // 頂/尾風（綠/紅）；標籤平移到跑道旁（與側風相反側）
+    if(Math.abs(hw)>0.1){
+      var ht=[CX+hw*k*ax, CY+hw*k*ay];
+      var hcol = hw>=0 ? "#1f7a55" : "#b4452f";
+      s.push(arrow(ht[0],ht[1],CX,CY,hcol,4,false));
+      var ps=(xw>=0?-1:1);
+      var hlab=[(CX+ht[0])/2 + ps*17*pxv, (CY+ht[1])/2 + ps*17*pyv];
+      s.push('<text x="'+r1(hlab[0])+'" y="'+r1(hlab[1]+3)+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+hcol+'">'+fmt(Math.abs(hw))+'</text>');
+    }
+    s.push('<circle cx="110" cy="110" r="3" fill="#1f2547"/>');
+    $("m3-svg").innerHTML = s.join("");
+
+    // chips（平均風）
+    var aChip=$("m3-chip-along"), aLab=$("m3-along-lab"), aVal=$("m3-along-val");
+    if(hw>=0){ aChip.className="chip hw"; aLab.textContent="HW"; aVal.textContent="+"+fmt(hw)+" kt"; }
+    else{ aChip.className="chip tw"; aLab.textContent="TW"; aVal.textContent="−"+fmt(Math.abs(hw))+" kt"; }
+
+    var xLab=$("m3-cross-lab"), xVal=$("m3-cross-val"), mag=Math.abs(xw);
+    var gtag=(gustSpd>wspd)?'<small>G '+fmt(gustSpd*Math.abs(Math.sin(rad(rel))))+'</small>':'';
+    if(mag<0.05){ xLab.textContent="XW"; xVal.innerHTML='<span>0 kt</span>'+gtag; }
+    else if(xw>0){ xLab.textContent="RX"; xVal.innerHTML='<span>'+fmt(mag)+' kt ←</span>'+gtag; }
+    else{ xLab.textContent="LX"; xVal.innerHTML='<span>'+fmt(mag)+' kt →</span>'+gtag; }
+
+    // === Zone A/B 判定：平均風 + 變動弧逐方向取最嚴格；側風含陣風、尾風用穩定風總風 ===
+    var dirsZ=[wdir].concat(arc);
+    var zMaxCW=-1, zMaxCWdir=wdir, zTwHit=false, zTwDir=wdir, zTwMax=-1;
+    for(var zi=0;zi<dirsZ.length;zi++){
+      var za=dirsZ[zi]-rwy;
+      var zcw=Math.abs(gustSpd*Math.sin(rad(za)));
+      if(zcw>zMaxCW){ zMaxCW=zcw; zMaxCWdir=dirsZ[zi]; }
+      var zh=wspd*Math.cos(rad(za));
+      if(zh<0 && wspd>10){ zTwHit=true; if(-zh>zTwMax){ zTwMax=-zh; zTwDir=dirsZ[zi]; } }
+    }
+    var zoneB=false, zReason=[];
+    if(zMaxCW>20){ zoneB=true; zReason.push("側風 "+fmt(zMaxCW)+" kt"+(gustSpd>wspd?"（含陣風）":"")+" > 20 kt ＠"+pad3(zMaxCWdir)+"°"); }
+    if(zTwHit){ zoneB=true; zReason.push("有尾風且總風 "+fmt(wspd)+" kt > 10 kt ＠"+pad3(zTwDir)+"°"); }
+    var zEl=$("m3-zone"); zEl.style.display="";
+    if(zoneB){
+      zEl.className="zone b";
+      zEl.innerHTML='<div class="zdot">B</div><div class="zwrap"><div class="zt">Zone B · 2 Step Takeoff</div><div class="zs">原因：'+zReason.join("；")+'</div></div>';
+    }else{
+      zEl.className="zone a";
+      zEl.innerHTML='<div class="zdot">A</div><div class="zwrap"><div class="zt">Zone A · Normal Takeoff</div><div class="zs">側風 ≤ 20kt 且無尾風，或有尾風時總風 ≤ 10kt</div></div>';
+    }
+
+    // === 變動範圍最差風（只掃變動弧）===
+    var vEl=$("m3-vrb");
+    if(arc.length>0){
+      var wMinHW=Infinity, wMinHWdir=arc[0], wMaxXW=-Infinity, wMaxXWdir=arc[0], wMaxXWsign=1;
+      for(var vi=0;vi<arc.length;vi++){
+        var rr=arc[vi]-rwy, hh=wspd*Math.cos(rad(rr)), xx=gustSpd*Math.sin(rad(rr));   // 尾風用穩定風、側風含陣風
+        if(hh<wMinHW){ wMinHW=hh; wMinHWdir=arc[vi]; }
+        if(Math.abs(xx)>wMaxXW){ wMaxXW=Math.abs(xx); wMaxXWdir=arc[vi]; wMaxXWsign=(xx>=0?1:-1); }
+      }
+      vEl.style.display="";
+      var aRow=$("m3-vrb-along");
+      if(wMinHW>=0){ aRow.className="hw-row"; $("m3-vrb-along-l").textContent="Min HW"; $("m3-vrb-along-v").textContent="+"+fmt(wMinHW)+" kt"; }
+      else{ aRow.className="tw-row"; $("m3-vrb-along-l").textContent="Max TW"; $("m3-vrb-along-v").textContent="−"+fmt(Math.abs(wMinHW))+" kt"; }
+      $("m3-vrb-along-d").textContent=pad3(wMinHWdir)+"°";
+      $("m3-vrb-cross-l").textContent="Max XW"+(gustSpd>wspd?" (G)":"");
+      $("m3-vrb-cross-d").textContent=pad3(wMaxXWdir)+"°";
+      $("m3-vrb-cross-v").textContent=fmt(wMaxXW)+" kt "+(wMaxXWsign>0?"R ←":"L →");
+    }else{ vEl.style.display="none"; }
+  }
+  on("m3-rwy",computeWind); on("m3-wdir",computeWind); on("m3-wspd",computeWind); on("m3-gust",computeWind);
+  on("m3-vrb-d1",computeWind); on("m3-vrb-d2",computeWind);
+  on("m3-metar",function(){ parseMetar($("m3-metar").value); computeWind(); });
+
+  // =====================================================================
+  //  模組 4：轉彎提前量（坡度固定 25°，只用 GS）
+  // =====================================================================
+  function leadRow(Rnm,omega,angleDeg,lnmId,lftId,tId){
+    if(!isFinite(angleDeg)){ $(lnmId).textContent="—"; $(lftId).textContent="—"; $(tId).textContent="—"; return; }
+    var lead=Rnm*Math.tan(rad(angleDeg/2));
+    $(lnmId).textContent=fmt(lead);
+    $(lftId).textContent=fmt(lead*M_PER_NM*FT_PER_M);
+    $(tId).textContent=(isFinite(omega)&&omega>0)?fmt(angleDeg/omega):"—";
+  }
+  function computeTurn(){
+    var gs=num("m4-gs"), cangle=num("m4-cangle");
+    if(!(isFinite(gs)&&gs>0)){
+      $("m4-rnm").innerHTML="—<small>nm</small>"; $("m4-rft").innerHTML="—<small>ft</small>";
+      $("m4-rot").innerHTML="—<small>°/s</small>";
+      leadRow(NaN,NaN,NaN,"m4-l90","m4-f90","m4-t90");
+      leadRow(NaN,NaN,NaN,"m4-l45","m4-f45","m4-t45");
+      leadRow(NaN,NaN,NaN,"m4-l30","m4-f30","m4-t30");
+      leadRow(NaN,NaN,NaN,"m4-lc","m4-fc","m4-tc");
+      return;
+    }
+    var Rnm=turnRnm(gs), omega=deg(G*BANK_TAN/(gs*KT_MS));
+    $("m4-rnm").innerHTML=fmt(Rnm)+"<small>nm</small>";
+    $("m4-rft").innerHTML=fmt(Rnm*M_PER_NM*FT_PER_M)+"<small>ft</small>";
+    $("m4-rot").innerHTML=fmt(omega,0)+"<small>°/s</small>";
+    leadRow(Rnm,omega,90,"m4-l90","m4-f90","m4-t90");
+    leadRow(Rnm,omega,45,"m4-l45","m4-f45","m4-t45");
+    leadRow(Rnm,omega,30,"m4-l30","m4-f30","m4-t30");
+    leadRow(Rnm,omega,cangle,"m4-lc","m4-fc","m4-tc");
+  }
+  on("m4-gs",computeTurn); on("m4-cangle",computeTurn);
+
+  // =====================================================================
+  //  模組 5：側風修正（航向修正角 / Crab Angle）
+  //  rel = 風向 − 航跡；側風 xw = WS·sin(rel)；頂風 hw = WS·cos(rel)
+  //  WCA = asin(xw / TAS)；應飛航向 = 航跡 + WCA；GS = TAS·cos(WCA) − hw
+  // =====================================================================
+  function pad3(n){ n=Math.round(norm360(n)); if(n===0) n=360; return (n<100?(n<10?"00":"0"):"")+n; }
+  function computeWCA(){
+    var tc=num("m5-track"), wd=num("m5-wdir"), ws=num("m5-wspd"), tas=num("m5-tas");
+    function dash(){ $("m5-wca").innerHTML="—<small>°</small>"; $("m5-hdg").innerHTML="—<small>°</small>";
+      $("m5-gs").innerHTML="—<small>kt</small>"; $("m5-xw").innerHTML="—<small>kt</small>"; }
+    if(!(isFinite(tc)&&isFinite(wd)&&isFinite(ws)&&isFinite(tas)&&tas>0)){ dash(); return; }
+
+    var rel=wd-tc;
+    var xw=ws*Math.sin(rad(rel));   // + 來自右
+    var hw=ws*Math.cos(rad(rel));   // + 頂風
+    var ratio=Math.max(-1,Math.min(1, xw/tas));
+    var wca=deg(Math.asin(ratio));  // + 向右修（風自右）
+    var hdg=norm360(tc+wca);
+    var gs=tas*Math.cos(rad(wca))-hw;
+
+    var side = Math.abs(wca)<0.05 ? "" : (wca>0?" 向右 R":" 向左 L");
+    $("m5-wca").innerHTML=fmt(Math.abs(wca),0)+"<small>°"+side+"</small>";
+    $("m5-hdg").innerHTML=pad3(hdg)+"<small>°</small>";
+    $("m5-gs").innerHTML=fmt(gs,0)+"<small>kt</small>";
+    var xside = Math.abs(xw)<0.05 ? "" : (xw>0?" R":" L");
+    $("m5-xw").innerHTML=fmt(Math.abs(xw))+"<small>kt"+xside+"</small>";
+  }
+  on("m5-track",computeWCA); on("m5-wdir",computeWCA); on("m5-wspd",computeWCA); on("m5-tas",computeWCA);
+
+  // =====================================================================
+  //  模組 6：目視起落航線（Visual Approach Pattern）
+  //  Downwind Track = RWY−180；Base Track = RWY∓90（左−/右+）
+  //  TAS = IAS·(1+0.02·MSL/1000)；各邊以風三角求 H/T、X/W、GS、WCA、HDG
+  //  轉彎 R = GS²/(11.26·tan25°)/6076 nm（90° 提前量 = R）
+  //  四邊計時 =(AGL/100)·3 ± Abeam(下邊) 頭尾風；D = 下邊GS·秒/3600；
+  //  總距離 = 寬度 + D；下降角/梯度/ROD 依總距離與 AGL（1nm=6076ft）
+  // =====================================================================
+  var pSide = "L";
+  function pwind(track, wdir, wspd, tas){
+    if(!(isFinite(track)&&isFinite(wdir)&&isFinite(wspd)&&isFinite(tas)&&tas>0)) return null;
+    var rel=wdir-track;
+    var hw=wspd*Math.cos(rad(rel));   // + 頂風 / − 尾風
+    var xw=wspd*Math.sin(rad(rel));   // + 來自右 / − 來自左
+    var ratio=Math.max(-1,Math.min(1, xw/tas));
+    var wca=deg(Math.asin(ratio));
+    return { hw:hw, xw:xw, wca:wca, hdg:norm360(track+wca), gs: tas*Math.cos(rad(wca))-hw };
+  }
+  function patR(gs){ if(!(isFinite(gs)&&gs>0)) return NaN; return (gs*gs)/(11.26*Math.tan(rad(25)))/6076; }
+  function sideStr(v){ return Math.abs(v)<0.05 ? "" : (v>0?"R ":"L "); }
+
+  function computePattern(){
+    function T(id,t){ var el=$(id); if(el) el.textContent=t; }
+    function leg(p,trk,pre){
+      T(pre+"-trk", isFinite(trk)?pad3(trk):"—");
+      if(!p){ ["-w","-xw","-gs","-wca","-hdg"].forEach(function(s){T(pre+s,"—");}); return; }
+      T(pre+"-hdg",pad3(p.hdg));
+      T(pre+"-w",  (p.hw>=0?"H ":"T ")+fmt(Math.abs(p.hw))+" kt");
+      T(pre+"-xw", sideStr(p.xw)+fmt(Math.abs(p.xw))+" kt");
+      T(pre+"-gs", fmt(p.gs,0));                       // GS 取整數
+      T(pre+"-wca",sideStr(p.wca)+fmt(Math.abs(p.wca),0)); // WCA 取整數
+    }
+
+    var ias=num("p-ias"), rwy=num("p-rwy"), wdir=num("p-wdir"), wspd=num("p-wspd"),
+        msl=num("p-msl"), elev=num("p-elev");
+    var width=num("p-width"); if(!isFinite(width)||width<=0) width=2.5;
+
+    var dwTrk = isFinite(rwy)? norm360(rwy-180):NaN;
+    // 正確幾何：左航線（左轉）Base = RWY+90、右航線 Base = RWY−90（為下邊轉向跑道的飛行方向）
+    var bsTrk = isFinite(rwy)? norm360(pSide==="L"?rwy+90:rwy-90):NaN;
+    var tas = (isFinite(ias)&&isFinite(msl))? ias*(1+0.02*(msl/1000)) : NaN;
+
+    var dw=pwind(dwTrk,wdir,wspd,tas), bs=pwind(bsTrk,wdir,wspd,tas), fnl=pwind(rwy,wdir,wspd,tas);
+    leg(dw,dwTrk,"p-dw"); leg(bs,bsTrk,"p-bs"); leg(fnl,rwy,"p-fn");
+
+    // ② 轉 Final 提前量：半徑用 IAS（統一公式）；實際轉彎角 = Base HDG 與 Final HDG 之差（含兩邊側風修正）
+    var turnAng=NaN, Rf=turnRnm(ias), lead=NaN;
+    if(bs && fnl){
+      turnAng = Math.abs(((fnl.hdg - bs.hdg + 540) % 360) - 180);  // 0..180 最短轉角
+      if(isFinite(Rf)) lead = Rf*Math.tan(rad(turnAng/2));
+    }
+    $("p-tf-r").innerHTML  = (isFinite(lead)?fmt(lead):"—")+"<small>nm</small>";
+    $("p-tf-ang").innerHTML= (isFinite(turnAng)?fmt(turnAng,0):"—")+"<small>°</small>";
+
+    // ③ 計時與距離
+    var FPM_C=6076/60;                                   // 梯度比 × 此 = fpm/（kt 地速）
+    var agl=(isFinite(msl)&&isFinite(elev))? msl-elev : NaN;
+    $("p-agl").innerHTML=(isFinite(agl)?fmt(agl):"—")+"<small>ft</small>";
+    var dwGs=(dw&&isFinite(dw.gs)&&dw.gs>0)?dw.gs:NaN;
+    var baseT=(isFinite(agl)&&agl>0)? (agl/100)*3 : NaN;
+    var autoTimer=(isFinite(baseT)&&dw)? Math.ceil(Math.max(0, baseT+dw.hw)) : NaN;  // 無條件進位
+    var autoD=(isFinite(autoTimer)&&isFinite(dwGs))? dwGs*(autoTimer/3600):NaN;
+    // 距離 D 可手動輸入：手動 → 回推計時；否則自動算 D 並填回欄位
+    var dEl=$("p-d-in"), dDisp=dEl?dEl.value.trim():"", D, timer, manualD=false;
+    if(dDisp!=="" && dDisp!==fmt(autoD)){
+      var ud=parseFloat(dDisp);
+      if(isFinite(ud)&&ud>0){ D=ud; manualD=true; timer=isFinite(dwGs)?Math.ceil(D/dwGs*3600):NaN; }
+    }
+    if(!manualD){ D=autoD; timer=autoTimer; if(dEl&&document.activeElement!==dEl) dEl.value=isFinite(D)?fmt(D):""; }
+    $("p-timer").innerHTML=(isFinite(timer)?String(timer):"—")+"<small>s</small>";
+    var total=isFinite(D)? width+D : NaN;
+    $("p-total").innerHTML=(isFinite(total)?fmt(total):"—")+"<small>nm</small>";
+
+    // 方式1：從 Turn Base 下降（依總距離），ROD 分四邊(base GS)/五邊(final GS)
+    var frac1=NaN, ang1=NaN, r4_1=NaN, r5_1=NaN;
+    if(isFinite(agl)&&agl>0&&isFinite(total)&&total>0){
+      frac1=agl/(total*6076); ang1=deg(Math.atan(frac1));
+      if(bs&&isFinite(bs.gs)) r4_1=bs.gs*frac1*FPM_C;
+      if(fnl&&isFinite(fnl.gs)) r5_1=fnl.gs*frac1*FPM_C;
+    }
+    $("p-d1-ang").textContent = isFinite(ang1)?fmt(ang1)+"°":"—";
+    $("p-d1-grad").textContent= isFinite(frac1)?fmt(frac1*100)+"%":"—";
+    $("p-d1-r4").textContent  = isFinite(r4_1)?fmt(r4_1,0):"—";
+    $("p-d1-r5").textContent  = isFinite(r5_1)?fmt(r5_1,0):"—";
+
+    // 方式2：3° 下降，ROD 分四邊/五邊；起點距跑道頭 d3、相對 Turn Final = d3−D
+    var frac3=Math.tan(rad(3));
+    $("p-d3-grad").textContent=fmt(frac3*100)+"%";
+    $("p-d3-r4").textContent=(bs&&isFinite(bs.gs))?fmt(bs.gs*frac3*FPM_C,0):"—";
+    $("p-d3-r5").textContent=(fnl&&isFinite(fnl.gs))?fmt(fnl.gs*frac3*FPM_C,0):"—";
+    var d3=NaN, tf3=NaN;
+    if(isFinite(agl)&&agl>0){ d3=agl/(frac3*6076); if(isFinite(D)) tf3=d3-D; }
+    $("p-d3-start").innerHTML = isFinite(d3)
+      ? ((isFinite(tf3)?((tf3>=0?"TF前 ":"TF後 ")+fmt(Math.abs(tf3))+"nm"):"")+"<small>距THR "+fmt(d3)+"nm</small>")
+      : "—";
+
+    drawPattern(pSide, rwy, dwTrk, bsTrk, dw, bs, D, width, wdir, wspd, timer, lead, r4_1, r5_1);
+  }
+
+  function drawPattern(side, rwy, dwTrk, bsTrk, dw, bs, D, width, wdir, wspd, timer, lead, rod4, rod5){
+    var s=[], cxc=170, m=(side==="L")?-1:1;
+    var wid=(isFinite(width)&&width>0)?width:2.5;
+    var Ddraw=(isFinite(D)&&D>0)?D:wid;
+    var scale=Math.min(122/Math.max(wid,0.5), 182/Math.max(Ddraw,0.5));
+    // 強制最小邊長，短邊也撐開到夠放標籤（不再擠成一團）
+    var patPx=Math.min(Math.max(wid*scale,86),128), finPx=Math.min(Math.max(Ddraw*scale,116),184);
+    var thrY=120, rwTop=thrY-92, dwTop=thrY-50;
+    var rwX=cxc-m*patPx/2, dwX=cxc+m*patPx/2, tfY=thrY+finPx;
+    var outAnchor=(m<0)?"end":"start", outDx=(m<0)?-9:9;
+
+    // 完成矩形的上邊/二邊（淡）
+    s.push('<polyline points="'+r1(rwX)+','+thrY+' '+r1(rwX)+','+rwTop+' '+r1(dwX)+','+dwTop+'" fill="none" stroke="#d8d4c8" stroke-width="2"/>');
+    // 延長中心線
+    s.push('<line x1="'+r1(rwX)+'" y1="'+thrY+'" x2="'+r1(rwX)+'" y2="'+r1(tfY)+'" stroke="#cdc9bd" stroke-width="1.2" stroke-dasharray="4 4"/>');
+    // 主航段：下邊、四邊（navy）、五邊（green）
+    s.push('<line x1="'+r1(dwX)+'" y1="'+r1(dwTop)+'" x2="'+r1(dwX)+'" y2="'+r1(tfY)+'" stroke="#2b3263" stroke-width="2.5"/>');
+    s.push('<line x1="'+r1(dwX)+'" y1="'+r1(tfY)+'" x2="'+r1(rwX)+'" y2="'+r1(tfY)+'" stroke="#2b3263" stroke-width="2.5"/>');
+    s.push('<line x1="'+r1(rwX)+'" y1="'+r1(tfY)+'" x2="'+r1(rwX)+'" y2="'+thrY+'" stroke="#1f7a55" stroke-width="3"/>');
+    // 方向箭頭
+    s.push(arrow(dwX,(dwTop+tfY)/2-9, dwX,(dwTop+tfY)/2+13, "#2b3263",2,false));
+    s.push(arrow((dwX+rwX)/2+m*9, tfY,(dwX+rwX)/2-m*9, tfY, "#2b3263",2,false));
+    s.push(arrow(rwX,(tfY+thrY)/2+9, rwX,(tfY+thrY)/2-13, "#1f7a55",2,false));
+    // 跑道
+    s.push('<rect x="'+r1(rwX-7)+'" y="'+rwTop+'" width="14" height="'+r1(thrY-rwTop)+'" rx="2" fill="#1f2547"/>');
+    s.push('<line x1="'+r1(rwX)+'" y1="'+(rwTop+6)+'" x2="'+r1(rwX)+'" y2="'+(thrY-6)+'" stroke="#d8c39c" stroke-width="1" stroke-dasharray="4 4"/>');
+    if(isFinite(rwy)) s.push('<text x="'+r1(rwX)+'" y="'+(thrY+13)+'" text-anchor="middle" font-size="11" font-weight="800" fill="#1f2547">'+desig(rwy)+'</text>');
+    // 航段名稱 + track 度數（兩行）
+    function legLab(x,y,anchor,name,trk,color){
+      s.push('<text x="'+r1(x)+'" y="'+r1(y)+'" text-anchor="'+anchor+'" font-size="9.5" font-weight="700" fill="'+color+'">'+name+'</text>');
+      if(isFinite(trk)) s.push('<text x="'+r1(x)+'" y="'+r1(y+11)+'" text-anchor="'+anchor+'" font-size="9" font-weight="700" fill="'+color+'">'+pad3(trk)+'°</text>');
+    }
+    legLab(dwX+outDx, (dwTop+thrY)/2-4, outAnchor, "Downwind", dwTrk, "#2b3263");
+    legLab((dwX+rwX)/2, tfY+14, "middle", "Base", bsTrk, "#2b3263");
+    legLab(rwX-m*10, (tfY+thrY)/2-4, (m<0?"start":"end"), "Final", rwy, "#1f7a55");
+    // 三個參考點
+    function dot(x,y,label,anchor,dx,dy){
+      s.push('<circle cx="'+r1(x)+'" cy="'+r1(y)+'" r="4" fill="#b89160" stroke="#fff" stroke-width="1.5"/>');
+      s.push('<text x="'+r1(x+dx)+'" y="'+r1(y+dy)+'" text-anchor="'+anchor+'" font-size="9" font-weight="700" fill="#5b6075">'+label+'</text>');
+    }
+    if(isFinite(rwy)){
+      dot(dwX, thrY, "Abeam THR", outAnchor, outDx, 3);
+      dot(dwX, tfY, "Turn Base", outAnchor, outDx, 13);
+      dot(rwX, tfY, "Turn Final", (m<0?"start":"end"), (m<0?9:-9), -6);
+    }
+    // 風向標（右上角）：相對「落地朝上」框
+    if(isFinite(wdir)&&isFinite(rwy)&&isFinite(wspd)){
+      var rel=wdir-rwy, wx=302, wy=44, wr=21;
+      s.push('<circle cx="'+wx+'" cy="'+wy+'" r="'+wr+'" fill="#fff" stroke="#e6e2d8" stroke-width="1"/>');
+      var f=[wx+wr*Math.sin(rad(rel)), wy-wr*Math.cos(rad(rel))];
+      var t=[wx-(wr-7)*Math.sin(rad(rel)), wy+(wr-7)*Math.cos(rad(rel))];
+      s.push(arrow(f[0],f[1],t[0],t[1],"#b89160",2.5,false));
+      s.push('<text x="'+wx+'" y="'+(wy+wr+11)+'" text-anchor="middle" font-size="8.5" font-weight="700" fill="#5b6075">'+pad3(wdir)+'/'+fmt(wspd)+'</text>');
+    }
+    // 真北指針（左上角）
+    if(isFinite(rwy)){
+      var nx=40, ny=44, na=[nx+15*Math.sin(rad(-rwy)), ny-15*Math.cos(rad(-rwy))], nb=[nx-10*Math.sin(rad(-rwy)), ny+10*Math.cos(rad(-rwy))];
+      s.push('<line x1="'+r1(nb[0])+'" y1="'+r1(nb[1])+'" x2="'+r1(na[0])+'" y2="'+r1(na[1])+'" stroke="#b4452f" stroke-width="2"/>');
+      s.push('<circle cx="'+r1(na[0])+'" cy="'+r1(na[1])+'" r="2.5" fill="#b4452f"/>');
+      s.push('<text x="'+r1(na[0])+'" y="'+r1(na[1]-4)+'" text-anchor="middle" font-size="8" font-weight="800" fill="#b4452f">N</text>');
+    }
+    // 效能數字（藍）：計時/D 在下風段、提前量在轉 Final、ROD 四/五在 base/final
+    if(isFinite(rwy)){
+      var PC="#2f6fb0";
+      function pl(x,y,anchor,txt){ s.push('<text x="'+r1(x)+'" y="'+r1(y)+'" text-anchor="'+anchor+'" font-size="8.5" font-weight="800" fill="'+PC+'">'+txt+'</text>'); }
+      var dwiX=dwX-m*11, dwiA=(m<0?"start":"end");      // 下風段內側
+      var fniX=rwX+m*11, fniA=(m<0?"end":"start");      // 五邊內側
+      if(isFinite(timer)) pl(dwiX,(thrY+tfY)/2-3,dwiA,"⏱ "+timer+"s");
+      if(isFinite(D))     pl(dwiX,(thrY+tfY)/2+8,dwiA,"D "+fmt(D)+"nm");
+      if(isFinite(lead))  pl(rwX-m*9, tfY+9, (m<0?"start":"end"), "提前 "+fmt(lead)+"nm");
+      if(isFinite(rod5))  pl(fniX,(tfY+thrY)/2+4,fniA,"五 "+fmt(rod5,0)+"fpm");
+      if(isFinite(rod4))  pl((dwX+rwX)/2,tfY-7,"middle","四 "+fmt(rod4,0)+"fpm");
+    }
+    // 依內容動態裁切 viewBox 高度，避免下方留白（含 Base 標籤兩行）
+    var vbTop=14, vbBot=tfY+34;
+    var svg=$("p-svg"); svg.setAttribute("viewBox","0 "+vbTop+" 340 "+r1(vbBot-vbTop));
+    svg.innerHTML=s.join("");
+  }
+  ["p-ias","p-rwy","p-wdir","p-wspd","p-msl","p-elev","p-width","p-d-in"].forEach(function(id){ on(id,computePattern); });
+  document.querySelectorAll("#p-toggle button").forEach(function(b){
+    b.addEventListener("click",function(){
+      pSide=b.getAttribute("data-side");
+      document.querySelectorAll("#p-toggle button").forEach(function(x){ x.classList.toggle("active", x===b); });
+      computePattern();
+    });
+  });
+
+  // =====================================================================
+  //  重整（清除）按鈕
+  // =====================================================================
+  var REFRESH={ m3:computeWind, m4:computeTurn, m5:computeWCA, p:computePattern };
+  document.querySelectorAll(".reset").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var key=btn.getAttribute("data-card"), card=$("card-"+key);
+      if(!card) return;
+      card.querySelectorAll("input:not([disabled])").forEach(function(el){ el.value=""; el._full=undefined; });
+      if(key==="p"){ var w=$("p-width"); if(w) w.value="2.5"; pSide="L";
+        document.querySelectorAll("#p-toggle button").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-side")==="L"); }); }
+      var fn=REFRESH[key]; if(fn) fn();
+    });
+  });
+
+  // =====================================================================
+  //  分頁切換（每頁滿版，預設第一頁）
+  // =====================================================================
+  document.querySelectorAll("#tabbar .tab").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      var t=btn.getAttribute("data-tab");
+      document.querySelectorAll("#tabbar .tab").forEach(function(x){ x.classList.toggle("active", x===btn); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.id==="card-"+t); });
+      window.scrollTo(0,0);
+    });
+  });
+
+  // 初始化
+  computeWind(); computeTurn(); computeWCA(); computePattern();
+})();
+</script>
+</body>
+</html>

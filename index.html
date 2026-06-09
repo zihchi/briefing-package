@@ -497,7 +497,8 @@
       <h1>Briefing Package</h1>
       <div class="app-topbar-meta">
         <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
-        <button id="btn-check-update" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
+        <button id="btn-reload-page" title="整頁重新整理（重抓所有資料，像重開 App）" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">🔄 重新整理</button>
+        <button id="btn-check-update" title="檢查是否有新版程式（換程式碼用，跟重新整理資料不同）" style="margin: 0; padding: 4px 10px; font-size: 11px; background: #8a7a6b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
       </div>
     </div>
   </div>
@@ -542,6 +543,7 @@
     <button class="btn" onclick="loadPage('schedule.html')">🗓️ 定期航班</button>
     <button class="btn" onclick="loadPage('altimetry.html')">❄️ ICAO 低溫修正</button>
     <button class="btn" onclick="loadPage('notam.html')">📡 NOTAM 座標地圖</button>
+    <button class="btn" onclick="loadFrame('aviation-calculator.html')">✈️ 航空計算機</button>
     </div>
 </div>
 
@@ -763,6 +765,25 @@
   <div id="update-banner" style="display: none; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); background-color: var(--danger); color: white; padding: 12px 24px; border-radius: 30px; z-index: 9999; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s;">
     🚀 新版本已準備就緒，點擊立即更新！
   </div>
+
+  <!-- 整頁重新整理：載入中遮罩（按下按鈕馬上顯示，給明確回饋）-->
+  <style>@keyframes reloadSpin { to { transform: rotate(360deg); } }</style>
+  <div id="reload-overlay" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(244,236,228,0.88); backdrop-filter:saturate(180%) blur(6px); -webkit-backdrop-filter:saturate(180%) blur(6px); align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+    <div style="width:46px; height:46px; border:4px solid var(--border); border-top-color:var(--brand); border-radius:50%; animation:reloadSpin 0.8s linear infinite;"></div>
+    <div style="font-weight:800; color:var(--text); letter-spacing:1px;">重新整理中…</div>
+  </div>
+  <script>
+    // 整頁重新整理：顯示遮罩 → location.reload() 把所有東西（天氣/雷達衛星圖/iframe/地圖）重抓一次，等同重開 App
+    (function(){
+      var btn = document.getElementById('btn-reload-page');
+      var ov = document.getElementById('reload-overlay');
+      if(!btn) return;
+      btn.addEventListener('click', function(){
+        if(ov) ov.style.display = 'flex';
+        setTimeout(function(){ location.reload(); }, 60); // 讓遮罩先畫出來再重載
+      });
+    })();
+  </script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="app.js?v=2.4"></script>

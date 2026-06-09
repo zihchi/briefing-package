@@ -3020,15 +3020,15 @@
             return "vfr";
         }
 
-        // 依時效回傳醒目色票徽章：🟢≤30分 / 🟠31-60分 / 🔴>60分
+        // 依時效回傳醒目色票徽章：≤30分綠 / 31-60分橘 / >60分紅（純色底，無 emoji）
         function ageBadgeHtml(mins) {
             if (mins == null || mins < 0) return "";
             const label = mins < 60 ? `${mins} 分鐘` : `${Math.floor(mins / 60)} 小時 ${mins % 60} 分`;
             let c;
-            if (mins <= 30) c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac', dot: '🟢' };
-            else if (mins <= 60) c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74', dot: '🟠' };
-            else c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5', dot: '🔴' };
-            return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:2px 9px; border-radius:999px; white-space:nowrap; vertical-align:middle; margin-left:6px;">${c.dot} ${label}</span>`;
+            if (mins <= 30) c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac' };
+            else if (mins <= 60) c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74' };
+            else c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5' };
+            return `<span style="display:inline-block; font-size:11px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:2px 9px; border-radius:999px; white-space:nowrap; vertical-align:middle; margin-left:6px;">${label}</span>`;
         }
 
         // 從報文 DDHHMMZ 算出已發佈幾分鐘（回傳數字；無法解析回 null）

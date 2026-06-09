@@ -142,15 +142,15 @@ function getFlightCategory(vis, ceil) {
   return "vfr";
 }
 
-// 依時效回傳醒目色票徽章：🟢≤30分 / 🟠31-60分 / 🔴>60分（mins 為數字，null/負值回空字串）
+// 依時效回傳醒目色票徽章：≤30分綠 / 31-60分橘 / >60分紅（純色底，無 emoji）（mins 為數字，null/負值回空字串）
 function ageBadgeHtml(mins) {
   if (mins == null || mins < 0) return "";
   const label = mins < 60 ? `${mins} 分鐘` : `${Math.floor(mins / 60)} 小時 ${mins % 60} 分`;
   let c;
-  if (mins <= 30) c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac', dot: '🟢' };
-  else if (mins <= 60) c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74', dot: '🟠' };
-  else c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5', dot: '🔴' };
-  return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:3px 10px; border-radius:999px; white-space:nowrap; vertical-align:middle;">${c.dot} ${label}</span>`;
+  if (mins <= 30) c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac' };
+  else if (mins <= 60) c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74' };
+  else c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5' };
+  return `<span style="display:inline-block; font-size:12px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:3px 10px; border-radius:999px; white-space:nowrap; vertical-align:middle;">${label}</span>`;
 }
 
 // 從報文 DDHHMMZ 算出已發佈幾分鐘（回傳數字；無法解析回 null）
@@ -286,9 +286,18 @@ function loadPage(pageUrl) {
         });
 }
 
+// 以 iframe 載入「獨立完整工具」（自帶樣式/腳本，與本站隔離，避免 CSS/JS 衝突）
+function loadFrame(pageUrl) {
+    const displayArea = document.getElementById('content-display');
+    cleanUpPanel();
+    displayArea.innerHTML =
+        '<iframe src="' + pageUrl + '" title="工具" loading="lazy" ' +
+        'style="width:100%;height:85vh;border:0;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06);"></iframe>';
+}
+
 function closePanel() {
     const displayArea = document.getElementById('content-display');
-    cleanUpPanel(); 
+    cleanUpPanel();
     displayArea.innerHTML = `
         <div class="section" style="text-align: center; color: #666;">
             <h3>👈 請點擊上方按鈕載入計算工具</h3>
