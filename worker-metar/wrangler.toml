@@ -1,0 +1,9 @@
+name = "metar"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+# 純 stateless proxy → aviationweather.gov（NOAA），不需 KV / R2 / D1 / secrets
+# 邊緣快取由 worker.js 內 EDGE_TTL 控制
+
+[observability]
+enabled = true
