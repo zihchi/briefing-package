@@ -743,10 +743,12 @@ window.fetchHistoryMetarPopup = async function(icao) {
             }
         };
 
-        // 4 條路並行 race,第一個成功就用
+        // 並行 race,第一個成功就用（首選自有 worker 直打 NOAA）
+        const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=metar&ids=${encodeURIComponent(icao)}&hours=24`;
         let data;
         try {
             data = await Promise.any([
+                fetchWithTimeout(wxWorker, 8000, 'worker'),
                 fetchWithTimeout(cleanUrl, 8000, 'direct'),
                 fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy'),
                 fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
@@ -1076,7 +1078,10 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
         }
     };
 
+    // 首選：自有 Cloudflare Worker 直打 NOAA（快又新鮮）；其餘公用代理留作備援
+    const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icaoList)}`;
     const racers = [
+        fetchWithTimeout(wxWorker, 8000, 'worker'),
         fetchWithTimeout(cleanUrl, 8000, 'direct'),
         fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy'),
         fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),

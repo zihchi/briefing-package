@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v61';
+const CACHE_NAME = 'briefing-v62';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -48,6 +48,7 @@ const BYPASS_HOSTNAMES = [
   'api.codetabs.com',
   'api.allorigins.win',
   'corsproxy.io',
+  'zihchi.workers.dev',
   'open-meteo.com',
   'script.google.com',
   'basemaps.cartocdn.com',
