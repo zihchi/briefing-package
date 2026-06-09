@@ -142,10 +142,21 @@ function getFlightCategory(vis, ceil) {
   return "vfr";
 }
 
+// 依時效回傳醒目藥丸徽章：≤30分綠 / 31-60分橘（皆只顯示 (Xm)）/ >60分紅（標示「⚠️ 已過期」）
+function ageBadgeHtml(mins) {
+  if (mins == null || mins < 0) return "";
+  let c, label;
+  if (mins <= 30) { c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac' }; label = `(${mins}m)`; }
+  else if (mins <= 60) { c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74' }; label = `(${mins}m)`; }
+  else { c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5' }; label = `⚠️ 已過期 (${mins}m)`; }
+  return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:3px 10px; border-radius:999px; white-space:nowrap; vertical-align:middle;">${label}</span>`;
+}
+
+// 從報文 DDHHMMZ 算出已發佈幾分鐘（回傳數字；無法解析回 null）
 function calculateReportAge(rawText) {
-  if (!rawText) return "";
+  if (!rawText) return null;
   const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
-  if (!match) return "";
+  if (!match) return null;
 
   const repDay = parseInt(match[1], 10);
   const repHour = parseInt(match[2], 10);
@@ -166,14 +177,7 @@ function calculateReportAge(rawText) {
 
   const reportDate = new Date(Date.UTC(targetYear, targetMonth, repDay, repHour, repMin));
   const diffMs = now.getTime() - reportDate.getTime();
-  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-
-  if (diffMins < 60) return `(已發佈 ${diffMins} 分鐘)`;
-  else {
-      const h = Math.floor(diffMins / 60);
-      const m = diffMins % 60;
-      return `(已發佈 ${h} 小時 ${m} 分鐘)`;
-  }
+  return Math.max(0, Math.floor(diffMs / 60000));
 }
 
 function formatColorTAF(rawTaf) {
@@ -452,11 +456,7 @@ function calculatePopupAtisAge(rawText) {
     
     if (diffMins < 0 || diffMins > 1440) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">時效異常</span>`;
     
-    if (diffMins > 30) {
-        return `<span style="font-size: 11px; background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 12px; font-weight: bold;">⚠️ 已過期 (${diffMins}m)</span>`;
-    } else {
-        return `<span style="font-size: 11px; background: #dcfce7; color: #10b981; padding: 2px 8px; border-radius: 12px; font-weight: bold;">✅ 最新 (${diffMins}m)</span>`;
-    }
+    return ageBadgeHtml(diffMins);
 }
 
 window.fetchPopupAtis = function(icao) {
@@ -635,8 +635,8 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
     const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
     const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
 
-    const metarAgeStr = calculateReportAge(rawMetarText);
-    const tafAgeStr = calculateReportAge(rawTafText);
+    const metarAgeStr = ageBadgeHtml(calculateReportAge(rawMetarText));
+    const tafAgeStr = ageBadgeHtml(calculateReportAge(rawTafText));
     const coloredTafHtml = formatColorTAF(rawTafText);
 
     const metarEmojis = getWeatherEmojis(rawMetarText);
@@ -667,7 +667,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
                     METAR (即時天氣)
                     ${rawMetarText ? `<span class="badge" style="background-color: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px; font-weight: bold;">${displayCat}</span>${metarEmojiHtml}` : ''}
                 </span>
-                <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${metarAgeStr}</span>
+                <span style="margin-left:10px; display:inline-flex; align-items:center;">${metarAgeStr}</span>
             </div>
             <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; ${MONOSPACE_FONT} font-size: 13px;">${rawMetarText || "目前無有效 METAR 報文"}</div>
         </div>
@@ -675,7 +675,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         <div class="data-block" style="margin-top: 15px;">
             <div class="section-title">
                 <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
-                <span style="font-size:12.5px; color:#7f8c8d; font-weight:normal; margin-left:10px; margin-top:2px;">${tafAgeStr}</span>
+                <span style="margin-left:10px; display:inline-flex; align-items:center;">${tafAgeStr}</span>
             </div>
             ${coloredTafHtml}
         </div>

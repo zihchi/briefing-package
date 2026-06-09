@@ -2870,10 +2870,7 @@
             if (nowMins < atisMins && parseInt(m[1],10) >= 22 && now.getUTCHours() <= 2) nowMins += 1440;
             const diff = nowMins - atisMins;
             if (diff < 0 || diff > 1440) return '';
-            const expired = diff > 30;
-            const cls = expired ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-emerald-100 text-emerald-700 border border-emerald-300';
-            const prefix = expired ? '⚠ ' : '✓ ';
-            return `<span class="${cls} text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">${prefix}${diff} min ago</span>`;
+            return ageBadgeHtml(diff);
         }
 
         function createDatisBlockHTML(icao) {
@@ -3023,15 +3020,25 @@
             return "vfr";
         }
 
+        // 依時效回傳醒目藥丸徽章：≤30分綠 / 31-60分橘（皆只顯示 (Xm)）/ >60分紅（標示「⚠️ 已過期」）
+        function ageBadgeHtml(mins) {
+            if (mins == null || mins < 0) return "";
+            let c, label;
+            if (mins <= 30) { c = { bg: '#dcfce7', fg: '#15803d', bd: '#86efac' }; label = `(${mins}m)`; }
+            else if (mins <= 60) { c = { bg: '#ffedd5', fg: '#c2410c', bd: '#fdba74' }; label = `(${mins}m)`; }
+            else { c = { bg: '#fee2e2', fg: '#b91c1c', bd: '#fca5a5' }; label = `⚠️ 已過期 (${mins}m)`; }
+            return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; background:${c.bg}; color:${c.fg}; border:1px solid ${c.bd}; padding:2px 9px; border-radius:999px; white-space:nowrap; vertical-align:middle; margin-left:6px;">${label}</span>`;
+        }
+
+        // 從報文 DDHHMMZ 算出已發佈幾分鐘（回傳數字；無法解析回 null）
         function calculateReportAge(rawText) {
-            if (!rawText) return "";
+            if (!rawText) return null;
             const match = rawText.match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
-            if (!match) return "";
+            if (!match) return null;
             const now = new Date(), currDay = now.getUTCDate();
             let targetMonth = now.getUTCMonth(), targetYear = now.getUTCFullYear();
             if (parseInt(match[1], 10) > currDay + 5) { targetMonth -= 1; if (targetMonth < 0) { targetMonth = 11; targetYear -= 1; } }
-            const diffMins = Math.max(0, Math.floor((now.getTime() - new Date(Date.UTC(targetYear, targetMonth, parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10))).getTime()) / 60000));
-            return diffMins < 60 ? `(已發佈 ${diffMins} 分鐘)` : `(已發佈 ${Math.floor(diffMins / 60)} 小時 ${diffMins % 60} 分鐘)`;
+            return Math.max(0, Math.floor((now.getTime() - new Date(Date.UTC(targetYear, targetMonth, parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10))).getTime()) / 60000));
         }
 
         function formatColorTAF(rawTaf) {
@@ -3137,11 +3144,11 @@
                     const rawMetar = metarResult.value, parsed = parseWeatherElements(rawMetar, 999, 99999), cat = getFlightCategory(parsed.vis, parsed.ceil), emojis = getWeatherEmojis(rawMetar);
                     metarContent.innerText = rawMetar; metarContent.className = `raw-text border-${cat} text-xs md:text-[14px]`;
                     metarHeader.innerHTML = `METAR <span class="badge bg-${cat}">${cat.toUpperCase()}</span> ${emojis ? `<span style="font-size: 14px; margin-left: 4px; vertical-align: middle;">${emojis}</span>` : ''}`;
-                    metarAge.innerText = calculateReportAge(rawMetar);
+                    metarAge.innerHTML = ageBadgeHtml(calculateReportAge(rawMetar));
                 } else { metarContent.innerText = "❌ 無有效 METAR 報文"; metarContent.className = "raw-text border-unk text-red-500 font-bold text-xs md:text-[14px]"; }
 
                 if (tafResult.status === 'fulfilled' && tafResult.value) {
-                    tafContent.innerHTML = formatColorTAF(tafResult.value); tafAge.innerText = calculateReportAge(tafResult.value);
+                    tafContent.innerHTML = formatColorTAF(tafResult.value); tafAge.innerHTML = ageBadgeHtml(calculateReportAge(tafResult.value));
                 } else { tafContent.innerHTML = `<div class="bg-red-50 p-2 md:p-3 rounded-md text-xs md:text-[14px] text-red-600 data-font border-l-4 border-red-500 font-bold">❌ 無有效 TAF 預報資料</div>`; }
 
                 if (!navigator.onLine) { syncStatus.innerText = "CACHED"; syncStatus.className = "text-[10px] px-2 py-0.5 rounded bg-stone-500 text-white shadow font-bold tracking-widest"; } 
