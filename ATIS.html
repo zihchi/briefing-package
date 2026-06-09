@@ -397,6 +397,14 @@
         return type === 'metar' ? (data[0].rawOb || data[0].raw) : (data[0].rawTAF || data[0].raw);
     };
 
+    // 📍 階段零：自有 Cloudflare Worker 直打 NOAA（首選，快又新鮮）
+    try {
+        const dataW = await executeFetch(`https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`, 6000);
+        return extractData(dataW);
+    } catch (errorW) {
+        console.warn(`[Worker 失效] ${type.toUpperCase()} 改走原備援鏈路...`);
+    }
+
     // 📍 階段一：官方主鏈路 (給予 4.5 秒耐心等待)
     try {
         const data = await executeFetch(cleanUrl, 4500);

@@ -3112,7 +3112,10 @@
                 } catch (e) { clearTimeout(tid); throw new Error(`${label}: ${e.message || e}`); }
             };
 
+            // 首選：自有 Cloudflare Worker 直打 NOAA（快又新鮮）；其餘公用代理留作備援
+            const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`;
             const racers = [
+                jsonRacer(wxWorker, 8000, 'worker'),
                 jsonRacer(cleanUrl, 8000, 'direct-json'),
                 textRacer(textUrl, 8000, 'direct-text'),
                 jsonRacer(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy-json'),
