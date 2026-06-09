@@ -1,13 +1,14 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v58';
+const CACHE_NAME = 'briefing-v59';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
   './',
   './index.html',
   './app.js',
+  './aviation-calculator.html',
   './ATIS.html',
   './Captain_Logbook_Cloud.html',
   './FDP.html',
