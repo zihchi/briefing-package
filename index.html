@@ -705,12 +705,14 @@
     </script>
   </div>
 
-  <!-- NCDR 即時回波與流場（w_05，響應式全螢幕地圖，直接全寬嵌入）-->
+  <!-- NCDR 即時回波與流場（w_05）。3:2 容器 + iframe 放大 1.27 倍置中、overflow:hidden 裁掉邊緣白邊 -->
   <div class="section windy-section">
     <h2>🌧️ NCDR 即時回波與流場</h2>
-    <iframe id="ncdrRain" src="https://watch.ncdr.nat.gov.tw/w_05" scrolling="no" loading="lazy"
-      title="NCDR 即時回波與流場動畫"
-      style="width:100%; aspect-ratio:3 / 2; border:none; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;"></iframe>
+    <div style="position:relative; width:100%; aspect-ratio:3 / 2; overflow:hidden; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
+      <iframe id="ncdrRain" src="https://watch.ncdr.nat.gov.tw/w_05" scrolling="no" loading="lazy"
+        title="NCDR 即時回波與流場動畫"
+        style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:127%; height:127%; border:0;"></iframe>
+    </div>
   </div>
 
   <!-- 即時圖：雷達 + 衛星（unibrief 來源）並列 -->
