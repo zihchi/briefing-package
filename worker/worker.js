@@ -691,6 +691,40 @@ function putAdbCache(ctx, cache, cacheKey, slim) {
 }
 
 // ──────────────────────────────────────────
+// 🌦️ METAR / TAF 代理 → aviationweather.gov (NOAA 官方)
+// 取代免費公用代理（corsproxy/codetabs/allorigins，慢/不穩/自帶舊快取）；
+// 直打 NOAA + 邊緣短快取 45s → 又快又新鮮。
+// ──────────────────────────────────────────
+async function handleWx(url, origin) {
+  const type = (url.searchParams.get('type') || 'metar').toLowerCase();
+  const ids = (url.searchParams.get('ids') || '').trim();
+  const hours = url.searchParams.get('hours') || '';
+  const format = url.searchParams.get('format') || 'json';
+  if (type !== 'metar' && type !== 'taf') return jsonResp({ error: 'type 必須是 metar 或 taf' }, 400, origin);
+  if (!ids) return jsonResp({ error: '缺少 ids（機場 ICAO，可逗號分隔）' }, 400, origin);
+  let target = `https://aviationweather.gov/api/data/${type}?ids=${encodeURIComponent(ids)}&format=${encodeURIComponent(format)}`;
+  if (hours) target += `&hours=${encodeURIComponent(hours)}`;
+  try {
+    const up = await fetch(target, {
+      cf: { cacheTtl: 45, cacheEverything: true },
+      headers: { 'Accept': 'application/json', 'User-Agent': UA },
+    });
+    const body = await up.text();
+    return new Response(body, {
+      status: up.status,
+      headers: {
+        ...cors(origin),
+        'Content-Type': up.headers.get('Content-Type') || 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=45',
+        'X-Proxy-By': 'elb-worker-wx',
+      },
+    });
+  } catch (e) {
+    return jsonResp({ error: 'aviationweather.gov 取得失敗: ' + String(e) }, 502, origin);
+  }
+}
+
+// ──────────────────────────────────────────
 // Router
 // ──────────────────────────────────────────
 export default {
@@ -703,7 +737,12 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/api/ping') {
-      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.9-aerodatabox', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records', 'log-actions', 'aerodatabox-gates'] }, 200, origin);
+      return jsonResp({ ok: true, name: 'ELB Proxy Worker', version: '3.9-aerodatabox', features: ['websocket-client', 'direct-login', 'fleet-enrichment', 'aircraft-detail', 'fuel-records', 'log-actions', 'aerodatabox-gates', 'wx-metar-taf'] }, 200, origin);
+    }
+
+    // 🌦️ METAR/TAF（公開、免登入）
+    if (url.pathname === '/api/wx' && request.method === 'GET') {
+      return await handleWx(url, origin);
     }
 
     try {
