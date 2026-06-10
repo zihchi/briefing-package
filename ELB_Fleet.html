@@ -428,24 +428,6 @@
     .expiry-crit { color: #b91c1c; background: rgba(220,38,38,0.12); font-weight: 700; }
     .expiry-exp  { color: #991b1b; background: rgba(185,28,28,0.15); font-weight: 700; }
 
-    /* MEL ATA code chip — tap to copy */
-    .mel-ata {
-      font-family: 'SF Mono', 'Menlo', monospace;
-      font-size: 11px; font-weight: 800;
-      color: #b91c1c;
-      background: rgba(220,38,38,0.10);
-      border: 1px solid rgba(220,38,38,0.30);
-      padding: 2px 7px; border-radius: 5px;
-      cursor: pointer; user-select: none;
-      transition: all 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .mel-ata:hover { background: rgba(220,38,38,0.18); }
-    .mel-ata:active { transform: scale(0.96); }
-    .mel-ata.copied {
-      background: rgba(22,163,74,0.15); color: #15803d;
-      border-color: rgba(22,163,74,0.4);
-    }
 
     /* NTC item */
     .ntc-item {
@@ -1464,76 +1446,7 @@ function updateFlightBar(data) {
 function renderDashboardTab(container, data) {
   const st    = data.state || {};
   const ntcs  = data.notesToCrew || [];
-  const mels  = data.deferredDefects || [];
-
-  // ── DEBUG: dump MEL raw structure 成「純文字」, 加自動 pattern 掃描 ──
-  if (mels.length && !window.__melDumped) {
-    window.__melDumped = true;
-
-    const SCAN_PATTERNS = [
-      { name: 'D-NUMBER (D447 樣式)',          re: /^D\d+$/ },
-      { name: 'MEL-REF (25-90-01A 樣式)',        re: /^\d{2}-\d{2}-\d+[A-Z]?$/ },
-      { name: 'CAT-LETTER (單字 A/B/C/D)',       re: /^[A-D]$/ },
-      { name: 'SUBJECT (含官方第二行的關鍵字)',
-        re: /ICE AND RAIN|EQUIPMENT.{0,3}FURNISHINGS|LAVATORIES|ARMREST|RAIN REPELLENT|GAGE ASSY|Pax Seat|ICE & RAIN/i },
-    ];
-    function scan(obj, path, hits, depth) {
-      if (depth > 8 || obj == null) return;
-      if (typeof obj === 'string') {
-        SCAN_PATTERNS.forEach(p => {
-          if (p.re.test(obj)) hits.push(`    [${p.name}]  ${path} = ${JSON.stringify(obj)}`);
-        });
-        return;
-      }
-      if (Array.isArray(obj)) {
-        obj.forEach((v, i) => scan(v, `${path}[${i}]`, hits, depth + 1));
-        return;
-      }
-      if (typeof obj === 'object') {
-        for (const k of Object.keys(obj)) {
-          // 跳過我們自己加上的 _id/_error，但保留 _action（裡面就是 maintAction）
-          if (k.startsWith('_') && k !== '_action') continue;
-          scan(obj[k], path ? `${path}.${k}` : k, hits, depth + 1);
-        }
-      }
-    }
-
-    const lines = [];
-    lines.push('============ MEL RAW DUMP START ============');
-    mels.forEach((m, i) => {
-      lines.push('');
-      lines.push(`---------- MEL [${i}] _id=${m._id} recordName=${m.recordName || '?'} ----------`);
-      lines.push('TOP-LEVEL KEYS: ' + Object.keys(m).sort().join(', '));
-      lines.push('_action KEYS: ' +
-        (m._action ? Object.keys(m._action).sort().join(', ') : '(無)'));
-      lines.push('maintActionDeferral KEYS: ' +
-        (m._action && m._action.maintActionDeferral
-          ? Object.keys(m._action.maintActionDeferral).sort().join(', ')
-          : '(無)'));
-
-      const hits = [];
-      scan(m, '', hits, 0);
-      lines.push('');
-      lines.push('  >>> PATTERN HITS <<<');
-      lines.push(hits.length ? hits.join('\n') : '    (無命中)');
-
-      lines.push('');
-      lines.push('FULL MAINT-LOG JSON (省略 _action，下面單獨印):');
-      lines.push(JSON.stringify(m, (k, v) => (k === '_action' ? '__see_below__' : v), 2));
-      lines.push('');
-      lines.push('FULL _action JSON:');
-      lines.push(JSON.stringify(m._action || null, null, 2));
-    });
-    lines.push('');
-    lines.push('============ MEL RAW DUMP END ============');
-
-    const text = lines.join('\n');
-    console.log(text);                 // ← 一次印出整段純文字，可直接圈選複製
-    window.__melDump = text;           // ← 也可在 console 用 copy(__melDump) 一鍵複製到剪貼簿
-    console.log('%c☝ 上面整段是純文字 dump。' +
-                '在 console 輸入  copy(__melDump)  可一鍵複製到剪貼簿。',
-                'background:#fbbf24;color:#000;padding:4px 8px;font-weight:700;font-size:14px');
-  }
+  const mels  = (data.deferredDefects || []).slice().sort(melSorter);
 
   // 分類 MEL → MEL / Inspection / Acceptable
   // 用 maintAction.actionAuthorityRef[].typeOfReference 判斷
@@ -1699,34 +1612,76 @@ function renderDefectMini(d) {
   </div>`;
 }
 
-function renderMelMini(m) {
-  const num = fmt(m.recordName || m._id);
-  const desc = fmt(m.comments || m.faultDescription || '');
-  const action = m._action || {};
-  const deferral = action.maintActionDeferral || {};
-  const refs = Array.isArray(action.actionAuthorityRef) ? action.actionAuthorityRef : [];
-  const ref = refs.find(r => r.typeOfReference === 'MEL' || r.typeOfReference === 'CDL');
-  const refDoc = ref ? fmt(ref.documentNumber || '') : '';
-  const cat = fmt(deferral.deferralCategoryOther || deferral.deferralCategory || '');
-  const exp0 = deferral.expiration?.[0];
-  let expTag = '';
-  if (exp0) {
-    if (exp0.relativeTime?.days && m.originDateTime) {
-      const days = exp0.relativeTime.days;
-      const expDate = new Date(new Date(m.originDateTime).getTime() + days * 86400000);
-      const dl = Math.round((expDate - new Date()) / 86400000);
-      const cls = dl<0?'expiry-exp':dl<=3?'expiry-crit':dl<=10?'expiry-warn':'expiry-ok';
-      expTag = `<span class="mel-meta-tag ${cls}">${dl<0?'EXPIRED':dl+'d'}</span>`;
+// ── MEL helpers ──
+// Defer 簽章日 (本筆 MEL 被 defer 的時間，作為 expiry 計算基準與排序的 tiebreak)
+function melDeferDate(m) {
+  return new Date(m._action?.signatureDate || m.originDateTime || 0).getTime();
+}
+// 剩餘天數 (整日計算，與官方 ELB 一致)
+function melDaysLeft(m) {
+  const days = m._action?.maintActionDeferral?.expiration?.[0]?.relativeTime?.days;
+  if (!days) return null;
+  const ref = m._action?.signatureDate || m.originDateTime;
+  if (!ref) return null;
+  const D = 86400000;
+  const expDay = Math.floor((new Date(ref).getTime() + days * D) / D);
+  const nowDay = Math.floor(Date.now() / D);
+  return expDay - nowDay;
+}
+// 排序: 剩餘天數升冪 (最緊急優先), 同天數則 defer 日期新→舊
+function melSorter(a, b) {
+  const da = melDaysLeft(a), db = melDaysLeft(b);
+  const va = da == null ? Number.POSITIVE_INFINITY : da;
+  const vb = db == null ? Number.POSITIVE_INFINITY : db;
+  if (va !== vb) return va - vb;
+  return melDeferDate(b) - melDeferDate(a);
+}
+// 從 maintAction 撈 MEL ref (e.g. 25-90-01A)
+function melRefDoc(m) {
+  const refs = Array.isArray(m._action?.actionAuthorityRef) ? m._action.actionAuthorityRef : [];
+  const ref = refs.find(r => r.typeOfReference === 'MEL' || r.typeOfReference === 'CDL')
+           || refs.find(r => r.typeOfDocumentOther === 'MEL');
+  return ref ? fmt(ref.documentNumber || '') : '';
+}
+function melExpTag(m, longLabel) {
+  const dl = melDaysLeft(m);
+  if (dl == null) {
+    const exp0 = m._action?.maintActionDeferral?.expiration?.[0];
+    if (exp0?.quantity && exp0?.unitName) {
+      return `<span class="mel-meta-tag expiry-warn">${exp0.quantity} ${esc(exp0.unitName)}</span>`;
     }
+    return '';
   }
-  return `<div style="padding:6px 0;border-top:1px solid var(--border);font-size:12px;margin-top:6px;">
-    <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;">
-      <span style="color:var(--gold);font-weight:700">${esc(num)}</span>
-      ${refDoc?`<span class="mel-ata" onclick="copyMelCode(event, this, '${esc(refDoc)}')" title="點選複製">${esc(refDoc)}</span>`:''}
-      ${cat?catTag(cat):''}
-      ${expTag}
+  const cls = dl < 0 ? 'expiry-exp' : dl <= 3 ? 'expiry-crit' : dl <= 10 ? 'expiry-warn' : 'expiry-ok';
+  const label = dl < 0 ? 'EXPIRED' : (longLabel ? `Expires ${dl} days` : `${dl}d`);
+  return `<span class="mel-meta-tag ${cls}">${label}</span>`;
+}
+
+function renderMelMini(m) {
+  const dNum   = fmt(m.deferralRefNum || m._action?.maintActionDeferral?.deferralRefNum || '');
+  const recNum = fmt(m.recordName || m._id || '');
+  const title  = fmt(m.faultDescription || '');
+  const desc   = fmt(m.comments || '');
+  const refDoc = melRefDoc(m);
+  const cat    = fmt(m._action?.maintActionDeferral?.deferralCategoryOther ||
+                     m._action?.maintActionDeferral?.deferralCategory || '');
+  const expTag = melExpTag(m, false);
+  const headId = dNum || recNum;
+  const subId  = (dNum && recNum && dNum !== recNum) ? recNum : '';
+  return `<div style="padding:8px 0;border-top:1px solid var(--border);font-size:12px;margin-top:6px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+      <div style="min-width:0;flex:1">
+        <span style="color:var(--gold);font-weight:700">${esc(headId)}</span>
+        ${subId ? `<span style="color:var(--muted);margin-left:6px;font-size:11px">· ${esc(subId)}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+        ${expTag}
+        ${cat ? catTag(cat) : ''}
+      </div>
     </div>
-    ${desc?`<div style="color:var(--muted);margin-top:4px;font-size:11px;line-height:1.4">${esc(desc.slice(0,150))}</div>`:''}
+    ${refDoc ? `<div style="color:var(--muted);margin-top:3px;font-size:11px">MEL ${esc(refDoc)}</div>` : ''}
+    ${title ? `<div style="color:var(--text);margin-top:3px;font-size:12px;font-weight:600;line-height:1.4">${esc(title)}</div>` : ''}
+    ${desc ? `<div style="color:var(--muted);margin-top:2px;font-size:11px;line-height:1.4">${esc(desc.slice(0,200))}</div>` : ''}
   </div>`;
 }
 
@@ -1872,7 +1827,7 @@ function renderHistoryTab(container, data) {
 function renderAircraftDetail(container, tail, data) {
   const state = data.state || {};
   const ntcs  = data.notesToCrew || [];
-  const mels  = data.deferredDefects || [];
+  const mels  = (data.deferredDefects || []).slice().sort(melSorter);
   const recentFlights  = data.recentFlights || [];
   const currentFlights = data.currentFlights || [];
 
@@ -1928,37 +1883,30 @@ function renderAircraftDetail(container, tail, data) {
   } else {
     for (const m of mels) {
       if (m._error) { html += `<div class="mel-item"><div class="mel-desc" style="color:var(--red)">${esc(m._id)}: ${esc(m._error)}</div></div>`; continue; }
-      const num  = fmt(m.recordName || m.melItemNumber || m.number || m._id);
-      const desc = fmt(m.faultDescription || m.description || m.title || '');
-      const action = m._action || {};
-      const deferral = action.maintActionDeferral || {};
-      const cat = fmt(deferral.deferralCategoryOther || deferral.deferralCategory || '');
-      const refs = Array.isArray(action.actionAuthorityRef) ? action.actionAuthorityRef : [];
-      const ref = refs.find(r => r.typeOfReference === 'MEL' || r.typeOfReference === 'CDL');
-      const refDoc = ref ? fmt(ref.documentNumber || '') : '';
-      // 計算過期
-      const exp0 = deferral.expiration && deferral.expiration[0];
-      let expTag = '';
-      if (exp0) {
-        if (exp0.relativeTime && exp0.relativeTime.days && m.originDateTime) {
-          const days = exp0.relativeTime.days;
-          const expDate = new Date(new Date(m.originDateTime).getTime() + days * 86400000);
-          const daysLeft = Math.round((expDate - new Date()) / 86400000);
-          expTag = `<span class="mel-meta-tag ${daysLeft<0?'expiry-exp':daysLeft<=3?'expiry-crit':daysLeft<=10?'expiry-warn':'expiry-ok'}">${daysLeft<0?'EXPIRED':daysLeft+'d'}</span>`;
-        } else if (exp0.quantity && exp0.unitName) {
-          expTag = `<span class="mel-meta-tag expiry-warn">${exp0.quantity} ${esc(exp0.unitName)}</span>`;
-        }
-      }
+      const dNum   = fmt(m.deferralRefNum || m._action?.maintActionDeferral?.deferralRefNum || '');
+      const recNum = fmt(m.recordName || m._id || '');
+      const title  = fmt(m.faultDescription || '');
+      const desc   = fmt(m.comments || '');
+      const refDoc = melRefDoc(m);
+      const cat = fmt(m._action?.maintActionDeferral?.deferralCategoryOther ||
+                      m._action?.maintActionDeferral?.deferralCategory || '');
+      const expTag = melExpTag(m, true);
+      const headId = dNum || recNum;
+      const subId  = (dNum && recNum && dNum !== recNum) ? recNum : '';
       html += `<div class="mel-item">
-        <div class="mel-head">
-          <span class="mel-num">${esc(num)}</span>
-          <span class="mel-desc">${esc(desc || '（無說明）')}</span>
+        <div class="mel-head" style="justify-content:space-between">
+          <div style="min-width:0;flex:1">
+            <span class="mel-num">${esc(headId)}</span>
+            ${subId ? `<span style="color:var(--muted);margin-left:8px;font-size:12px;font-weight:500">${esc(subId)}</span>` : ''}
+          </div>
+          <div class="mel-meta" style="margin-top:0;flex-shrink:0;justify-content:flex-end">
+            ${expTag}
+            ${cat ? catTag(cat) : ''}
+          </div>
         </div>
-        <div class="mel-meta">
-          ${cat ? catTag(cat) : ''}
-          ${refDoc ? `<span class="mel-meta-tag">REF: ${esc(refDoc)}</span>` : ''}
-          ${expTag}
-        </div>
+        ${refDoc ? `<div style="color:var(--muted);margin-top:6px;font-size:12px">MEL ${esc(refDoc)}</div>` : ''}
+        ${title ? `<div style="color:var(--text);margin-top:4px;font-size:13px;font-weight:600;line-height:1.45">${esc(title)}</div>` : ''}
+        ${desc ? `<div style="color:var(--muted);margin-top:4px;font-size:12px;line-height:1.5;white-space:pre-wrap">${esc(desc)}</div>` : ''}
       </div>`;
     }
   }
@@ -2152,30 +2100,6 @@ function toggleDebug(id) {
 // ─────────────────────────────────────────────
 // Actions
 // ─────────────────────────────────────────────
-async function copyMelCode(event, el, code) {
-  event.stopPropagation();
-  const original = el.textContent;
-  const restore = () => {
-    el.textContent = original;
-    el.classList.remove('copied');
-  };
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(code);
-    } else {
-      // Fallback for non-HTTPS / older browsers
-      const ta = document.createElement('textarea');
-      ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-    }
-    el.textContent = '✓ ' + code;
-    el.classList.add('copied');
-    setTimeout(restore, 1500);
-  } catch (e) {
-    prompt('請複製：', code);
-  }
-}
 
 function goHome() {
   // ← 只負責關閉詳情面板回到機隊列表。
