@@ -153,15 +153,15 @@
 
   <div class="card">
     <p class="lbl">組員與休息方式</p>
-    <div class="seg" id="crewSeg"><button data-v="3" class="on">3 pilot</button><button data-v="4">4 pilot</button></div>
+    <div class="seg" id="crewSeg"><button data-v="2">2 pilot</button><button data-v="3" class="on">3 pilot</button><button data-v="4">4 pilot</button></div>
     <div id="patWrap">
-      <p class="lbl" style="margin:15px 0 8px">休息型態</p>
+      <p class="lbl" id="patSelLbl" style="margin:15px 0 8px">休息型態</p>
       <select id="patSel" class="sel"></select>
       <div id="patNote" class="note"></div>
     </div>
     <p class="lbl" style="margin:16px 0 8px">指派角色（點選 PF / PM）</p>
     <div id="crewList"></div>
-    <div class="hint">落地 <b>PF</b> 優先權最高、需連續休 ≥ 2:00；<b>PM</b> ≥ 1:30（飛行時間 ≥ 7 小時時適用）。PF＋PM 同組一起休、加派同組一起休，兩組輪替。名稱可點欄位修改。</div>
+    <div class="hint">落地 <b>PF</b> 優先權最高、需連續休 ≥ 2:00；<b>PM</b> ≥ 1:30（飛行時間 ≥ 7 小時時適用）。<span id="crewHint"></span>名稱可點欄位修改。</div>
   </div>
 
   <div id="out"></div>
@@ -176,7 +176,7 @@ const PATS4=['even','SSLL','LLSS','SLLS','LSSL'];
 const patName=p=>p==='even'?'總時間均分':p;
 
 const state={mode:'ground',endMode:'tod',crew:3,pattern:null,pilots:null};
-function defaultPilots(n){return [{nm:'機長',role:'PF'},{nm:'副機長',role:'PM'},{nm:'加派 A',role:'REL'},{nm:'加派 B',role:'REL'}].slice(0,n).map(p=>({...p}));}
+function defaultPilots(n){return [{nm:'起降組員A',role:'PF'},{nm:'起降組員B',role:'PM'},{nm:'加派組員C',role:'REL'},{nm:'加派組員D',role:'REL'}].slice(0,n).map(p=>({...p}));}
 state.pilots=defaultPilots(3);
 
 const pad=n=>String(n).padStart(2,'0');
@@ -199,6 +199,12 @@ function patternLens(pattern,W,gate){
 function buildSchedule(W,pilots,pattern,gate){
   const N=pilots.length,{pf,pm,others}=roleIdx(pilots);const tl=[],per={};
   const add=(i,o,d)=>{(per[i]=per[i]||[]).push({offStart:o,offEnd:o+d,dur:d});};
+  if(N===2){ // 2 pilot：駕駛艙內輪流休息，PF 前段、PM 後段，依手冊門檻對半輪替
+    let durs=waterfill(W,[gate?MIN_PF:0,gate?MIN_PM:0]);let infe=false;
+    if(!durs){durs=[W/2,W/2];infe=gate;}
+    let c=0;[[pf,durs[0]],[pm,durs[1]]].forEach(([i,d])=>{tl.push({offStart:c,offEnd:c+d,dur:d,resters:[i]});add(i,c,d);c+=d;});
+    return {tl,per,pfWarn:gate&&durs[0]<MIN_PF-0.5,pmWarn:gate&&durs[1]<MIN_PM-0.5,infeasible:infe||(gate&&durs[0]<MIN_PF-0.5)};
+  }
   if(N===3){
     if(pattern==='split'&&W/3-SHORT>=30){ // 每人兩段：一段 2:00 + 餘段；PF 的 2:00 收在最後（最清醒）
       const rem=W/3-SHORT;let c=0;
@@ -223,7 +229,7 @@ function scorePattern(W,pilots,pat,gate,rs){
   Object.keys(s.per).forEach(i=>s.per[i].forEach(b=>{sc+=woclOverlap(rs+b.offStart,rs+b.offEnd)*(+i===pf?2.2:+i===pm?1.6:1);}));
   if(s.pfWarn)sc-=1e5; if(s.pmWarn)sc-=5e4; if(s.infeasible)sc-=2e5; return sc;
 }
-function recommend(W,pilots,gate,rs){const opts=pilots.length===3?['even','split']:PATS4;let best=opts[0],bs=-1e15;opts.forEach(p=>{const v=scorePattern(W,pilots,p,gate,rs);if(v>bs){bs=v;best=p;}});return best;}
+function recommend(W,pilots,gate,rs){if(pilots.length===2)return 'pair';const opts=pilots.length===3?['even','split']:PATS4;let best=opts[0],bs=-1e15;opts.forEach(p=>{const v=scorePattern(W,pilots,p,gate,rs);if(v>bs){bs=v;best=p;}});return best;}
 
 /* ---------- window ---------- */
 function computeWindow(){
@@ -250,10 +256,13 @@ function tickCD(){$$('[data-cd]').forEach(el=>{const t=+el.getAttribute('data-cd
 
 /* ---------- pattern UI ---------- */
 const PAT3=[['even','均分（一段）'],['split','短＋長（兩段）']];
-function patLabel(p){return state.crew===3?(P3MAP[p]||p):patName(p);}
+function patLabel(p){return state.crew===2?'兩人對半輪替':state.crew===3?(P3MAP[p]||p):patName(p);}
 const P3MAP={even:'均分（一段）',split:'短＋長（兩段）'};
 function renderPattern(rec){
-  const sel=$('#patSel');sel.style.display='block';
+  const sel=$('#patSel'),lbl=$('#patSelLbl');
+  if(state.crew===2){sel.style.display='none';if(lbl)lbl.style.display='none';return;}
+  if(lbl)lbl.style.display='';
+  sel.style.display='block';
   const opts=state.crew===3?PAT3:PATS4.map(p=>[p,patName(p)]);
   const cur=state.pattern||rec;
   sel.innerHTML=opts.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${l}${v===rec?'（建議）':''}</option>`).join('');
@@ -342,11 +351,13 @@ function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ---------- crew list ---------- */
 function renderCrew(){
   const box=$('#crewList');box.innerHTML='';
+  const ch=$('#crewHint');if(ch)ch.innerHTML=state.pilots.length===2?'兩人輪流休息（一次一人）、PF 排前段、PM 排後段。':'PF＋PM 同組一起休、加派同組一起休，兩組輪替。';
   state.pilots.forEach((p,i)=>{
     const row=document.createElement('div');row.className='crew-row';
     const nm=document.createElement('input');nm.className='nm';nm.value=p.nm;nm.oninput=()=>{p.nm=nm.value;render();};
     const roles=document.createElement('div');roles.className='roles';
-    [['PF','pf','PF'],['PM','pm','PM'],['加派','rel','REL']].forEach(([txt,cls,val])=>{const b=document.createElement('button');b.textContent=txt;b.className=cls;if(p.role===val)b.classList.add('on');b.onclick=()=>setRole(i,val);roles.appendChild(b);});
+    const roleDefs=[['PF','pf','PF'],['PM','pm','PM'],['加派','rel','REL']];
+    (state.pilots.length>2?roleDefs:roleDefs.slice(0,2)).forEach(([txt,cls,val])=>{const b=document.createElement('button');b.textContent=txt;b.className=cls;if(p.role===val)b.classList.add('on');b.onclick=()=>setRole(i,val);roles.appendChild(b);});
     row.appendChild(nm);row.appendChild(roles);box.appendChild(row);
   });
 }
@@ -371,6 +382,8 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify({mode:state.mode,end
 function load(){let d;try{d=JSON.parse(localStorage.getItem(KEY));}catch(e){}
   if(!d){for(const ok of ['pilotRest.v2','pilotRest.v1']){let o;try{o=JSON.parse(localStorage.getItem(ok));}catch(e){}if(o&&o.f){for(const k in o.f){const el=$('#'+k);if(el)el.value=o.f[k];}break;}}return;}
   Object.assign(state,{mode:d.mode||'ground',endMode:d.endMode||'tod',crew:+d.crew||3,pattern:d.pattern||null,pilots:d.pilots||defaultPilots(+d.crew||3)});
+  const RENAME={'機長':'起降組員A','副機長':'起降組員B','加派 A':'加派組員C','加派 B':'加派組員D'};
+  state.pilots.forEach(p=>{if(RENAME[p.nm])p.nm=RENAME[p.nm];});
   if(d.f)for(const k in d.f){const el=$('#'+k);if(el)el.value=d.f[k];}
   const setSeg=(id,v)=>$$('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v==String(v)));
   setSeg('modeSeg',state.mode);setSeg('endSeg',state.endMode);setSeg('crewSeg',state.crew);
