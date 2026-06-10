@@ -1466,27 +1466,73 @@ function renderDashboardTab(container, data) {
   const ntcs  = data.notesToCrew || [];
   const mels  = data.deferredDefects || [];
 
-  // ── DEBUG: dump MEL raw structure (一次性，幫忙找對齊官方 ELB 的欄位) ──
+  // ── DEBUG: dump MEL raw structure 成「純文字」, 加自動 pattern 掃描 ──
   if (mels.length && !window.__melDumped) {
     window.__melDumped = true;
-    console.log('%c=== MEL RAW DUMP (' + mels.length + ' items) ===',
-                'background:#fbbf24;color:#000;padding:4px 8px;font-weight:700;font-size:14px');
-    mels.forEach((m, i) => {
-      console.log(`%c--- MEL [${i}] _id=${m._id} recordName=${m.recordName||'?'} ---`,
-                  'background:#1f2937;color:#fbbf24;padding:2px 6px;font-weight:700');
-      console.log('TOP-LEVEL KEYS:', Object.keys(m));
-      console.log('FULL OBJECT:', JSON.parse(JSON.stringify(m)));
-      if (m._action) {
-        console.log('  _action KEYS:', Object.keys(m._action));
-        console.log('  _action FULL:', JSON.parse(JSON.stringify(m._action)));
-        if (m._action.maintActionDeferral) {
-          console.log('    maintActionDeferral KEYS:', Object.keys(m._action.maintActionDeferral));
-          console.log('    maintActionDeferral FULL:', JSON.parse(JSON.stringify(m._action.maintActionDeferral)));
+
+    const SCAN_PATTERNS = [
+      { name: 'D-NUMBER (D447 樣式)',          re: /^D\d+$/ },
+      { name: 'MEL-REF (25-90-01A 樣式)',        re: /^\d{2}-\d{2}-\d+[A-Z]?$/ },
+      { name: 'CAT-LETTER (單字 A/B/C/D)',       re: /^[A-D]$/ },
+      { name: 'SUBJECT (含官方第二行的關鍵字)',
+        re: /ICE AND RAIN|EQUIPMENT.{0,3}FURNISHINGS|LAVATORIES|ARMREST|RAIN REPELLENT|GAGE ASSY|Pax Seat|ICE & RAIN/i },
+    ];
+    function scan(obj, path, hits, depth) {
+      if (depth > 8 || obj == null) return;
+      if (typeof obj === 'string') {
+        SCAN_PATTERNS.forEach(p => {
+          if (p.re.test(obj)) hits.push(`    [${p.name}]  ${path} = ${JSON.stringify(obj)}`);
+        });
+        return;
+      }
+      if (Array.isArray(obj)) {
+        obj.forEach((v, i) => scan(v, `${path}[${i}]`, hits, depth + 1));
+        return;
+      }
+      if (typeof obj === 'object') {
+        for (const k of Object.keys(obj)) {
+          // 跳過我們自己加上的 _id/_error，但保留 _action（裡面就是 maintAction）
+          if (k.startsWith('_') && k !== '_action') continue;
+          scan(obj[k], path ? `${path}.${k}` : k, hits, depth + 1);
         }
       }
+    }
+
+    const lines = [];
+    lines.push('============ MEL RAW DUMP START ============');
+    mels.forEach((m, i) => {
+      lines.push('');
+      lines.push(`---------- MEL [${i}] _id=${m._id} recordName=${m.recordName || '?'} ----------`);
+      lines.push('TOP-LEVEL KEYS: ' + Object.keys(m).sort().join(', '));
+      lines.push('_action KEYS: ' +
+        (m._action ? Object.keys(m._action).sort().join(', ') : '(無)'));
+      lines.push('maintActionDeferral KEYS: ' +
+        (m._action && m._action.maintActionDeferral
+          ? Object.keys(m._action.maintActionDeferral).sort().join(', ')
+          : '(無)'));
+
+      const hits = [];
+      scan(m, '', hits, 0);
+      lines.push('');
+      lines.push('  >>> PATTERN HITS <<<');
+      lines.push(hits.length ? hits.join('\n') : '    (無命中)');
+
+      lines.push('');
+      lines.push('FULL MAINT-LOG JSON (省略 _action，下面單獨印):');
+      lines.push(JSON.stringify(m, (k, v) => (k === '_action' ? '__see_below__' : v), 2));
+      lines.push('');
+      lines.push('FULL _action JSON:');
+      lines.push(JSON.stringify(m._action || null, null, 2));
     });
-    console.log('%c=== END MEL DUMP — 請把上面整段複製給 Claude ===',
-                'background:#fbbf24;color:#000;padding:4px 8px;font-weight:700');
+    lines.push('');
+    lines.push('============ MEL RAW DUMP END ============');
+
+    const text = lines.join('\n');
+    console.log(text);                 // ← 一次印出整段純文字，可直接圈選複製
+    window.__melDump = text;           // ← 也可在 console 用 copy(__melDump) 一鍵複製到剪貼簿
+    console.log('%c☝ 上面整段是純文字 dump。' +
+                '在 console 輸入  copy(__melDump)  可一鍵複製到剪貼簿。',
+                'background:#fbbf24;color:#000;padding:4px 8px;font-weight:700;font-size:14px');
   }
 
   // 分類 MEL → MEL / Inspection / Acceptable
