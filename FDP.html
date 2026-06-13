@@ -543,6 +543,28 @@ function initApp() {
         });
     });
 
+    // Accessibility: the visible bilingual labels are <div>s, so screen readers
+    // can't tie them to the date/time/select controls. Attach aria-labels here.
+    const fieldLabels = {
+        report: 'FDP Start 開始',
+        release: 'FDP End 結束',
+        dhdEnd: 'DHD End / Rest Start 搭機結束 休時開始',
+        nextReport: 'Next FDP Start / Rest End 下次FDP開始 休時結束',
+        hotelIn: 'Hotel Check-in / Rest Start 飯店入住 休時開始',
+        hotelOut: 'Hotel Check-out / Rest End 飯店退房 休時結束'
+    };
+    timeFields.forEach(f => {
+        const label = fieldLabels[f] || f;
+        document.getElementById(`date_${f}`).setAttribute('aria-label', `${label} date 日期`);
+        document.getElementById(`time_${f}`).setAttribute('aria-label', `${label} time 時間`);
+        const tz = document.getElementById(`tz_${f}`);
+        if(tz) tz.setAttribute('aria-label', `${label} timezone 時區`);
+    });
+    document.getElementById('baseTz').setAttribute('aria-label', 'Base WOCL timezone WOCL基準時區');
+    document.getElementById('flightTime').setAttribute('aria-label', 'Total block time 總飛時');
+    document.getElementById('restDurHour').setAttribute('aria-label', 'Rest duration hours 休息時長(小時)');
+    document.getElementById('restDurMinute').setAttribute('aria-label', 'Rest duration minutes 休息時長(分鐘)');
+
     setInitialDefaults();
     switchInputMode();
     updateUI();
@@ -685,7 +707,7 @@ function toggleRestAcc() {
 }
 
 function safeCalculate() {
-    try { calculateCore(); } catch(e) { console.log("Awaiting valid data...", e); }
+    try { calculateCore(); } catch(e) { console.debug("Awaiting valid data...", e); }
 }
 
 function calculateCore() {
