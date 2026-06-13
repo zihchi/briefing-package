@@ -319,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupChecklist("personalChecklist");
     initFlightSelect();
     initAviationMap();
+    initWindyGeolocation();
 
     console.log("✈️ 簡報箱主核心系統已全面整合上線 (Core Engine Online)");
 });
@@ -326,6 +327,39 @@ document.addEventListener("DOMContentLoaded", function () {
 function refreshIframe(id) {
     const iframe = document.getElementById(id);
     if (iframe) iframe.src = iframe.src;
+}
+
+// ------------------------------------------
+// 🌬️ Windy 氣象圖定位：預設台灣，若使用者允許則改用目前位置
+// ------------------------------------------
+const WINDY_PANELS = [
+    { id: 'windyRadar',       level: 'surface', overlay: 'radar' },
+    { id: 'windySatellite',   level: 'surface', overlay: 'satellite' },
+    { id: 'windyWindSurface', level: 'surface', overlay: 'wind' },
+    { id: 'windyWindFL390',   level: '200h',    overlay: 'wind' }
+];
+
+function setWindyLocation(lat, lon, zoom = 4) {
+    WINDY_PANELS.forEach(p => {
+        const iframe = document.getElementById(p.id);
+        if (iframe) {
+            iframe.src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=${zoom}&level=${p.level}&overlay=${p.overlay}`;
+        }
+    });
+}
+
+function initWindyGeolocation() {
+    // 不支援定位時，維持 HTML 內寫死的台灣預設座標
+    if (!('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const lat = pos.coords.latitude.toFixed(2);
+            const lon = pos.coords.longitude.toFixed(2);
+            setWindyLocation(lat, lon);
+        },
+        err => { console.debug('Windy 定位失敗，維持台灣預設：', err && err.message); },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+    );
 }
 
 function initFlightSelect() {
