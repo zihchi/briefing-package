@@ -77,7 +77,7 @@
     .dash-title { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px; line-height: 1.2; }
     .dash-val { font-size: 1.75rem; font-weight: 800; font-family: ui-monospace, monospace; color: var(--jx-navy); line-height: 1; }
     .dash-card.violation .dash-val { color: #b91c1c; }
-    .dash-sub { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 8px; display: flex; justify-content: space-between; }
+    .dash-sub { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; }
     .dash-card.violation .dash-sub { color: #dc2626; }
 
     /* Timeline Canvas */
@@ -573,13 +573,35 @@ function setInitialDefaults() {
 function switchInputMode() {
     const mode = document.querySelector('input[name="inputMode"]:checked').value;
     const tzSelectors = document.querySelectorAll('.tz-select');
-    
+
     tzSelectors.forEach(el => {
         if(mode === 'lcl') el.classList.remove('hide-initially');
         else el.classList.add('hide-initially');
     });
 
-    timeFields.forEach(f => processTimeChange(f));
+    // Re-render the visible date/time fields from the stored UTC instant so the
+    // underlying time stays constant when toggling modes, then round-trip through
+    // processTimeChange to refresh badges (and recompute the same UTC value).
+    timeFields.forEach(f => {
+        renderFieldFromUTC(f, mode);
+        processTimeChange(f);
+    });
+}
+
+function renderFieldFromUTC(field, mode) {
+    const utc = parsedTimesUTC[field];
+    if(!utc) return;
+    let display;
+    if(mode === 'lcl') {
+        const tzOffset = parseInt(document.getElementById(`tz_${field}`).value) || 8;
+        display = new Date(utc.getTime() + tzOffset*3600000);
+    } else {
+        display = utc;
+    }
+    document.getElementById(`date_${field}`).value =
+        `${display.getUTCFullYear()}-${pad(display.getUTCMonth()+1)}-${pad(display.getUTCDate())}`;
+    document.getElementById(`time_${field}`).value =
+        `${pad(display.getUTCHours())}:${pad(display.getUTCMinutes())}`;
 }
 
 function processTimeChange(field) {
