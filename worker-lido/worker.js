@@ -197,11 +197,16 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
               || [];
     const requiredTypes = ['OFP', 'ATS', 'NOTAM', 'CREWINFO', 'RAIM', 'VERTPROF', 'SIGWXROUTE', 'IWFR'];
     const multiImageTypes = new Set(['SIGWXROUTE']);
+    // IWFR (route weather) can be split across several text documents
+    // (e.g. dep/dest/altn in one, enroute/EDTO alternates in another),
+    // so download every text part and concatenate instead of taking the first.
+    const multiTextTypes = new Set(['IWFR']);
 
     const docTasks = [];
     for (const cat of cats) {
       if (!requiredTypes.includes(cat.type) || !cat.documents) continue;
       const isMulti = multiImageTypes.has(cat.type);
+      const isMultiText = multiTextTypes.has(cat.type);
       for (let d = 0; d < cat.documents.length; d++) {
         const doc = cat.documents[d];
         const mt = doc.mediaType || '';
@@ -209,8 +214,9 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
           docTasks.push({
             url: `${BASE}/lido/lcb/ui/${encodedLegId}/briefing/${doc.fileId}/docs`,
             key: isMulti ? `${cat.type}_${d}` : cat.type,
+            append: isMultiText,
           });
-          if (!isMulti) break;
+          if (!isMulti && !isMultiText) break;
         }
       }
     }
@@ -225,7 +231,7 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
       for (let i = 0; i < responses.length; i++) {
         const r = responses[i];
         const k = docTasks[i].key;
-        if (r.status !== 200) { chosen.rawTexts[k] = '下載失敗'; continue; }
+        if (r.status !== 200) { if (!(docTasks[i].append && chosen.rawTexts[k])) chosen.rawTexts[k] = '下載失敗'; continue; }
         const cType = r.headers.get('Content-Type') || '';
         const isImg = cType.includes('image') || k.indexOf('VERTPROF') !== -1 || k.indexOf('SIGWXROUTE') !== -1;
         if (isImg) {
@@ -233,7 +239,10 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
           const mime = (cType.split(';')[0] || '').trim() || 'image/png';
           chosen.rawTexts[k] = `data:${mime};base64,${arrayBufferToBase64(buf)}`;
         } else {
-          chosen.rawTexts[k] = await r.text();
+          const txt = await r.text();
+          chosen.rawTexts[k] = (docTasks[i].append && chosen.rawTexts[k])
+            ? chosen.rawTexts[k] + '\n' + txt
+            : txt;
         }
       }
     }
