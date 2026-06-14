@@ -195,7 +195,7 @@ async function fetchLidoBriefing(env, username, password, target, targetRawForMs
     const cats = briefingData.categories
               || (briefingData.briefingPackages && briefingData.briefingPackages[0] && briefingData.briefingPackages[0].categories)
               || [];
-    const requiredTypes = ['OFP', 'ATS', 'NOTAM', 'CREWINFO', 'RAIM', 'VERTPROF', 'SIGWXROUTE'];
+    const requiredTypes = ['OFP', 'ATS', 'NOTAM', 'CREWINFO', 'RAIM', 'VERTPROF', 'SIGWXROUTE', 'IWFR'];
     const multiImageTypes = new Set(['SIGWXROUTE']);
 
     const docTasks = [];
