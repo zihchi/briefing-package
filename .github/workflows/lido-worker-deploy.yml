@@ -20,20 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy worker + 同步 secrets
+      - name: Deploy worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker-lido
-          # 這 4 個值會被 wrangler 寫成 Cloudflare 端的 secrets
-          secrets: |
-            LIDO_BASE_URL
-            LIDO_CUSTOMER_ID
-            LIDO_AUTH_REALM
-            LIDO_DWR_SESSION_ID
-        env:
-          LIDO_BASE_URL: ${{ secrets.LIDO_BASE_URL }}
-          LIDO_CUSTOMER_ID: ${{ secrets.LIDO_CUSTOMER_ID }}
-          LIDO_AUTH_REALM: ${{ secrets.LIDO_AUTH_REALM }}
-          LIDO_DWR_SESSION_ID: ${{ secrets.LIDO_DWR_SESSION_ID }}
+          # Secrets (LIDO_*) are already set on the Worker via `wrangler secret put`.
+          # We intentionally do NOT re-sync them here: the LIDO_* GitHub secrets are
+          # empty, and syncing them aborted every deploy before the code ever shipped.
+
