@@ -339,7 +339,7 @@ const WINDY_PANELS = [
     { id: 'windyWindFL390',   level: '200h',    overlay: 'wind' }
 ];
 
-function setWindyLocation(lat, lon, zoom = 4) {
+function setWindyLocation(lat, lon, zoom = 6) {
     WINDY_PANELS.forEach(p => {
         const iframe = document.getElementById(p.id);
         if (iframe) {
