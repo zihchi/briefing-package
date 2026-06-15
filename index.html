@@ -365,6 +365,9 @@
     }
     .app-topbar .ft-tag { font-size: 0.82rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
     .app-topbar #fd-select { flex: 1 1 auto; min-width: 0; max-width: 340px; margin: 0; }
+    /* 重新整理按鈕：跟著置頂欄一起捲動。寬螢幕(橫向)靠右，窄螢幕(直向)自動換行貼右 */
+    .app-topbar #btn-reload-page { flex: 0 0 auto; margin: 0 0 0 auto; padding: 5px 12px; font-size: 11px; font-weight: bold; background: var(--brand); color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; box-shadow: var(--shadow-btn); }
+    .app-topbar #btn-reload-page:active { transform: scale(0.96); }
     .app-topbar #fd-panel { flex: 0 0 100%; display: none; }
     .app-topbar #fd-panel.open { display: block; max-height: 60vh; overflow-y: auto; }
     .app-topbar .fd-inner { padding: 6px 0 8px; }
@@ -465,6 +468,7 @@
   <header class="app-topbar">
     <span class="ft-tag">✈️ 航班資訊</span>
     <select id="fd-select" title="選擇航班顯示資訊"><option value="">選擇航班…</option></select>
+    <button id="btn-reload-page" title="整頁重新整理（重抓所有資料，像重開 App）">🔄 重新整理</button>
     <div id="fd-panel" class="fd-panel">
       <div class="fd-inner">
         <button class="fd-close" id="fd-close" aria-label="收合">✕</button>
@@ -497,7 +501,6 @@
       <h1>Briefing Package</h1>
       <div class="app-topbar-meta">
         <span id="sys-version" style="font-size: 11px; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', 'Courier New', Courier, monospace; font-weight: bold; letter-spacing: 1px; user-select: none;">Verifying...</span>
-        <button id="btn-reload-page" title="整頁重新整理（重抓所有資料，像重開 App）" style="margin: 0; padding: 4px 10px; font-size: 11px; background: var(--brand); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">🔄 重新整理</button>
         <button id="btn-check-update" title="檢查是否有新版程式（換程式碼用，跟重新整理資料不同）" style="margin: 0; padding: 4px 10px; font-size: 11px; background: #8a7a6b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-btn);">檢查更新</button>
       </div>
     </div>
@@ -659,19 +662,19 @@
     <div class="windy-4grid">
       <div class="w4-cell">
         <div class="w4-label"><span>🌧️ 即時雷達</span><button onclick="refreshIframe('windyRadar')">↻</button></div>
-        <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=radar"></iframe>
+        <iframe id="windyRadar" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=6&level=surface&overlay=radar"></iframe>
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌤️ 衛星雲圖</span><button onclick="refreshIframe('windySatellite')">↻</button></div>
-        <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=satellite"></iframe>
+        <iframe id="windySatellite" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=6&level=surface&overlay=satellite"></iframe>
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌬️ 地面風 (Surface)</span><button onclick="refreshIframe('windyWindSurface')">↻</button></div>
-        <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=surface&overlay=wind"></iframe>
+        <iframe id="windyWindSurface" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=6&level=surface&overlay=wind"></iframe>
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌬️ 高空風 (FL390)</span><button onclick="refreshIframe('windyWindFL390')">↻</button></div>
-        <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=4&level=200h&overlay=wind"></iframe>
+        <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=6&level=200h&overlay=wind"></iframe>
       </div>
     </div>
   </div>
