@@ -28,6 +28,16 @@
         .leaflet-popup-content { font-family: 'JetBrains Mono', 'Monaco', monospace; font-size: 13px; line-height: 1.6; color: #4a3627; }
         .notam-legend { background: rgba(255,255,255,0.88); border: 1px solid #e7ddd0; color: #4a3627; padding: 10px 12px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-size: 11px; font-weight: 600; line-height: 1.9; }
         .notam-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+        /* 已偵測 NOTAM 清單（可勾選開關 / 點擊聚焦地圖；移植自 notam.html）*/
+        .notam-results { flex-shrink: 0; max-height: 240px; overflow-y: auto; border: 1px solid #e7ddd0; border-radius: 12px; background: #fff; padding: 10px 14px; }
+        .notam-results-empty { font-size: 12px; color: #a8a29e; text-align: center; padding: 14px 8px; line-height: 1.6; }
+        .notam-results-head { font-size: 12px; font-weight: 700; color: #8b5a2b; margin-bottom: 8px; letter-spacing: 0.02em; }
+        .notam-result-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+        .notam-result-item:hover { background: #faf6f0; }
+        .notam-result-chk { cursor: pointer; accent-color: #8b5a2b; flex-shrink: 0; }
+        .notam-result-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(0,0,0,0.04); }
+        .notam-result-id { font-family: 'Monaco', 'Consolas', monospace; font-size: 12px; font-weight: 700; color: #4a3627; flex-shrink: 0; }
+        .notam-result-geom { font-size: 11px; color: #78716c; margin-left: auto; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         /* 航路/航跡下拉欄位 */
         .notam-routes-panel { background: #fff; border: 1px solid #e7ddd0; border-radius: 12px; padding: 4px 16px; }
         .notam-routes-details { }
@@ -700,6 +710,10 @@
                                         <div><span class="dot" style="background:#0d9488"></span>飛行航線</div>
                                     </div>
                                 </div>
+                            </div>
+                            <!-- 已偵測 NOTAM 清單（可勾選開關 / 點擊聚焦地圖）-->
+                            <div id="notam-results" class="notam-results">
+                                <div class="notam-results-empty">尚無偵測結果。載入或貼上 NOTAM 後自動掃描座標。</div>
                             </div>
                             <div id="notam-routes" class="notam-routes-panel" style="display:none"></div>
                         </div>
