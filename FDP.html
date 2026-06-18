@@ -53,16 +53,18 @@
     .time-input-group { display: flex; flex-direction: column; gap: 8px; background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; transition: border-color 0.2s; width: 100%; }
     .time-input-group:focus-within { border-color: var(--jx-gold); background-color: #ffffff; }
     
-    input[type="date"], input[type="time"], select { 
+    input[type="date"], input[type="time"], input[type="text"], input[type="number"], select {
         background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 1rem; color: #1e293b; font-family: ui-monospace, monospace; outline: none; transition: all 0.2s; width: 100%; max-width: 100%; min-width: 0; appearance: none;
     }
-    input[type="date"]:focus, input[type="time"]:focus, select:focus { border-color: var(--jx-gold); box-shadow: 0 0 0 2px rgba(191, 162, 118, 0.2); }
+    input[type="date"]:focus, input[type="time"]:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--jx-gold); box-shadow: 0 0 0 2px rgba(191, 162, 118, 0.2); }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
     select { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.7rem center; background-repeat: no-repeat; background-size: 1.4em 1.4em; padding-left: 0.9rem; padding-right: 2.6rem; }
 
     /* Smart Flex Grouping to prevent overflow */
     .dt-flex-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; width: 100%; max-width: 100%; }
     .dt-flex-group > input[type="date"] { flex: 1 1 100%; }
-    .dt-flex-group > input[type="time"] { flex: 1 1 120px; }
+    .dt-flex-group > input[type="text"] { flex: 1 1 120px; }
     .dt-flex-group > select.tz-select { flex: 1 1 120px; }
     
     /* Read-only Badge */
@@ -219,19 +221,19 @@
                             <div id="sectorRows" class="space-y-2">
                                 <div class="sector-row flex items-center gap-2" data-idx="1">
                                     <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 1</span>
-                                    <input type="time" value="03:45" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" value="03:45" class="sector-input ntime font-bold text-center bg-white flex-1" onchange="recalcSectors()">
                                 </div>
                                 <div class="sector-row flex items-center gap-2" data-idx="2">
                                     <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 2</span>
-                                    <input type="time" value="03:45" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" value="03:45" class="sector-input ntime font-bold text-center bg-white flex-1" onchange="recalcSectors()">
                                 </div>
                                 <div class="sector-row flex items-center gap-2 hide-initially" data-idx="3">
                                     <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 3</span>
-                                    <input type="time" value="00:00" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" value="00:00" class="sector-input ntime font-bold text-center bg-white flex-1" onchange="recalcSectors()">
                                 </div>
                                 <div class="sector-row flex items-center gap-2 hide-initially" data-idx="4">
                                     <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 4</span>
-                                    <input type="time" value="00:00" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" value="00:00" class="sector-input ntime font-bold text-center bg-white flex-1" onchange="recalcSectors()">
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 pt-1">
@@ -246,7 +248,7 @@
 
                         <!-- Direct mode -->
                         <div id="btDirectMode" class="hide-initially">
-                            <input type="time" id="btDirectInput" value="07:30" onchange="syncDirectBt()" class="font-bold text-center bg-slate-50 w-full">
+                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="btDirectInput" value="07:30" onchange="syncDirectBt()" class="ntime font-bold text-center bg-slate-50 w-full">
                         </div>
 
                         <!-- Canonical value consumed by the calculator -->
@@ -307,7 +309,7 @@
                         <!-- Robust Flex Group for Date/Time/TZ -->
                         <div class="dt-flex-group">
                             <input type="date" id="date_report" required onchange="processTimeChange('report')">
-                            <input type="time" id="time_report" required onchange="processTimeChange('report')">
+                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_report" class="ntime" onchange="processTimeChange('report')">
                             <select id="tz_report" class="tz-select hide-initially" onchange="processTimeChange('report')"></select>
                         </div>
                     </div>
@@ -352,9 +354,9 @@
                                     <span class="en text-emerald-800">Rest Duration <span class="text-[0.75rem] text-emerald-700 tracking-normal">(休息時長)</span></span>
                                 </div>
                                 <div class="flex items-center gap-2 w-full">
-                                    <select id="restDurHour" onchange="safeCalculate()" class="border-[#a7f3d0] font-bold text-slate-700 flex-1"></select>
+                                    <input type="text" inputmode="numeric" id="restDurHour" value="3" onchange="safeCalculate()" class="nint border-[#a7f3d0] font-bold text-slate-700 text-center flex-1">
                                     <span class="font-bold text-slate-800 text-sm">hr</span>
-                                    <select id="restDurMinute" onchange="safeCalculate()" class="border-[#a7f3d0] font-bold text-slate-700 flex-1"></select>
+                                    <input type="text" inputmode="numeric" id="restDurMinute" value="0" onchange="safeCalculate()" class="nint border-[#a7f3d0] font-bold text-slate-700 text-center flex-1">
                                     <span class="font-bold text-slate-800 text-sm">min</span>
                                 </div>
                             </div>
@@ -458,7 +460,7 @@
                         </div>
                         <div class="dt-flex-group">
                             <input type="date" id="date_release" onchange="processTimeChange('release')">
-                            <input type="time" id="time_release" onchange="processTimeChange('release')">
+                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_release" class="ntime" onchange="processTimeChange('release')">
                             <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
                         </div>
                     </div>
@@ -495,7 +497,7 @@
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
-                                <input type="time" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')" class="ntime border-[#fcd34d]">
                                 <select id="tz_dhdEnd" class="tz-select hide-initially border-[#fcd34d]" onchange="processTimeChange('dhdEnd')"></select>
                             </div>
                         </div>
@@ -510,7 +512,7 @@
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_nextReport" onchange="processTimeChange('nextReport')">
-                                <input type="time" id="time_nextReport" onchange="processTimeChange('nextReport')">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_nextReport" class="ntime" onchange="processTimeChange('nextReport')">
                                 <select id="tz_nextReport" class="tz-select hide-initially" onchange="processTimeChange('nextReport')"></select>
                             </div>
                         </div>
@@ -528,7 +530,7 @@
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_hotelIn" onchange="processTimeChange('hotelIn')">
-                                <input type="time" id="time_hotelIn" onchange="processTimeChange('hotelIn')">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_hotelIn" class="ntime" onchange="processTimeChange('hotelIn')">
                                 <select id="tz_hotelIn" class="tz-select hide-initially" onchange="processTimeChange('hotelIn')"></select>
                             </div>
                         </div>
@@ -543,7 +545,7 @@
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_hotelOut" onchange="processTimeChange('hotelOut')">
-                                <input type="time" id="time_hotelOut" onchange="processTimeChange('hotelOut')">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_hotelOut" class="ntime" onchange="processTimeChange('hotelOut')">
                                 <select id="tz_hotelOut" class="tz-select hide-initially" onchange="processTimeChange('hotelOut')"></select>
                             </div>
                         </div>
@@ -637,6 +639,21 @@
 const pad = (n) => n.toString().padStart(2, '0');
 const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 
+// Numeric-only time entry (no native picker): format digits into HH:MM as typed.
+function fmtNTime(raw) {
+    const d = (raw||'').replace(/\D/g,'').slice(0,4);
+    if(d.length <= 2) return d;
+    const h = Math.min(parseInt(d.slice(0,2)), 23);
+    const m = Math.min(parseInt(d.slice(2))||0, 59);
+    return pad(h)+':'+pad(m);
+}
+document.addEventListener('input', (e) => {
+    const el = e.target;
+    if(!el.classList) return;
+    if(el.classList.contains('ntime')) el.value = fmtNTime(el.value);
+    else if(el.classList.contains('nint')) el.value = (el.value||'').replace(/\D/g,'').slice(0,4);
+});
+
 let currentLocation = 'home';
 const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
 const parsedTimesUTC = {};
@@ -710,10 +727,19 @@ const p2DurFmt= (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 const p2Clock = (m) => { m = ((Math.round(m)%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; };
 const p2Diff  = (a,b) => { let d = b - a; if(d < 0) d += 1440; return d; };
 
-function p2InputField(label, cls, type) {
-    const extra = (type === 'number') ? ' min="0" placeholder="0"' : '';
+function p2InputField(label, cls, kind, group) {
+    const numClass = (kind === 'int') ? 'nint' : 'ntime';
+    const ph = (kind === 'int') ? '0' : 'HH:MM';
     return `<div class="min-w-0"><div class="text-[0.55rem] text-slate-400 font-bold text-center uppercase">${label}</div>`
-         + `<input type="${type}"${extra} class="${cls} !text-xs !px-1 !py-1.5 text-center" onchange="recomputeP2()"></div>`;
+         + `<input type="text" inputmode="numeric" placeholder="${ph}" class="${cls} ${numClass} !text-xs !px-1 !py-1.5 text-center" onchange="p2Edited(this,'${group}')"></div>`;
+}
+
+// Track which input group the user last edited per sector, so OOOI<->TTT
+// stays bidirectional (last edited wins) instead of OOOI always overriding.
+function p2Edited(el, group) {
+    const sec = el.closest('.p2-sector');
+    if(sec) sec.dataset.driver = group;
+    recomputeP2();
 }
 
 function buildP2Sectors() {
@@ -729,13 +755,13 @@ function buildP2Sectors() {
             <div class="mb-2">
                 <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻</div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    ${p2InputField('Out','p2-out','time')}${p2InputField('Off','p2-off','time')}${p2InputField('On','p2-on','time')}${p2InputField('In','p2-in','time')}
+                    ${p2InputField('Out','p2-out','time','oooi')}${p2InputField('Off','p2-off','time','oooi')}${p2InputField('On','p2-on','time','oooi')}${p2InputField('In','p2-in','time','oooi')}
                 </div>
             </div>
             <div>
                 <div class="text-[0.6rem] font-extrabold lcl-text uppercase mb-1">Taxi / Trip 時長</div>
                 <div class="grid grid-cols-3 gap-1.5">
-                    ${p2InputField('Taxi Out(m)','p2-txo','number')}${p2InputField('Trip(h:m)','p2-trip','time')}${p2InputField('Taxi In(m)','p2-txi','number')}
+                    ${p2InputField('Taxi Out(m)','p2-txo','int','ttt')}${p2InputField('Trip(h:m)','p2-trip','time','ttt')}${p2InputField('Taxi In(m)','p2-txi','int','ttt')}
                 </div>
             </div>
         </div>`;
@@ -743,7 +769,7 @@ function buildP2Sectors() {
             html += `<div class="p2-ta flex items-center justify-center gap-2 py-0.5${i>=2?' hide-initially':''}" data-ta="${i}">
                 <i class="fas fa-arrows-rotate text-slate-300 text-xs"></i>
                 <span class="text-[0.6rem] font-extrabold text-slate-500 uppercase">Turnaround 轉場</span>
-                <input type="time" value="01:00" class="p2-ta-input !w-[100px] !text-xs !py-1 text-center" onchange="recomputeP2()">
+                <input type="text" inputmode="numeric" placeholder="HH:MM" value="01:00" class="p2-ta-input ntime !w-[100px] !text-xs !py-1 text-center" onchange="recomputeP2()">
             </div>`;
         }
     }
@@ -790,15 +816,16 @@ function recomputeP2() {
         const out = p2HM(g('p2-out').value), off = p2HM(g('p2-off').value),
               on  = p2HM(g('p2-on').value),  inn = p2HM(g('p2-in').value);
         const txo = parseInt(g('p2-txo').value)||0, trip = p2HM(g('p2-trip').value)||0, txi = parseInt(g('p2-txi').value)||0;
+        const driver = sec.dataset.driver || 'ttt';
         let dur = 0;
-        if(out != null && inn != null) {
-            // OOOI drives → derive Taxi/Trip where possible (相輔相成)
+        if(driver === 'oooi' && out != null && inn != null) {
+            // OOOI last edited → drive Duration, derive Taxi/Trip where possible
             dur = p2Diff(out, inn);
             if(off != null) g('p2-txo').value = p2Diff(out, off);
             if(off != null && on != null) g('p2-trip').value = p2Clock(p2Diff(off, on));
             if(on != null) g('p2-txi').value = p2Diff(on, inn);
         } else {
-            // Taxi/Trip drives → derive OOOI clocks if an Out time is given
+            // Taxi/Trip drives (default) → as long as Out is given, derive Off/On/In
             dur = txo + trip + txi;
             if(out != null) {
                 const offv = out + txo, onv = offv + trip, inv = onv + txi;
@@ -888,13 +915,6 @@ function initApp() {
             sel.add(opt);
         }
     });
-
-    const rHour = document.getElementById('restDurHour');
-    const rMin = document.getElementById('restDurMinute');
-    for(let i=0; i<=24; i++) rHour.add(new Option(i, i));
-    for(let i=0; i<60; i++) rMin.add(new Option(pad(i), i));
-    rHour.value = "3";
-    rMin.value = "0";
 
     document.querySelectorAll('.radio-pill input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -1001,26 +1021,51 @@ function processTimeChange(field) {
     const mode = document.querySelector('input[name="inputMode"]:checked').value;
     const badge = document.getElementById(`badge_${field}`);
     const rawMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
+    if(isNaN(rawMs)) return;
 
-    if (mode === 'lcl') {
-        const tzOffset = parseInt(document.getElementById(`tz_${field}`).value) || 8;
-        const actualUTC = new Date(rawMs - (tzOffset * 3600000));
+    const tzOffset = (mode === 'lcl') ? (parseInt(document.getElementById(`tz_${field}`).value) || 8) : 0;
+    let actualUTC = new Date(rawMs - (tzOffset * 3600000));
+
+    // Rule: no field may be earlier than FDP start (report). Auto-bump the date.
+    if(field !== 'report' && parsedTimesUTC['report'] && actualUTC < parsedTimesUTC['report']) {
+        const addDays = Math.ceil((parsedTimesUTC['report'] - actualUTC) / 86400000);
+        actualUTC = new Date(actualUTC.getTime() + addDays*86400000);
         parsedTimesUTC[field] = actualUTC;
-        
+        renderFieldFromUTC(field, mode); // reflect the corrected date in the input
+    } else {
+        parsedTimesUTC[field] = actualUTC;
+    }
+
+    if(mode === 'lcl') {
         badge.className = "tz-badge utc";
         badge.innerHTML = `<i class="fas fa-globe"></i> ${pad(actualUTC.getUTCDate())}d ${pad(actualUTC.getUTCHours())}${pad(actualUTC.getUTCMinutes())}z`;
     } else {
-        const actualUTC = new Date(rawMs);
-        parsedTimesUTC[field] = actualUTC;
-
         const baseOffset = parseInt(document.getElementById('baseTz').value) || 8;
         const projectedLcl = new Date(actualUTC.getTime() + (baseOffset * 3600000));
-        
         badge.className = "tz-badge lcl";
         badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(projectedLcl.getUTCHours())}${pad(projectedLcl.getUTCMinutes())}`;
     }
 
+    // When FDP start moves, push any now-earlier fields forward too.
+    if(field === 'report') enforceAfterReport();
+
     safeCalculate();
+}
+
+function enforceAfterReport() {
+    const rep = parsedTimesUTC['report'];
+    if(!rep) return;
+    const mode = document.querySelector('input[name="inputMode"]:checked').value;
+    timeFields.forEach(f => {
+        if(f === 'report') return;
+        const t = parsedTimesUTC[f];
+        if(t && t < rep) {
+            const addDays = Math.ceil((rep - t) / 86400000);
+            parsedTimesUTC[f] = new Date(t.getTime() + addDays*86400000);
+            renderFieldFromUTC(f, mode);
+            processTimeChange(f);
+        }
+    });
 }
 
 function updateUI() {
