@@ -166,7 +166,7 @@
                             <span class="en text-purple-600">Base WOCL TZ</span>
                             <span class="zh">WOCL 基準時區</span>
                         </div>
-                        <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto !py-1.5 !px-2 !text-sm border-purple-300 bg-purple-50 text-purple-700 font-bold rounded"></select>
+                        <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto sm:!min-w-[140px] !py-2 !pl-3 !pr-9 !text-sm border-purple-300 bg-purple-50 text-purple-700 font-bold !rounded-lg"></select>
                     </div>
                 </div>
             </div>
@@ -194,8 +194,8 @@
                         </div>
                         <div class="w-full">
                             <div class="bilingual-label mb-2">
-                                <span class="en">Total Block Time</span>
-                                <span class="zh">總飛時</span>
+                                <span class="en">Block Time</span>
+                                <span class="zh">輪檔時間</span>
                             </div>
                             <input type="time" id="flightTime" value="07:30" required onchange="safeCalculate()" class="font-bold text-center bg-slate-50 w-full">
                         </div>
@@ -260,29 +260,26 @@
                         </div>
                     </div>
 
-                    <!-- FDP End -->
-                    <div class="time-input-group border-l-4 border-l-slate-400">
-                        <div class="flex justify-between items-start sm:items-center gap-2">
+                    <!-- AUTO Max FDP Result (computed from Start Time) -->
+                    <div id="mfdpResult" class="rounded-xl border border-[#bfdbfe] bg-gradient-to-br from-[#eff6ff] to-[#dbeafe] p-4">
+                        <div class="flex items-center justify-between gap-2 mb-3">
                             <div class="bilingual-label">
-                                <span class="en text-[#10b981]">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(*DHD 不算 FDP)</span></span>
-                                <span class="zh">任務結束</span>
+                                <span class="en text-blue-700">Max FDP (Auto)</span>
+                                <span class="zh text-blue-900">最大飛勤上限（自動計算）</span>
                             </div>
-                            <span id="badge_release" class="tz-badge">--:--</span>
+                            <i class="fas fa-wand-magic-sparkles text-blue-400"></i>
                         </div>
-                        <!-- UI Indicator for End Type -->
-                        <div class="radio-pill-group">
-                            <label class="radio-pill active-pill">
-                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN + 30M
-                            </label>
-                            <label class="radio-pill">
-                                <input type="radio" name="fdpEndType" value="another"> ANOTHER DUTY END
-                            </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white/70 rounded-lg p-3 border border-blue-100 min-w-0">
+                                <div class="text-[0.65rem] font-extrabold text-blue-500 uppercase tracking-wide">Duration 時長</div>
+                                <div id="mfdpDur" class="text-2xl font-extrabold font-mono text-[#1e3a8a] leading-tight mt-1">--:--</div>
+                            </div>
+                            <div class="bg-white/70 rounded-lg p-3 border border-blue-100 min-w-0">
+                                <div class="text-[0.65rem] font-extrabold text-blue-500 uppercase tracking-wide">Latest End 最晚結束</div>
+                                <div id="mfdpEnd" class="text-base font-extrabold font-mono text-[#1e3a8a] leading-tight mt-1 break-words">--</div>
+                            </div>
                         </div>
-                        <div class="dt-flex-group">
-                            <input type="date" id="date_release" required onchange="processTimeChange('release')">
-                            <input type="time" id="time_release" required onchange="processTimeChange('release')">
-                            <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
-                        </div>
+                        <p id="mfdpHint" class="hidden text-[0.7rem] text-blue-600 font-bold mt-2"></p>
                     </div>
 
                     <hr class="border-slate-200">
@@ -343,7 +340,42 @@
                     Phase 2: Rest Management 第二階段：休時管理
                 </div>
                 <div class="p-5 space-y-5">
-                    
+
+                    <!-- Master Toggle: enable rest calculation -->
+                    <label class="toggle-chk border-[#fde68a] bg-[#fffbeb]">
+                        <input type="checkbox" id="enableRest" onchange="toggleRestCalc()">
+                        <div class="toggle-content">
+                            <span class="toggle-title text-amber-800">Calculate Rest Time</span>
+                            <span class="toggle-desc text-amber-700">我要計算休息時間（開啟後輸入任務結束與休息地點）</span>
+                        </div>
+                    </label>
+
+                    <div id="restBody" class="hide-initially space-y-5">
+
+                    <!-- FDP End (moved here: only needed for rest calc) -->
+                    <div class="time-input-group border-l-4 border-l-slate-400">
+                        <div class="flex justify-between items-start sm:items-center gap-2">
+                            <div class="bilingual-label">
+                                <span class="en text-slate-800">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(On Blocks · 休息 +30m 自動計 · DHD 不算 FDP)</span></span>
+                                <span class="zh">任務結束</span>
+                            </div>
+                            <span id="badge_release" class="tz-badge">--:--</span>
+                        </div>
+                        <div class="radio-pill-group">
+                            <label class="radio-pill active-pill">
+                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="fdpEndType" value="another"> ANOTHER DUTY END
+                            </label>
+                        </div>
+                        <div class="dt-flex-group">
+                            <input type="date" id="date_release" onchange="processTimeChange('release')">
+                            <input type="time" id="time_release" onchange="processTimeChange('release')">
+                            <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
+                        </div>
+                    </div>
+
                     <!-- Location Selection -->
                     <div>
                         <div class="bilingual-label mb-2">
@@ -430,6 +462,8 @@
                         </div>
                     </div>
 
+                    </div><!-- /#restBody -->
+
                 </div>
             </div>
 
@@ -442,12 +476,11 @@
             <div class="lg:sticky lg:top-6 space-y-6">
                 
                 <div class="dashboard-grid">
-                    <div id="cardFDP" class="dash-card">
-                        <div class="dash-title">Actual FDP<br><span class="text-xs text-slate-500 font-bold">實際飛勤</span></div>
-                        <div id="valFDP" class="dash-val">--:--</div>
+                    <div id="cardMFDP" class="dash-card ok">
+                        <div class="dash-title">Max FDP<br><span class="text-xs text-slate-500 font-bold">最大飛勤</span></div>
+                        <div id="valMFDP" class="dash-val">--:--</div>
                         <div class="dash-sub">
-                            <span id="txtMaxFDP">Max: --:--</span>
-                            <span id="txtExtFDP" class="text-emerald-600 hidden"></span>
+                            <span id="txtMFDPEnd">End: --:--</span>
                         </div>
                     </div>
                     <div id="cardFT" class="dash-card">
@@ -455,7 +488,15 @@
                         <div id="valFT" class="dash-val">--:--</div>
                         <div class="dash-sub"><span id="txtMaxFT">Max: --:--</span></div>
                     </div>
-                    <div id="cardRest" class="dash-card">
+                    <div id="cardFDP" class="dash-card hide-initially">
+                        <div class="dash-title">Actual FDP<br><span class="text-xs text-slate-500 font-bold">實際飛勤</span></div>
+                        <div id="valFDP" class="dash-val">--:--</div>
+                        <div class="dash-sub">
+                            <span id="txtMaxFDP">Max: --:--</span>
+                            <span id="txtExtFDP" class="text-emerald-600 hidden"></span>
+                        </div>
+                    </div>
+                    <div id="cardRest" class="dash-card hide-initially">
                         <div class="dash-title">Actual Rest<br><span class="text-xs text-slate-500 font-bold">實際休時</span></div>
                         <div id="valRest" class="dash-val">--:--</div>
                         <div class="dash-sub">
@@ -706,52 +747,78 @@ function toggleRestAcc() {
     safeCalculate();
 }
 
+function toggleRestCalc() {
+    const body = document.getElementById('restBody');
+    if(document.getElementById('enableRest').checked) body.classList.remove('hide-initially');
+    else body.classList.add('hide-initially');
+    safeCalculate();
+}
+
 function safeCalculate() {
     try { calculateCore(); } catch(e) { console.debug("Awaiting valid data...", e); }
 }
 
+// Card updater (shared). Defined here so it is reachable from the whole file.
+function updateCard(id, act, lim, isMin) {
+    const elVal = document.getElementById('val'+id);
+    const elLim = document.getElementById(isMin ? 'txtMin'+id : 'txtMax'+id);
+    const card = document.getElementById('card'+id);
+    const elExcep = document.getElementById('exemptionInfo');
+
+    elVal.innerText = fmt(act);
+    let bad = false;
+
+    if(id === 'Rest' && document.getElementById('timeDiff6h').checked && currentLocation === 'home') {
+        elLim.innerText = "Req: 48h (No FD)";
+        bad = act < 48*60;
+        if(bad) elExcep.classList.remove('hidden'); else elExcep.classList.add('hidden');
+    } else {
+        if(id === 'Rest') elExcep.classList.add('hidden');
+        elLim.innerText = (isMin ? "Req: " : "Max: ") + fmt(lim);
+        bad = isMin ? (act < lim) : (act > lim);
+    }
+
+    if(bad) { card.classList.add('violation'); card.classList.remove('ok'); }
+    else { card.classList.remove('violation'); card.classList.add('ok'); }
+}
+
 function calculateCore() {
     const report = parsedTimesUTC['report'];
-    const release = parsedTimesUTC['release'];
-    
-    if(!report || !release || release <= report) return;
+    if(!report) return; // Phase 1 only needs the start time
 
     const crew = document.querySelector('input[name="crew"]:checked').value;
     const hasClass1 = document.querySelector('input[name="class1"]:checked')?.value === 'yes';
-    
+
     const ftParts = document.getElementById('flightTime').value.split(':');
-    const actFT = parseInt(ftParts[0])*60 + parseInt(ftParts[1]);
+    const actFT = (parseInt(ftParts[0])||0)*60 + (parseInt(ftParts[1])||0);
     const baseOffset = parseInt(document.getElementById('baseTz').value);
 
-    let rawFDP = (release - report)/60000;
-    let actFDP = rawFDP;
-
+    // ---- Base limits by crew composition (FOM 4.7.5) ----
     let maxFDP = 0, maxFT = 0;
     if(crew === "2") { maxFDP = 14*60; maxFT = 10*60; }
     else if(crew === "3") { maxFDP = 18*60; maxFT = hasClass1 ? 16*60 : 12*60; }
     else { maxFDP = 24*60; maxFT = hasClass1 ? 18*60 : 12*60; }
 
+    // ---- In-flight rest at accommodation (FOM 4-16 B) ----
     let extMin = 0, deductMin = 0;
     let isAccActive = document.getElementById('hasRestAcc').checked;
-    
     if(isAccActive) {
         const rh = parseInt(document.getElementById('restDurHour').value) || 0;
         const rm = parseInt(document.getElementById('restDurMinute').value) || 0;
         const restDuration = rh * 60 + rm;
-        
+
         if(restDuration > 180) {
             document.getElementById('restLogicOptions').classList.remove('hide-initially');
             document.getElementById('restWarning').classList.add('hide-initially');
             const scenario = document.querySelector('input[name="restScenario"]:checked').value;
             if(scenario === 'not_start') {
-                deductMin = restDuration;
-                actFDP = Math.max(0, rawFDP - deductMin);
+                deductMin = restDuration; // 4-16 B.a: 計入勤務、自 FDP 扣除
                 document.getElementById('restNote').innerText = `*Mode: Deducting ${fmt(deductMin)} from Actual FDP`;
             } else {
-                let added = Math.floor(restDuration * 0.5);
+                let added = Math.floor(restDuration * 0.5); // 4-16 B.b: Max FDP +一半
                 let tempMax = maxFDP + added;
                 if(tempMax > 1440) tempMax = 1440;
-                extMin = tempMax - maxFDP; 
+                extMin = tempMax - maxFDP;
                 maxFDP = tempMax;
                 document.getElementById('restNote').innerText = `*Mode: Max FDP increased by ${fmt(extMin)}`;
             }
@@ -761,101 +828,136 @@ function calculateCore() {
         }
     }
 
+    // ---- Commander's discretion (FOM 4-17 C.c) ----
     let extPic = 0;
-    if(crew === "3" && document.getElementById('picDiscretion').checked) { extPic = 120; maxFDP += extPic; }
-
-    let actRest = 0, restStart, restEnd, hasDHD = false, dhdEnd = null;
-    
-    if(currentLocation === 'home') {
-        const nextReport = parsedTimesUTC['nextReport'];
-        if(!nextReport) return;
-        
-        hasDHD = document.getElementById('followingDHD').checked;
-        if(hasDHD) {
-            dhdEnd = parsedTimesUTC['dhdEnd'];
-            if(!dhdEnd || dhdEnd <= release) return;
-            restStart = dhdEnd;
-        } else {
-            restStart = release;
-        }
-        restEnd = nextReport;
-        actRest = (restEnd <= restStart) ? 0 : (restEnd - restStart)/60000;
-    } else {
-        const hotelIn = parsedTimesUTC['hotelIn'];
-        const hotelOut = parsedTimesUTC['hotelOut'];
-        if(!hotelIn || !hotelOut || hotelOut <= hotelIn) return;
-        restStart = hotelIn; restEnd = hotelOut;
-        actRest = (restEnd <= restStart) ? 0 : (restEnd - restStart)/60000;
+    if(crew === "3" && document.getElementById('picDiscretion').checked) {
+        extPic = 120; maxFDP += extPic;
+        maxFT = Math.max(maxFT, 16*60); // 改航延長時最大飛時上限放寬至 16h
     }
 
-    let minRestH = 0;
-    const ftH = actFT / 60;
-    if(crew === "2") minRestH = (ftH <= 8) ? 10 : 18;
-    else if(crew === "3") minRestH = (ftH <= 8) ? 10 : (ftH <= 12 ? 18 : 24);
-    else minRestH = (ftH <= 8) ? 10 : (ftH <= 16 ? 18 : 22);
-    
-    const minRest = minRestH * 60;
+    // ---- AUTO Max FDP result (Req 2): latest end = report + maxFDP ----
+    const maxFDPEnd = new Date(report.getTime() + maxFDP*60000);
+    const endLcl = new Date(maxFDPEnd.getTime() + baseOffset*3600000);
+    const endUtcStr = `${pad(maxFDPEnd.getUTCDate())}d ${pad(maxFDPEnd.getUTCHours())}${pad(maxFDPEnd.getUTCMinutes())}z`;
+    const endLclStr = `${pad(endLcl.getUTCHours())}${pad(endLcl.getUTCMinutes())} LCL`;
+    document.getElementById('valMFDP').innerText = fmt(maxFDP);
+    document.getElementById('mfdpDur').innerText = fmt(maxFDP);
+    document.getElementById('txtMFDPEnd').innerText = `End: ${endUtcStr}`;
+    document.getElementById('mfdpEnd').innerHTML = `${endUtcStr}<br><span class="text-blue-500 text-sm">${endLclStr}</span>`;
+    const mfdpHint = document.getElementById('mfdpHint');
+    let hintParts = [];
+    if(extMin > 0) hintParts.push(`含住宿休息延長 +${fmt(extMin)}`);
+    if(extPic > 0) hintParts.push(`含機長裁量 +${fmt(extPic)}`);
+    if(hintParts.length) { mfdpHint.classList.remove('hidden'); mfdpHint.innerText = '＊'+hintParts.join('、'); }
+    else mfdpHint.classList.add('hidden');
 
+    // Flight Time card is always available (block time entered in Phase 1)
+    updateCard('FT', actFT, maxFT, false);
+
+    // ---- Optional rest calculation (Phase 2 toggle) ----
+    const restOn = document.getElementById('enableRest').checked;
+    const cardFDP = document.getElementById('cardFDP');
+    const cardRest = document.getElementById('cardRest');
+    const release = parsedTimesUTC['release'];
+    const hasRelease = restOn && release && release > report;
+
+    let actFDP = null, actRest = 0, restStart = null, restEnd = null;
+    let hasDHD = false, dhdEnd = null, minRest = 0, restValid = false;
+
+    if(hasRelease) {
+        let rawFDP = (release - report)/60000;
+        actFDP = Math.max(0, rawFDP - deductMin);
+
+        if(currentLocation === 'home') {
+            const nextReport = parsedTimesUTC['nextReport'];
+            if(nextReport) {
+                hasDHD = document.getElementById('followingDHD').checked;
+                if(hasDHD) {
+                    // 4-16 C.b / 4-17 d: DHD 不計入休息，休息自 DHD 結束起算
+                    dhdEnd = parsedTimesUTC['dhdEnd'];
+                    if(dhdEnd && dhdEnd > release) { restStart = dhdEnd; restValid = true; }
+                } else {
+                    // 4-16 C.a: 休息於 FDP 結束(block-in)後 30 分鐘開始
+                    restStart = new Date(release.getTime() + 30*60000); restValid = true;
+                }
+                if(restValid) { restEnd = nextReport; actRest = (restEnd <= restStart) ? 0 : (restEnd - restStart)/60000; }
+            }
+        } else {
+            const hotelIn = parsedTimesUTC['hotelIn'];
+            const hotelOut = parsedTimesUTC['hotelOut'];
+            if(hotelIn && hotelOut && hotelOut > hotelIn) {
+                restStart = hotelIn; restEnd = hotelOut; restValid = true;
+                actRest = (restEnd - restStart)/60000;
+            }
+        }
+
+        const ftH = actFT / 60;
+        let minRestH = 0;
+        if(crew === "2") minRestH = (ftH <= 8) ? 10 : 18;
+        else if(crew === "3") minRestH = (ftH <= 8) ? 10 : (ftH <= 12 ? 18 : 24);
+        else minRestH = (ftH <= 8) ? 10 : (ftH <= 16 ? 18 : 22);
+        minRest = minRestH * 60;
+    }
+
+    // Actual FDP card (only when rest calc is on and an end time exists)
+    if(hasRelease) {
+        cardFDP.classList.remove('hide-initially');
+        updateCard('FDP', actFDP, maxFDP, false);
+        const elExt = document.getElementById('txtExtFDP');
+        let txt = [];
+        if(deductMin > 0) txt.push(`(-${fmt(deductMin)})`);
+        if(extMin > 0) txt.push(`(+${fmt(extMin)})`);
+        if(extPic > 0) txt.push(`(PIC +${fmt(extPic)})`);
+        if(txt.length > 0) { elExt.style.display = 'block'; elExt.innerText = txt.join(' '); }
+        else { elExt.style.display = 'none'; }
+    } else {
+        cardFDP.classList.add('hide-initially');
+    }
+
+    // Actual Rest card
+    if(restOn && restValid) {
+        cardRest.classList.remove('hide-initially');
+        updateCard('Rest', actRest, minRest, true);
+    } else {
+        cardRest.classList.add('hide-initially');
+        document.getElementById('exemptionInfo').classList.add('hidden');
+    }
+
+    // ---- WOCL detection (uses actual end if available, else max FDP end) ----
+    const dutyEnd = hasRelease ? release : maxFDPEnd;
     let touchesWOCL = false;
     const offsetMs = baseOffset * 3600000;
     const localStart = new Date(report.getTime() + offsetMs);
-    const localEnd = new Date(release.getTime() + offsetMs);
+    const localEnd = new Date(dutyEnd.getTime() + offsetMs);
     let checkTime = new Date(localStart);
     checkTime.setUTCHours(0,0,0,0);
-    for(let i=0; i<3; i++) {
-        let woclStart = new Date(checkTime.getTime() + 2*3600000); 
-        let woclEnd = new Date(checkTime.getTime() + 5*3600000);   
+    for(let i=0; i<4; i++) {
+        let woclStart = new Date(checkTime.getTime() + 2*3600000);
+        let woclEnd = new Date(checkTime.getTime() + 5*3600000);
         if(localStart < woclEnd && localEnd > woclStart) { touchesWOCL = true; break; }
         checkTime.setDate(checkTime.getDate() + 1);
     }
-
-    const updateCard = (id, act, lim, isMin) => {
-        const elVal = document.getElementById('val'+id);
-        const elLim = document.getElementById(isMin ? 'txtMin'+id : 'txtMax'+id);
-        const card = document.getElementById('card'+id);
-        const elExcep = document.getElementById('exemptionInfo');
-        
-        elVal.innerText = fmt(act);
-        let bad = false;
-        
-        if(id === 'Rest' && document.getElementById('timeDiff6h').checked && currentLocation === 'home') {
-            elLim.innerText = "Req: 48h (No FD)";
-            bad = act < 48*60; 
-            if(bad) elExcep.classList.remove('hidden'); else elExcep.classList.add('hidden');
-        } else {
-            if(id === 'Rest') elExcep.classList.add('hidden');
-            elLim.innerText = (isMin ? "Req: " : "Max: ") + fmt(lim);
-            bad = isMin ? (act < lim) : (act > lim);
-        }
-
-        if(bad) { card.classList.add('violation'); card.classList.remove('ok'); } 
-        else { card.classList.remove('violation'); card.classList.add('ok'); }
-    };
-
-    updateCard('FDP', actFDP, maxFDP, false);
-    updateCard('FT', actFT, maxFT, false);
-    updateCard('Rest', actRest, minRest, true);
-    
-    const elExt = document.getElementById('txtExtFDP');
-    let txt = [];
-    if(deductMin > 0) txt.push(`(-${fmt(deductMin)})`);
-    if(extMin > 0) txt.push(`(+${fmt(extMin)})`);
-    if(extPic > 0) txt.push(`(PIC +${fmt(extPic)})`);
-    
-    if(txt.length > 0) {
-        elExt.style.display = 'block'; elExt.innerText = txt.join(' ');
-    } else {
-        elExt.style.display = 'none';
-    }
-
     const wBox = document.getElementById('woclAlert');
     if(touchesWOCL) wBox.classList.remove('hide-initially'); else wBox.classList.add('hide-initially');
 
-    drawTimelineEngine('timelineFDP', report, release, actFDP, maxFDP, hasDHD, dhdEnd, baseOffset, extPic, true);
-    drawTimelineEngine('timelineRest', restStart, restEnd, actRest, minRest, false, null, 0, 0, false);
+    // ---- Timelines ----
+    drawTimelineEngine('timelineFDP', report, dutyEnd, hasRelease ? actFDP : 0,
+                       maxFDP, hasDHD, dhdEnd, baseOffset, extPic, true, hasRelease);
+
+    const restWrap = document.getElementById('timelineRest');
+    const fdpWrap = document.getElementById('timelineFDP');
+    if(restOn && restValid) {
+        restWrap.style.display = '';
+        fdpWrap.classList.remove('rounded-b-lg');
+        drawTimelineEngine('timelineRest', restStart, restEnd, actRest, minRest, false, null, 0, 0, false, true);
+    } else {
+        restWrap.innerHTML = '';
+        restWrap.style.display = 'none';
+        fdpWrap.classList.add('rounded-b-lg');
+    }
 }
 
-function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, dhdEnd, offset, extPic, isFDP) {
+function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, dhdEnd, offset, extPic, isFDP, hasActual = true) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
     
@@ -910,18 +1012,20 @@ function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, d
             iterTime.setDate(iterTime.getDate() + 1);
         }
         
-        let baseMax = limMins - extPic; 
+        let baseMax = limMins - extPic;
         addBlock(start, baseMax, `Max ${fmt(baseMax)}`, "bg-mfdp");
         if(extPic > 0) addBlock(new Date(start.getTime() + baseMax*60000), extPic, `PIC +2h`, "bg-ext");
-        addBlock(start, actMins, `Actual ${fmt(actMins)}`, "bg-fdp" + (actMins > limMins ? " violation":""));
-        if(hasDHD && dhdEnd) {
+        if(hasActual && actMins > 0) {
+            addBlock(start, actMins, `Actual ${fmt(actMins)}`, "bg-fdp" + (actMins > limMins ? " violation":""));
+        }
+        if(hasActual && hasDHD && dhdEnd) {
             const dhdDur = (dhdEnd - end)/60000;
             addBlock(end, dhdDur, `DHD`, "bg-dhd");
         }
-        
+
         addTick(start, "RPT\n"+fT(start));
-        addTick(end, "END\n"+fT(end));
-        if(hasDHD && dhdEnd) addTick(dhdEnd, "DHD\n"+fT(dhdEnd));
+        if(hasActual) addTick(end, "END\n"+fT(end));
+        if(hasActual && hasDHD && dhdEnd) addTick(dhdEnd, "DHD\n"+fT(dhdEnd));
         const maxFDPTime = new Date(start.getTime() + limMins * 60000);
         addTick(maxFDPTime, `<span style="color:#2563eb">MAX</span>\n${fT(maxFDPTime)}`, true);
     } else {
