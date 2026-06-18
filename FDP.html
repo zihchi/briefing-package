@@ -264,7 +264,7 @@
                     <div class="time-input-group border-l-4 border-l-slate-400">
                         <div class="flex justify-between items-start sm:items-center gap-2">
                             <div class="bilingual-label">
-                                <span class="en text-[#10b981]">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(*DHD 不算 FDP)</span></span>
+                                <span class="en text-[#10b981]">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(On Blocks · 休息 +30m 自動計 · DHD 不算 FDP)</span></span>
                                 <span class="zh">任務結束</span>
                             </div>
                             <span id="badge_release" class="tz-badge">--:--</span>
@@ -272,7 +272,7 @@
                         <!-- UI Indicator for End Type -->
                         <div class="radio-pill-group">
                             <label class="radio-pill active-pill">
-                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN + 30M
+                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN
                             </label>
                             <label class="radio-pill">
                                 <input type="radio" name="fdpEndType" value="another"> ANOTHER DUTY END
@@ -762,7 +762,11 @@ function calculateCore() {
     }
 
     let extPic = 0;
-    if(crew === "3" && document.getElementById('picDiscretion').checked) { extPic = 120; maxFDP += extPic; }
+    if(crew === "3" && document.getElementById('picDiscretion').checked) {
+        extPic = 120; maxFDP += extPic;
+        // 4-17 C.c: 改航延長經機長同意時，最大飛時上限放寬至 16h
+        maxFT = Math.max(maxFT, 16*60);
+    }
 
     let actRest = 0, restStart, restEnd, hasDHD = false, dhdEnd = null;
     
@@ -772,11 +776,13 @@ function calculateCore() {
         
         hasDHD = document.getElementById('followingDHD').checked;
         if(hasDHD) {
+            // 4-16 C.b / 4-17 d: DHD 不計入休息，休息自 DHD 結束起算
             dhdEnd = parsedTimesUTC['dhdEnd'];
             if(!dhdEnd || dhdEnd <= release) return;
             restStart = dhdEnd;
         } else {
-            restStart = release;
+            // 4-16 C.a: 休息於 FDP 結束(block-in)後 30 分鐘開始
+            restStart = new Date(release.getTime() + 30*60000);
         }
         restEnd = nextReport;
         actRest = (restEnd <= restStart) ? 0 : (restEnd - restStart)/60000;
