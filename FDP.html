@@ -108,7 +108,7 @@
     .tick { position: absolute; top: 0; height: 100%; border-left: 1px dashed #94a3b8; pointer-events: none; z-index: 1; }
     .tick-label { position: absolute; top: 78px; transform: translateX(-50%); font-size: 10px; background-color: rgba(255,255,255,0.95); padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; color: #475569; text-align: center; z-index: 4; white-space: pre-line; line-height: 1.1; font-family: ui-monospace, monospace; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
-    .hide-initially { display: none; }
+    .hide-initially { display: none !important; }
     
     /* Helper classes for dual-language layout */
     .bilingual-label { display: block; line-height: 1.2; }
@@ -274,13 +274,6 @@
                                 <span class="toggle-desc text-purple-600">機長裁量權延長</span>
                             </div>
                         </label>
-                        <label class="toggle-chk border-[#fef3c7] bg-[#fffbeb]">
-                            <input type="checkbox" id="timeDiff6h" onchange="safeCalculate()">
-                            <div class="toggle-content">
-                                <span class="toggle-title text-amber-700">Time Diff ≥ 6h & Stay > 48h</span>
-                                <span class="toggle-desc text-amber-600">時差大於6小時且停留超過48小時</span>
-                            </div>
-                        </label>
                     </div>
 
                     <hr class="border-slate-200">
@@ -394,8 +387,17 @@
                     Phase 2: Latest Pushback 第二階段：最晚後推時間
                 </div>
                 <div class="p-5 space-y-4">
+                    <label class="toggle-chk border-[#bfa276] bg-[#faf7f0]">
+                        <input type="checkbox" id="enableP2" onchange="toggleP2()">
+                        <div class="toggle-content">
+                            <span class="toggle-title text-[#8a5a2b]">Calculate Latest Pushback</span>
+                            <span class="toggle-desc text-[#a06a32]">我要回推最晚後推時間（開啟後輸入各航段時長）</span>
+                        </div>
+                    </label>
+
+                    <div id="p2Body" class="hide-initially space-y-4">
                     <p class="text-xs text-slate-500 leading-relaxed">
-                        每段可用 <span class="utc-text font-bold">OOOI 固定時刻</span> 或 <span class="lcl-text font-bold">Taxi/Trip 時長</span> 輸入（兩者相輔相成），
+                        每段可用 <span class="utc-text font-bold">OOOI 固定時刻</span>、<span class="lcl-text font-bold">Taxi/Trip 時長</span> 或直接輸入 <span class="font-bold text-slate-700">Duration</span>（互相回填），
                         加總各段時長與轉場後，自 Max FDP 最晚結束回推第一段最晚後推。
                     </p>
 
@@ -419,6 +421,7 @@
                         <div id="p2Schedule" class="hidden border-t border-slate-200 pt-3 space-y-1"></div>
                         <p id="p2Warn" class="hidden text-xs text-[#dc2626] font-bold"></p>
                     </div>
+                    </div><!-- /#p2Body -->
                 </div>
             </div>
 
@@ -441,30 +444,6 @@
 
                     <div id="restBody" class="hide-initially space-y-5">
 
-                    <!-- FDP End (moved here: only needed for rest calc) -->
-                    <div class="time-input-group border-l-4 border-l-slate-400">
-                        <div class="flex justify-between items-start sm:items-center gap-2">
-                            <div class="bilingual-label">
-                                <span class="en text-slate-800">FDP End Time <span class="text-xs font-normal text-slate-500 tracking-normal normal-case">(On Blocks · 休息 +30m 自動計 · DHD 不算 FDP)</span></span>
-                                <span class="zh">任務結束</span>
-                            </div>
-                            <span id="badge_release" class="tz-badge">--:--</span>
-                        </div>
-                        <div class="radio-pill-group">
-                            <label class="radio-pill active-pill">
-                                <input type="radio" name="fdpEndType" value="block" checked> BLOCK-IN
-                            </label>
-                            <label class="radio-pill">
-                                <input type="radio" name="fdpEndType" value="another"> ANOTHER DUTY END
-                            </label>
-                        </div>
-                        <div class="dt-flex-group">
-                            <input type="date" id="date_release" onchange="processTimeChange('release')">
-                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_release" class="ntime" onchange="processTimeChange('release')">
-                            <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
-                        </div>
-                    </div>
-
                     <!-- Location Selection -->
                     <div>
                         <div class="bilingual-label mb-2">
@@ -479,11 +458,35 @@
 
                     <!-- Home Base Extras -->
                     <div id="uiHomeExtras" class="space-y-5 pt-2 border-t border-dashed border-slate-200">
+                        <!-- Rest Start Time (home base) -->
+                        <div id="restStartBox" class="time-input-group border-l-4 border-l-slate-700">
+                            <div class="flex justify-between items-start sm:items-center gap-2">
+                                <div class="bilingual-label">
+                                    <span class="en text-slate-800">Rest Start Time</span>
+                                    <span class="zh">休時開始</span>
+                                </div>
+                                <span id="badge_release" class="tz-badge">--:--</span>
+                            </div>
+                            <div class="dt-flex-group">
+                                <input type="date" id="date_release" onchange="processTimeChange('release')">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_release" class="ntime" onchange="processTimeChange('release')">
+                                <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
+                            </div>
+                        </div>
+
                         <label class="toggle-chk border-[#fde68a] bg-[#fffbeb]">
                             <input type="checkbox" id="followingDHD" onchange="toggleDHD(); safeCalculate()">
                             <div class="toggle-content">
                                 <span class="toggle-title text-amber-800">Following DHD</span>
                                 <span class="toggle-desc text-amber-700">包含後續搭機任務 (休時開始時間將遞延)</span>
+                            </div>
+                        </label>
+
+                        <label class="toggle-chk border-[#fef3c7] bg-[#fffbeb]">
+                            <input type="checkbox" id="timeDiff6h" onchange="safeCalculate()">
+                            <div class="toggle-content">
+                                <span class="toggle-title text-amber-700">Time Diff ≥ 6h & Stay > 48h</span>
+                                <span class="toggle-desc text-amber-600">時差大於6小時且停留超過48小時（需 48h 休息）</span>
                             </div>
                         </label>
 
@@ -720,7 +723,15 @@ function syncDirectBt() {
 let gMaxFDPEnd = null;   // Max FDP latest end (UTC Date) from Phase 1
 let gReportUTC = null;   // FDP start (UTC) for feasibility check
 let gBaseOffset = 8;     // base TZ offset for local display
+let gLastInBlock = null; // actual last-sector in-block (UTC) → drives Actual FDP
 let p2SectorCount = 2;
+
+function toggleP2() {
+    const body = document.getElementById('p2Body');
+    if(document.getElementById('enableP2').checked) body.classList.remove('hide-initially');
+    else body.classList.add('hide-initially');
+    safeCalculate();
+}
 
 const p2HM    = (v) => { if(!v) return null; const p = v.split(':'); return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); };
 const p2DurFmt= (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
@@ -739,7 +750,7 @@ function p2InputField(label, cls, kind, group) {
 function p2Edited(el, group) {
     const sec = el.closest('.p2-sector');
     if(sec) sec.dataset.driver = group;
-    recomputeP2();
+    safeCalculate();
 }
 
 function buildP2Sectors() {
@@ -750,7 +761,10 @@ function buildP2Sectors() {
         html += `<div class="p2-sector rounded-lg border border-slate-200 bg-white p-3${i>2?' hide-initially':''}" data-sec="${i}">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-extrabold text-slate-700 uppercase">Sector ${i}</span>
-                <span class="text-xs font-bold text-slate-500">Duration <span class="p2dur font-mono text-[#0f172a] text-sm">0:00</span></span>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-bold text-slate-500">Duration</span>
+                    <input type="text" inputmode="numeric" placeholder="HH:MM" class="p2-dur ntime !w-[74px] !text-xs !py-1 text-center font-mono" onchange="p2Edited(this,'dur')">
+                </div>
             </div>
             <div class="mb-2">
                 <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻</div>
@@ -769,7 +783,7 @@ function buildP2Sectors() {
             html += `<div class="p2-ta flex items-center justify-center gap-2 py-0.5${i>=2?' hide-initially':''}" data-ta="${i}">
                 <i class="fas fa-arrows-rotate text-slate-300 text-xs"></i>
                 <span class="text-[0.6rem] font-extrabold text-slate-500 uppercase">Turnaround 轉場</span>
-                <input type="text" inputmode="numeric" placeholder="HH:MM" value="01:00" class="p2-ta-input ntime !w-[100px] !text-xs !py-1 text-center" onchange="recomputeP2()">
+                <input type="text" inputmode="numeric" placeholder="HH:MM" value="01:00" class="p2-ta-input ntime !w-[100px] !text-xs !py-1 text-center" onchange="safeCalculate()">
             </div>`;
         }
     }
@@ -790,7 +804,7 @@ function addP2Sector() {
         if(ta) ta.classList.remove('hide-initially');
     }
     renderP2Buttons();
-    recomputeP2();
+    safeCalculate();
 }
 
 function removeP2Sector() {
@@ -801,12 +815,17 @@ function removeP2Sector() {
         p2SectorCount--;
     }
     renderP2Buttons();
-    recomputeP2();
+    safeCalculate();
 }
+
+const p2DurHM = (m) => `${pad(Math.floor(m/60))}:${pad(m%60)}`;
 
 function recomputeP2() {
     const c = document.getElementById('p2Sectors');
     if(!c) return;
+    const enP2 = document.getElementById('enableP2');
+    if(!enP2 || !enP2.checked) { gLastInBlock = null; return; } // Phase 2 only runs when enabled
+
     const sectors = [...c.querySelectorAll('.p2-sector:not(.hide-initially)')];
     const durs = [];
     let totalDur = 0;
@@ -818,12 +837,16 @@ function recomputeP2() {
         const txo = parseInt(g('p2-txo').value)||0, trip = p2HM(g('p2-trip').value)||0, txi = parseInt(g('p2-txi').value)||0;
         const driver = sec.dataset.driver || 'ttt';
         let dur = 0;
-        if(driver === 'oooi' && out != null && inn != null) {
+        if(driver === 'dur') {
+            // Direct Duration entry drives; leave OOOI/TTT as-is
+            dur = p2HM(g('p2-dur').value) || 0;
+        } else if(driver === 'oooi' && out != null && inn != null) {
             // OOOI last edited → drive Duration, derive Taxi/Trip where possible
             dur = p2Diff(out, inn);
             if(off != null) g('p2-txo').value = p2Diff(out, off);
             if(off != null && on != null) g('p2-trip').value = p2Clock(p2Diff(off, on));
             if(on != null) g('p2-txi').value = p2Diff(on, inn);
+            g('p2-dur').value = p2DurHM(dur);
         } else {
             // Taxi/Trip drives (default) → as long as Out is given, derive Off/On/In
             dur = txo + trip + txi;
@@ -833,8 +856,8 @@ function recomputeP2() {
                 g('p2-on').value  = p2Clock(onv);
                 g('p2-in').value  = p2Clock(inv);
             }
+            g('p2-dur').value = p2DurHM(dur);
         }
-        sec.querySelector('.p2dur').innerText = p2DurFmt(dur);
         durs.push(dur);
         totalDur += dur;
     });
@@ -844,7 +867,22 @@ function recomputeP2() {
     tas.forEach(ta => taTotal += (p2HM(ta.querySelector('.p2-ta-input').value)||0));
 
     const grand = totalDur + taTotal;
-    document.getElementById('p2Total').innerText = p2DurFmt(grand);
+    document.getElementById('p2Total').innerText = p2DurHM(grand);
+
+    // Actual last-sector in-block (#6): anchor first OOOI Out to FDP-start local date.
+    gLastInBlock = null;
+    const firstOut = p2HM(sectors[0].querySelector('.p2-out').value);
+    if(gReportUTC && firstOut != null && grand > 0) {
+        const repLcl = new Date(gReportUTC.getTime() + gBaseOffset*3600000);
+        const outLclMs = Date.UTC(repLcl.getUTCFullYear(), repLcl.getUTCMonth(), repLcl.getUTCDate(), Math.floor(firstOut/60), firstOut%60);
+        let cur = outLclMs - gBaseOffset*3600000;
+        while(cur < gReportUTC.getTime()) cur += 86400000;
+        for(let i=0; i<sectors.length; i++) {
+            cur += durs[i]*60000;                       // In_i
+            if(i < sectors.length-1) cur += (p2HM(tas[i].querySelector('.p2-ta-input').value)||0)*60000;
+        }
+        gLastInBlock = new Date(cur);
+    }
 
     const pbEl = document.getElementById('p2Pushback');
     const schedEl = document.getElementById('p2Schedule');
@@ -1107,8 +1145,14 @@ function setLocation(loc) {
 
 function toggleDHD() {
     const box = document.getElementById('dhdInputBox');
-    if(document.getElementById('followingDHD').checked) box.classList.remove('hide-initially');
-    else box.classList.add('hide-initially');
+    const restStartBox = document.getElementById('restStartBox');
+    if(document.getElementById('followingDHD').checked) {
+        box.classList.remove('hide-initially');
+        if(restStartBox) restStartBox.classList.add('hide-initially'); // DHD end becomes the rest start
+    } else {
+        box.classList.add('hide-initially');
+        if(restStartBox) restStartBox.classList.remove('hide-initially');
+    }
 }
 
 function toggleRestAcc() {
@@ -1234,33 +1278,44 @@ function calculateCore() {
     // Flight Time card is always available (block time entered in Phase 1)
     updateCard('FT', actFT, maxFT, false);
 
-    // ---- Optional rest calculation (Phase 2 toggle) ----
-    const restOn = document.getElementById('enableRest').checked;
     const cardFDP = document.getElementById('cardFDP');
     const cardRest = document.getElementById('cardRest');
-    const release = parsedTimesUTC['release'];
-    const hasRelease = restOn && release && release > report;
 
-    let actFDP = null, actRest = 0, restStart = null, restEnd = null;
-    let hasDHD = false, dhdEnd = null, minRest = 0, restValid = false;
+    // ---- Actual FDP = report → last sector in-block (#6, from Phase 2) ----
+    let actFDP = null;
+    if(gLastInBlock && gLastInBlock > report) {
+        actFDP = Math.max(0, (gLastInBlock - report)/60000 - deductMin);
+        cardFDP.classList.remove('hide-initially');
+        updateCard('FDP', actFDP, maxFDP, false);
+        const elExt = document.getElementById('txtExtFDP');
+        let txt = [];
+        if(deductMin > 0) txt.push(`(-${fmt(deductMin)})`);
+        if(extMin > 0) txt.push(`(+${fmt(extMin)})`);
+        if(extPic > 0) txt.push(`(PIC +${fmt(extPic)})`);
+        if(txt.length > 0) { elExt.style.display = 'block'; elExt.innerText = txt.join(' '); }
+        else { elExt.style.display = 'none'; }
+    } else {
+        cardFDP.classList.add('hide-initially');
+    }
 
-    if(hasRelease) {
-        let rawFDP = (release - report)/60000;
-        actFDP = Math.max(0, rawFDP - deductMin);
+    // ---- Rest calculation (Phase 3 toggle, #7) ----
+    const restOn = document.getElementById('enableRest').checked;
+    let actRest = 0, restStart = null, restEnd = null, minRest = 0, restValid = false;
+    let hasDHD = false, dhdEnd = null;
 
+    if(restOn) {
         if(currentLocation === 'home') {
             const nextReport = parsedTimesUTC['nextReport'];
-            if(nextReport) {
-                hasDHD = document.getElementById('followingDHD').checked;
-                if(hasDHD) {
-                    // 4-16 C.b / 4-17 d: DHD 不計入休息，休息自 DHD 結束起算
-                    dhdEnd = parsedTimesUTC['dhdEnd'];
-                    if(dhdEnd && dhdEnd > release) { restStart = dhdEnd; restValid = true; }
-                } else {
-                    // 4-16 C.a: 休息於 FDP 結束(block-in)後 30 分鐘開始
-                    restStart = new Date(release.getTime() + 30*60000); restValid = true;
-                }
-                if(restValid) { restEnd = nextReport; actRest = (restEnd <= restStart) ? 0 : (restEnd - restStart)/60000; }
+            hasDHD = document.getElementById('followingDHD').checked;
+            if(hasDHD) {
+                dhdEnd = parsedTimesUTC['dhdEnd'];          // DHD never rest (4-16 C.b); rest starts at DHD end
+                if(dhdEnd) restStart = dhdEnd;
+            } else {
+                restStart = parsedTimesUTC['release'];      // Rest Start Time input
+            }
+            if(restStart && nextReport && nextReport > restStart) {
+                restEnd = nextReport; restValid = true;
+                actRest = (restEnd - restStart)/60000;
             }
         } else {
             const hotelIn = parsedTimesUTC['hotelIn'];
@@ -1279,21 +1334,6 @@ function calculateCore() {
         minRest = minRestH * 60;
     }
 
-    // Actual FDP card (only when rest calc is on and an end time exists)
-    if(hasRelease) {
-        cardFDP.classList.remove('hide-initially');
-        updateCard('FDP', actFDP, maxFDP, false);
-        const elExt = document.getElementById('txtExtFDP');
-        let txt = [];
-        if(deductMin > 0) txt.push(`(-${fmt(deductMin)})`);
-        if(extMin > 0) txt.push(`(+${fmt(extMin)})`);
-        if(extPic > 0) txt.push(`(PIC +${fmt(extPic)})`);
-        if(txt.length > 0) { elExt.style.display = 'block'; elExt.innerText = txt.join(' '); }
-        else { elExt.style.display = 'none'; }
-    } else {
-        cardFDP.classList.add('hide-initially');
-    }
-
     // Actual Rest card
     if(restOn && restValid) {
         cardRest.classList.remove('hide-initially');
@@ -1303,8 +1343,8 @@ function calculateCore() {
         document.getElementById('exemptionInfo').classList.add('hidden');
     }
 
-    // ---- WOCL detection (uses actual end if available, else max FDP end) ----
-    const dutyEnd = hasRelease ? release : maxFDPEnd;
+    // ---- WOCL detection (uses actual FDP end if available, else max FDP end) ----
+    const dutyEnd = (gLastInBlock && gLastInBlock > report) ? gLastInBlock : maxFDPEnd;
     let touchesWOCL = false;
     const offsetMs = baseOffset * 3600000;
     const localStart = new Date(report.getTime() + offsetMs);
@@ -1321,8 +1361,9 @@ function calculateCore() {
     if(touchesWOCL) wBox.classList.remove('hide-initially'); else wBox.classList.add('hide-initially');
 
     // ---- Timelines ----
-    drawTimelineEngine('timelineFDP', report, dutyEnd, hasRelease ? actFDP : 0,
-                       maxFDP, hasDHD, dhdEnd, baseOffset, extPic, true, hasRelease);
+    const hasActual = (actFDP !== null);
+    drawTimelineEngine('timelineFDP', report, dutyEnd, hasActual ? actFDP : 0,
+                       maxFDP, false, null, baseOffset, extPic, true, hasActual);
 
     const restWrap = document.getElementById('timelineRest');
     const fdpWrap = document.getElementById('timelineFDP');
