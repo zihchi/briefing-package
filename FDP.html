@@ -406,6 +406,7 @@
                     <div class="flex items-center gap-2">
                         <button type="button" id="p2AddBtn" onclick="addP2Sector()" class="text-xs font-extrabold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-all">+ Add Sector 增加航段</button>
                         <button type="button" id="p2RemoveBtn" onclick="removeP2Sector()" class="hide-initially text-xs font-extrabold text-slate-600 bg-slate-100 border border-slate-300 rounded-md px-3 py-1.5 hover:bg-slate-200 transition-all">− 移除</button>
+                        <button type="button" onclick="clearP2()" class="ml-auto text-xs font-extrabold text-[#b91c1c] bg-red-50 border border-red-200 rounded-md px-3 py-1.5 hover:bg-red-100 transition-all"><i class="fas fa-eraser mr-1"></i>清空 Clear</button>
                     </div>
 
                     <!-- Results -->
@@ -419,6 +420,10 @@
                             <div id="p2Pushback" class="font-mono break-words text-slate-400">輸入航段時長後計算</div>
                         </div>
                         <div id="p2Schedule" class="hidden border-t border-slate-200 pt-3 space-y-1"></div>
+                        <div id="p2TimelineWrap" class="hidden border-t border-slate-200 pt-3">
+                            <div class="text-[0.65rem] font-extrabold text-slate-500 uppercase mb-2">回推時間軸 Latest Pushback Timeline</div>
+                            <div id="p2Timeline" style="position:relative;height:110px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"></div>
+                        </div>
                         <p id="p2Warn" class="hidden text-xs text-[#dc2626] font-bold"></p>
                     </div>
                     </div><!-- /#p2Body -->
@@ -642,12 +647,20 @@
 const pad = (n) => n.toString().padStart(2, '0');
 const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 
-// Numeric-only time entry (no native picker): format digits into HH:MM as typed.
+// Numeric-only time entry (no native picker). While typing we ONLY insert the
+// colon (no padding/clamping) so digits stay editable; we normalise on blur.
 function fmtNTime(raw) {
     const d = (raw||'').replace(/\D/g,'').slice(0,4);
     if(d.length <= 2) return d;
-    const h = Math.min(parseInt(d.slice(0,2)), 23);
-    const m = Math.min(parseInt(d.slice(2))||0, 59);
+    return d.slice(0,2) + ':' + d.slice(2);
+}
+function padNTime(raw) {
+    const d = (raw||'').replace(/\D/g,'').slice(0,4);
+    if(!d) return '';
+    let h, m;
+    if(d.length <= 2) { h = parseInt(d); m = 0; }
+    else { h = parseInt(d.slice(0,2)); m = parseInt(d.slice(2)); }
+    h = Math.min(h||0, 23); m = Math.min(m||0, 59);
     return pad(h)+':'+pad(m);
 }
 document.addEventListener('input', (e) => {
@@ -656,6 +669,17 @@ document.addEventListener('input', (e) => {
     if(el.classList.contains('ntime')) el.value = fmtNTime(el.value);
     else if(el.classList.contains('nint')) el.value = (el.value||'').replace(/\D/g,'').slice(0,4);
 });
+// Select-all on focus so you can just type 4 digits over the existing value.
+document.addEventListener('focusin', (e) => {
+    const el = e.target;
+    if(el.classList && (el.classList.contains('ntime') || el.classList.contains('nint')))
+        setTimeout(() => { try { el.select(); } catch(_){} }, 0);
+});
+// Normalise to HH:MM on blur (capture phase → runs before inline onchange).
+document.addEventListener('change', (e) => {
+    const el = e.target;
+    if(el.classList && el.classList.contains('ntime')) el.value = padNTime(el.value);
+}, true);
 
 let currentLocation = 'home';
 const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
@@ -820,6 +844,60 @@ function removeP2Sector() {
 
 const p2DurHM = (m) => `${pad(Math.floor(m/60))}:${pad(m%60)}`;
 
+function clearP2() {
+    document.querySelectorAll('#p2Sectors .p2-out, #p2Sectors .p2-off, #p2Sectors .p2-on, #p2Sectors .p2-in, #p2Sectors .p2-txo, #p2Sectors .p2-trip, #p2Sectors .p2-txi, #p2Sectors .p2-dur')
+        .forEach(i => i.value = '');
+    document.querySelectorAll('#p2Sectors .p2-ta-input').forEach(i => i.value = '01:00');
+    document.querySelectorAll('#p2Sectors .p2-sector').forEach(s => delete s.dataset.driver);
+    safeCalculate();
+}
+
+function drawP2Timeline(sched, taMins, startD, endD) {
+    const wrap = document.getElementById('p2TimelineWrap');
+    const c = document.getElementById('p2Timeline');
+    if(!c || !wrap) return;
+    if(!sched.length || !startD || !endD || endD.getTime() <= startD.getTime()) { wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    c.innerHTML = '';
+    const padMs = 45*60000;
+    const cvsS = startD.getTime() - padMs, cvsE = endD.getTime() + padMs;
+    const total = (cvsE - cvsS)/60000;
+    const X = (ms) => ((ms - cvsS)/60000/total)*100;
+    const W = (m) => (m/total)*100;
+    const toLcl = (d) => new Date(d.getTime() + gBaseOffset*3600000);
+
+    sched.forEach((sd, i) => {
+        const b = document.createElement('div');
+        b.className = 'block bg-fdp'; b.style.top = '14px';
+        b.style.left = X(sd.out.getTime())+'%'; b.style.width = Math.max(W((sd.in - sd.out)/60000), 1)+'%';
+        b.innerHTML = 'S'+(i+1);
+        c.appendChild(b);
+        if(i < sched.length-1 && (taMins[i]||0) > 0) {
+            const t = document.createElement('div');
+            t.className = 'block'; t.style.top = '46px'; t.style.color = '#78350f';
+            t.style.background = 'repeating-linear-gradient(45deg,#fde68a,#fde68a 6px,#f59e0b 6px,#f59e0b 12px)';
+            t.style.left = X(sd.in.getTime())+'%'; t.style.width = Math.max(W(taMins[i]), 0.5)+'%';
+            t.innerHTML = 'TA';
+            c.appendChild(t);
+        }
+    });
+
+    const addTick = (d, label, color) => {
+        const x = X(d.getTime()); if(x < 0 || x > 100) return;
+        const tick = document.createElement('div'); tick.className = 'tick'; tick.style.left = x+'%'; c.appendChild(tick);
+        const l = document.createElement('div'); l.className = 'tick-label';
+        if(color) l.style.color = color;
+        if(x < 6) { l.style.left = '0'; l.style.transform = 'none'; }
+        else if(x > 94) { l.style.right = '0'; l.style.left = 'auto'; l.style.transform = 'none'; }
+        else l.style.left = x+'%';
+        const o = toLcl(d);
+        l.innerHTML = label + '\n' + pad(o.getUTCHours())+pad(o.getUTCMinutes());
+        c.appendChild(l);
+    };
+    addTick(startD, 'PUSH', '#8a5a2b');
+    addTick(endD, 'MAX IN', '#2563eb');
+}
+
 function recomputeP2() {
     const c = document.getElementById('p2Sectors');
     if(!c) return;
@@ -892,12 +970,14 @@ function recomputeP2() {
         pbEl.className = 'font-mono break-words text-slate-400';
         pbEl.innerText = '請先在 Phase 1 輸入 FDP Start';
         schedEl.classList.add('hidden'); warnEl.classList.add('hidden');
+        document.getElementById('p2TimelineWrap').classList.add('hidden');
         return;
     }
     if(grand <= 0) {
         pbEl.className = 'font-mono break-words text-slate-400';
         pbEl.innerText = '輸入航段時長後計算';
         schedEl.classList.add('hidden'); warnEl.classList.add('hidden');
+        document.getElementById('p2TimelineWrap').classList.add('hidden');
         return;
     }
 
@@ -933,6 +1013,9 @@ function recomputeP2() {
     });
     schedEl.innerHTML = rows;
     schedEl.classList.remove('hidden');
+
+    // #4 Latest-pushback timeline
+    drawP2Timeline(sched, tas.map(ta => p2HM(ta.querySelector('.p2-ta-input').value)||0), pushback, gMaxFDPEnd);
 
     if(gReportUTC && pushback.getTime() < gReportUTC.getTime()) {
         warnEl.classList.remove('hidden');
