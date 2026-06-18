@@ -61,8 +61,8 @@
 
     /* Smart Flex Grouping to prevent overflow */
     .dt-flex-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; width: 100%; max-width: 100%; }
-    .dt-flex-group > input[type="date"] { flex: 1 1 140px; }
-    .dt-flex-group > input[type="time"] { flex: 1 1 100px; }
+    .dt-flex-group > input[type="date"] { flex: 1 1 100%; }
+    .dt-flex-group > input[type="time"] { flex: 1 1 120px; }
     .dt-flex-group > select.tz-select { flex: 1 1 120px; }
     
     /* Read-only Badge */
@@ -175,7 +175,7 @@
                             <span class="en text-purple-600">Base WOCL TZ</span>
                             <span class="zh">WOCL 基準時區</span>
                         </div>
-                        <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto sm:!min-w-[140px] !py-2 !pl-3 !pr-9 !text-sm border-purple-300 bg-purple-50 text-purple-700 font-bold !rounded-lg"></select>
+                        <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto sm:!min-w-[130px] border-purple-300 bg-purple-50 text-purple-700 font-bold !rounded-lg"></select>
                     </div>
                 </div>
             </div>
@@ -385,17 +385,38 @@
                 </div>
             </div>
 
-            <!-- PHASE 2: LATEST PUSHBACK (placeholder, pending spec) -->
+            <!-- PHASE 2: LATEST PUSHBACK -->
             <div class="panel-card">
                 <div class="panel-header-primary" style="background-color:#3f3f46;border-bottom-color:#bfa276;">
                     <i class="fas fa-backward mr-2 text-[#bfa276]"></i>
                     Phase 2: Latest Pushback 第二階段：最晚後推時間
                 </div>
-                <div class="p-5">
-                    <p class="text-sm text-slate-500 leading-relaxed">
-                        依 <span class="font-bold text-slate-700">Max FDP</span> 回推最晚後推 / 結束時間之功能。
-                        <span class="block mt-1 text-xs text-slate-400">（呈現方式待你確認後建置）</span>
+                <div class="p-5 space-y-4">
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        每段可用 <span class="utc-text font-bold">OOOI 固定時刻</span> 或 <span class="lcl-text font-bold">Taxi/Trip 時長</span> 輸入（兩者相輔相成），
+                        加總各段時長與轉場後，自 Max FDP 最晚結束回推第一段最晚後推。
                     </p>
+
+                    <div id="p2Sectors" class="space-y-3"></div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="p2AddBtn" onclick="addP2Sector()" class="text-xs font-extrabold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-all">+ Add Sector 增加航段</button>
+                        <button type="button" id="p2RemoveBtn" onclick="removeP2Sector()" class="hide-initially text-xs font-extrabold text-slate-600 bg-slate-100 border border-slate-300 rounded-md px-3 py-1.5 hover:bg-slate-200 transition-all">− 移除</button>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="p2Result" class="rounded-xl border border-[#e9d5ff] bg-[#faf5ff] p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[0.65rem] font-extrabold text-slate-500 uppercase tracking-wide">Total Trip 全程時長 (含轉場)</span>
+                            <span id="p2Total" class="text-lg font-extrabold font-mono text-[#0f172a]">--:--</span>
+                        </div>
+                        <div class="border-t border-slate-200 pt-3">
+                            <div class="text-[0.65rem] font-extrabold text-slate-500 uppercase tracking-wide mb-1.5">Latest Pushback 最晚後推 (Sector 1 OUT)</div>
+                            <div id="p2Pushback" class="font-mono break-words text-slate-400">輸入航段時長後計算</div>
+                        </div>
+                        <div id="p2Schedule" class="hidden border-t border-slate-200 pt-3 space-y-1"></div>
+                        <p id="p2Warn" class="hidden text-xs text-[#dc2626] font-bold"></p>
+                    </div>
                 </div>
             </div>
 
@@ -678,6 +699,184 @@ function syncDirectBt() {
     safeCalculate();
 }
 
+/* ---- Phase 2: latest-pushback back-calculation ---- */
+let gMaxFDPEnd = null;   // Max FDP latest end (UTC Date) from Phase 1
+let gReportUTC = null;   // FDP start (UTC) for feasibility check
+let gBaseOffset = 8;     // base TZ offset for local display
+let p2SectorCount = 2;
+
+const p2HM    = (v) => { if(!v) return null; const p = v.split(':'); return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); };
+const p2DurFmt= (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
+const p2Clock = (m) => { m = ((Math.round(m)%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; };
+const p2Diff  = (a,b) => { let d = b - a; if(d < 0) d += 1440; return d; };
+
+function p2InputField(label, cls, type) {
+    const extra = (type === 'number') ? ' min="0" placeholder="0"' : '';
+    return `<div class="min-w-0"><div class="text-[0.55rem] text-slate-400 font-bold text-center uppercase">${label}</div>`
+         + `<input type="${type}"${extra} class="${cls} !text-xs !px-1 !py-1.5 text-center" onchange="recomputeP2()"></div>`;
+}
+
+function buildP2Sectors() {
+    const c = document.getElementById('p2Sectors');
+    if(!c) return;
+    let html = '';
+    for(let i=1; i<=4; i++) {
+        html += `<div class="p2-sector rounded-lg border border-slate-200 bg-white p-3${i>2?' hide-initially':''}" data-sec="${i}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-extrabold text-slate-700 uppercase">Sector ${i}</span>
+                <span class="text-xs font-bold text-slate-500">Duration <span class="p2dur font-mono text-[#0f172a] text-sm">0:00</span></span>
+            </div>
+            <div class="mb-2">
+                <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    ${p2InputField('Out','p2-out','time')}${p2InputField('Off','p2-off','time')}${p2InputField('On','p2-on','time')}${p2InputField('In','p2-in','time')}
+                </div>
+            </div>
+            <div>
+                <div class="text-[0.6rem] font-extrabold lcl-text uppercase mb-1">Taxi / Trip 時長</div>
+                <div class="grid grid-cols-3 gap-1.5">
+                    ${p2InputField('Taxi Out(m)','p2-txo','number')}${p2InputField('Trip(h:m)','p2-trip','time')}${p2InputField('Taxi In(m)','p2-txi','number')}
+                </div>
+            </div>
+        </div>`;
+        if(i < 4) {
+            html += `<div class="p2-ta flex items-center justify-center gap-2 py-0.5${i>=2?' hide-initially':''}" data-ta="${i}">
+                <i class="fas fa-arrows-rotate text-slate-300 text-xs"></i>
+                <span class="text-[0.6rem] font-extrabold text-slate-500 uppercase">Turnaround 轉場</span>
+                <input type="time" value="01:00" class="p2-ta-input !w-[100px] !text-xs !py-1 text-center" onchange="recomputeP2()">
+            </div>`;
+        }
+    }
+    c.innerHTML = html;
+    renderP2Buttons();
+}
+
+function renderP2Buttons() {
+    document.getElementById('p2AddBtn').style.display = (p2SectorCount < 4) ? '' : 'none';
+    document.getElementById('p2RemoveBtn').classList.toggle('hide-initially', p2SectorCount <= 2);
+}
+
+function addP2Sector() {
+    if(p2SectorCount < 4) {
+        p2SectorCount++;
+        document.querySelector(`.p2-sector[data-sec="${p2SectorCount}"]`).classList.remove('hide-initially');
+        const ta = document.querySelector(`.p2-ta[data-ta="${p2SectorCount-1}"]`);
+        if(ta) ta.classList.remove('hide-initially');
+    }
+    renderP2Buttons();
+    recomputeP2();
+}
+
+function removeP2Sector() {
+    if(p2SectorCount > 2) {
+        document.querySelector(`.p2-sector[data-sec="${p2SectorCount}"]`).classList.add('hide-initially');
+        const ta = document.querySelector(`.p2-ta[data-ta="${p2SectorCount-1}"]`);
+        if(ta) ta.classList.add('hide-initially');
+        p2SectorCount--;
+    }
+    renderP2Buttons();
+    recomputeP2();
+}
+
+function recomputeP2() {
+    const c = document.getElementById('p2Sectors');
+    if(!c) return;
+    const sectors = [...c.querySelectorAll('.p2-sector:not(.hide-initially)')];
+    const durs = [];
+    let totalDur = 0;
+
+    sectors.forEach(sec => {
+        const g = (cls) => sec.querySelector('.'+cls);
+        const out = p2HM(g('p2-out').value), off = p2HM(g('p2-off').value),
+              on  = p2HM(g('p2-on').value),  inn = p2HM(g('p2-in').value);
+        const txo = parseInt(g('p2-txo').value)||0, trip = p2HM(g('p2-trip').value)||0, txi = parseInt(g('p2-txi').value)||0;
+        let dur = 0;
+        if(out != null && inn != null) {
+            // OOOI drives → derive Taxi/Trip where possible (相輔相成)
+            dur = p2Diff(out, inn);
+            if(off != null) g('p2-txo').value = p2Diff(out, off);
+            if(off != null && on != null) g('p2-trip').value = p2Clock(p2Diff(off, on));
+            if(on != null) g('p2-txi').value = p2Diff(on, inn);
+        } else {
+            // Taxi/Trip drives → derive OOOI clocks if an Out time is given
+            dur = txo + trip + txi;
+            if(out != null) {
+                const offv = out + txo, onv = offv + trip, inv = onv + txi;
+                g('p2-off').value = p2Clock(offv);
+                g('p2-on').value  = p2Clock(onv);
+                g('p2-in').value  = p2Clock(inv);
+            }
+        }
+        sec.querySelector('.p2dur').innerText = p2DurFmt(dur);
+        durs.push(dur);
+        totalDur += dur;
+    });
+
+    const tas = [...c.querySelectorAll('.p2-ta:not(.hide-initially)')];
+    let taTotal = 0;
+    tas.forEach(ta => taTotal += (p2HM(ta.querySelector('.p2-ta-input').value)||0));
+
+    const grand = totalDur + taTotal;
+    document.getElementById('p2Total').innerText = p2DurFmt(grand);
+
+    const pbEl = document.getElementById('p2Pushback');
+    const schedEl = document.getElementById('p2Schedule');
+    const warnEl = document.getElementById('p2Warn');
+
+    if(!gMaxFDPEnd) {
+        pbEl.className = 'font-mono break-words text-slate-400';
+        pbEl.innerText = '請先在 Phase 1 輸入 FDP Start';
+        schedEl.classList.add('hidden'); warnEl.classList.add('hidden');
+        return;
+    }
+    if(grand <= 0) {
+        pbEl.className = 'font-mono break-words text-slate-400';
+        pbEl.innerText = '輸入航段時長後計算';
+        schedEl.classList.add('hidden'); warnEl.classList.add('hidden');
+        return;
+    }
+
+    const fullDT = (d) => `${d.getUTCFullYear()}/${pad(d.getUTCMonth()+1)}/${pad(d.getUTCDate())} ${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
+    const toLcl  = (d) => new Date(d.getTime() + gBaseOffset*3600000);
+    const tzLabel= `UTC${gBaseOffset>0?'+':(gBaseOffset===0?'±':'')}${gBaseOffset}`;
+
+    const pushback = new Date(gMaxFDPEnd.getTime() - grand*60000);
+    pbEl.className = 'font-mono break-words';
+    pbEl.innerHTML =
+        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(toLcl(pushback))} <span class="text-xs font-bold">LCL ${tzLabel}</span></div>` +
+        `<div class="utc-text text-base font-bold leading-tight mt-0.5">${fullDT(pushback)} <span class="text-xs font-bold">UTC&nbsp;Z</span></div>`;
+
+    // Per-sector latest schedule (work backwards from last In = Max FDP end)
+    const sched = [];
+    let cursorIn = gMaxFDPEnd;
+    for(let i = sectors.length-1; i >= 0; i--) {
+        const inT = cursorIn;
+        const outT = new Date(inT.getTime() - durs[i]*60000);
+        sched[i] = { out: outT, in: inT };
+        if(i > 0) {
+            const taVal = p2HM(tas[i-1].querySelector('.p2-ta-input').value)||0;
+            cursorIn = new Date(outT.getTime() - taVal*60000);
+        }
+    }
+    let rows = `<div class="text-[0.65rem] font-extrabold text-slate-500 uppercase mb-1">回推時刻表 (Local ${tzLabel})</div>`;
+    sched.forEach((s, i) => {
+        const o = toLcl(s.out), n = toLcl(s.in);
+        rows += `<div class="flex items-center justify-between text-xs">
+            <span class="font-extrabold text-slate-600">Sector ${i+1}</span>
+            <span class="font-mono lcl-text">OUT ${pad(o.getUTCHours())}${pad(o.getUTCMinutes())} → IN ${pad(n.getUTCHours())}${pad(n.getUTCMinutes())}</span>
+        </div>`;
+    });
+    schedEl.innerHTML = rows;
+    schedEl.classList.remove('hidden');
+
+    if(gReportUTC && pushback.getTime() < gReportUTC.getTime()) {
+        warnEl.classList.remove('hidden');
+        warnEl.innerText = '⚠️ 全程時長已超過 Max FDP 可用範圍，無法在限制內完成。';
+    } else {
+        warnEl.classList.add('hidden');
+    }
+}
+
 function initApp() {
     const tzSelects = document.querySelectorAll('.tz-select, #baseTz');
     tzSelects.forEach(sel => {
@@ -732,6 +931,7 @@ function initApp() {
 
     renderSectorButtons();
     recalcSectors();
+    buildP2Sectors();
     setInitialDefaults();
     switchInputMode();
     updateUI();
@@ -979,6 +1179,12 @@ function calculateCore() {
     if(extPic > 0) hintParts.push(`含機長裁量 +${fmt(extPic)}`);
     if(hintParts.length) { mfdpHint.classList.remove('hidden'); mfdpHint.innerText = '＊'+hintParts.join('、'); }
     else mfdpHint.classList.add('hidden');
+
+    // Expose Max FDP end + report for Phase 2 back-calculation
+    gMaxFDPEnd = maxFDPEnd;
+    gReportUTC = report;
+    gBaseOffset = baseOffset;
+    if(typeof recomputeP2 === 'function') recomputeP2();
 
     // Flight Time card is always available (block time entered in Phase 1)
     updateCard('FT', actFT, maxFT, false);
