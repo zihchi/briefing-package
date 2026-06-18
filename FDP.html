@@ -18,7 +18,16 @@
         --status-danger: #ef4444;
         --bg-main: #f8fafc;
         --color-wocl: #8b5cf6;
+        /* Local = earth tones (本土/大地色) ; UTC = aviation blue (Zulu) */
+        --c-local: #8a5a2b;
+        --c-local-bg: #f6eddd;
+        --c-local-border: #d8bd91;
+        --c-utc: #1d4ed8;
+        --c-utc-bg: #dbeafe;
+        --c-utc-border: #bfdbfe;
     }
+    .lcl-text { color: var(--c-local); }
+    .utc-text { color: var(--c-utc); }
     
     body { background-color: var(--bg-main); color: #334155; -webkit-font-smoothing: antialiased; margin: 0; }
     
@@ -48,18 +57,18 @@
         background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 1rem; color: #1e293b; font-family: ui-monospace, monospace; outline: none; transition: all 0.2s; width: 100%; max-width: 100%; min-width: 0; appearance: none;
     }
     input[type="date"]:focus, input[type="time"]:focus, select:focus { border-color: var(--jx-gold); box-shadow: 0 0 0 2px rgba(191, 162, 118, 0.2); }
-    select { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
+    select { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.7rem center; background-repeat: no-repeat; background-size: 1.4em 1.4em; padding-left: 0.9rem; padding-right: 2.6rem; }
 
     /* Smart Flex Grouping to prevent overflow */
     .dt-flex-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; width: 100%; max-width: 100%; }
     .dt-flex-group > input[type="date"] { flex: 1 1 140px; }
     .dt-flex-group > input[type="time"] { flex: 1 1 100px; }
-    .dt-flex-group > select.tz-select { flex: 1 1 100px; }
+    .dt-flex-group > select.tz-select { flex: 1 1 120px; }
     
     /* Read-only Badge */
     .tz-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; font-family: ui-monospace, monospace; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid transparent; flex-shrink: 0; }
-    .tz-badge.utc { background-color: #e2e8f0; color: #334155; border-color: #cbd5e1; }
-    .tz-badge.lcl { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+    .tz-badge.utc { background-color: var(--c-utc-bg); color: var(--c-utc); border-color: var(--c-utc-border); }
+    .tz-badge.lcl { background-color: var(--c-local-bg); color: var(--c-local); border-color: var(--c-local-border); }
 
     /* Checkbox Switches */
     .toggle-chk { display: flex; align-items: flex-start; cursor: pointer; gap: 12px; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9; transition: all 0.2s; background-color: #f8fafc; width: 100%; }
@@ -180,25 +189,68 @@
                 <div class="p-5 space-y-5">
                     
                     <!-- Dispatch & Crew -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="w-full">
-                            <div class="bilingual-label mb-2">
-                                <span class="en">Crew Number</span>
-                                <span class="zh">派遣人數</span>
+                    <div class="w-full">
+                        <div class="bilingual-label mb-2">
+                            <span class="en">Crew Number</span>
+                            <span class="zh">派遣人數</span>
+                        </div>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="crew" value="2" checked onchange="updateUI(); safeCalculate()"><span>2</span></label>
+                            <label><input type="radio" name="crew" value="3" onchange="updateUI(); safeCalculate()"><span>3</span></label>
+                            <label><input type="radio" name="crew" value="4" onchange="updateUI(); safeCalculate()"><span>4</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Total Block Time (per-sector sum OR direct) -->
+                    <div class="w-full">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <div class="bilingual-label">
+                                <span class="en">Total Block Time</span>
+                                <span class="zh">總輪檔時間</span>
                             </div>
-                            <div class="segmented-control">
-                                <label><input type="radio" name="crew" value="2" checked onchange="updateUI(); safeCalculate()"><span>2</span></label>
-                                <label><input type="radio" name="crew" value="3" onchange="updateUI(); safeCalculate()"><span>3</span></label>
-                                <label><input type="radio" name="crew" value="4" onchange="updateUI(); safeCalculate()"><span>4</span></label>
+                            <div class="segmented-control sm:!w-auto">
+                                <label><input type="radio" name="btMode" value="sector" checked onchange="switchBtMode()"><span>分段 Sector</span></label>
+                                <label><input type="radio" name="btMode" value="direct" onchange="switchBtMode()"><span>直接 Direct</span></label>
                             </div>
                         </div>
-                        <div class="w-full">
-                            <div class="bilingual-label mb-2">
-                                <span class="en">Block Time</span>
-                                <span class="zh">輪檔時間</span>
+
+                        <!-- Sector mode -->
+                        <div id="btSectorMode" class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+                            <div id="sectorRows" class="space-y-2">
+                                <div class="sector-row flex items-center gap-2" data-idx="1">
+                                    <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 1</span>
+                                    <input type="time" value="03:45" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                </div>
+                                <div class="sector-row flex items-center gap-2" data-idx="2">
+                                    <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 2</span>
+                                    <input type="time" value="03:45" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                </div>
+                                <div class="sector-row flex items-center gap-2 hide-initially" data-idx="3">
+                                    <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 3</span>
+                                    <input type="time" value="00:00" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                </div>
+                                <div class="sector-row flex items-center gap-2 hide-initially" data-idx="4">
+                                    <span class="text-xs font-extrabold text-slate-500 uppercase w-[70px] shrink-0">Sector 4</span>
+                                    <input type="time" value="00:00" class="sector-input font-bold text-center bg-white flex-1" onchange="recalcSectors()">
+                                </div>
                             </div>
-                            <input type="time" id="flightTime" value="07:30" required onchange="safeCalculate()" class="font-bold text-center bg-slate-50 w-full">
+                            <div class="flex items-center gap-2 pt-1">
+                                <button type="button" id="addSectorBtn" onclick="addSector()" class="text-xs font-extrabold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-all">+ Add Sector 增加航段</button>
+                                <button type="button" id="removeSectorBtn" onclick="removeSector()" class="hide-initially text-xs font-extrabold text-slate-600 bg-slate-100 border border-slate-300 rounded-md px-3 py-1.5 hover:bg-slate-200 transition-all">− 移除</button>
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-200">
+                                <span class="text-xs font-extrabold text-slate-500 uppercase">Total 總計</span>
+                                <span id="sectorTotal" class="text-lg font-extrabold font-mono text-[#0f172a]">--:--</span>
+                            </div>
                         </div>
+
+                        <!-- Direct mode -->
+                        <div id="btDirectMode" class="hide-initially">
+                            <input type="time" id="btDirectInput" value="07:30" onchange="syncDirectBt()" class="font-bold text-center bg-slate-50 w-full">
+                        </div>
+
+                        <!-- Canonical value consumed by the calculator -->
+                        <input type="hidden" id="flightTime" value="07:30">
                     </div>
 
                     <div id="class1Box" class="hide-initially w-full">
@@ -261,25 +313,25 @@
                     </div>
 
                     <!-- AUTO Max FDP Result (computed from Start Time) -->
-                    <div id="mfdpResult" class="rounded-xl border border-[#bfdbfe] bg-gradient-to-br from-[#eff6ff] to-[#dbeafe] p-4">
+                    <div id="mfdpResult" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex items-center justify-between gap-2 mb-3">
                             <div class="bilingual-label">
-                                <span class="en text-blue-700">Max FDP (Auto)</span>
-                                <span class="zh text-blue-900">最大飛勤上限（自動計算）</span>
+                                <span class="en text-slate-600">Max FDP (Auto)</span>
+                                <span class="zh text-[#0f172a]">最大飛勤上限（自動計算）</span>
                             </div>
-                            <i class="fas fa-wand-magic-sparkles text-blue-400"></i>
+                            <i class="fas fa-wand-magic-sparkles text-[#bfa276]"></i>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-white/70 rounded-lg p-3 border border-blue-100 min-w-0">
-                                <div class="text-[0.65rem] font-extrabold text-blue-500 uppercase tracking-wide">Duration 時長</div>
-                                <div id="mfdpDur" class="text-2xl font-extrabold font-mono text-[#1e3a8a] leading-tight mt-1">--:--</div>
+                        <div class="space-y-3">
+                            <div class="bg-white rounded-lg p-3 border border-slate-200 flex items-center justify-between gap-2">
+                                <span class="text-[0.65rem] font-extrabold text-slate-500 uppercase tracking-wide">Duration 時長</span>
+                                <span id="mfdpDur" class="text-2xl font-extrabold font-mono text-[#0f172a] leading-none">--:--</span>
                             </div>
-                            <div class="bg-white/70 rounded-lg p-3 border border-blue-100 min-w-0">
-                                <div class="text-[0.65rem] font-extrabold text-blue-500 uppercase tracking-wide">Latest End 最晚結束</div>
-                                <div id="mfdpEnd" class="text-base font-extrabold font-mono text-[#1e3a8a] leading-tight mt-1 break-words">--</div>
+                            <div class="bg-white rounded-lg p-3 border border-slate-200 min-w-0">
+                                <div class="text-[0.65rem] font-extrabold text-slate-500 uppercase tracking-wide mb-1.5">Latest End 最晚結束</div>
+                                <div id="mfdpEnd" class="font-mono break-words">--</div>
                             </div>
                         </div>
-                        <p id="mfdpHint" class="hidden text-[0.7rem] text-blue-600 font-bold mt-2"></p>
+                        <p id="mfdpHint" class="hidden text-[0.7rem] text-[#8a5a2b] font-bold mt-2"></p>
                     </div>
 
                     <hr class="border-slate-200">
@@ -333,11 +385,25 @@
                 </div>
             </div>
 
-            <!-- PHASE 2: REST MANAGEMENT -->
+            <!-- PHASE 2: LATEST PUSHBACK (placeholder, pending spec) -->
+            <div class="panel-card">
+                <div class="panel-header-primary" style="background-color:#3f3f46;border-bottom-color:#bfa276;">
+                    <i class="fas fa-backward mr-2 text-[#bfa276]"></i>
+                    Phase 2: Latest Pushback 第二階段：最晚後推時間
+                </div>
+                <div class="p-5">
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        依 <span class="font-bold text-slate-700">Max FDP</span> 回推最晚後推 / 結束時間之功能。
+                        <span class="block mt-1 text-xs text-slate-400">（呈現方式待你確認後建置）</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- PHASE 3: REST MANAGEMENT -->
             <div class="panel-card">
                 <div class="panel-header-secondary">
-                    <i class="fas fa-bed mr-2 text-[#fbbf24]"></i> 
-                    Phase 2: Rest Management 第二階段：休時管理
+                    <i class="fas fa-bed mr-2 text-[#fbbf24]"></i>
+                    Phase 3: Rest Management 第三階段：休時管理
                 </div>
                 <div class="p-5 space-y-5">
 
@@ -550,9 +616,67 @@
 const pad = (n) => n.toString().padStart(2, '0');
 const fmt = (m) => `${Math.floor(m/60)}:${pad(m%60)}`;
 
-let currentLocation = 'home'; 
+let currentLocation = 'home';
 const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
 const parsedTimesUTC = {};
+
+/* ---- Total Block Time: per-sector sum or direct entry ---- */
+let sectorCount = 2;
+
+function renderSectorButtons() {
+    document.getElementById('addSectorBtn').style.display = (sectorCount < 4) ? '' : 'none';
+    document.getElementById('removeSectorBtn').classList.toggle('hide-initially', sectorCount <= 2);
+}
+
+function recalcSectors() {
+    let total = 0;
+    document.querySelectorAll('#sectorRows .sector-row:not(.hide-initially) .sector-input').forEach(inp => {
+        const parts = (inp.value || "").split(':');
+        total += (parseInt(parts[0])||0)*60 + (parseInt(parts[1])||0);
+    });
+    document.getElementById('sectorTotal').innerText = `${pad(Math.floor(total/60))}:${pad(total%60)}`;
+    document.getElementById('flightTime').value = `${pad(Math.floor(total/60))}:${pad(total%60)}`;
+    safeCalculate();
+}
+
+function addSector() {
+    if(sectorCount < 4) {
+        sectorCount++;
+        document.querySelector(`.sector-row[data-idx="${sectorCount}"]`).classList.remove('hide-initially');
+    }
+    renderSectorButtons();
+    recalcSectors();
+}
+
+function removeSector() {
+    if(sectorCount > 2) {
+        const row = document.querySelector(`.sector-row[data-idx="${sectorCount}"]`);
+        row.classList.add('hide-initially');
+        row.querySelector('.sector-input').value = "00:00";
+        sectorCount--;
+    }
+    renderSectorButtons();
+    recalcSectors();
+}
+
+function switchBtMode() {
+    const mode = document.querySelector('input[name="btMode"]:checked').value;
+    if(mode === 'sector') {
+        document.getElementById('btSectorMode').classList.remove('hide-initially');
+        document.getElementById('btDirectMode').classList.add('hide-initially');
+        recalcSectors();
+    } else {
+        document.getElementById('btDirectMode').classList.remove('hide-initially');
+        document.getElementById('btSectorMode').classList.add('hide-initially');
+        document.getElementById('btDirectInput').value = document.getElementById('flightTime').value || "07:30";
+        syncDirectBt();
+    }
+}
+
+function syncDirectBt() {
+    document.getElementById('flightTime').value = document.getElementById('btDirectInput').value || "00:00";
+    safeCalculate();
+}
 
 function initApp() {
     const tzSelects = document.querySelectorAll('.tz-select, #baseTz');
@@ -606,6 +730,8 @@ function initApp() {
     document.getElementById('restDurHour').setAttribute('aria-label', 'Rest duration hours 休息時長(小時)');
     document.getElementById('restDurMinute').setAttribute('aria-label', 'Rest duration minutes 休息時長(分鐘)');
 
+    renderSectorButtons();
+    recalcSectors();
     setInitialDefaults();
     switchInputMode();
     updateUI();
@@ -838,12 +964,15 @@ function calculateCore() {
     // ---- AUTO Max FDP result (Req 2): latest end = report + maxFDP ----
     const maxFDPEnd = new Date(report.getTime() + maxFDP*60000);
     const endLcl = new Date(maxFDPEnd.getTime() + baseOffset*3600000);
-    const endUtcStr = `${pad(maxFDPEnd.getUTCDate())}d ${pad(maxFDPEnd.getUTCHours())}${pad(maxFDPEnd.getUTCMinutes())}z`;
-    const endLclStr = `${pad(endLcl.getUTCHours())}${pad(endLcl.getUTCMinutes())} LCL`;
+    // Full date + time. Local on top (earth tone), UTC below (blue).
+    const fullDT = (d) => `${d.getUTCFullYear()}/${pad(d.getUTCMonth()+1)}/${pad(d.getUTCDate())} ${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
+    const tzLabel = `UTC${baseOffset>0?'+':(baseOffset===0?'±':'')}${baseOffset}`;
     document.getElementById('valMFDP').innerText = fmt(maxFDP);
     document.getElementById('mfdpDur').innerText = fmt(maxFDP);
-    document.getElementById('txtMFDPEnd').innerText = `End: ${endUtcStr}`;
-    document.getElementById('mfdpEnd').innerHTML = `${endUtcStr}<br><span class="text-blue-500 text-sm">${endLclStr}</span>`;
+    document.getElementById('txtMFDPEnd').innerText = `End ${pad(endLcl.getUTCHours())}${pad(endLcl.getUTCMinutes())} LCL`;
+    document.getElementById('mfdpEnd').innerHTML =
+        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(endLcl)} <span class="text-xs font-bold">LCL ${tzLabel}</span></div>` +
+        `<div class="utc-text text-base font-bold leading-tight mt-0.5">${fullDT(maxFDPEnd)} <span class="text-xs font-bold">UTC&nbsp;Z</span></div>`;
     const mfdpHint = document.getElementById('mfdpHint');
     let hintParts = [];
     if(extMin > 0) hintParts.push(`含住宿休息延長 +${fmt(extMin)}`);
