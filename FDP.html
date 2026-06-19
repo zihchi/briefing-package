@@ -39,6 +39,12 @@
     .tz-badge { user-select: none; }
     .tz-badge.clickable { cursor: pointer; }
     .tz-badge.clickable:hover { filter: brightness(0.96); }
+    /* Compliance status bar */
+    .status-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+    .status-chip.ok   { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .status-chip.bad  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .status-chip.warn { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .status-chip.na   { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
     
     body { background-color: var(--bg-main); color: #334155; -webkit-font-smoothing: antialiased; margin: 0; }
     
@@ -399,6 +405,15 @@
                         <button type="button" onclick="clearP2()" class="ml-auto text-xs font-extrabold text-[#b91c1c] bg-red-50 border border-red-200 rounded-md px-3 py-1.5 hover:bg-red-100 transition-all"><i class="fas fa-eraser mr-1"></i>清空 Clear</button>
                     </div>
 
+                    <label class="toggle-chk border-[#fde68a] bg-[#fffbeb]">
+                        <input type="checkbox" id="p2Diverted" onchange="safeCalculate()">
+                        <div class="toggle-content">
+                            <span class="toggle-title text-amber-800">Diverted 改航</span>
+                            <span class="toggle-desc text-amber-700">因天候/不可抗力改航時，單一 FDP 航段上限由 4 放寬為 6（FOM 4.7.5 D）</span>
+                        </div>
+                    </label>
+                    <p id="p2SectorWarn" class="hidden text-xs text-[#b91c1c] font-bold"></p>
+
                     <!-- Results -->
                     <div id="p2Result" class="rounded-xl border border-[#e9d5ff] bg-[#faf5ff] p-4 space-y-3">
                         <div class="flex items-center justify-between gap-2">
@@ -479,6 +494,26 @@
                             <button id="modeHomeBtn" class="flex-1 py-2 px-1 rounded-md text-sm font-bold bg-white text-[#0f172a] shadow transition-all" onclick="setLocation('home')">Home Base (基地)</button>
                             <button id="modeOutBtn" class="flex-1 py-2 px-1 rounded-md text-sm font-bold text-slate-500 hover:text-slate-700 transition-all" onclick="setLocation('outstation')">Outstation (外站)</button>
                         </div>
+                    </div>
+
+                    <!-- WOCL consecutive-day rest requirement (FOM 4-17 f) -->
+                    <div class="rounded-lg border border-[#e9d5ff] bg-[#faf5ff] p-3">
+                        <div class="bilingual-label mb-2">
+                            <span class="en text-purple-700">WOCL Consecutive Days</span>
+                            <span class="zh">連續觸及夜間生理低點 (WOCL) 天數</span>
+                        </div>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="woclDays" value="0" checked onchange="safeCalculate()"><span>無/單日</span></label>
+                            <label><input type="radio" name="woclDays" value="2" onchange="safeCalculate()"><span>連續 2 日 (34h)</span></label>
+                            <label><input type="radio" name="woclDays" value="3" onchange="safeCalculate()"><span>連續 3 日 (54h)</span></label>
+                        </div>
+                        <label class="toggle-chk mt-2 bg-white border border-purple-100">
+                            <input type="checkbox" id="woclExempt" onchange="safeCalculate()">
+                            <div class="toggle-content">
+                                <span class="toggle-title text-purple-800">每次 WOCL FDP 後均提供 ≥14h 休息（豁免）</span>
+                                <span class="toggle-desc text-purple-600">符合則不適用 34/54h 加嚴規定</span>
+                            </div>
+                        </label>
                     </div>
 
                     <!-- Home Base Extras -->
@@ -596,7 +631,18 @@
             
             <!-- Live Results Dashboard -->
             <div class="lg:sticky lg:top-6 space-y-6">
-                
+
+                <!-- Compliance status bar -->
+                <div id="statusBar" class="bg-white border border-slate-200 rounded-xl p-3 flex flex-wrap items-center gap-2 text-xs font-extrabold shadow-sm">
+                    <span id="stOverall" class="status-chip na">—</span>
+                    <span class="text-slate-300">|</span>
+                    <span id="chFDP"  class="status-chip na">FDP —</span>
+                    <span id="chFT"   class="status-chip na">FT —</span>
+                    <span id="chRest" class="status-chip na">REST —</span>
+                    <span id="chWOCL" class="status-chip na">WOCL —</span>
+                    <span id="chSec"  class="status-chip na">SEC —</span>
+                </div>
+
                 <div class="dashboard-grid">
                     <div id="cardMFDP" class="dash-card ok">
                         <div class="dash-title">Max FDP<br><span class="text-xs text-slate-500 font-bold">最大飛勤</span></div>
@@ -833,7 +879,7 @@ function buildP2Sectors() {
     const c = document.getElementById('p2Sectors');
     if(!c) return;
     let html = '';
-    for(let i=1; i<=4; i++) {
+    for(let i=1; i<=6; i++) {
         html += `<div class="p2-sector rounded-lg border border-slate-200 bg-white p-3${i>2?' hide-initially':''}" data-sec="${i}">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-extrabold text-slate-700 uppercase">Sector ${i}</span>
@@ -855,7 +901,7 @@ function buildP2Sectors() {
                 </div>
             </div>
         </div>`;
-        if(i < 4) {
+        if(i < 6) {
             html += `<div class="p2-ta flex items-center justify-center gap-2 py-0.5${i>=2?' hide-initially':''}" data-ta="${i}">
                 <i class="fas fa-arrows-rotate text-slate-300 text-xs"></i>
                 <span class="text-[0.6rem] font-extrabold text-slate-500 uppercase">Turnaround 轉場</span>
@@ -868,12 +914,12 @@ function buildP2Sectors() {
 }
 
 function renderP2Buttons() {
-    document.getElementById('p2AddBtn').style.display = (p2SectorCount < 4) ? '' : 'none';
+    document.getElementById('p2AddBtn').style.display = (p2SectorCount < 6) ? '' : 'none';
     document.getElementById('p2RemoveBtn').classList.toggle('hide-initially', p2SectorCount <= 2);
 }
 
 function addP2Sector() {
-    if(p2SectorCount < 4) {
+    if(p2SectorCount < 6) {
         p2SectorCount++;
         document.querySelector(`.p2-sector[data-sec="${p2SectorCount}"]`).classList.remove('hide-initially');
         const ta = document.querySelector(`.p2-ta[data-ta="${p2SectorCount-1}"]`);
@@ -1327,28 +1373,17 @@ function safeCalculate() {
     try { calculateCore(); } catch(e) { console.debug("Awaiting valid data...", e); }
 }
 
-// Card updater (shared). Defined here so it is reachable from the whole file.
+// Card updater (shared). Returns true when the card is in violation.
 function updateCard(id, act, lim, isMin) {
     const elVal = document.getElementById('val'+id);
     const elLim = document.getElementById(isMin ? 'txtMin'+id : 'txtMax'+id);
     const card = document.getElementById('card'+id);
-    const elExcep = document.getElementById('exemptionInfo');
-
     elVal.innerText = fmt(act);
-    let bad = false;
-
-    if(id === 'Rest' && document.getElementById('timeDiff6h').checked && currentLocation === 'home') {
-        elLim.innerText = "Req: 48h (No FD)";
-        bad = act < 48*60;
-        if(bad) elExcep.classList.remove('hidden'); else elExcep.classList.add('hidden');
-    } else {
-        if(id === 'Rest') elExcep.classList.add('hidden');
-        elLim.innerText = (isMin ? "Req: " : "Max: ") + fmt(lim);
-        bad = isMin ? (act < lim) : (act > lim);
-    }
-
+    elLim.innerText = (isMin ? "Req: " : "Max: ") + fmt(lim);
+    const bad = isMin ? (act < lim) : (act > lim);
     if(bad) { card.classList.add('violation'); card.classList.remove('ok'); }
     else { card.classList.remove('violation'); card.classList.add('ok'); }
+    return bad;
 }
 
 function calculateCore() {
@@ -1440,7 +1475,7 @@ function calculateCore() {
     if(typeof recomputeP2 === 'function') recomputeP2();
 
     // Flight Time card is always available (block time entered in Phase 1)
-    updateCard('FT', actFT, maxFT, false);
+    const ftBad = updateCard('FT', actFT, maxFT, false);
 
     const cardFDP = document.getElementById('cardFDP');
     const cardRest = document.getElementById('cardRest');
@@ -1450,11 +1485,11 @@ function calculateCore() {
     const blockIn = restOn ? parsedTimesUTC['blockIn'] : null;
     const fdpEndUTC = (blockIn && blockIn > report) ? blockIn
                     : (gLastInBlock && gLastInBlock > report) ? gLastInBlock : null;
-    let actFDP = null;
+    let actFDP = null, fdpBad = null;
     if(fdpEndUTC) {
         actFDP = Math.max(0, (fdpEndUTC - report)/60000 - deductMin);
         cardFDP.classList.remove('hide-initially');
-        updateCard('FDP', actFDP, maxFDP, false);
+        fdpBad = updateCard('FDP', actFDP, maxFDP, false);
         const elExt = document.getElementById('txtExtFDP');
         let txt = [];
         if(deductMin > 0) txt.push(`(-${fmt(deductMin)})`);
@@ -1468,6 +1503,7 @@ function calculateCore() {
 
     // ---- Rest calculation (Phase 3, 3-option Rest Start) ----
     let actRest = 0, restStart = null, restEnd = null, minRest = 0, restValid = false;
+    let reqRest = 0, reqReason = '';
 
     if(restOn) {
         if(currentLocation === 'home') {
@@ -1516,12 +1552,26 @@ function calculateCore() {
         else if(crew === "3") minRestH = (ftH <= 8) ? 10 : (ftH <= 12 ? 18 : 24);
         else minRestH = (ftH <= 8) ? 10 : (ftH <= 16 ? 18 : 22);
         minRest = minRestH * 60;
+
+        // Effective required rest = max of all applicable rules
+        reqRest = minRest; reqReason = '';
+        const cand = [];
+        if(document.getElementById('timeDiff6h').checked && currentLocation === 'home') cand.push([48*60, '時差≥6h且停留>48h']);
+        const woclDays = parseInt((document.querySelector('input[name="woclDays"]:checked')||{}).value) || 0;
+        const woclExempt = document.getElementById('woclExempt').checked;
+        if(!woclExempt && woclDays >= 3) cand.push([54*60, '連續3日觸及WOCL']);
+        else if(!woclExempt && woclDays >= 2) cand.push([34*60, '連續2日觸及WOCL']);
+        cand.forEach(([v, r]) => { if(v > reqRest) { reqRest = v; reqReason = r; } });
     }
 
     // Actual Rest card
+    let restBad = null;
     if(restOn && restValid) {
         cardRest.classList.remove('hide-initially');
-        updateCard('Rest', actRest, minRest, true);
+        restBad = updateCard('Rest', actRest, reqRest, true);
+        const exEl = document.getElementById('exemptionInfo');
+        if(reqRest > minRest) { exEl.classList.remove('hidden'); exEl.innerHTML = `加嚴休息需求：需 ${fmt(reqRest)}（${reqReason}）`; }
+        else exEl.classList.add('hidden');
     } else {
         cardRest.classList.add('hide-initially');
         document.getElementById('exemptionInfo').classList.add('hidden');
@@ -1554,14 +1604,44 @@ function calculateCore() {
     if(restOn && restValid) {
         restWrap.style.display = '';
         fdpWrap.classList.remove('rounded-b-lg');
-        // Match the 48h requirement shown on the card when the time-diff exemption applies
-        const effMinRest = (document.getElementById('timeDiff6h').checked && currentLocation === 'home') ? 48*60 : minRest;
-        drawTimelineEngine('timelineRest', restStart, restEnd, actRest, effMinRest, false, null, 0, 0, false, true);
+        drawTimelineEngine('timelineRest', restStart, restEnd, actRest, reqRest, false, null, 0, 0, false, true);
     } else {
         restWrap.innerHTML = '';
         restWrap.style.display = 'none';
         fdpWrap.classList.add('rounded-b-lg');
     }
+
+    // ---- Sector limit (FOM 4.7.5 D: 4 sectors, 6 if diverted) ----
+    const diverted = !!(document.getElementById('p2Diverted') && document.getElementById('p2Diverted').checked);
+    const sectorLimit = diverted ? 6 : 4;
+    const enP2on = document.getElementById('enableP2').checked;
+    let secCount = null;
+    if(enP2on) secCount = p2SectorCount;
+    else if(document.querySelector('input[name="btMode"]:checked').value === 'sector') secCount = sectorCount;
+    const sectorBad = (secCount !== null) && (secCount > sectorLimit);
+    const sWarn = document.getElementById('p2SectorWarn');
+    if(sWarn) {
+        if(enP2on && sectorBad) { sWarn.classList.remove('hidden'); sWarn.innerText = `⚠️ 航段數 ${secCount} 超過上限 ${sectorLimit}（${diverted ? '改航' : '正常'}）`; }
+        else sWarn.classList.add('hidden');
+    }
+
+    // ---- Compliance status bar ----
+    updateStatusBar({ fdpBad, ftBad, restBad, wocl: touchesWOCL, secCount, sectorLimit, sectorBad });
+}
+
+function updateStatusBar(s) {
+    const setChip = (id, state, label) => { const el = document.getElementById(id); if(!el) return; el.className = 'status-chip ' + state; el.innerText = label; };
+    setChip('chFDP',  s.fdpBad === null ? 'na' : (s.fdpBad ? 'bad' : 'ok'),  'FDP '  + (s.fdpBad === null ? '—' : (s.fdpBad ? '✗' : '✓')));
+    setChip('chFT',   s.ftBad ? 'bad' : 'ok',                                 'FT '   + (s.ftBad ? '✗' : '✓'));
+    setChip('chRest', s.restBad === null ? 'na' : (s.restBad ? 'bad' : 'ok'), 'REST ' + (s.restBad === null ? '—' : (s.restBad ? '✗' : '✓')));
+    setChip('chWOCL', s.wocl ? 'warn' : 'ok',                                 'WOCL ' + (s.wocl ? '!' : '✓'));
+    setChip('chSec',  s.secCount === null ? 'na' : (s.sectorBad ? 'bad' : 'ok'), 'SEC ' + (s.secCount === null ? '—' : (s.secCount + '/' + s.sectorLimit)));
+    const anyBad = s.fdpBad || s.ftBad || s.restBad || s.sectorBad;
+    const ov = document.getElementById('stOverall');
+    if(!ov) return;
+    if(anyBad) { ov.className = 'status-chip bad'; ov.innerText = '違規 CHECK'; }
+    else if(s.wocl) { ov.className = 'status-chip warn'; ov.innerText = '注意 CAUTION'; }
+    else { ov.className = 'status-chip ok'; ov.innerText = '合規 OK'; }
 }
 
 function drawTimelineEngine(containerId, start, end, actMins, limMins, hasDHD, dhdEnd, offset, extPic, isFDP, hasActual = true) {
