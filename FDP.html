@@ -397,8 +397,9 @@
 
                     <div id="p2Body" class="hide-initially space-y-4">
                     <p class="text-xs text-slate-500 leading-relaxed">
-                        每段可用 <span class="utc-text font-bold">OOOI 固定時刻</span>、<span class="lcl-text font-bold">Taxi/Trip 時長</span> 或直接輸入 <span class="font-bold text-slate-700">Duration</span>（互相回填），
+                        每段可用 <span class="utc-text font-bold">OOOI（一律 UTC/Z）</span>、<span class="lcl-text font-bold">Taxi/Trip 時長</span> 或直接輸入 <span class="font-bold text-slate-700">Duration</span>（互相回填），
                         加總各段時長與轉場後，自 Max FDP 最晚結束回推第一段最晚後推。
+                        <span class="block mt-1 text-[0.7rem] text-slate-400">報到／休息用當地時間；OOOI 與回推時刻表用 UTC。</span>
                     </p>
 
                     <div id="p2Sectors" class="space-y-3"></div>
@@ -791,7 +792,7 @@ function buildP2Sectors() {
                 </div>
             </div>
             <div class="mb-2">
-                <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻</div>
+                <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻 · UTC (Z)</div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     ${p2InputField('Out','p2-out','time','oooi')}${p2InputField('Off','p2-off','time','oooi')}${p2InputField('On','p2-on','time','oooi')}${p2InputField('In','p2-in','time','oooi')}
                 </div>
@@ -864,7 +865,6 @@ function drawP2Timeline(sched, taMins, startD, endD) {
     const total = (cvsE - cvsS)/60000;
     const X = (ms) => ((ms - cvsS)/60000/total)*100;
     const W = (m) => (m/total)*100;
-    const toLcl = (d) => new Date(d.getTime() + gBaseOffset*3600000);
 
     sched.forEach((sd, i) => {
         const b = document.createElement('div');
@@ -890,11 +890,10 @@ function drawP2Timeline(sched, taMins, startD, endD) {
         if(x < 6) { l.style.left = '0'; l.style.transform = 'none'; }
         else if(x > 94) { l.style.right = '0'; l.style.left = 'auto'; l.style.transform = 'none'; }
         else l.style.left = x+'%';
-        const o = toLcl(d);
-        l.innerHTML = label + '\n' + pad(o.getUTCHours())+pad(o.getUTCMinutes());
+        l.innerHTML = label + '\n' + pad(d.getUTCHours())+pad(d.getUTCMinutes())+'z';
         c.appendChild(l);
     };
-    addTick(startD, 'PUSH', '#8a5a2b');
+    addTick(startD, 'PUSH', '#2563eb');
     addTick(endD, 'MAX IN', '#2563eb');
 }
 
@@ -947,13 +946,12 @@ function recomputeP2() {
     const grand = totalDur + taTotal;
     document.getElementById('p2Total').innerText = p2DurHM(grand);
 
-    // Actual last-sector in-block (#6): anchor first OOOI Out to FDP-start local date.
+    // Actual last-sector in-block (#6). OOOI are UTC (Zulu): anchor the first
+    // Out to the report's UTC date (report/rest stay local; OOOI stay UTC).
     gLastInBlock = null;
     const firstOut = p2HM(sectors[0].querySelector('.p2-out').value);
     if(gReportUTC && firstOut != null && grand > 0) {
-        const repLcl = new Date(gReportUTC.getTime() + gBaseOffset*3600000);
-        const outLclMs = Date.UTC(repLcl.getUTCFullYear(), repLcl.getUTCMonth(), repLcl.getUTCDate(), Math.floor(firstOut/60), firstOut%60);
-        let cur = outLclMs - gBaseOffset*3600000;
+        let cur = Date.UTC(gReportUTC.getUTCFullYear(), gReportUTC.getUTCMonth(), gReportUTC.getUTCDate(), Math.floor(firstOut/60), firstOut%60);
         while(cur < gReportUTC.getTime()) cur += 86400000;
         for(let i=0; i<sectors.length; i++) {
             cur += durs[i]*60000;                       // In_i
@@ -1003,12 +1001,11 @@ function recomputeP2() {
             cursorIn = new Date(outT.getTime() - taVal*60000);
         }
     }
-    let rows = `<div class="text-[0.65rem] font-extrabold text-slate-500 uppercase mb-1">回推時刻表 (Local ${tzLabel})</div>`;
+    let rows = `<div class="text-[0.65rem] font-extrabold text-slate-500 uppercase mb-1">回推時刻表 (UTC Z)</div>`;
     sched.forEach((s, i) => {
-        const o = toLcl(s.out), n = toLcl(s.in);
         rows += `<div class="flex items-center justify-between text-xs">
             <span class="font-extrabold text-slate-600">Sector ${i+1}</span>
-            <span class="font-mono lcl-text">OUT ${pad(o.getUTCHours())}${pad(o.getUTCMinutes())} → IN ${pad(n.getUTCHours())}${pad(n.getUTCMinutes())}</span>
+            <span class="font-mono utc-text">OUT ${pad(s.out.getUTCHours())}${pad(s.out.getUTCMinutes())}z → IN ${pad(s.in.getUTCHours())}${pad(s.in.getUTCMinutes())}z</span>
         </div>`;
     });
     schedEl.innerHTML = rows;
