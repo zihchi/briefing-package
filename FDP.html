@@ -159,25 +159,32 @@
         <!-- LEFT COLUMN: Inputs (Phase 1 & Phase 2) -->
         <div class="lg:col-span-5 space-y-6">
             
-            <!-- Global Input Mode -->
-            <div class="panel-card bg-slate-50 border-slate-300">
-                <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div class="w-full sm:w-auto flex-1">
-                        <div class="bilingual-label mb-2">
-                            <span class="en">Time Input Mode</span>
-                            <span class="zh">時間輸入模式</span>
-                        </div>
-                        <div class="segmented-control">
-                            <label><input type="radio" name="inputMode" value="lcl" checked onchange="switchInputMode()"><span>Local Time (當地)</span></label>
-                            <label><input type="radio" name="inputMode" value="utc" onchange="switchInputMode()"><span>UTC Only (標準)</span></label>
-                        </div>
-                    </div>
-                    <div class="w-full sm:w-auto">
+            <!-- STEP 1: FDP Start & Base TZ -->
+            <div class="panel-card">
+                <div class="panel-header-primary">
+                    <i class="fas fa-flag-checkered mr-2 text-[#bfa276]"></i>
+                    Step 1: FDP Start &amp; Base TZ 第一步：報到與基準時區
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="w-full">
                         <div class="bilingual-label mb-2 text-purple-700">
-                            <span class="en text-purple-600">Base WOCL TZ</span>
-                            <span class="zh">WOCL 基準時區</span>
+                            <span class="en text-purple-600">Base TZ (Local)</span>
+                            <span class="zh">基準時區（當地）</span>
                         </div>
-                        <select id="baseTz" onchange="safeCalculate()" class="!w-full sm:!w-auto sm:!min-w-[130px] border-purple-300 bg-purple-50 text-purple-700 font-bold !rounded-lg"></select>
+                        <select id="baseTz" onchange="reprocessLocalFields()" class="!w-full sm:!w-auto sm:!min-w-[140px] border-purple-300 bg-purple-50 text-purple-700 font-bold !rounded-lg"></select>
+                    </div>
+                    <div class="time-input-group border-l-4 border-l-[#10b981]">
+                        <div class="flex justify-between items-start sm:items-center gap-2">
+                            <div class="bilingual-label">
+                                <span class="en text-[#10b981]">FDP Start Time (Local)</span>
+                                <span class="zh">報到 / FDP 開始（當地）</span>
+                            </div>
+                            <span id="badge_report" class="tz-badge">--:--</span>
+                        </div>
+                        <div class="dt-flex-group">
+                            <input type="date" id="date_report" onchange="processTimeChange('report')">
+                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_report" class="ntime" onchange="processTimeChange('report')">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -277,35 +284,6 @@
                     </div>
 
                     <hr class="border-slate-200">
-
-                    <!-- FDP Start -->
-                    <div class="time-input-group border-l-4 border-l-[#10b981]">
-                        <div class="flex justify-between items-start sm:items-center gap-2">
-                            <div class="bilingual-label">
-                                <span class="en text-[#10b981]">FDP Start Time</span>
-                                <span class="zh">FDP開始</span>
-                            </div>
-                            <span id="badge_report" class="tz-badge">--:--</span>
-                        </div>
-                        <!-- UI Indicator for Start Type -->
-                        <div class="radio-pill-group">
-                            <label class="radio-pill active-pill">
-                                <input type="radio" name="fdpStartType" value="report" checked> REPORT
-                            </label>
-                            <label class="radio-pill">
-                                <input type="radio" name="fdpStartType" value="dhd"> DHD
-                            </label>
-                            <label class="radio-pill">
-                                <input type="radio" name="fdpStartType" value="another"> ANOTHER DUTY START
-                            </label>
-                        </div>
-                        <!-- Robust Flex Group for Date/Time/TZ -->
-                        <div class="dt-flex-group">
-                            <input type="date" id="date_report" required onchange="processTimeChange('report')">
-                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_report" class="ntime" onchange="processTimeChange('report')">
-                            <select id="tz_report" class="tz-select hide-initially" onchange="processTimeChange('report')"></select>
-                        </div>
-                    </div>
 
                     <!-- AUTO Max FDP Result (computed from Start Time) -->
                     <div id="mfdpResult" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -450,6 +428,27 @@
 
                     <div id="restBody" class="hide-initially space-y-5">
 
+                    <!-- FDP Start reference (from Step 1) -->
+                    <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                        <div class="text-[0.65rem] font-extrabold text-emerald-700 uppercase mb-1">FDP Start（Step 1）</div>
+                        <div id="fdpStartDisp" class="font-mono text-sm break-words text-slate-400">--</div>
+                    </div>
+
+                    <!-- Block In Time (UTC / Zulu) -->
+                    <div class="time-input-group border-l-4 border-l-[#1d4ed8]">
+                        <div class="flex justify-between items-start sm:items-center gap-2">
+                            <div class="bilingual-label">
+                                <span class="en utc-text">Block In Time (UTC Z)</span>
+                                <span class="zh">最後落地關車（Zulu）</span>
+                            </div>
+                            <span id="badge_blockIn" class="tz-badge">--:--</span>
+                        </div>
+                        <div class="dt-flex-group">
+                            <input type="date" id="date_blockIn" onchange="processTimeChange('blockIn')">
+                            <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_blockIn" class="ntime" onchange="processTimeChange('blockIn')">
+                        </div>
+                    </div>
+
                     <!-- Location Selection -->
                     <div>
                         <div class="bilingual-label mb-2">
@@ -464,29 +463,66 @@
 
                     <!-- Home Base Extras -->
                     <div id="uiHomeExtras" class="space-y-5 pt-2 border-t border-dashed border-slate-200">
-                        <!-- Rest Start Time (home base) -->
-                        <div id="restStartBox" class="time-input-group border-l-4 border-l-slate-700">
-                            <div class="flex justify-between items-start sm:items-center gap-2">
-                                <div class="bilingual-label">
-                                    <span class="en text-slate-800">Rest Start Time</span>
-                                    <span class="zh">休時開始</span>
-                                </div>
-                                <span id="badge_release" class="tz-badge">--:--</span>
+                        <!-- Rest Start Time: 3 options -->
+                        <div>
+                            <div class="bilingual-label mb-2">
+                                <span class="en text-slate-800">Rest Start Time</span>
+                                <span class="zh">休時開始（三選一）</span>
                             </div>
-                            <div class="dt-flex-group">
-                                <input type="date" id="date_release" onchange="processTimeChange('release')">
-                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_release" class="ntime" onchange="processTimeChange('release')">
-                                <select id="tz_release" class="tz-select hide-initially" onchange="processTimeChange('release')"></select>
+                            <div class="segmented-control">
+                                <label><input type="radio" name="restStartMode" value="block30" checked onchange="setRestStartMode()"><span>Block In +30</span></label>
+                                <label><input type="radio" name="restStartMode" value="actual" onchange="setRestStartMode()"><span>Actual End</span></label>
+                                <label><input type="radio" name="restStartMode" value="dhd" onchange="setRestStartMode()"><span>DHD</span></label>
+                            </div>
+
+                            <div id="restStartBlock30" class="mt-2 rounded-lg bg-slate-50 border border-slate-200 p-2 text-xs flex items-center gap-2">
+                                <span class="text-slate-500 font-bold">= Block In + 30m：</span>
+                                <span id="restStart30Disp" class="font-mono lcl-text font-bold">--</span>
+                            </div>
+
+                            <div id="restStartActualBox" class="time-input-group border-l-4 border-l-slate-700 mt-2 hide-initially">
+                                <div class="flex justify-between items-start sm:items-center gap-2">
+                                    <div class="bilingual-label">
+                                        <span class="en text-slate-800">Actual Rest Start (Local)</span>
+                                        <span class="zh">實際休時開始（當地）</span>
+                                    </div>
+                                    <span id="badge_release" class="tz-badge">--:--</span>
+                                </div>
+                                <div class="dt-flex-group">
+                                    <input type="date" id="date_release" onchange="processTimeChange('release')">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_release" class="ntime" onchange="processTimeChange('release')">
+                                </div>
+                            </div>
+
+                            <div id="dhdInputBox" class="time-input-group border-l-4 border-l-[#f59e0b] mt-2 hide-initially bg-[#fef3c7]">
+                                <div class="flex justify-between items-start sm:items-center gap-2">
+                                    <div class="bilingual-label">
+                                        <span class="en text-amber-900">DHD End (Local) = Rest Start</span>
+                                        <span class="zh text-amber-800">搭機結束（當地）/ 休時開始</span>
+                                    </div>
+                                    <span id="badge_dhdEnd" class="tz-badge bg-[#fde68a] text-amber-900 border-[#fcd34d]">--:--</span>
+                                </div>
+                                <div class="dt-flex-group">
+                                    <input type="date" id="date_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
+                                    <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')" class="ntime border-[#fcd34d]">
+                                </div>
                             </div>
                         </div>
 
-                        <label class="toggle-chk border-[#fde68a] bg-[#fffbeb]">
-                            <input type="checkbox" id="followingDHD" onchange="toggleDHD(); safeCalculate()">
-                            <div class="toggle-content">
-                                <span class="toggle-title text-amber-800">Following DHD</span>
-                                <span class="toggle-desc text-amber-700">包含後續搭機任務 (休時開始時間將遞延)</span>
+                        <!-- Next FDP Start (Rest End), default Rest Start + 12h -->
+                        <div class="time-input-group border-l-4 border-l-slate-700">
+                            <div class="flex justify-between items-start sm:items-center gap-2">
+                                <div class="bilingual-label">
+                                    <span class="en text-slate-800">Next FDP Start (Rest End)</span>
+                                    <span class="zh">下次FDP開始 / 休時結束（預設 +12h）</span>
+                                </div>
+                                <span id="badge_nextReport" class="tz-badge">--:--</span>
                             </div>
-                        </label>
+                            <div class="dt-flex-group">
+                                <input type="date" id="date_nextReport" onchange="processTimeChange('nextReport')">
+                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_nextReport" class="ntime" onchange="processTimeChange('nextReport')">
+                            </div>
+                        </div>
 
                         <label class="toggle-chk border-[#fef3c7] bg-[#fffbeb]">
                             <input type="checkbox" id="timeDiff6h" onchange="safeCalculate()">
@@ -495,36 +531,6 @@
                                 <span class="toggle-desc text-amber-600">時差大於6小時且停留超過48小時（需 48h 休息）</span>
                             </div>
                         </label>
-
-                        <div id="dhdInputBox" class="time-input-group border-l-4 border-l-[#f59e0b] hide-initially bg-[#fef3c7]">
-                            <div class="flex justify-between items-start sm:items-center gap-2">
-                                <div class="bilingual-label">
-                                    <span class="en text-amber-900">DHD End Time (Rest Start)</span>
-                                    <span class="zh text-amber-800">搭機結束 / 休時開始</span>
-                                </div>
-                                <span id="badge_dhdEnd" class="tz-badge bg-[#fde68a] text-amber-900 border-[#fcd34d]">--:--</span>
-                            </div>
-                            <div class="dt-flex-group">
-                                <input type="date" id="date_dhdEnd" onchange="processTimeChange('dhdEnd')" class="border-[#fcd34d]">
-                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_dhdEnd" onchange="processTimeChange('dhdEnd')" class="ntime border-[#fcd34d]">
-                                <select id="tz_dhdEnd" class="tz-select hide-initially border-[#fcd34d]" onchange="processTimeChange('dhdEnd')"></select>
-                            </div>
-                        </div>
-
-                        <div class="time-input-group border-l-4 border-l-slate-700">
-                            <div class="flex justify-between items-start sm:items-center gap-2">
-                                <div class="bilingual-label">
-                                    <span class="en text-slate-800">Next FDP Start (Rest End)</span>
-                                    <span class="zh">下次FDP開始 / 休時結束</span>
-                                </div>
-                                <span id="badge_nextReport" class="tz-badge">--:--</span>
-                            </div>
-                            <div class="dt-flex-group">
-                                <input type="date" id="date_nextReport" onchange="processTimeChange('nextReport')">
-                                <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_nextReport" class="ntime" onchange="processTimeChange('nextReport')">
-                                <select id="tz_nextReport" class="tz-select hide-initially" onchange="processTimeChange('nextReport')"></select>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Outstation Extras -->
@@ -532,30 +538,28 @@
                         <div class="time-input-group border-l-4 border-l-[#3b82f6]">
                             <div class="flex justify-between items-start sm:items-center gap-2">
                                 <div class="bilingual-label">
-                                    <span class="en text-slate-800">Hotel Check-in (Rest Start)</span>
-                                    <span class="zh">飯店入住 / 休時開始</span>
+                                    <span class="en text-slate-800">Hotel Check-in (Rest Start, Local)</span>
+                                    <span class="zh">飯店入住 / 休時開始（當地）</span>
                                 </div>
                                 <span id="badge_hotelIn" class="tz-badge bg-[#dbeafe] text-blue-800 border-[#bfdbfe]">--:--</span>
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_hotelIn" onchange="processTimeChange('hotelIn')">
                                 <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_hotelIn" class="ntime" onchange="processTimeChange('hotelIn')">
-                                <select id="tz_hotelIn" class="tz-select hide-initially" onchange="processTimeChange('hotelIn')"></select>
                             </div>
                         </div>
 
                         <div class="time-input-group border-l-4 border-l-slate-700">
                             <div class="flex justify-between items-start sm:items-center gap-2">
                                 <div class="bilingual-label">
-                                    <span class="en text-slate-800">Hotel Check-out (Rest End)</span>
-                                    <span class="zh">飯店退房 / 休時結束</span>
+                                    <span class="en text-slate-800">Hotel Check-out (Rest End, Local)</span>
+                                    <span class="zh">飯店退房 / 休時結束（當地）</span>
                                 </div>
                                 <span id="badge_hotelOut" class="tz-badge">--:--</span>
                             </div>
                             <div class="dt-flex-group">
                                 <input type="date" id="date_hotelOut" onchange="processTimeChange('hotelOut')">
                                 <input type="text" inputmode="numeric" placeholder="HH:MM" id="time_hotelOut" class="ntime" onchange="processTimeChange('hotelOut')">
-                                <select id="tz_hotelOut" class="tz-select hide-initially" onchange="processTimeChange('hotelOut')"></select>
                             </div>
                         </div>
                     </div>
@@ -683,8 +687,12 @@ document.addEventListener('change', (e) => {
 }, true);
 
 let currentLocation = 'home';
-const timeFields = ['report', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
+// Local fields use Base TZ; UTC fields (blockIn) are entered in Zulu.
+const timeFields = ['report', 'blockIn', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
+const isUtcField = (f) => f === 'blockIn';
+const baseTzVal = () => parseInt(document.getElementById('baseTz').value) || 8;
 const parsedTimesUTC = {};
+let gNextReportManual = false;  // user has manually edited Next FDP Start
 
 /* ---- Total Block Time: per-sector sum or direct entry ---- */
 let sectorCount = 2;
@@ -1023,16 +1031,14 @@ function recomputeP2() {
 }
 
 function initApp() {
-    const tzSelects = document.querySelectorAll('.tz-select, #baseTz');
-    tzSelects.forEach(sel => {
-        sel.innerHTML = "";
-        for(let i=-12; i<=14; i++) {
-            const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
-            const opt = new Option(`UTC${sign}${i}`, i);
-            if(i === 8) opt.selected = true;
-            sel.add(opt);
-        }
-    });
+    const baseSel = document.getElementById('baseTz');
+    baseSel.innerHTML = "";
+    for(let i=-12; i<=14; i++) {
+        const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
+        const opt = new Option(`UTC${sign}${i}`, i);
+        if(i === 8) opt.selected = true;
+        baseSel.add(opt);
+    }
 
     document.querySelectorAll('.radio-pill input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -1048,8 +1054,9 @@ function initApp() {
     // Accessibility: the visible bilingual labels are <div>s, so screen readers
     // can't tie them to the date/time/select controls. Attach aria-labels here.
     const fieldLabels = {
-        report: 'FDP Start 開始',
-        release: 'FDP End 結束',
+        report: 'FDP Start 報到',
+        blockIn: 'Block In UTC 落地關車',
+        release: 'Actual Rest Start 實際休時開始',
         dhdEnd: 'DHD End / Rest Start 搭機結束 休時開始',
         nextReport: 'Next FDP Start / Rest End 下次FDP開始 休時結束',
         hotelIn: 'Hotel Check-in / Rest Start 飯店入住 休時開始',
@@ -1057,10 +1064,10 @@ function initApp() {
     };
     timeFields.forEach(f => {
         const label = fieldLabels[f] || f;
-        document.getElementById(`date_${f}`).setAttribute('aria-label', `${label} date 日期`);
-        document.getElementById(`time_${f}`).setAttribute('aria-label', `${label} time 時間`);
-        const tz = document.getElementById(`tz_${f}`);
-        if(tz) tz.setAttribute('aria-label', `${label} timezone 時區`);
+        const dEl = document.getElementById(`date_${f}`);
+        const tEl = document.getElementById(`time_${f}`);
+        if(dEl) dEl.setAttribute('aria-label', `${label} date 日期`);
+        if(tEl) tEl.setAttribute('aria-label', `${label} time 時間`);
     });
     document.getElementById('baseTz').setAttribute('aria-label', 'Base WOCL timezone WOCL基準時區');
     document.getElementById('flightTime').setAttribute('aria-label', 'Total block time 總飛時');
@@ -1071,117 +1078,100 @@ function initApp() {
     recalcSectors();
     buildP2Sectors();
     setInitialDefaults();
-    switchInputMode();
     updateUI();
 }
 
 function setInitialDefaults() {
-    const now = new Date();
-    const baseMs = now.getTime();
+    const baseMs = Date.now();
     const times = {
-        report: new Date(baseMs),
-        release: new Date(baseMs + 8*3600000),
-        dhdEnd: new Date(baseMs + 9*3600000),
-        nextReport: new Date(baseMs + 32*3600000),
-        hotelIn: new Date(baseMs + 9*3600000),
-        hotelOut: new Date(baseMs + 24*3600000)
+        report:     new Date(baseMs),
+        blockIn:    new Date(baseMs + 8*3600000),
+        release:    new Date(baseMs + 8.5*3600000),
+        dhdEnd:     new Date(baseMs + 9*3600000),
+        nextReport: new Date(baseMs + 20.5*3600000),
+        hotelIn:    new Date(baseMs + 9*3600000),
+        hotelOut:   new Date(baseMs + 24*3600000)
     };
-
     timeFields.forEach(f => {
         parsedTimesUTC[f] = times[f];
-        const lcl = new Date(times[f].getTime() + 8*3600000);
-        document.getElementById(`date_${f}`).value = lcl.toISOString().split('T')[0];
-        document.getElementById(`time_${f}`).value = `${pad(lcl.getUTCHours())}:${pad(lcl.getUTCMinutes())}`;
+        renderFieldFromUTC(f);
+        setBadge(f);
     });
-
     safeCalculate();
 }
 
-function switchInputMode() {
-    const mode = document.querySelector('input[name="inputMode"]:checked').value;
-    const tzSelectors = document.querySelectorAll('.tz-select');
-
-    tzSelectors.forEach(el => {
-        if(mode === 'lcl') el.classList.remove('hide-initially');
-        else el.classList.add('hide-initially');
-    });
-
-    // Re-render the visible date/time fields from the stored UTC instant so the
-    // underlying time stays constant when toggling modes, then round-trip through
-    // processTimeChange to refresh badges (and recompute the same UTC value).
-    timeFields.forEach(f => {
-        renderFieldFromUTC(f, mode);
-        processTimeChange(f);
-    });
+function setBadge(field) {
+    const badge = document.getElementById(`badge_${field}`);
+    const utc = parsedTimesUTC[field];
+    if(!badge || !utc) return;
+    if(isUtcField(field)) {
+        const lcl = new Date(utc.getTime() + baseTzVal()*3600000);
+        badge.className = "tz-badge lcl";
+        badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(lcl.getUTCHours())}${pad(lcl.getUTCMinutes())}`;
+    } else {
+        badge.className = "tz-badge utc";
+        badge.innerHTML = `<i class="fas fa-globe"></i> ${pad(utc.getUTCDate())}d ${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}z`;
+    }
 }
 
-function renderFieldFromUTC(field, mode) {
+function renderFieldFromUTC(field) {
     const utc = parsedTimesUTC[field];
     if(!utc) return;
-    let display;
-    if(mode === 'lcl') {
-        const tzOffset = parseInt(document.getElementById(`tz_${field}`).value) || 8;
-        display = new Date(utc.getTime() + tzOffset*3600000);
-    } else {
-        display = utc;
-    }
-    document.getElementById(`date_${field}`).value =
-        `${display.getUTCFullYear()}-${pad(display.getUTCMonth()+1)}-${pad(display.getUTCDate())}`;
-    document.getElementById(`time_${field}`).value =
-        `${pad(display.getUTCHours())}:${pad(display.getUTCMinutes())}`;
+    const display = isUtcField(field) ? utc : new Date(utc.getTime() + baseTzVal()*3600000);
+    const dEl = document.getElementById(`date_${field}`);
+    const tEl = document.getElementById(`time_${field}`);
+    if(dEl) dEl.value = `${display.getUTCFullYear()}-${pad(display.getUTCMonth()+1)}-${pad(display.getUTCDate())}`;
+    if(tEl) tEl.value = `${pad(display.getUTCHours())}:${pad(display.getUTCMinutes())}`;
+}
+
+// Base TZ changed → keep each local field's wall-clock, recompute its UTC;
+// UTC fields keep their instant but refresh their (local) badge.
+function reprocessLocalFields() {
+    timeFields.forEach(f => { if(isUtcField(f)) setBadge(f); else processTimeChange(f); });
+    safeCalculate();
 }
 
 function processTimeChange(field) {
-    const dateStr = document.getElementById(`date_${field}`).value;
-    const timeStr = document.getElementById(`time_${field}`).value;
+    const dEl = document.getElementById(`date_${field}`);
+    const tEl = document.getElementById(`time_${field}`);
+    if(!dEl || !tEl) return;
+    const dateStr = dEl.value, timeStr = tEl.value;
     if(!dateStr || !timeStr) return;
 
-    const mode = document.querySelector('input[name="inputMode"]:checked').value;
-    const badge = document.getElementById(`badge_${field}`);
     const rawMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
     if(isNaN(rawMs)) return;
 
-    const tzOffset = (mode === 'lcl') ? (parseInt(document.getElementById(`tz_${field}`).value) || 8) : 0;
-    let actualUTC = new Date(rawMs - (tzOffset * 3600000));
+    const off = isUtcField(field) ? 0 : baseTzVal();   // local→UTC, or UTC as-is
+    let actualUTC = new Date(rawMs - off*3600000);
 
-    // Rule: no field may be earlier than FDP start (report). Auto-bump the date.
+    if(field === 'nextReport') gNextReportManual = true;
+
+    // No field may be earlier than FDP start (report). Auto-bump the date.
     if(field !== 'report' && parsedTimesUTC['report'] && actualUTC < parsedTimesUTC['report']) {
         const addDays = Math.ceil((parsedTimesUTC['report'] - actualUTC) / 86400000);
         actualUTC = new Date(actualUTC.getTime() + addDays*86400000);
         parsedTimesUTC[field] = actualUTC;
-        renderFieldFromUTC(field, mode); // reflect the corrected date in the input
+        renderFieldFromUTC(field);
     } else {
         parsedTimesUTC[field] = actualUTC;
     }
 
-    if(mode === 'lcl') {
-        badge.className = "tz-badge utc";
-        badge.innerHTML = `<i class="fas fa-globe"></i> ${pad(actualUTC.getUTCDate())}d ${pad(actualUTC.getUTCHours())}${pad(actualUTC.getUTCMinutes())}z`;
-    } else {
-        const baseOffset = parseInt(document.getElementById('baseTz').value) || 8;
-        const projectedLcl = new Date(actualUTC.getTime() + (baseOffset * 3600000));
-        badge.className = "tz-badge lcl";
-        badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(projectedLcl.getUTCHours())}${pad(projectedLcl.getUTCMinutes())}`;
-    }
-
-    // When FDP start moves, push any now-earlier fields forward too.
+    setBadge(field);
     if(field === 'report') enforceAfterReport();
-
     safeCalculate();
 }
 
 function enforceAfterReport() {
     const rep = parsedTimesUTC['report'];
     if(!rep) return;
-    const mode = document.querySelector('input[name="inputMode"]:checked').value;
     timeFields.forEach(f => {
         if(f === 'report') return;
         const t = parsedTimesUTC[f];
         if(t && t < rep) {
             const addDays = Math.ceil((rep - t) / 86400000);
             parsedTimesUTC[f] = new Date(t.getTime() + addDays*86400000);
-            renderFieldFromUTC(f, mode);
-            processTimeChange(f);
+            renderFieldFromUTC(f);
+            setBadge(f);
         }
     });
 }
@@ -1223,16 +1213,17 @@ function setLocation(loc) {
     safeCalculate();
 }
 
-function toggleDHD() {
-    const box = document.getElementById('dhdInputBox');
-    const restStartBox = document.getElementById('restStartBox');
-    if(document.getElementById('followingDHD').checked) {
-        box.classList.remove('hide-initially');
-        if(restStartBox) restStartBox.classList.add('hide-initially'); // DHD end becomes the rest start
-    } else {
-        box.classList.add('hide-initially');
-        if(restStartBox) restStartBox.classList.remove('hide-initially');
-    }
+function restStartModeVal() {
+    const el = document.querySelector('input[name="restStartMode"]:checked');
+    return el ? el.value : 'block30';
+}
+
+function setRestStartMode() {
+    const mode = restStartModeVal();
+    document.getElementById('restStartBlock30').classList.toggle('hide-initially', mode !== 'block30');
+    document.getElementById('restStartActualBox').classList.toggle('hide-initially', mode !== 'actual');
+    document.getElementById('dhdInputBox').classList.toggle('hide-initially', mode !== 'dhd');
+    safeCalculate();
 }
 
 function toggleRestAcc() {
@@ -1349,6 +1340,16 @@ function calculateCore() {
     if(hintParts.length) { mfdpHint.classList.remove('hidden'); mfdpHint.innerText = '＊'+hintParts.join('、'); }
     else mfdpHint.classList.add('hidden');
 
+    // FDP Start reference shown in Phase 3 (Local + Zulu)
+    const fdpStartDisp = document.getElementById('fdpStartDisp');
+    if(fdpStartDisp) {
+        const repLclD = new Date(report.getTime() + baseOffset*3600000);
+        fdpStartDisp.className = 'font-mono text-sm break-words';
+        fdpStartDisp.innerHTML =
+            `<span class="lcl-text font-bold">${fullDT(repLclD)} LCL ${tzLabel}</span>` +
+            ` <span class="utc-text font-bold">· ${fullDT(report)}z</span>`;
+    }
+
     // Expose Max FDP end + report for Phase 2 back-calculation
     gMaxFDPEnd = maxFDPEnd;
     gReportUTC = report;
@@ -1360,11 +1361,15 @@ function calculateCore() {
 
     const cardFDP = document.getElementById('cardFDP');
     const cardRest = document.getElementById('cardRest');
+    const restOn = document.getElementById('enableRest').checked;
 
-    // ---- Actual FDP = report → last sector in-block (#6, from Phase 2) ----
+    // ---- Actual FDP end = Block In (Phase 3, UTC) or Phase 2 last in-block ----
+    const blockIn = restOn ? parsedTimesUTC['blockIn'] : null;
+    const fdpEndUTC = (blockIn && blockIn > report) ? blockIn
+                    : (gLastInBlock && gLastInBlock > report) ? gLastInBlock : null;
     let actFDP = null;
-    if(gLastInBlock && gLastInBlock > report) {
-        actFDP = Math.max(0, (gLastInBlock - report)/60000 - deductMin);
+    if(fdpEndUTC) {
+        actFDP = Math.max(0, (fdpEndUTC - report)/60000 - deductMin);
         cardFDP.classList.remove('hide-initially');
         updateCard('FDP', actFDP, maxFDP, false);
         const elExt = document.getElementById('txtExtFDP');
@@ -1378,21 +1383,37 @@ function calculateCore() {
         cardFDP.classList.add('hide-initially');
     }
 
-    // ---- Rest calculation (Phase 3 toggle, #7) ----
-    const restOn = document.getElementById('enableRest').checked;
+    // ---- Rest calculation (Phase 3, 3-option Rest Start) ----
     let actRest = 0, restStart = null, restEnd = null, minRest = 0, restValid = false;
-    let hasDHD = false, dhdEnd = null;
 
     if(restOn) {
         if(currentLocation === 'home') {
-            const nextReport = parsedTimesUTC['nextReport'];
-            hasDHD = document.getElementById('followingDHD').checked;
-            if(hasDHD) {
-                dhdEnd = parsedTimesUTC['dhdEnd'];          // DHD never rest (4-16 C.b); rest starts at DHD end
-                if(dhdEnd) restStart = dhdEnd;
+            const mode = restStartModeVal();
+            if(mode === 'block30') {
+                if(blockIn) restStart = new Date(blockIn.getTime() + 30*60000);   // Block In + 30m
+            } else if(mode === 'actual') {
+                restStart = parsedTimesUTC['release'];                            // Actual End (Local)
             } else {
-                restStart = parsedTimesUTC['release'];      // Rest Start Time input
+                restStart = parsedTimesUTC['dhdEnd'];                             // DHD end = rest start
             }
+
+            // Read-only display of Block In + 30m
+            const r30 = document.getElementById('restStart30Disp');
+            if(r30) {
+                if(blockIn) {
+                    const rs = new Date(blockIn.getTime() + 30*60000);
+                    const rsL = new Date(rs.getTime() + baseOffset*3600000);
+                    r30.innerHTML = `${pad(rsL.getUTCHours())}${pad(rsL.getUTCMinutes())} LCL · ${pad(rs.getUTCHours())}${pad(rs.getUTCMinutes())}z`;
+                } else { r30.innerText = '請先輸入 Block In'; }
+            }
+
+            // Default Next FDP Start = Rest Start + 12h (until the user edits it)
+            if(restStart && !gNextReportManual) {
+                const auto = new Date(restStart.getTime() + 12*3600000);
+                parsedTimesUTC['nextReport'] = auto;
+                renderFieldFromUTC('nextReport'); setBadge('nextReport');
+            }
+            const nextReport = parsedTimesUTC['nextReport'];
             if(restStart && nextReport && nextReport > restStart) {
                 restEnd = nextReport; restValid = true;
                 actRest = (restEnd - restStart)/60000;
@@ -1424,7 +1445,7 @@ function calculateCore() {
     }
 
     // ---- WOCL detection (uses actual FDP end if available, else max FDP end) ----
-    const dutyEnd = (gLastInBlock && gLastInBlock > report) ? gLastInBlock : maxFDPEnd;
+    const dutyEnd = fdpEndUTC || maxFDPEnd;
     let touchesWOCL = false;
     const offsetMs = baseOffset * 3600000;
     const localStart = new Date(report.getTime() + offsetMs);
