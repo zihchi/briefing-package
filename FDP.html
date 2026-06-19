@@ -1360,7 +1360,7 @@ function calculateCore() {
 
     const ftParts = document.getElementById('flightTime').value.split(':');
     const actFT = (parseInt(ftParts[0])||0)*60 + (parseInt(ftParts[1])||0);
-    const baseOffset = parseInt(document.getElementById('baseTz').value);
+    const baseOffset = parseInt(document.getElementById('baseTz').value) || 8;
 
     // ---- Base limits by crew composition (FOM 4.7.5) ----
     let maxFDP = 0, maxFT = 0;
@@ -1554,7 +1554,9 @@ function calculateCore() {
     if(restOn && restValid) {
         restWrap.style.display = '';
         fdpWrap.classList.remove('rounded-b-lg');
-        drawTimelineEngine('timelineRest', restStart, restEnd, actRest, minRest, false, null, 0, 0, false, true);
+        // Match the 48h requirement shown on the card when the time-diff exemption applies
+        const effMinRest = (document.getElementById('timeDiff6h').checked && currentLocation === 'home') ? 48*60 : minRest;
+        drawTimelineEngine('timelineRest', restStart, restEnd, actRest, effMinRest, false, null, 0, 0, false, true);
     } else {
         restWrap.innerHTML = '';
         restWrap.style.display = 'none';
