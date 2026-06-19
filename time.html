@@ -45,7 +45,6 @@
     box-shadow: 0 0 0 2px rgba(139,90,43,0.2);
   }
   #addDays { width: 60px !important; } /* 天數可以寬一點 */
-  #simpleH1, #simpleH2 { width: 80px !important; } /* 🎉 更新：純時間的小時寬一點，以支援到萬位數 */
 
   .app-date-input { padding: 8px; border: 1px solid #e7ddd0; border-radius: 10px; text-align: center; font-size: 1em; color: #4a3627; background: #ffffff; min-height: 38px; box-sizing: border-box; }
 
@@ -59,6 +58,17 @@
   button[onclick^="calc"] { background: #8b5a2b; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; min-height: 44px; transition: background 0.2s; }
   button[onclick^="calc"]:hover { background: #7a4e23; }
   .app-time-display { font-size: 1.5em; font-weight: bold; color: #8b5a2b; }
+
+  /* 純時間加減：計算機鍵盤 */
+  .calc-keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .calc-key { padding: 14px 0; font-size: 1.3em; font-weight: bold; border: none; border-radius: 12px; background: #faf6f0; color: #4a3627; cursor: pointer; min-height: 56px; box-shadow: 0 1px 2px rgba(74,54,39,0.08); transition: filter .12s; font-family: monospace; }
+  .calc-key:active { filter: brightness(0.9); }
+  .calc-key.calc-op { background: #e7ddd0; color: #8b5a2b; }
+  .calc-key.calc-eq { background: #8b5a2b; color: #fff; }
+  .calc-key.calc-clear { background: #f3d9d4; color: #b91c1c; }
+  .calc-key.calc-back { background: #efe6da; }
+  .now-btn { background: #efe6da; color: #8b5a2b; border: 1px solid #e7ddd0; border-radius: 8px; padding: 6px 10px; font-size: 0.8em; font-weight: bold; cursor: pointer; min-height: 32px; }
+  .now-btn:active { filter: brightness(0.92); }
 
   /* 響應式：iPhone 直式避免水平溢出 */
   @media (max-width: 480px) {
@@ -88,47 +98,30 @@
         <button class="time-tab-btn" data-tab="tab-addsub" onclick="switchTimeTab('tab-addsub')">時間推算</button>
       </div>
 
-      <!-- 功能一：純時間加減 -->
+      <!-- 功能一：純時間加減（計算機式，可連續運算） -->
       <div id="tab-simple" class="time-tab-content active">
-        <div class="app-card" style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
-          
-          <div style="flex: 1; text-align: center;">
-            <div class="app-label" style="margin-bottom: 8px;">TIME 1</div>
-            <div class="app-time-input" style="justify-content: center;">
-              <!-- 🎉 更新：支援到 5 位數輸入 (maxlength="5") -->
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="simpleH1" class="auto-next" data-next="simpleM1" placeholder="00" onfocus="this.select()">
-              <span style="color:#78716c;">時</span>
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM1" class="auto-next" data-next="simpleH2" placeholder="00" onfocus="this.select()">
-              <span style="color:#78716c;">分</span>
-            </div>
-          </div>
-          
-          <div style="flex: 0 0 140px;">
-            <div class="app-toggle" style="margin-bottom: 0;">
-              <button class="app-toggle-btn active" id="btnOpAdd" onclick="setSimpleOp('add')">➕ 加</button>
-              <button class="app-toggle-btn" id="btnOpSub" onclick="setSimpleOp('sub')">➖ 減</button>
-              <div id="simpleOpPill" class="app-toggle-pill" style="transform: translateX(0);"></div>
-            </div>
-            <input type="hidden" id="simpleOp" value="add">
-          </div>
-
-          <div style="flex: 1; text-align: center;">
-            <div class="app-label" style="margin-bottom: 8px;">TIME 2</div>
-            <div class="app-time-input" style="justify-content: center;">
-              <!-- 🎉 更新：支援到 5 位數輸入 (maxlength="5") -->
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="simpleH2" class="auto-next" data-next="simpleM2" placeholder="00" onfocus="this.select()">
-              <span style="color:#78716c;">時</span>
-              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="simpleM2" class="auto-next" placeholder="00" onfocus="this.select()">
-              <span style="color:#78716c;">分</span>
-            </div>
-          </div>
+        <div class="app-card" style="padding: 16px;">
+          <div id="calcTape" style="min-height: 20px; text-align: right; color: #a8a29e; font-size: 0.95em; font-family: monospace; word-break: break-all;">&nbsp;</div>
+          <div id="calcDisplay" style="text-align: right; font-size: 2.4em; font-weight: bold; color: #8b5a2b; font-family: monospace; line-height: 1.2;">0:00</div>
+          <div style="text-align: right; color: #a8a29e; font-size: 0.78em; margin-top: 2px;">輸入 4 碼 HH:MM（後兩碼為分）· 可連續 ＋／－</div>
         </div>
-        
-        <button onclick="calculateSimple()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算總時長</button>
-        
-        <div id="simpleResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #8b5a2b; background: rgba(139,90,43,0.06);">
-          <div id="simpleResultText" class="app-time-display"></div>
-          <div id="simpleResultDetail" style="color: #78716c; margin-top: 10px; font-weight: bold;"></div>
+        <div class="calc-keypad">
+          <button class="calc-key" onclick="calcDigit('7')">7</button>
+          <button class="calc-key" onclick="calcDigit('8')">8</button>
+          <button class="calc-key" onclick="calcDigit('9')">9</button>
+          <button class="calc-key calc-back" onclick="calcBack()">⌫</button>
+          <button class="calc-key" onclick="calcDigit('4')">4</button>
+          <button class="calc-key" onclick="calcDigit('5')">5</button>
+          <button class="calc-key" onclick="calcDigit('6')">6</button>
+          <button class="calc-key calc-op" onclick="calcOp('-')">−</button>
+          <button class="calc-key" onclick="calcDigit('1')">1</button>
+          <button class="calc-key" onclick="calcDigit('2')">2</button>
+          <button class="calc-key" onclick="calcDigit('3')">3</button>
+          <button class="calc-key calc-op" onclick="calcOp('+')">＋</button>
+          <button class="calc-key calc-clear" onclick="calcClear()">C</button>
+          <button class="calc-key" onclick="calcDigit('0')">0</button>
+          <button class="calc-key" onclick="calcDigit('00')">00</button>
+          <button class="calc-key calc-eq" onclick="calcOp('=')">＝</button>
         </div>
       </div>
 
@@ -136,7 +129,10 @@
       <div id="tab-diff" class="time-tab-content">
         <div class="app-grid" style="display: flex; gap: 15px; margin-bottom: 1.5em; flex-wrap: wrap;">
           <div class="app-card" style="flex: 1; margin-bottom: 0;">
-            <div class="app-label" style="margin-bottom: 10px;">🛫 起始時間</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span class="app-label">🛫 起始時間</span>
+              <button type="button" class="now-btn" onclick="fillNow('diffStartDate','diffStartHour','diffStartMin')">現在</button>
+            </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <input type="date" id="diffStartDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
               <div class="app-time-input" style="justify-content: center;">
@@ -148,7 +144,10 @@
           </div>
           
           <div class="app-card" style="flex: 1; margin-bottom: 0;">
-            <div class="app-label" style="margin-bottom: 10px;">🛬 結束時間</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span class="app-label">🛬 結束時間</span>
+              <button type="button" class="now-btn" onclick="fillNow('diffEndDate','diffEndHour','diffEndMin')">現在</button>
+            </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <input type="date" id="diffEndDate" class="app-date-input" style="width: 100%; box-sizing: border-box;">
               <div class="app-time-input" style="justify-content: center;">
@@ -160,6 +159,9 @@
           </div>
         </div>
 
+        <div style="text-align:center;margin-bottom:10px;">
+          <button type="button" class="now-btn" onclick="swapDiff()">⇅ 對調起訖</button>
+        </div>
         <button onclick="calculateTimeDiff()" style="width: 100%; padding: 1em; font-size: 1.1em; margin-bottom: 15px;">計算時間差</button>
 
         <div id="diffResultBox" class="app-card" style="display: none; text-align: center; border: 2px solid #8b5a2b; background: rgba(139,90,43,0.06);">
@@ -173,6 +175,7 @@
         <div class="app-card">
           <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; border-bottom: 1px dashed #e7ddd0; padding-bottom: 15px; margin-bottom: 15px;">
             <div class="app-label" style="min-width: 80px; margin: 0;">📍 基準</div>
+            <button type="button" class="now-btn" onclick="fillNow('baseDate','baseHour','baseMin')">現在</button>
             <input type="date" id="baseDate" class="app-date-input">
             <div class="app-time-input">
               <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="baseHour" class="auto-next" data-next="baseMin" placeholder="00" onfocus="this.select()">
@@ -270,43 +273,58 @@
       document.getElementById(tabId).classList.add('active');
     }
 
-    // --- 切換開關邏輯 ---
-    function setSimpleOp(op) {
-      document.getElementById('simpleOp').value = op;
-      document.getElementById('btnOpAdd').classList.toggle('active', op === 'add');
-      document.getElementById('btnOpSub').classList.toggle('active', op === 'sub');
-      document.getElementById('simpleOpPill').style.transform = op === 'add' ? 'translateX(0)' : 'translateX(100%)';
+    // --- 功能一：HH:MM 計算機（可連續加減） ---
+    let calcAcc = null, calcEntry = '', calcOpv = null, calcTape = '', calcJustEval = false;
+    const calcEntryMins = () => {
+      if(!calcEntry) return 0;
+      const mm = parseInt(calcEntry.slice(-2) || '0', 10);
+      const hh = parseInt(calcEntry.slice(0, -2) || '0', 10);
+      return hh * 60 + mm;
+    };
+    const calcFmt = (mins) => { const neg = mins < 0; mins = Math.abs(mins); return (neg ? '-' : '') + Math.floor(mins/60) + ':' + String(mins % 60).padStart(2, '0'); };
+    function calcRender() {
+      const disp = document.getElementById('calcDisplay');
+      disp.textContent = calcEntry !== '' ? calcFmt(calcEntryMins()) : calcFmt(calcAcc || 0);
+      document.getElementById('calcTape').innerHTML = (calcTape + (calcEntry !== '' ? calcFmt(calcEntryMins()) : '')) || '&nbsp;';
+    }
+    function calcDigit(d) {
+      if(calcJustEval) { calcAcc = null; calcOpv = null; calcTape = ''; calcJustEval = false; }
+      calcEntry = (calcEntry + d).replace(/\D/g, '').slice(-4);
+      calcRender();
+    }
+    function calcBack() { calcEntry = calcEntry.slice(0, -1); calcRender(); }
+    function calcOp(sym) {
+      if(calcEntry !== '') {
+        const v = calcEntryMins();
+        calcAcc = (calcOpv === null) ? v : (calcOpv === '+' ? calcAcc + v : calcAcc - v);
+        calcTape += calcFmt(v);
+        calcEntry = '';
+      } else if(calcAcc === null) { calcAcc = 0; }
+      if(sym === '=') { calcTape += ' ='; calcOpv = null; calcJustEval = true; }
+      else { calcTape += ' ' + (sym === '+' ? '＋' : '−') + ' '; calcOpv = sym; calcJustEval = false; }
+      calcRender();
+    }
+    function calcClear() { calcAcc = null; calcEntry = ''; calcOpv = null; calcTape = ''; calcJustEval = false; calcRender(); }
+
+    // --- 快速填入「現在」(當地) 與起訖對調 ---
+    function fillNow(dateId, hId, mId) {
+      const n = new Date();
+      const p = (x) => String(x).padStart(2, '0');
+      document.getElementById(dateId).value = `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}`;
+      document.getElementById(hId).value = p(n.getHours());
+      document.getElementById(mId).value = p(n.getMinutes());
+    }
+    function swapDiff() {
+      const ids = [['diffStartDate','diffEndDate'], ['diffStartHour','diffEndHour'], ['diffStartMin','diffEndMin']];
+      ids.forEach(([a, b]) => { const ea = document.getElementById(a), eb = document.getElementById(b); const t = ea.value; ea.value = eb.value; eb.value = t; });
     }
 
+    // --- 切換開關邏輯 ---
     function setBaseOp(op) {
       document.getElementById('operationType').value = op;
       document.getElementById('btnBaseAdd').classList.toggle('active', op === 'add');
       document.getElementById('btnBaseSub').classList.toggle('active', op === 'sub');
       document.getElementById('baseOpPill').style.transform = op === 'add' ? 'translateX(0)' : 'translateX(100%)';
-    }
-
-    // --- 功能一：純時間加減 ---
-    function calculateSimple() {
-      const h1 = parseInt(document.getElementById('simpleH1').value) || 0;
-      const m1 = parseInt(document.getElementById('simpleM1').value) || 0;
-      const h2 = parseInt(document.getElementById('simpleH2').value) || 0;
-      const m2 = parseInt(document.getElementById('simpleM2').value) || 0;
-      const op = document.getElementById('simpleOp').value;
-
-      const totalMins1 = (h1 * 60) + m1;
-      const totalMins2 = (h2 * 60) + m2;
-      
-      let resultMins = op === 'add' ? totalMins1 + totalMins2 : totalMins1 - totalMins2;
-      const isNegative = resultMins < 0;
-      resultMins = Math.abs(resultMins);
-
-      const resH = Math.floor(resultMins / 60);
-      const resM = resultMins % 60;
-
-      const sign = isNegative ? "- " : "";
-      document.getElementById('simpleResultText').innerText = `${sign}${resH} 小時 ${resM} 分鐘`;
-      document.getElementById('simpleResultDetail').innerText = `總計: ${isNegative ? '-' : ''}${resultMins} 分鐘`;
-      document.getElementById('simpleResultBox').style.display = 'block';
     }
 
     // --- 功能二：計算時間差 ---
@@ -394,7 +412,7 @@
       document.querySelectorAll('input[inputmode="numeric"]').forEach(input => input.value = '');
       setTodayDates();
       document.querySelectorAll('[id$="ResultBox"]').forEach(box => box.style.display = 'none');
-      setSimpleOp('add');
+      calcClear();
       setBaseOp('add');
     }
   </script>
