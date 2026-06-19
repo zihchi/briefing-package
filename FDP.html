@@ -31,10 +31,14 @@
     /* Centre all time/number entry and selects */
     input.ntime, input.nint, .dt-flex-group input[type="date"] { text-align: center; }
     #baseTz, #restTz { text-align: center; text-align-last: center; }
-    /* LCL / Z reminder chip shown next to each time field */
-    .tz-tag { align-self: center; flex: 0 0 auto; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; padding: 0 6px; border-radius: 6px; }
-    .tz-tag.lcl-text { background: var(--c-local-bg); border: 1px solid var(--c-local-border); }
-    .tz-tag.utc-text { background: var(--c-utc-bg); border: 1px solid var(--c-utc-border); }
+    /* In-field L / Z reminder (shown inside the time input) */
+    .dt-flex-group > .ntime-wrap { flex: 1 1 120px; }
+    .ntime-wrap { position: relative; display: flex; min-width: 0; }
+    .ntime-wrap > input.ntime { flex: 1 1 auto; padding-right: 1.85rem; }
+    .in-field-tz { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 0.62rem; font-weight: 900; pointer-events: none; }
+    .tz-badge { user-select: none; }
+    .tz-badge.clickable { cursor: pointer; }
+    .tz-badge.clickable:hover { filter: brightness(0.96); }
     
     body { background-color: var(--bg-main); color: #334155; -webkit-font-smoothing: antialiased; margin: 0; }
     
@@ -226,7 +230,7 @@
                             </div>
                             <div class="segmented-control sm:!w-auto">
                                 <label><input type="radio" name="btMode" value="sector" checked onchange="switchBtMode()"><span>分段 Sector</span></label>
-                                <label><input type="radio" name="btMode" value="direct" onchange="switchBtMode()"><span>直接 Direct</span></label>
+                                <label><input type="radio" name="btMode" value="direct" onchange="switchBtMode()"><span>總共 Total</span></label>
                             </div>
                         </div>
 
@@ -408,7 +412,7 @@
                         <div id="p2Schedule" class="hidden border-t border-slate-200 pt-3 space-y-1"></div>
                         <div id="p2TimelineWrap" class="hidden border-t border-slate-200 pt-3">
                             <div class="text-[0.65rem] font-extrabold text-slate-500 uppercase mb-2">回推時間軸 Latest Pushback Timeline</div>
-                            <div id="p2Timeline" style="position:relative;height:110px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"></div>
+                            <div id="p2Timeline" style="position:relative;height:135px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"></div>
                         </div>
                         <p id="p2Warn" class="hidden text-xs text-[#dc2626] font-bold"></p>
                     </div>
@@ -713,14 +717,15 @@ document.addEventListener('change', (e) => {
 }, true);
 
 let currentLocation = 'home';
-// Field zones: report = Base TZ (departure local); blockIn = UTC (Zulu);
-// rest fields = Rest-location TZ (may differ on outstation).
+// Each field has an input mode: 'local' or 'zulu' (toggle by tapping its badge).
+// In local mode, report uses Base TZ (departure); other fields use Rest TZ.
 const timeFields = ['report', 'blockIn', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
-const fieldZone = (f) => f === 'blockIn' ? 'utc' : (f === 'report' ? 'base' : 'rest');
-const isUtcField = (f) => fieldZone(f) === 'utc';
+const gFieldMode = { report:'local', blockIn:'zulu', release:'local', dhdEnd:'local', nextReport:'local', hotelIn:'local', hotelOut:'local' };
 const baseTzVal = () => parseInt(document.getElementById('baseTz').value) || 8;
 const restTzVal = () => parseInt((document.getElementById('restTz')||{}).value) || 8;
-const tzOffsetFor = (f) => { const z = fieldZone(f); return z === 'utc' ? 0 : (z === 'base' ? baseTzVal() : restTzVal()); };
+const localTzFor = (f) => f === 'report' ? baseTzVal() : restTzVal();
+const tzOffsetFor = (f) => gFieldMode[f] === 'zulu' ? 0 : localTzFor(f);
+const isUtcField = (f) => gFieldMode[f] === 'zulu';
 const parsedTimesUTC = {};
 let gNextReportManual = false;  // user has manually edited Next FDP Start
 
@@ -809,6 +814,13 @@ function p2InputField(label, cls, kind, group) {
          + `<input type="text" inputmode="numeric" placeholder="${ph}" class="${cls} ${numClass}${seq} !text-xs !px-1 !py-1.5 text-center" onchange="p2Edited(this,'${group}')"></div>`;
 }
 
+// OOOI as a single top→down column: label on the left, input on the right.
+function p2OOOIRow(label, cls) {
+    return `<div class="flex items-center gap-2">`
+         + `<span class="w-10 shrink-0 text-[0.62rem] font-extrabold text-slate-400 uppercase">${label}</span>`
+         + `<input type="text" inputmode="numeric" placeholder="HH:MM" class="${cls} ntime oooi-seq !text-xs !py-1.5 text-center flex-1" onchange="p2Edited(this,'oooi')"></div>`;
+}
+
 // Track which input group the user last edited per sector, so OOOI<->TTT
 // stays bidirectional (last edited wins) instead of OOOI always overriding.
 function p2Edited(el, group) {
@@ -832,8 +844,8 @@ function buildP2Sectors() {
             </div>
             <div class="mb-2">
                 <div class="text-[0.6rem] font-extrabold utc-text uppercase mb-1">OOOI 固定時刻 · UTC (Z)</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    ${p2InputField('Out','p2-out','time','oooi')}${p2InputField('Off','p2-off','time','oooi')}${p2InputField('On','p2-on','time','oooi')}${p2InputField('In','p2-in','time','oooi')}
+                <div class="space-y-1">
+                    ${p2OOOIRow('Out','p2-out')}${p2OOOIRow('Off','p2-off')}${p2OOOIRow('On','p2-on')}${p2OOOIRow('In','p2-in')}
                 </div>
             </div>
             <div>
@@ -933,7 +945,7 @@ function drawP2Timeline(sched, taMins, startD, endD) {
         c.appendChild(l);
     };
     addTick(startD, 'PUSH', '#2563eb');
-    addTick(endD, 'MAX IN', '#2563eb');
+    addTick(endD, 'MAX', '#2563eb');
 }
 
 function recomputeP2() {
@@ -1025,7 +1037,7 @@ function recomputeP2() {
     const pushback = new Date(gMaxFDPEnd.getTime() - grand*60000);
     pbEl.className = 'font-mono break-words';
     pbEl.innerHTML =
-        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(toLcl(pushback))} <span class="text-xs font-bold">LCL ${tzLabel}</span></div>` +
+        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(toLcl(pushback))} <span class="text-xs font-bold">L ${tzLabel}</span></div>` +
         `<div class="utc-text text-base font-bold leading-tight mt-0.5">${fullDT(pushback)} <span class="text-xs font-bold">UTC&nbsp;Z</span></div>`;
 
     // Per-sector latest schedule (work backwards from last In = Max FDP end)
@@ -1101,15 +1113,26 @@ function initApp() {
         const dEl = document.getElementById(`date_${f}`);
         const tEl = document.getElementById(`time_${f}`);
         if(dEl) dEl.setAttribute('aria-label', `${label} date 日期`);
-        if(tEl) tEl.setAttribute('aria-label', `${label} time 時間`);
-        // LCL / Z reminder chip in each time field
-        if(tEl && !document.getElementById(`tag_${f}`)) {
-            const utc = isUtcField(f);
-            const chip = document.createElement('span');
-            chip.id = `tag_${f}`;
-            chip.className = 'tz-tag ' + (utc ? 'utc-text' : 'lcl-text');
-            chip.textContent = utc ? 'Z' : 'LCL';
-            tEl.insertAdjacentElement('afterend', chip);
+        if(tEl) {
+            tEl.setAttribute('aria-label', `${label} time 時間`);
+            // Wrap input so the L/Z reminder sits inside the field
+            if(!tEl.closest('.ntime-wrap')) {
+                const wrap = document.createElement('div');
+                wrap.className = 'ntime-wrap';
+                tEl.parentNode.insertBefore(wrap, tEl);
+                wrap.appendChild(tEl);
+                const tag = document.createElement('span');
+                tag.id = `tag_${f}`;
+                tag.className = 'in-field-tz';
+                wrap.appendChild(tag);
+            }
+        }
+        // Tap the badge to toggle this field's Local/Zulu input
+        const badge = document.getElementById(`badge_${f}`);
+        if(badge) {
+            badge.classList.add('clickable');
+            badge.title = '點此切換 L / Z 輸入';
+            badge.addEventListener('click', () => toggleFieldMode(f));
         }
     });
     document.getElementById('baseTz').setAttribute('aria-label', 'Base WOCL timezone WOCL基準時區');
@@ -1144,18 +1167,30 @@ function setInitialDefaults() {
 }
 
 function setBadge(field) {
+    const zulu = gFieldMode[field] === 'zulu';
+    const tag = document.getElementById(`tag_${field}`);
+    if(tag) { tag.textContent = zulu ? 'Z' : 'L'; tag.className = 'in-field-tz ' + (zulu ? 'utc-text' : 'lcl-text'); }
     const badge = document.getElementById(`badge_${field}`);
     const utc = parsedTimesUTC[field];
     if(!badge || !utc) return;
-    if(isUtcField(field)) {
-        // UTC field → show its local (rest-location) projection
-        const lcl = new Date(utc.getTime() + restTzVal()*3600000);
-        badge.className = "tz-badge lcl";
-        badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(lcl.getUTCHours())}${pad(lcl.getUTCMinutes())}`;
+    if(zulu) {
+        // input is Zulu → badge shows the local projection
+        const lcl = new Date(utc.getTime() + localTzFor(field)*3600000);
+        badge.className = "tz-badge lcl clickable";
+        badge.innerHTML = `<i class="fas fa-location-dot"></i> L: ${pad(lcl.getUTCHours())}${pad(lcl.getUTCMinutes())}`;
     } else {
-        badge.className = "tz-badge utc";
+        // input is local → badge shows UTC
+        badge.className = "tz-badge utc clickable";
         badge.innerHTML = `<i class="fas fa-globe"></i> ${pad(utc.getUTCDate())}d ${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}z`;
     }
+}
+
+// Tap a field's badge to switch that field between Local and Zulu input.
+function toggleFieldMode(field) {
+    gFieldMode[field] = (gFieldMode[field] === 'zulu') ? 'local' : 'zulu';
+    renderFieldFromUTC(field); // keep the same instant, re-display in the new mode
+    setBadge(field);
+    safeCalculate();
 }
 
 function renderFieldFromUTC(field) {
@@ -1168,15 +1203,14 @@ function renderFieldFromUTC(field) {
     if(tEl) tEl.value = `${pad(display.getUTCHours())}:${pad(display.getUTCMinutes())}`;
 }
 
-// Base TZ changed → re-process the base field (report); refresh badges.
+// Base TZ changed → only the report field's local mapping is affected.
 function reprocessLocalFields() {
     processTimeChange('report');
     safeCalculate();
 }
-// Rest TZ changed → keep rest fields' wall-clock, recompute UTC; refresh blockIn badge.
+// Rest TZ changed → recompute every non-report field (keep wall-clock) + refresh badges.
 function onRestTzChange() {
-    timeFields.forEach(f => { if(fieldZone(f) === 'rest') processTimeChange(f); });
-    setBadge('blockIn');
+    timeFields.forEach(f => { if(f !== 'report') processTimeChange(f); });
     safeCalculate();
 }
 
@@ -1380,7 +1414,7 @@ function calculateCore() {
     document.getElementById('mfdpDur').innerText = fmt(maxFDP);
     document.getElementById('txtMFDPEnd').innerText = `End ${maxFDPEnd.getUTCMonth()+1}/${maxFDPEnd.getUTCDate()} ${pad(maxFDPEnd.getUTCHours())}${pad(maxFDPEnd.getUTCMinutes())}z`;
     document.getElementById('mfdpEnd').innerHTML =
-        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(endLcl)} <span class="text-xs font-bold">LCL ${tzLabel}</span></div>` +
+        `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(endLcl)} <span class="text-xs font-bold">L ${tzLabel}</span></div>` +
         `<div class="utc-text text-base font-bold leading-tight mt-0.5">${fullDT(maxFDPEnd)} <span class="text-xs font-bold">UTC&nbsp;Z</span></div>`;
     const mfdpHint = document.getElementById('mfdpHint');
     let hintParts = [];
@@ -1395,7 +1429,7 @@ function calculateCore() {
         const repLclD = new Date(report.getTime() + baseOffset*3600000);
         fdpStartDisp.className = 'font-mono break-words';
         fdpStartDisp.innerHTML =
-            `<div class="lcl-text font-bold">${fullDT(repLclD)} LCL ${tzLabel}</div>` +
+            `<div class="lcl-text font-bold">${fullDT(repLclD)} L ${tzLabel}</div>` +
             `<div class="utc-text font-bold mt-0.5">${fullDT(report)} UTC Z</div>`;
     }
 
@@ -1452,7 +1486,7 @@ function calculateCore() {
                 if(blockIn) {
                     const rs = new Date(blockIn.getTime() + 30*60000);
                     const rsL = new Date(rs.getTime() + restTzVal()*3600000);
-                    r30.innerHTML = `${pad(rsL.getUTCHours())}${pad(rsL.getUTCMinutes())} LCL · ${pad(rs.getUTCHours())}${pad(rs.getUTCMinutes())}z`;
+                    r30.innerHTML = `${pad(rsL.getUTCHours())}${pad(rsL.getUTCMinutes())} L · ${pad(rs.getUTCHours())}${pad(rs.getUTCMinutes())}z`;
                 } else { r30.innerText = '請先輸入 Block In'; }
             }
 
