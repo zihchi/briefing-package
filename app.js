@@ -1452,168 +1452,289 @@ function initAviationMap() {
 // ⏳ Curfew Calculator 核心邏輯
 // ==========================================
 function initCurfewCalculator() {
-    let state = {
-        curfewType: 'parking', 
-        curfewCondition: 'before' 
+    const box = document.getElementById('curfewBox');
+    if (!box) return;
+
+    const $ = (id) => document.getElementById(id);
+    const pad = (n) => String(n).padStart(2, '0');
+    const parseHM = (v) => {
+        const d = String(v == null ? '' : v).replace(/\D/g, '').slice(0, 4);
+        if (!d) return null;
+        const mm = parseInt(d.slice(-2) || '0', 10);
+        const hh = parseInt(d.slice(0, -2) || '0', 10);
+        return hh * 60 + mm;
     };
-
-    const els = {
-        offBlockLabel: document.getElementById('offBlockLabel'),
-        takeoffLabel: document.getElementById('takeoffLabel'),
-        resultEOBT: document.getElementById('resultEOBT'),
-        resultETOT: document.getElementById('resultETOT'),
-        resetBtn: document.getElementById('resetCurfewBtn'),
-        typeBgPill: document.getElementById('typeBgPill'),
-        condBgPill: document.getElementById('condBgPill'),
-        typeBtns: document.querySelectorAll('.curfew-type-btn'),
-        condBtns: document.querySelectorAll('.curfew-cond-btn'),
-        liveClock: document.getElementById('liveUTCClock')
+    const fmtNTime = (v) => {
+        const d = String(v || '').replace(/\D/g, '').slice(0, 4);
+        if (d.length <= 2) return d;
+        return d.slice(0, 2) + ':' + d.slice(2);
     };
+    const intVal = (el) => parseInt((el.value || '').replace(/\D/g, ''), 10) || 0;
+    const fmtDur = (m) => { const neg = m < 0; m = Math.abs(m); return (neg ? '-' : '') + Math.floor(m / 60) + ':' + pad(m % 60); };
+    const tzVal = () => parseInt($('cfTz').value, 10) || 8;
+    const fullDT = (d) => `${d.getUTCFullYear()}/${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())} ${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
+    const toLcl = (d) => new Date(d.getTime() + tzVal() * 3600000);
+    const tzLabel = () => { const t = tzVal(); return `UTC${t > 0 ? '+' : (t === 0 ? '±' : '')}${t}`; };
+    const dual = (utc) => `<div class="cf-lcl" style="font-weight:800;">${fullDT(toLcl(utc))} L ${tzLabel()}</div><div class="cf-utc" style="font-weight:700;font-size:.92em;">${fullDT(utc)} Z</div>`;
 
-    const dropdownIds = ['curfewHr', 'curfewMin', 'txoHr', 'txoMin', 'ftHr', 'ftMin', 'txiHr', 'txiMin'];
+    const state = { type: 'parking', mode: 'zulu', sectorCount: 1 };
+    let gFirstOut = null; // latest Sector-1 off-block (UTC) for the countdown
 
-    function updateClock() {
-        const now = new Date();
-        const h = String(now.getUTCHours()).padStart(2, '0');
-        const m = String(now.getUTCMinutes()).padStart(2, '0');
-        const s = String(now.getUTCSeconds()).padStart(2, '0');
-        if(els.liveClock) els.liveClock.textContent = `${h}:${m}:${s}`;
+    // ---- dest-TZ select ----
+    const tzSel = $('cfTz');
+    tzSel.innerHTML = '';
+    for (let i = -12; i <= 14; i++) {
+        const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
+        const opt = new Option(`UTC${sign}${i}`, i);
+        if (i === 8) opt.selected = true;
+        tzSel.add(opt);
     }
-    
-    if(curfewClockInterval) clearInterval(curfewClockInterval);
-    curfewClockInterval = setInterval(updateClock, 1000);
-    updateClock();
 
-    function populateDropdowns() {
-        const generateOptions = (max, defaultVal) => {
-            let html = '<option value="">--</option>';
-            for (let i = 0; i <= max; i++) {
-                const val = String(i).padStart(2, '0');
-                const selected = val === defaultVal ? 'selected' : '';
-                html += `<option value="${val}" ${selected}>${val}</option>`;
+    // ---- sectors (1 visible, up to 6) ----
+    function sectorCard(i) {
+        return `<div class="cf-sector${i > 1 ? ' hide' : ''}" data-sec="${i}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span class="cf-label">Sector ${i}</span>
+                <span class="cf-label">Dur <span class="cf-dur" style="font-family:ui-monospace,monospace;color:#4a3627;">0:00</span></span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                <div><div class="cf-label" style="text-align:center;">Taxi Out(m)</div><input class="cf-in cf-nint cf-txo" inputmode="numeric" placeholder="0" value="15"></div>
+                <div><div class="cf-label" style="text-align:center;">Trip</div><input class="cf-in cf-ntime cf-trip" inputmode="numeric" placeholder="HH:MM"></div>
+                <div><div class="cf-label" style="text-align:center;">Taxi In(m)</div><input class="cf-in cf-nint cf-txi" inputmode="numeric" placeholder="0" value="15"></div>
+            </div>
+        </div>`;
+    }
+    function taRow(i) {
+        return `<div class="cf-ta hide" data-ta="${i}"><span class="cf-label">轉場 TA</span><input class="cf-in cf-ntime cf-ta-in" inputmode="numeric" value="01:00" style="width:90px;"></div>`;
+    }
+    let secHtml = '';
+    for (let i = 1; i <= 6; i++) { secHtml += sectorCard(i); if (i < 6) secHtml += taRow(i); }
+    $('cfSectors').innerHTML = secHtml;
+
+    function renderSectorButtons() {
+        $('cfAddBtn').style.display = state.sectorCount < 6 ? '' : 'none';
+        $('cfRemoveBtn').classList.toggle('hide', state.sectorCount <= 1);
+    }
+    function addSector() {
+        if (state.sectorCount < 6) {
+            state.sectorCount++;
+            box.querySelector(`.cf-sector[data-sec="${state.sectorCount}"]`).classList.remove('hide');
+            const ta = box.querySelector(`.cf-ta[data-ta="${state.sectorCount - 1}"]`);
+            if (ta) ta.classList.remove('hide');
+        }
+        renderSectorButtons(); recompute();
+    }
+    function removeSector() {
+        if (state.sectorCount > 1) {
+            box.querySelector(`.cf-sector[data-sec="${state.sectorCount}"]`).classList.add('hide');
+            const ta = box.querySelector(`.cf-ta[data-ta="${state.sectorCount - 1}"]`);
+            if (ta) ta.classList.add('hide');
+            state.sectorCount--;
+        }
+        renderSectorButtons(); recompute();
+    }
+
+    // ---- curfew datetime helpers ----
+    function curfewUTC() {
+        const dStr = $('cfDate').value, tStr = $('cfTime').value;
+        if (!dStr || !tStr) return null;
+        const mins = parseHM(tStr); if (mins == null) return null;
+        const parts = dStr.split('-').map(Number);
+        if (parts.length !== 3 || !parts[0]) return null;
+        const raw = Date.UTC(parts[0], parts[1] - 1, parts[2], Math.floor(mins / 60), mins % 60);
+        return new Date(state.mode === 'zulu' ? raw : raw - tzVal() * 3600000);
+    }
+    function renderCurfewFromUTC(utc) {
+        const disp = state.mode === 'zulu' ? utc : new Date(utc.getTime() + tzVal() * 3600000);
+        $('cfDate').value = `${disp.getUTCFullYear()}-${pad(disp.getUTCMonth() + 1)}-${pad(disp.getUTCDate())}`;
+        $('cfTime').value = `${pad(disp.getUTCHours())}:${pad(disp.getUTCMinutes())}`;
+    }
+    function updateBadge() {
+        const b = $('cfBadge');
+        b.textContent = state.mode === 'zulu' ? 'Z' : 'L';
+        b.className = 'cf-badge ' + (state.mode === 'zulu' ? 'z' : 'l');
+    }
+    function updateTypeUI() {
+        box.querySelectorAll('.cf-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === state.type));
+        $('cfTypePill').style.transform = state.type === 'landing' ? 'translateX(0)' : 'translateX(100%)';
+    }
+    function setDefaultDate() {
+        const n = new Date();
+        $('cfDate').value = `${n.getUTCFullYear()}-${pad(n.getUTCMonth() + 1)}-${pad(n.getUTCDate())}`;
+    }
+
+    function drawTimeline(sched, taMins, startD, endD) {
+        const c = $('cfTimeline'); if (!c) return;
+        c.innerHTML = '';
+        if (endD.getTime() <= startD.getTime()) return;
+        const padMs = 30 * 60000;
+        const s0 = startD.getTime() - padMs, s1 = endD.getTime() + padMs;
+        const total = (s1 - s0) / 60000;
+        const X = (ms) => ((ms - s0) / 60000 / total) * 100;
+        const W = (m) => (m / total) * 100;
+        sched.forEach((sd, i) => {
+            const b = document.createElement('div');
+            b.className = 'cf-blk'; b.style.background = '#8b5a2b'; b.style.top = '12px';
+            b.style.left = X(sd.out.getTime()) + '%'; b.style.width = Math.max(W((sd.in - sd.out) / 60000), 1) + '%';
+            b.textContent = 'S' + (i + 1);
+            c.appendChild(b);
+            if (i < sched.length - 1 && (taMins[i] || 0) > 0) {
+                const t = document.createElement('div');
+                t.className = 'cf-blk'; t.style.top = '42px'; t.style.color = '#78350f';
+                t.style.background = 'repeating-linear-gradient(45deg,#fde68a,#fde68a 6px,#f59e0b 6px,#f59e0b 12px)';
+                t.style.left = X(sd.in.getTime()) + '%'; t.style.width = Math.max(W(taMins[i]), 0.5) + '%';
+                t.textContent = 'TA';
+                c.appendChild(t);
             }
-            return html;
+        });
+        const addTick = (d, label) => {
+            const x = X(d.getTime()); if (x < 0 || x > 100) return;
+            const tk = document.createElement('div'); tk.className = 'cf-tick'; tk.style.left = x + '%'; c.appendChild(tk);
+            const l = document.createElement('div'); l.className = 'cf-ticklbl';
+            if (x < 8) { l.style.left = '0'; l.style.transform = 'none'; }
+            else if (x > 92) { l.style.right = '0'; l.style.left = 'auto'; l.style.transform = 'none'; }
+            else l.style.left = x + '%';
+            l.textContent = label + '\n' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + 'z';
+            c.appendChild(l);
         };
-
-        const setOptions = (id, max, def) => {
-            const el = document.getElementById(id);
-            if(el) el.innerHTML = generateOptions(max, def);
-        };
-
-        setOptions('curfewHr', 23, '');
-        setOptions('curfewMin', 59, '');
-        setOptions('txoHr', 23, '00');
-        setOptions('txoMin', 59, '15');
-        setOptions('ftHr', 23, '');
-        setOptions('ftMin', 59, '');
-        setOptions('txiHr', 23, '00');
-        setOptions('txiMin', 59, '15');
+        addTick(startD, 'PUSH');
+        addTick(endD, 'IN');
     }
 
-    function getTimeStr(hrId, minId) {
-        const hEl = document.getElementById(hrId);
-        const mEl = document.getElementById(minId);
-        if (!hEl || !mEl || hEl.value === '' || mEl.value === '') return null;
-        return `${hEl.value}:${mEl.value}`;
-    }
+    function recompute() {
+        const u0 = curfewUTC();
+        $('cfConv').innerHTML = u0
+            ? (state.mode === 'zulu'
+                ? `<span class="cf-lcl">${fullDT(toLcl(u0))} L ${tzLabel()}</span>`
+                : `<span class="cf-utc">${fullDT(u0)} Z</span>`)
+            : '';
 
-    function timeToMins(timeStr) {
-        if (!timeStr) return NaN;
-        const parts = timeStr.split(':');
-        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    }
+        const secs = [...box.querySelectorAll('.cf-sector:not(.hide)')];
+        const durs = []; let total = 0; let lastTxi = 0;
+        secs.forEach((s, idx) => {
+            const txo = intVal(s.querySelector('.cf-txo'));
+            const trip = parseHM(s.querySelector('.cf-trip').value) || 0;
+            const txi = intVal(s.querySelector('.cf-txi'));
+            const dur = txo + trip + txi;
+            s.querySelector('.cf-dur').textContent = fmtDur(dur);
+            durs.push({ dur, txo, txi });
+            total += dur;
+            if (idx === secs.length - 1) lastTxi = txi;
+        });
+        const tas = [...box.querySelectorAll('.cf-ta:not(.hide)')];
+        const taMins = []; let taTotal = 0;
+        tas.forEach(t => { const v = parseHM(t.querySelector('.cf-ta-in').value) || 0; taMins.push(v); taTotal += v; });
+        const grand = total + taTotal;
+        $('cfTotal').textContent = fmtDur(grand);
 
-    function minsToTime(mins) {
-        mins = ((mins % 1440) + 1440) % 1440;
-        const h = String(Math.floor(mins / 60)).padStart(2, '0');
-        const m = String(mins % 60).padStart(2, '0');
-        return `${h}:${m}`;
-    }
-
-    function calculateTimes() {
-        const isBefore = state.curfewCondition === 'before';
-        if(els.offBlockLabel) els.offBlockLabel.textContent = isBefore ? 'Latest Off Block Time' : 'Earliest Off Block Time';
-        if(els.takeoffLabel) els.takeoffLabel.textContent = isBefore ? 'Latest Takeoff Time' : 'Earliest Takeoff Time';
-
-        const curfewTime = getTimeStr('curfewHr', 'curfewMin');
-        const ftTime = getTimeStr('ftHr', 'ftMin');
-        const txoTime = getTimeStr('txoHr', 'txoMin');
-        const txiTime = getTimeStr('txiHr', 'txiMin');
-
-        if (!curfewTime || !ftTime || !txoTime || !txiTime) {
-            if(els.resultEOBT) els.resultEOBT.textContent = '--:--';
-            if(els.resultETOT) els.resultETOT.textContent = '--:--';
+        const cf = curfewUTC();
+        const pbEl = $('cfPushback'), toEl = $('cfTakeoff'), schEl = $('cfSchedule'), tlWrap = $('cfTimelineWrap');
+        if (!cf || grand <= 0 || secs.length === 0) {
+            gFirstOut = null;
+            pbEl.style.color = '#a8a29e'; pbEl.textContent = '輸入宵禁與航段後計算';
+            toEl.style.color = '#a8a29e'; toEl.textContent = '--';
+            schEl.classList.add('hide'); tlWrap.classList.add('hide');
             return;
         }
 
-        const curfewMins = timeToMins(curfewTime);
-        const ftMins = timeToMins(ftTime);
-        const txoMins = timeToMins(txoTime);
-        const txiMins = timeToMins(txiTime);
-
-        let targetTouchdownMins = curfewMins;
-        if (state.curfewType === 'parking') {
-            targetTouchdownMins = curfewMins - txiMins;
+        const targetLastIn = state.type === 'parking' ? cf : new Date(cf.getTime() + lastTxi * 60000);
+        const sched = []; let cursorIn = targetLastIn;
+        for (let i = secs.length - 1; i >= 0; i--) {
+            const inT = cursorIn;
+            const outT = new Date(inT.getTime() - durs[i].dur * 60000);
+            sched[i] = { out: outT, in: inT };
+            if (i > 0) cursorIn = new Date(outT.getTime() - taMins[i - 1] * 60000);
         }
+        const firstOut = sched[0].out;
+        const firstTakeoff = new Date(firstOut.getTime() + durs[0].txo * 60000);
+        gFirstOut = firstOut;
 
-        const takeoffMins = targetTouchdownMins - ftMins;
-        const offBlockMins = takeoffMins - txoMins;
+        pbEl.style.color = ''; pbEl.innerHTML = dual(firstOut);
+        toEl.style.color = ''; toEl.innerHTML = dual(firstTakeoff);
 
-        if(els.resultETOT) els.resultETOT.textContent = minsToTime(takeoffMins);
-        if(els.resultEOBT) els.resultEOBT.textContent = minsToTime(offBlockMins);
-    }
-
-    function updateTypeToggleUI() {
-        els.typeBtns.forEach(btn => {
-            if (btn.dataset.type === state.curfewType) btn.classList.add('active');
-            else btn.classList.remove('active');
+        let rows = '';
+        sched.forEach((s, i) => {
+            rows += `<div style="display:flex;justify-content:space-between;font-size:.8rem;"><span style="font-weight:800;color:#78716c;">Sector ${i + 1}</span><span class="cf-utc" style="font-family:ui-monospace,monospace;">OUT ${pad(s.out.getUTCHours())}${pad(s.out.getUTCMinutes())}z → IN ${pad(s.in.getUTCHours())}${pad(s.in.getUTCMinutes())}z</span></div>`;
         });
-        if(els.typeBgPill) els.typeBgPill.style.transform = state.curfewType === 'landing' ? 'translateX(0)' : 'translateX(100%)';
+        schEl.innerHTML = `<div class="cf-label" style="margin-bottom:4px;">回推時刻表 (UTC Z)</div>` + rows;
+        schEl.classList.remove('hide');
+
+        drawTimeline(sched, taMins, firstOut, targetLastIn);
+        tlWrap.classList.remove('hide');
     }
 
-    function updateCondToggleUI() {
-        els.condBtns.forEach(btn => {
-            if (btn.dataset.cond === state.curfewCondition) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
-        if(els.condBgPill) els.condBgPill.style.transform = state.curfewCondition === 'before' ? 'translateX(0)' : 'translateX(100%)';
+    function updateClock() {
+        const now = new Date();
+        $('liveUTCClock').textContent = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+        const cd = $('curfewCountdown');
+        if (gFirstOut) {
+            const signed = gFirstOut.getTime() - now.getTime();
+            const past = signed < 0;
+            let diff = Math.abs(signed);
+            const h = Math.floor(diff / 3600000), m = Math.floor(diff / 60000) % 60, s = Math.floor(diff / 1000) % 60;
+            cd.textContent = (past ? '已超過後推 ' : '距最晚後推 ') + `${pad(h)}:${pad(m)}:${pad(s)}`;
+            cd.style.color = past ? '#f87171' : (signed < 30 * 60000 ? '#fbbf24' : '#86efac');
+        } else {
+            cd.textContent = '距最晚後推 --:--:--';
+            cd.style.color = '#d8c4ad';
+        }
     }
 
-    els.typeBtns.forEach(btn => {
-        btn.onclick = (e) => {
-            state.curfewType = e.target.dataset.type;
-            updateTypeToggleUI();
-            calculateTimes();
-        };
+    // ---- events ----
+    box.querySelectorAll('.cf-type-btn').forEach(b => b.onclick = () => { state.type = b.dataset.type; updateTypeUI(); recompute(); });
+    $('cfBadge').onclick = () => {
+        const cur = curfewUTC();
+        state.mode = state.mode === 'zulu' ? 'local' : 'zulu';
+        updateBadge();
+        if (cur) renderCurfewFromUTC(cur);
+        recompute();
+    };
+    box.addEventListener('input', (e) => {
+        const el = e.target;
+        if (!el.classList) return;
+        if (el.classList.contains('cf-ntime')) el.value = fmtNTime(el.value);
+        else if (el.classList.contains('cf-nint')) el.value = (el.value || '').replace(/\D/g, '').slice(0, 3);
+        recompute();
     });
-
-    els.condBtns.forEach(btn => {
-        btn.onclick = (e) => {
-            state.curfewCondition = e.target.dataset.cond;
-            updateCondToggleUI();
-            calculateTimes();
-        };
+    box.addEventListener('change', (e) => { if (e.target && (e.target.id === 'cfDate' || e.target.id === 'cfTz')) recompute(); });
+    box.addEventListener('focusin', (e) => {
+        const el = e.target;
+        if (el && el.classList && (el.classList.contains('cf-ntime') || el.classList.contains('cf-nint')))
+            setTimeout(() => { try { el.select(); } catch (_) {} }, 0);
     });
+    $('cfAddBtn').onclick = addSector;
+    $('cfRemoveBtn').onclick = removeSector;
+    $('cfClearBtn').onclick = () => {
+        box.querySelectorAll('.cf-trip').forEach(i => i.value = '');
+        box.querySelectorAll('.cf-txo, .cf-txi').forEach(i => i.value = '15');
+        box.querySelectorAll('.cf-ta-in').forEach(i => i.value = '01:00');
+        $('cfTime').value = '';
+        recompute();
+    };
+    $('resetCurfewBtn').onclick = () => {
+        state.type = 'parking'; state.mode = 'zulu';
+        while (state.sectorCount > 1) {
+            box.querySelector(`.cf-sector[data-sec="${state.sectorCount}"]`).classList.add('hide');
+            const ta = box.querySelector(`.cf-ta[data-ta="${state.sectorCount - 1}"]`); if (ta) ta.classList.add('hide');
+            state.sectorCount--;
+        }
+        $('cfTz').value = '8';
+        box.querySelectorAll('.cf-trip').forEach(i => i.value = '');
+        box.querySelectorAll('.cf-txo, .cf-txi').forEach(i => i.value = '15');
+        box.querySelectorAll('.cf-ta-in').forEach(i => i.value = '01:00');
+        setDefaultDate(); $('cfTime').value = '';
+        updateTypeUI(); updateBadge(); renderSectorButtons(); recompute();
+    };
 
-    dropdownIds.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.onchange = calculateTimes;
-    });
-
-    if(els.resetBtn) {
-        els.resetBtn.onclick = () => {
-            state.curfewType = 'parking'; 
-            state.curfewCondition = 'before';
-            updateTypeToggleUI();
-            updateCondToggleUI();
-            populateDropdowns();
-            calculateTimes();
-        };
-    }
-
-    populateDropdowns();
-    updateTypeToggleUI();
-    updateCondToggleUI();
+    // ---- init ----
+    setDefaultDate();
+    updateTypeUI();
+    updateBadge();
+    renderSectorButtons();
+    recompute();
+    if (curfewClockInterval) clearInterval(curfewClockInterval);
+    curfewClockInterval = setInterval(updateClock, 1000);
+    updateClock();
 }
 
 // ==========================================
