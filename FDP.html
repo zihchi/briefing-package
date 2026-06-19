@@ -28,6 +28,13 @@
     }
     .lcl-text { color: var(--c-local); }
     .utc-text { color: var(--c-utc); }
+    /* Centre all time/number entry and selects */
+    input.ntime, input.nint, .dt-flex-group input[type="date"] { text-align: center; }
+    #baseTz, #restTz { text-align: center; text-align-last: center; }
+    /* LCL / Z reminder chip shown next to each time field */
+    .tz-tag { align-self: center; flex: 0 0 auto; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; padding: 0 6px; border-radius: 6px; }
+    .tz-tag.lcl-text { background: var(--c-local-bg); border: 1px solid var(--c-local-border); }
+    .tz-tag.utc-text { background: var(--c-utc-bg); border: 1px solid var(--c-utc-border); }
     
     body { background-color: var(--bg-main); color: #334155; -webkit-font-smoothing: antialiased; margin: 0; }
     
@@ -428,6 +435,15 @@
 
                     <div id="restBody" class="hide-initially space-y-5">
 
+                    <!-- Rest-location Local TZ (may differ from base on outstation) -->
+                    <div class="w-full">
+                        <div class="bilingual-label mb-2 text-[#8a5a2b]">
+                            <span class="en" style="color:var(--c-local)">Rest Location TZ (Local)</span>
+                            <span class="zh">休息地當地時區（預設台灣 UTC+8）</span>
+                        </div>
+                        <select id="restTz" onchange="onRestTzChange()" class="!w-full sm:!w-auto sm:!min-w-[140px] font-bold !rounded-lg" style="border-color:var(--c-local-border);background:var(--c-local-bg);color:var(--c-local)"></select>
+                    </div>
+
                     <!-- FDP Start reference (from Step 1) -->
                     <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                         <div class="text-[0.65rem] font-extrabold text-emerald-700 uppercase mb-1">FDP Start（Step 1）</div>
@@ -668,11 +684,21 @@ function padNTime(raw) {
     h = Math.min(h||0, 23); m = Math.min(m||0, 59);
     return pad(h)+':'+pad(m);
 }
+function focusNextSeq(el) {
+    const all = [...document.querySelectorAll('#p2Sectors .p2-sector:not(.hide-initially) .oooi-seq')];
+    const i = all.indexOf(el);
+    if(i >= 0 && i < all.length - 1) setTimeout(() => { all[i+1].focus(); }, 0);
+}
 document.addEventListener('input', (e) => {
     const el = e.target;
     if(!el.classList) return;
-    if(el.classList.contains('ntime')) el.value = fmtNTime(el.value);
-    else if(el.classList.contains('nint')) el.value = (el.value||'').replace(/\D/g,'').slice(0,4);
+    if(el.classList.contains('ntime')) {
+        el.value = fmtNTime(el.value);
+        // OOOI: auto-jump to the next field once 4 digits are entered (top→down)
+        if(el.classList.contains('oooi-seq') && el.value.replace(/\D/g,'').length === 4) focusNextSeq(el);
+    } else if(el.classList.contains('nint')) {
+        el.value = (el.value||'').replace(/\D/g,'').slice(0,4);
+    }
 });
 // Select-all on focus so you can just type 4 digits over the existing value.
 document.addEventListener('focusin', (e) => {
@@ -687,10 +713,14 @@ document.addEventListener('change', (e) => {
 }, true);
 
 let currentLocation = 'home';
-// Local fields use Base TZ; UTC fields (blockIn) are entered in Zulu.
+// Field zones: report = Base TZ (departure local); blockIn = UTC (Zulu);
+// rest fields = Rest-location TZ (may differ on outstation).
 const timeFields = ['report', 'blockIn', 'release', 'dhdEnd', 'nextReport', 'hotelIn', 'hotelOut'];
-const isUtcField = (f) => f === 'blockIn';
+const fieldZone = (f) => f === 'blockIn' ? 'utc' : (f === 'report' ? 'base' : 'rest');
+const isUtcField = (f) => fieldZone(f) === 'utc';
 const baseTzVal = () => parseInt(document.getElementById('baseTz').value) || 8;
+const restTzVal = () => parseInt((document.getElementById('restTz')||{}).value) || 8;
+const tzOffsetFor = (f) => { const z = fieldZone(f); return z === 'utc' ? 0 : (z === 'base' ? baseTzVal() : restTzVal()); };
 const parsedTimesUTC = {};
 let gNextReportManual = false;  // user has manually edited Next FDP Start
 
@@ -774,8 +804,9 @@ const p2Diff  = (a,b) => { let d = b - a; if(d < 0) d += 1440; return d; };
 function p2InputField(label, cls, kind, group) {
     const numClass = (kind === 'int') ? 'nint' : 'ntime';
     const ph = (kind === 'int') ? '0' : 'HH:MM';
+    const seq = (group === 'oooi') ? ' oooi-seq' : '';
     return `<div class="min-w-0"><div class="text-[0.55rem] text-slate-400 font-bold text-center uppercase">${label}</div>`
-         + `<input type="text" inputmode="numeric" placeholder="${ph}" class="${cls} ${numClass} !text-xs !px-1 !py-1.5 text-center" onchange="p2Edited(this,'${group}')"></div>`;
+         + `<input type="text" inputmode="numeric" placeholder="${ph}" class="${cls} ${numClass}${seq} !text-xs !px-1 !py-1.5 text-center" onchange="p2Edited(this,'${group}')"></div>`;
 }
 
 // Track which input group the user last edited per sector, so OOOI<->TTT
@@ -1031,14 +1062,17 @@ function recomputeP2() {
 }
 
 function initApp() {
-    const baseSel = document.getElementById('baseTz');
-    baseSel.innerHTML = "";
-    for(let i=-12; i<=14; i++) {
-        const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
-        const opt = new Option(`UTC${sign}${i}`, i);
-        if(i === 8) opt.selected = true;
-        baseSel.add(opt);
-    }
+    ['baseTz', 'restTz'].forEach(id => {
+        const sel = document.getElementById(id);
+        if(!sel) return;
+        sel.innerHTML = "";
+        for(let i=-12; i<=14; i++) {
+            const sign = i > 0 ? '+' : (i === 0 ? '±' : '');
+            const opt = new Option(`UTC${sign}${i}`, i);
+            if(i === 8) opt.selected = true;
+            sel.add(opt);
+        }
+    });
 
     document.querySelectorAll('.radio-pill input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -1068,6 +1102,15 @@ function initApp() {
         const tEl = document.getElementById(`time_${f}`);
         if(dEl) dEl.setAttribute('aria-label', `${label} date 日期`);
         if(tEl) tEl.setAttribute('aria-label', `${label} time 時間`);
+        // LCL / Z reminder chip in each time field
+        if(tEl && !document.getElementById(`tag_${f}`)) {
+            const utc = isUtcField(f);
+            const chip = document.createElement('span');
+            chip.id = `tag_${f}`;
+            chip.className = 'tz-tag ' + (utc ? 'utc-text' : 'lcl-text');
+            chip.textContent = utc ? 'Z' : 'LCL';
+            tEl.insertAdjacentElement('afterend', chip);
+        }
     });
     document.getElementById('baseTz').setAttribute('aria-label', 'Base WOCL timezone WOCL基準時區');
     document.getElementById('flightTime').setAttribute('aria-label', 'Total block time 總飛時');
@@ -1105,7 +1148,8 @@ function setBadge(field) {
     const utc = parsedTimesUTC[field];
     if(!badge || !utc) return;
     if(isUtcField(field)) {
-        const lcl = new Date(utc.getTime() + baseTzVal()*3600000);
+        // UTC field → show its local (rest-location) projection
+        const lcl = new Date(utc.getTime() + restTzVal()*3600000);
         badge.className = "tz-badge lcl";
         badge.innerHTML = `<i class="fas fa-location-dot"></i> LCL: ${pad(lcl.getUTCHours())}${pad(lcl.getUTCMinutes())}`;
     } else {
@@ -1117,17 +1161,22 @@ function setBadge(field) {
 function renderFieldFromUTC(field) {
     const utc = parsedTimesUTC[field];
     if(!utc) return;
-    const display = isUtcField(field) ? utc : new Date(utc.getTime() + baseTzVal()*3600000);
+    const display = new Date(utc.getTime() + tzOffsetFor(field)*3600000);
     const dEl = document.getElementById(`date_${field}`);
     const tEl = document.getElementById(`time_${field}`);
     if(dEl) dEl.value = `${display.getUTCFullYear()}-${pad(display.getUTCMonth()+1)}-${pad(display.getUTCDate())}`;
     if(tEl) tEl.value = `${pad(display.getUTCHours())}:${pad(display.getUTCMinutes())}`;
 }
 
-// Base TZ changed → keep each local field's wall-clock, recompute its UTC;
-// UTC fields keep their instant but refresh their (local) badge.
+// Base TZ changed → re-process the base field (report); refresh badges.
 function reprocessLocalFields() {
-    timeFields.forEach(f => { if(isUtcField(f)) setBadge(f); else processTimeChange(f); });
+    processTimeChange('report');
+    safeCalculate();
+}
+// Rest TZ changed → keep rest fields' wall-clock, recompute UTC; refresh blockIn badge.
+function onRestTzChange() {
+    timeFields.forEach(f => { if(fieldZone(f) === 'rest') processTimeChange(f); });
+    setBadge('blockIn');
     safeCalculate();
 }
 
@@ -1141,7 +1190,7 @@ function processTimeChange(field) {
     const rawMs = new Date(`${dateStr}T${timeStr}:00Z`).getTime();
     if(isNaN(rawMs)) return;
 
-    const off = isUtcField(field) ? 0 : baseTzVal();   // local→UTC, or UTC as-is
+    const off = tzOffsetFor(field);   // local→UTC by the field's zone, or UTC as-is
     let actualUTC = new Date(rawMs - off*3600000);
 
     if(field === 'nextReport') gNextReportManual = true;
@@ -1329,7 +1378,7 @@ function calculateCore() {
     const tzLabel = `UTC${baseOffset>0?'+':(baseOffset===0?'±':'')}${baseOffset}`;
     document.getElementById('valMFDP').innerText = fmt(maxFDP);
     document.getElementById('mfdpDur').innerText = fmt(maxFDP);
-    document.getElementById('txtMFDPEnd').innerText = `End ${pad(endLcl.getUTCHours())}${pad(endLcl.getUTCMinutes())} LCL`;
+    document.getElementById('txtMFDPEnd').innerText = `End ${maxFDPEnd.getUTCMonth()+1}/${maxFDPEnd.getUTCDate()} ${pad(maxFDPEnd.getUTCHours())}${pad(maxFDPEnd.getUTCMinutes())}z`;
     document.getElementById('mfdpEnd').innerHTML =
         `<div class="lcl-text text-lg font-extrabold leading-tight">${fullDT(endLcl)} <span class="text-xs font-bold">LCL ${tzLabel}</span></div>` +
         `<div class="utc-text text-base font-bold leading-tight mt-0.5">${fullDT(maxFDPEnd)} <span class="text-xs font-bold">UTC&nbsp;Z</span></div>`;
@@ -1344,10 +1393,10 @@ function calculateCore() {
     const fdpStartDisp = document.getElementById('fdpStartDisp');
     if(fdpStartDisp) {
         const repLclD = new Date(report.getTime() + baseOffset*3600000);
-        fdpStartDisp.className = 'font-mono text-sm break-words';
+        fdpStartDisp.className = 'font-mono break-words';
         fdpStartDisp.innerHTML =
-            `<span class="lcl-text font-bold">${fullDT(repLclD)} LCL ${tzLabel}</span>` +
-            ` <span class="utc-text font-bold">· ${fullDT(report)}z</span>`;
+            `<div class="lcl-text font-bold">${fullDT(repLclD)} LCL ${tzLabel}</div>` +
+            `<div class="utc-text font-bold mt-0.5">${fullDT(report)} UTC Z</div>`;
     }
 
     // Expose Max FDP end + report for Phase 2 back-calculation
@@ -1402,7 +1451,7 @@ function calculateCore() {
             if(r30) {
                 if(blockIn) {
                     const rs = new Date(blockIn.getTime() + 30*60000);
-                    const rsL = new Date(rs.getTime() + baseOffset*3600000);
+                    const rsL = new Date(rs.getTime() + restTzVal()*3600000);
                     r30.innerHTML = `${pad(rsL.getUTCHours())}${pad(rsL.getUTCMinutes())} LCL · ${pad(rs.getUTCHours())}${pad(rs.getUTCMinutes())}z`;
                 } else { r30.innerText = '請先輸入 Block In'; }
             }
