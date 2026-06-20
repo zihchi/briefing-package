@@ -242,6 +242,19 @@
                                     <option value="" disabled selected>Loading...</option>
                                 </select>
                             </div>
+                            <div id="acft-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Registration</span>
+                                    <input type="text" id="inp-reg-custom-id" class="ios-input uppercase !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. B-58308" maxlength="10">
+                                </div>
+                                <div class="flex justify-between w-full items-center">
+                                    <span class="text-[15px] text-[var(--jx-gray)]">Model / Type</span>
+                                    <input type="text" id="inp-reg-custom-type" class="ios-input !text-[var(--jx-dark)] !text-[15px]" value="A339" placeholder="e.g. A339">
+                                </div>
+                                <div class="w-full flex justify-end">
+                                    <button onclick="saveNewAircraftToCloud()" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1099,7 +1112,10 @@
                     return;
                 }
                 
-                dbAircrafts = data.aircrafts || []; populateAircraftDropdowns();
+                const cloudAcfts = data.aircrafts || [];
+                const cloudIds = new Set(cloudAcfts.map(a => String(a.aircraft_id).toUpperCase()));
+                const localOnlyAcfts = dbAircrafts.filter(a => (a.is_local == 1 || a.is_local == "1") && !cloudIds.has(String(a.aircraft_id).toUpperCase()));
+                dbAircrafts = cloudAcfts.concat(localOnlyAcfts); populateAircraftDropdowns();
                 localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
 
                 dbPilots = (data.pilots || []).map(p => {
@@ -1315,7 +1331,8 @@
             document.getElementById('dash-dep').textContent = document.getElementById('inp-dep').value.toUpperCase() || "---";
             document.getElementById('dash-arr').textContent = document.getElementById('inp-arr').value.toUpperCase() || "---";
             const acft = document.getElementById('inp-acft-select').value;
-            const reg = document.getElementById('inp-reg').value;
+            let reg = document.getElementById('inp-reg').value;
+            if (reg === '__add_new__') reg = '';
             document.getElementById('dash-acft').textContent = reg ? `${reg} (${acft})` : `(${acft || '---'})`;
         }
 
@@ -1649,10 +1666,46 @@
             regSelect.innerHTML = `<option value="" disabled selected>Select Registration...</option>`;
             const activeAcfts = dbAircrafts.filter(a => a.is_active == 1 || a.is_active == "1");
             activeAcfts.forEach(a => regSelect.innerHTML += `<option value="${a.aircraft_id}">${a.aircraft_id}</option>`);
+            regSelect.innerHTML += `<option value="__add_new__">➕ Add new registration...</option>`;
         }
 
         function handleRegistrationChange() {
+            const regSelect = document.getElementById('inp-reg');
+            const wrapper = document.getElementById('acft-custom-wrapper');
+            if (regSelect.value === '__add_new__') {
+                wrapper.classList.remove('hidden');
+                wrapper.classList.add('flex');
+                document.getElementById('inp-reg-custom-id').focus();
+            } else {
+                wrapper.classList.add('hidden');
+                wrapper.classList.remove('flex');
+            }
             updateEntryDash();
+        }
+
+        function saveNewAircraftToCloud() {
+            const idInput = document.getElementById('inp-reg-custom-id');
+            const typeInput = document.getElementById('inp-reg-custom-type');
+            const regId = idInput.value.trim().toUpperCase();
+            const regType = typeInput.value.trim() || 'A339';
+            const wrapper = document.getElementById('acft-custom-wrapper');
+            const regSelect = document.getElementById('inp-reg');
+            if (!regId) { idInput.focus(); return; }
+
+            const exists = dbAircrafts.some(a => String(a.aircraft_id).toUpperCase() === regId);
+            if (!exists) {
+                dbAircrafts.push({ aircraft_id: regId, type: regType, is_active: 1, is_local: 1 });
+                localStorage.setItem(CACHE_AIRCRAFTS, JSON.stringify(dbAircrafts));
+                queueAction({ action: 'add_aircraft', aircraft_id: regId, type: regType }, true);
+            }
+            populateAircraftDropdowns();
+            regSelect.value = regId;
+            wrapper.classList.add('hidden');
+            wrapper.classList.remove('flex');
+            idInput.value = '';
+            typeInput.value = 'A339';
+            updateEntryDash();
+            showToast(`機號 ${regId} 已新增`);
         }
 
         function populatePilotDropdown() {
