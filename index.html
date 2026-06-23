@@ -674,7 +674,7 @@
       </div>
       <div class="w4-cell">
         <div class="w4-label"><span>🌬️ 高空風 (FL390)</span><button onclick="refreshIframe('windyWindFL390')">↻</button></div>
-        <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=6&level=200h&overlay=wind"></iframe>
+        <iframe id="windyWindFL390" src="https://embed.windy.com/embed2.html?lat=23.5&lon=120.9&zoom=3&level=200h&overlay=wind"></iframe>
       </div>
     </div>
   </div>
@@ -850,6 +850,13 @@
     var panel = document.getElementById('fd-panel');
     if(!sel || !panel) return;
 
+    // 持久化：把選到的航班存進 sessionStorage，切到外部連結再回來時還原。
+    // 手動關閉面板（✕／清空下拉）會清除；手動重新整理頁面也會清除（見下方 restore）；
+    // 完全關閉 App 時 sessionStorage 自動失效，符合「手動關掉才消失」。
+    var FD_KEY = 'fd-selected-flight';
+    function saveSel(flightNo){ try{ sessionStorage.setItem(FD_KEY, flightNo); }catch(e){} }
+    function clearSel(){ try{ sessionStorage.removeItem(FD_KEY); }catch(e){} }
+
     var SCHED_GAS = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
     var FIDS_GAS  = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec";
     // IATA → [緯度, 經度]（星宇航點，取自 app.js coordsDB）
@@ -983,7 +990,8 @@
 
     function select(flightNo){
       var info=(window.flights||[]).find(function(f){return f.flightNo===flightNo;});
-      if(!info){ panel.classList.remove('open'); return; }
+      if(!info){ panel.classList.remove('open'); clearSel(); return; }
+      saveSel(flightNo);
       var parts=info.route.split('/'), orig=parts[0], dest=parts[1], tpeIsOrigin=(orig==='TPE');
       document.getElementById('fd-no').textContent='JX'+flightNo;
       document.getElementById('fd-route').textContent=orig+' → '+dest;
@@ -1003,8 +1011,22 @@
         catch(e){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">FIDS 載入失敗</span>'; }
       });
     }
-    sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else panel.classList.remove('open'); });
-    document.getElementById('fd-close').addEventListener('click', function(){ panel.classList.remove('open'); sel.value=''; });
+    sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else { panel.classList.remove('open'); clearSel(); } });
+    document.getElementById('fd-close').addEventListener('click', function(){ panel.classList.remove('open'); sel.value=''; clearSel(); });
+
+    // 還原上次選擇：手動重新整理（含「🔄 重新整理」鈕）時清空，其餘情況（切外部連結回來、被背景凍結後恢復）才還原。
+    (function restore(){
+      var navType='';
+      try{ var nav=performance.getEntriesByType('navigation'); navType=(nav&&nav[0]&&nav[0].type)||''; }catch(e){}
+      if(navType==='reload'){ clearSel(); return; }
+      var saved=''; try{ saved=sessionStorage.getItem(FD_KEY)||''; }catch(e){}
+      if(!saved) return;
+      // 確認下拉裡有這個航班才還原（選單由上方 build() 動態建立）
+      var ok=Array.prototype.some.call(sel.options, function(o){ return o.value===saved; });
+      if(!ok){ clearSel(); return; }
+      sel.value=saved;
+      select(saved);
+    })();
   })();
 
   if ('serviceWorker' in navigator) {
