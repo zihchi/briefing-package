@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pilot Logbook">
+    <link rel="manifest" href="./Captain_Logbook_Cloud.webmanifest">
     <title>Pilot Logbook</title>
     
     <!-- External Libraries -->
@@ -602,101 +603,15 @@
     <!-- 🚀 PWA 離線核心架構 🚀 -->
     <!-- ========================================== -->
     <script>
-        const manifestData = {
-            "name": "Pilot Logbook",
-            "short_name": "Logbook",
-            "start_url": "./",
-            "display": "standalone",
-            "background_color": "#F4F0EB",
-            "theme_color": "#2C2C2E",
-            "icons": [
-                {
-                    "src": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23C2A370'/%3E%3Ctext x='50' y='65' font-size='50' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EJX%3C/text%3E%3C/svg%3E",
-                    "sizes": "192x192",
-                    "type": "image/svg+xml"
-                }
-            ]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = URL.createObjectURL(manifestBlob);
-        document.head.appendChild(link);
-
-        // 使用安全的字串相加，完全避免 Template Literals (反引號) 帶來的 Syntax Error
-        const swCode = "const CACHE_NAME = 'jx-logbook-v2.6';\n" +
-        "const urlsToCache = [\n" +
-        "    './',\n" +
-        "    './index.html',\n" +
-        "    'https://cdn.tailwindcss.com',\n" +
-        "    'https://cdn.jsdelivr.net/npm/chart.js',\n" +
-        "    'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',\n" +
-        "    'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js'\n" +
-        "];\n" +
-        "\n" +
-        "self.addEventListener('install', event => {\n" +
-        "    self.skipWaiting();\n" +
-        "    event.waitUntil(\n" +
-        "        caches.open(CACHE_NAME).then(cache => {\n" +
-        "            return Promise.allSettled(urlsToCache.map(url => cache.add(url)));\n" +
-        "        })\n" +
-        "    );\n" +
-        "});\n" +
-        "\n" +
-        "self.addEventListener('activate', event => {\n" +
-        "    self.clients.claim();\n" +
-        "    event.waitUntil(\n" +
-        "        caches.keys().then(cacheNames => {\n" +
-        "            return Promise.all(\n" +
-        "                cacheNames.map(cacheName => {\n" +
-        "                    if (cacheName !== CACHE_NAME) {\n" +
-        "                        return caches.delete(cacheName);\n" +
-        "                    }\n" +
-        "                })\n" +
-        "            );\n" +
-        "        })\n" +
-        "    );\n" +
-        "});\n" +
-        "\n" +
-        "self.addEventListener('fetch', event => {\n" +
-        "    if (event.request.url.includes('script.google.com')) {\n" +
-        "        event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), { headers: { 'Content-Type': 'application/json' } })));\n" +
-        "        return;\n" +
-        "    }\n" +
-        "\n" +
-        "    if (event.request.mode === 'navigate') {\n" +
-        "        event.respondWith(\n" +
-        "            caches.match(event.request).then(cached => {\n" +
-        "                return cached || fetch(event.request).then(res => {\n" +
-        "                    return caches.open(CACHE_NAME).then(cache => { cache.put(event.request, res.clone()); return res; });\n" +
-        "                }).catch(() => caches.match('./'));\n" +
-        "            })\n" +
-        "        );\n" +
-        "        return;\n" +
-        "    }\n" +
-        "\n" +
-        "    event.respondWith(\n" +
-        "        caches.match(event.request).then(cachedResponse => {\n" +
-        "            const fetchPromise = fetch(event.request).then(networkResponse => {\n" +
-        "                if(networkResponse && networkResponse.status === 200) {\n" +
-        "                    const responseToCache = networkResponse.clone();\n" +
-        "                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));\n" +
-        "                }\n" +
-        "                return networkResponse;\n" +
-        "            }).catch(() => {});\n" +
-        "            return cachedResponse || fetchPromise;\n" +
-        "        })\n" +
-        "    );\n" +
-        "});";
-
+        // PWA 由真實的同源靜態檔案提供：
+        //   - manifest：<link rel="manifest" href="./Captain_Logbook_Cloud.webmanifest">（見 <head>）
+        //   - service worker：根目錄共用的 ./service-worker.js（已預快取本頁）
+        // 注意：service worker 的腳本網址必須是 http/https，瀏覽器會拒絕 blob: URL，
+        // 因此這裡不再使用 URL.createObjectURL() 動態產生 SW。
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(registration => {
-                    console.log('PWA ServiceWorker 註冊成功 v2.6');
-                    if (navigator.onLine && window.location.protocol !== 'file:') {
-                        caches.open('jx-logbook-v2.6').then(cache => cache.add(window.location.href)).catch(() => {});
-                    }
+                navigator.serviceWorker.register('./service-worker.js').then(() => {
+                    console.log('PWA ServiceWorker 註冊成功');
                 }).catch(err => console.log('ServiceWorker 註冊失敗: ', err));
             });
         }
