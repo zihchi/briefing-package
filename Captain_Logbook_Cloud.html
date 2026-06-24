@@ -1024,10 +1024,10 @@
                 populatePilotDropdown();
                 localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
 
-                flightLogs = (data.flights || []).filter(row => row.date).map(row => {
+                const mappedFlights = (data.flights || []).filter(row => row.date).map(row => {
                     const acftData = dbAircrafts.find(a => a.aircraft_id === row.aircraft);
                     return {
-                        index: String(row.index), date: safeDateString(row.date), 
+                        index: String(row.index), date: safeDateString(row.date),
                         flt: String(row.filght_number).replace('JX',''), 
                         dep: String(row.airport_departure).trim(), arr: String(row.airport_arrival).trim(), 
                         reg: row.aircraft, acft: acftData ? acftData.type : 'N/A', 
@@ -1043,7 +1043,12 @@
                         fob_out: row.fob_out || '', fob_in: row.fob_in || ''
                     };
                 });
-                
+
+                // 依 index 去重：同一筆紀錄只保留最後一列，防止後端歷史殘留的重複列在畫面上變成多筆
+                const byIndex = new Map();
+                mappedFlights.forEach(f => byIndex.set(String(f.index), f));
+                flightLogs = Array.from(byIndex.values());
+
                 let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
                 queue.forEach(qItem => {
                     if (qItem.action === 'create' || qItem.action === 'update') {
@@ -1838,7 +1843,7 @@
 
                 payloadData = {
                     action: actionType, 
-                    index: document.getElementById('inp-index').value || (actionType === 'create' ? generateNextIndex() : generateUUID()),
+                    index: document.getElementById('inp-index').value || generateUUID(),
                     date: dateStr, filght_number: "JX" + fltInput, 
                     airport_departure: depICAO, airport_arrival: arrICAO,
                     aircraft: document.getElementById('inp-reg').value, time_blockout: outT, time_takeoff: offT, time_landing: onT, time_blockin: inT,
@@ -1881,7 +1886,21 @@
             }
 
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
-            queue.push(payloadData); localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
+            const idxKey = String(payloadData.index);
+            // 佇列中是否還有「尚未成功上傳」的 create（代表雲端上目前還沒有這筆）
+            const hadPendingCreate = queue.some(q => String(q.index) === idxKey && q.action === 'create');
+            // 移除這筆先前排隊但還沒送出的待辦，避免弱網下反覆編輯堆出一串重複的 POST
+            queue = queue.filter(q => String(q.index) !== idxKey);
+
+            if (payloadData.action === 'delete') {
+                // 這筆若還沒上過雲端，刪除只要把佇列裡的待辦丟掉即可，不必通知後端
+                if (!hadPendingCreate) queue.push(payloadData);
+            } else {
+                // 連續離線編輯：原始 create 還沒送成功時，後續修改仍以 create（同一個 index）送出
+                if (hadPendingCreate) payloadData.action = 'create';
+                queue.push(payloadData);
+            }
+            localStorage.setItem(SYNC_QUEUE, JSON.stringify(queue));
             processSyncQueue();
         }
 
