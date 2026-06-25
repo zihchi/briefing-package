@@ -402,7 +402,7 @@
     .fd-no { font-weight: 900; font-size: 1.1rem; color: var(--brand); font-family: ui-monospace,'SF Mono',monospace; }
     .fd-rt { font-weight: 800; font-size: 1.05rem; color: var(--text); letter-spacing: 1px; }
     .fd-close { position: absolute; top: 6px; right: 0; background: none; border: 0; font-size: 1.15rem; color: var(--text-faint); cursor: pointer; padding: 2px 8px; z-index: 1; }
-    .fd-ops { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 0; padding-right: 32px; }
+    .fd-ops { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin-top: 0; padding-right: 32px; }
     .fd-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
     .fd-end { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 9px 12px; box-shadow: var(--shadow-card); min-width: 0; }
     .fd-end .ap { font-weight: 900; font-size: clamp(1rem,4.5vw,1.2rem); color: var(--brand); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
@@ -411,13 +411,18 @@
     .fd-end .lbl { font-size: 0.52rem; font-weight: 800; color: var(--text-faint); letter-spacing: 0.5px; width: 26px; flex: 0 0 26px; }
     .fd-end .tm { font-size: clamp(0.95rem,4vw,1.05rem); font-weight: 800; color: var(--text); }
     .fd-end .dt { font-size: 0.6rem; color: var(--text-muted); font-weight: 700; }
-    .fd-fids { display: contents; }
-    .fd-chip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 10px; font-size: 0.74rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-    .fd-chip b { color: var(--brand); }
-    .fd-turb { display: inline-flex; align-items: center; gap: 8px; }
-    .fd-turb img { height: 40px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; box-shadow: var(--shadow-card); }
-    .fd-turb .btn { margin: 0; padding: 5px 11px; font-size: 0.78rem; }
-    .fd-note { font-size: 0.75rem; color: var(--text-faint); }
+    /* 整列式航班看板（FIDS 風）：GATE / TERM / BELT 一條橫幅，等寬數字、細灰線分隔 */
+    .fd-fids { display: inline-flex; align-items: stretch; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
+    .fd-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px clamp(13px, 2.4vw, 22px); }
+    .fd-cl { font-size: 0.64rem; font-weight: 800; letter-spacing: 1.5px; color: #a8896b; }
+    .fd-cv { font-size: clamp(1.5rem, 4.2vw, 1.85rem); font-weight: 800; line-height: 1.1; color: var(--text); font-family: ui-monospace,'SF Mono',Menlo,monospace; }
+    .fd-cd { width: 1px; background: var(--border); margin: 9px 0; flex: 0 0 1px; align-self: stretch; }
+    .fd-turb { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 4px 12px; }
+    .fd-turb .tl { font-size: 0.64rem; font-weight: 800; letter-spacing: 1.5px; color: #a8896b; }
+    .fd-turb img { height: 42px; max-width: 130px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; display: block; transition: transform .18s, box-shadow .18s; }
+    .fd-turb img:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(74,54,39,0.18); }
+    .fd-turb-fallback { margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); border: 1px solid var(--border); border-radius: var(--radius-pill); cursor: pointer; }
+    .fd-note { font-size: 0.78rem; color: var(--text-faint); padding: 13px 16px; white-space: nowrap; }
     .fd-lb { position: fixed; inset: 0; z-index: 2000; background: rgba(40,28,18,0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 20px; overflow: auto; }
     .fd-lb.open { display: flex; }
     .fd-lb img { max-width: 96vw; max-height: 42vh; border-radius: 8px; background: #fff; }
@@ -425,12 +430,13 @@
     .fd-lb .cap-link { color: #8ec5ff; font-weight: 700; font-size: 0.9rem; text-decoration: underline; padding: 16px 10px; display: inline-block; }
     .fd-lb .cap-link:hover { color: #c7e2ff; }
 
-    /* iPad / 寬螢幕：起訖卡與 Gate/航廈/亂流同列，整體更扁 */
+    /* iPad Pro 11" 橫向：看板條 + 亂流 + 起訖卡全部同一列、等高對齊 */
     @media (min-width: 720px) {
-      .app-topbar .fd-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-right: 36px; }
+      .app-topbar .fd-inner { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; padding-right: 36px; }
       .app-topbar .fd-ops { display: contents; }
       .app-topbar .fd-ends { display: contents; }
-      .app-topbar .fd-end { flex: 1 1 240px; margin-top: 0; padding: 7px 12px; }
+      .app-topbar .fd-fids, .app-topbar .fd-turb { flex: 0 0 auto; }
+      .app-topbar .fd-end { flex: 1 1 220px; margin-top: 0; padding: 7px 12px; }
     }
 
     .app-hero {
@@ -955,23 +961,28 @@
     }
     function renderFids(f, tpeIsOrigin){
       var box=document.getElementById('fd-fids');
-      if(!f){ box.innerHTML='<span class="fd-note">桃機 FIDS 查無今日此航班（可能尚未開放或非今日班）</span>'; return; }
-      var chips=[];
-      chips.push('<span class="fd-chip">GATE <b>'+((f.Gate||'').trim()||'—')+'</b></span>');
-      chips.push('<span class="fd-chip">航廈 <b>'+(f.Terminal?('T'+f.Terminal):'—')+'</b></span>');
-      if(tpeIsOrigin) chips.push('<span class="fd-chip">櫃檯 <b>'+((f.CheckCounter||'').trim()||'—')+'</b></span>');
-      else chips.push('<span class="fd-chip">Belt <b>'+((f.BaggageClaim||'').trim()||'—')+'</b></span>');
-      box.innerHTML = chips.join('');
+      if(!f){ box.innerHTML='<span class="fd-note">桃機 FIDS 查無今日此航班</span>'; return; }
+      var cells=[
+        ['GATE', (f.Gate||'').trim()||'—'],
+        ['TERM', f.Terminal?('T'+f.Terminal):'—'],
+        tpeIsOrigin ? ['DESK', (f.CheckCounter||'').trim()||'—']
+                    : ['BELT', (f.BaggageClaim||'').trim()||'—']
+      ];
+      box.innerHTML = cells.map(function(c){
+        return '<div class="fd-cell"><span class="fd-cl">'+c[0]+'</span><span class="fd-cv">'+c[1]+'</span></div>';
+      }).join('<div class="fd-cd"></div>');
     }
     function renderTurb(flightNo, route){
       var box=document.getElementById('fd-turb');
       var t=todayTPE(), src='chartcache/'+flightNo+'-'+t+'.png';
-      box.innerHTML='<img id="fd-turb-img" alt="亂流縮圖" src="'+src+'"><button class="btn" id="fd-turb-btn">查看亂流圖</button>';
-      var img=document.getElementById('fd-turb-img');
-      img.addEventListener('error', function(){ img.style.display='none'; });
       function open(){ openLightbox(flightNo, route, t); }
+      box.innerHTML='<span class="tl">TURB</span><img id="fd-turb-img" title="點看亂流大圖" alt="亂流縮圖（點看大圖）" src="'+src+'">';
+      var img=document.getElementById('fd-turb-img');
       img.addEventListener('click', open);
-      document.getElementById('fd-turb-btn').addEventListener('click', open);
+      img.addEventListener('error', function(){
+        box.innerHTML='<button class="fd-turb-fallback" type="button">🌀 亂流圖</button>';
+        box.querySelector('.fd-turb-fallback').addEventListener('click', open);
+      });
     }
     function openLightbox(flightNo, route, today){
       var lb=document.getElementById('fd-lb');
