@@ -757,7 +757,8 @@ window.fetchHistoryMetarPopup = async function(icao) {
     container.innerHTML = `<div style="text-align: center; color: #8e44ad; font-size: 0.9em; padding: 20px;">🔄 正在獲取 ${icao} 過去 24 小時紀錄...</div>`;
 
     try {
-        const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
+        // ⏱️ 時間戳破代理快取(同 fetchBulkWeatherFast)，確保歷史紀錄也抓最新
+        const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24&_=${Date.now()}`;
 
         const fetchWithTimeout = async (url, ms, label) => {
             const controller = new AbortController();
@@ -1092,7 +1093,9 @@ let fleetMarkersLayer;
 // 🌍 全域共用：並行 race 多條 proxy 鏈路,第一個拿到資料就回傳 — 比序列備援快 + 不會被單條卡住
 const fetchBulkWeatherFast = async (icaoList, type) => {
     if(!icaoList) return [];
-    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
+    // ⏱️ 加唯一時間戳：讓公用代理(corsproxy/codetabs/allorigins)的伺服器端快取認不得此網址、被迫向 NOAA 取最新
+    //    → 解決「明明有新報文、按重新整理卻一直是舊的」(代理回舊快取且常贏過 worker)
+    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_=${Date.now()}`;
 
     const fetchWithTimeout = async (url, timeoutMs, label) => {
         const controller = new AbortController();
