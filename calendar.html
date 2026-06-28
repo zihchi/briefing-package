@@ -3,47 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>班表轉換器 (免費版)</title>
-  <!-- Tailwind CSS -->
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <!-- Tesseract.js (Free OCR Engine) -->
-  <script src="[https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js)"></script>
+  <title>班表轉換器 — Flighty 相容</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen flex items-center justify-center font-sans">
 
-  <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
+  <div class="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full">
     <div class="text-center mb-6">
       <h1 class="text-2xl font-bold text-slate-800">✈️ 班表轉行事曆</h1>
-      <p class="text-slate-500 text-sm mt-2">上傳截圖，一鍵生成 Apple 日曆檔 (免 API)</p>
+      <p class="text-slate-500 text-sm mt-2">產出 Flighty 可辨識的 ICS 檔（每段航班獨立事件）</p>
     </div>
 
-    <!-- Upload Area -->
-    <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-      <input type="file" id="rosterImage" accept="image/*" class="hidden" onchange="previewImage(event)">
-      <label for="rosterImage" class="cursor-pointer flex flex-col items-center">
-        <svg class="w-12 h-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-        <span class="text-slate-600 font-medium" id="fileName">點擊選擇班表截圖</span>
-      </label>
+    <!-- Input Mode Tabs -->
+    <div class="flex rounded-lg bg-slate-100 p-1 mb-5">
+      <button id="tabOcr" onclick="switchTab('ocr')" class="flex-1 py-2 text-sm font-semibold rounded-md bg-white text-slate-800 shadow-sm transition-all">截圖 OCR</button>
+      <button id="tabText" onclick="switchTab('text')" class="flex-1 py-2 text-sm font-semibold rounded-md text-slate-500 transition-all">貼上文字</button>
     </div>
-    
-    <!-- Preview Image -->
-    <div class="mt-4 hidden" id="previewContainer">
-      <img id="imagePreview" class="rounded border border-slate-200 max-h-48 mx-auto shadow-sm" src="" alt="預覽圖">
+
+    <!-- OCR Upload Area -->
+    <div id="panelOcr">
+      <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+        <input type="file" id="rosterImage" accept="image/*" class="hidden" onchange="previewImage(event)">
+        <label for="rosterImage" class="cursor-pointer flex flex-col items-center">
+          <svg class="w-12 h-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+          <span class="text-slate-600 font-medium" id="fileName">點擊選擇班表截圖</span>
+        </label>
+      </div>
+      <div class="mt-4 hidden" id="previewContainer">
+        <img id="imagePreview" class="rounded border border-slate-200 max-h-48 mx-auto shadow-sm" src="" alt="預覽圖">
+      </div>
+    </div>
+
+    <!-- Text Paste Area -->
+    <div id="panelText" class="hidden">
+      <p class="text-xs text-slate-500 mb-2">貼上班表附註內容，每行一段航班。支援格式：</p>
+      <pre class="text-xs bg-slate-50 rounded p-2 mb-3 text-slate-400 leading-relaxed">JX233 0800L-0955L
+JX234 1120L-1320L
+報到：2026/07/01 06:10:00 (台北)
+收工：2026/07/01 13:50:00 (台北)</pre>
+      <textarea id="rosterText" rows="8" class="w-full border border-slate-300 rounded-lg p-3 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none" placeholder="在此貼上班表資料…"></textarea>
     </div>
 
     <!-- Convert Button -->
     <button id="convertBtn" onclick="startConversion()" class="mt-6 w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
       開始轉換 ICS
     </button>
-    
+
     <!-- Status Message -->
     <p id="statusMsg" class="text-center text-sm mt-4 text-slate-600 font-medium"></p>
+
+    <!-- Flighty Tip -->
+    <div class="mt-5 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 leading-relaxed">
+      <b>Flighty 同步提示：</b>將下載的 ICS 匯入 iPhone 行事曆後，在 Flighty → Calendar Sync → Import Flights 選擇該行事曆即可自動抓取航班。每段航班標題皆含 "JX XXX" 格式，Flighty 可正確辨識。
+    </div>
   </div>
 
   <script>
-    let base64String = "";
+    const SCHEDULE_API = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
 
-    // 建立班表字典檔 (節錄自 REV13 PDF)
+    let base64String = "";
+    let currentTab = "ocr";
+
     const DUTY_DICTIONARY = {
       "DO": "Days Off",
       "HDO": "Holiday Days Off",
@@ -68,129 +89,166 @@
       "A33 PADV": "A330 Pre-Aircraft Training / Advance"
     };
 
+    const AIRPORT_TZ = {
+      TPE:"Asia/Taipei", TSA:"Asia/Taipei",
+      NRT:"Asia/Tokyo", HND:"Asia/Tokyo", KIX:"Asia/Tokyo",
+      FUK:"Asia/Tokyo", OKA:"Asia/Tokyo", CTS:"Asia/Tokyo", NGO:"Asia/Tokyo",
+      ICN:"Asia/Seoul", PUS:"Asia/Seoul",
+      HKG:"Asia/Hong_Kong", MFM:"Asia/Macau",
+      SIN:"Asia/Singapore", KUL:"Asia/Kuala_Lumpur", PEN:"Asia/Kuala_Lumpur",
+      BKK:"Asia/Bangkok", CNX:"Asia/Bangkok",
+      SGN:"Asia/Ho_Chi_Minh", HAN:"Asia/Ho_Chi_Minh", DAN:"Asia/Ho_Chi_Minh", DAD:"Asia/Ho_Chi_Minh",
+      PNH:"Asia/Phnom_Penh", REP:"Asia/Phnom_Penh",
+      MNL:"Asia/Manila", CEB:"Asia/Manila", CRK:"Asia/Manila",
+      DPS:"Asia/Makassar",
+      LAX:"America/Los_Angeles", SFO:"America/Los_Angeles", SEA:"America/Los_Angeles",
+      JFK:"America/New_York", BOS:"America/New_York",
+      ORD:"America/Chicago",
+      DEN:"America/Denver",
+      ANC:"America/Anchorage",
+      LHR:"Europe/London"
+    };
+
+    /* ── Tab Switching ── */
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('panelOcr').classList.toggle('hidden', tab !== 'ocr');
+      document.getElementById('panelText').classList.toggle('hidden', tab !== 'text');
+      const tabOcr = document.getElementById('tabOcr');
+      const tabText = document.getElementById('tabText');
+      if (tab === 'ocr') {
+        tabOcr.className = "flex-1 py-2 text-sm font-semibold rounded-md bg-white text-slate-800 shadow-sm transition-all";
+        tabText.className = "flex-1 py-2 text-sm font-semibold rounded-md text-slate-500 transition-all";
+      } else {
+        tabText.className = "flex-1 py-2 text-sm font-semibold rounded-md bg-white text-slate-800 shadow-sm transition-all";
+        tabOcr.className = "flex-1 py-2 text-sm font-semibold rounded-md text-slate-500 transition-all";
+      }
+    }
+
+    /* ── Image Preview ── */
     function previewImage(event) {
       const file = event.target.files[0];
       if (!file) return;
-      
       document.getElementById('fileName').innerText = file.name;
-      
       const reader = new FileReader();
       reader.onload = function(e) {
         document.getElementById('imagePreview').src = e.target.result;
         document.getElementById('previewContainer').classList.remove('hidden');
         base64String = e.target.result;
-      }
+      };
       reader.readAsDataURL(file);
     }
 
-    // Tesseract.js OCR Execution
-    async function startConversion() {
-      if (!base64String) {
-        alert("請先上傳圖片！");
-        return;
-      }
-      
-      const btn = document.getElementById('convertBtn');
-      const status = document.getElementById('statusMsg');
-      
-      btn.disabled = true;
-      btn.innerHTML = `
-        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        AI 引擎運算中...
-      `;
-      status.innerText = "正在使用本機端免費 OCR 引擎辨識網格 (首次運行需時稍長)...";
-      status.className = "text-center text-sm mt-4 text-blue-600 font-medium animate-pulse";
-
-      try {
-        // Run OCR with English language model
-        const result = await Tesseract.recognize(base64String, 'eng');
-        const words = result.data.words;
-        
-        if (!words || words.length === 0) {
-          throw new Error("圖片中找不到任何文字，請確認截圖是否清晰！");
-        }
-
-        // Map Tesseract bounding box output to our algorithm's format
-        const annotations = words.map(w => ({
-          description: w.text,
-          boundingPoly: { vertices: [{ x: w.bbox.x0, y: w.bbox.y0 }] }
-        }));
-        
-        // Parse Grid & Generate ICS
-        const rosterData = extractGridData(annotations);
-        const icsString = generateICS(rosterData);
-        
-        status.innerText = "✅ 轉換成功！即將開始下載";
-        status.className = "text-center text-sm mt-4 text-emerald-600 font-medium";
-        downloadICS(icsString);
-        resetButton();
-        
-      } catch (error) {
-        status.innerText = "❌ 系統錯誤：" + error.message;
-        status.className = "text-center text-sm mt-4 text-red-600 font-medium";
-        resetButton();
-      }
+    /* ── Parse flight codes from a duty code string ── */
+    function parseFlightCodes(rawCode) {
+      let code = rawCode.replace(/\s+/g, '');
+      let jxMatches = code.match(/JX\d{1,4}/gi);
+      if (jxMatches) return jxMatches.map(m => m.replace(/JX/i, ''));
+      if (/^\d{2,4}(\/\d{2,4})+$/.test(code)) return code.split('/');
+      if (/^\d{2,4}$/.test(code) && parseInt(code) >= 100) return [code];
+      return [];
     }
 
-    // Grid Parsing Logic (Y coordinate for rows, X for columns)
+    /* ── Lookup flight schedule from TDX API ── */
+    const scheduleCache = {};
+    async function lookupFlight(flightNum) {
+      if (scheduleCache[flightNum] !== undefined) return scheduleCache[flightNum];
+      try {
+        const r = await fetch(SCHEDULE_API + '?flight=JX' + encodeURIComponent(flightNum), { cache: 'no-store' });
+        const j = await r.json();
+        if (j.ok && j.schedules && j.schedules.length > 0) {
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+          const valid = j.schedules.filter(s => {
+            const a = (s.ScheduleStartDate || '').slice(0, 10);
+            const b = (s.ScheduleEndDate || '').slice(0, 10);
+            return (!a || a <= today) && (!b || b >= today);
+          });
+          scheduleCache[flightNum] = valid[0] || j.schedules[0];
+          return scheduleCache[flightNum];
+        }
+      } catch (e) { /* ignore */ }
+      scheduleCache[flightNum] = null;
+      return null;
+    }
+
+    /* ── Parse text-pasted roster data ── */
+    function parseRosterText(text) {
+      const events = [];
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      let reportDate = null;
+      for (const line of lines) {
+        const dateMatch = line.match(/報到\s*[：:]\s*(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (dateMatch) {
+          reportDate = { year: parseInt(dateMatch[1]), month: parseInt(dateMatch[2]), day: parseInt(dateMatch[3]) };
+        }
+      }
+
+      for (const line of lines) {
+        const m = line.match(/^JX\s*(\d{1,4})\s+(\d{4})L?\s*[-–]\s*(\d{4})L?/i);
+        if (m) {
+          const fn = m[1];
+          const depTime = m[2];
+          const arrTime = m[3];
+          events.push({
+            flightNum: fn,
+            depTime: depTime,
+            arrTime: arrTime,
+            year: reportDate ? reportDate.year : new Date().getFullYear(),
+            month: reportDate ? reportDate.month : new Date().getMonth() + 1,
+            day: reportDate ? reportDate.day : new Date().getDate(),
+            fromText: true
+          });
+        }
+      }
+      return events;
+    }
+
+    /* ── OCR Grid Parsing ── */
     function extractGridData(annotations) {
       let rows = [];
       annotations.forEach(item => {
         let y = item.boundingPoly.vertices[0].y;
         let text = item.description;
         let x = item.boundingPoly.vertices[0].x;
-        
         let added = false;
         for (let i = 0; i < rows.length; i++) {
-          if (Math.abs(rows[i].y - y) < 15) { // 15px tolerance
-            rows[i].items.push({ text: text, x: x });
+          if (Math.abs(rows[i].y - y) < 15) {
+            rows[i].items.push({ text, x });
             added = true;
             break;
           }
         }
-        if (!added) {
-          rows.push({ y: y, items: [{ text: text, x: x }] });
-        }
+        if (!added) rows.push({ y, items: [{ text, x }] });
       });
-      
       rows.sort((a, b) => a.y - b.y);
-      
+
       let year = new Date().getFullYear();
       let month = new Date().getMonth() + 1;
       let parsedEvents = [];
       const monthMap = {"JAN":1,"FEB":2,"MAR":3,"APR":4,"MAY":5,"JUN":6,"JUL":7,"AUG":8,"SEP":9,"OCT":10,"NOV":11,"DEC":12};
-      
+
       for (let r = 0; r < rows.length; r++) {
         rows[r].items.sort((a, b) => a.x - b.x);
         let rowStr = rows[r].items.map(i => i.text).join("");
-        
         let yearMonthMatch = rowStr.match(/(\d{4})\.([A-Z]{3})/i);
         if (yearMonthMatch) {
           year = parseInt(yearMonthMatch[1]);
           month = monthMap[yearMonthMatch[2].toUpperCase()] || month;
           continue;
         }
-        
         let isDateRow = rows[r].items.filter(i => /^\d{1,2}$/.test(i.text)).length >= 3;
-        
         if (isDateRow && r + 1 < rows.length) {
           let dateItems = rows[r].items;
-          let dutyItems = rows[r+1].items; 
-          
+          let dutyItems = rows[r + 1].items;
           dateItems.forEach(dItem => {
             if (/^\d{1,2}$/.test(dItem.text)) {
               let day = parseInt(dItem.text);
-              let matchedDuty = dutyItems.reduce((prev, curr) => {
-                return (Math.abs(curr.x - dItem.x) < Math.abs(prev.x - dItem.x) ? curr : prev);
-              }, dutyItems[0]);
-              
+              let matchedDuty = dutyItems.reduce((prev, curr) =>
+                Math.abs(curr.x - dItem.x) < Math.abs(prev.x - dItem.x) ? curr : prev
+              , dutyItems[0]);
               if (matchedDuty && Math.abs(matchedDuty.x - dItem.x) < 100) {
-                parsedEvents.push({
-                  year: year,
-                  month: month,
-                  day: day,
-                  code: matchedDuty.text
-                });
+                parsedEvents.push({ year, month, day, code: matchedDuty.text });
               }
             }
           });
@@ -199,36 +257,195 @@
       return parsedEvents;
     }
 
-    // Generate Apple Calendar ICS file
-    function generateICS(rosterData) {
-      let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Starlux Roster Converter//TW\r\nCALSCALE:GREGORIAN\r\n";
-      
-      rosterData.forEach(data => {
-        let yStr = data.year.toString();
-        let mStr = data.month.toString().padStart(2, '0');
-        let dStr = data.day.toString().padStart(2, '0');
-        let dateStr = `${yStr}${mStr}${dStr}`;
-        
-        let rawCode = data.code;
-        let description = DUTY_DICTIONARY[rawCode] || "飛行任務或其他排程";
-        let summary = rawCode;
-        
-        if (rawCode.includes("JX")) {
-          description = `執行航班: ${rawCode}`;
-        } else if (DUTY_DICTIONARY[rawCode]) {
-          summary = `${rawCode} - ${DUTY_DICTIONARY[rawCode]}`;
+    /* ── Format time string "0800" → "080000" ── */
+    function fmtTime(t) {
+      t = t.replace(/[^0-9]/g, '');
+      return t.length === 4 ? t + '00' : t;
+    }
+
+    /* ── Generate UID ── */
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 8); }
+
+    /* ── Generate Flighty-compatible ICS ── */
+    async function generateICS(rosterData, textEvents) {
+      let ics = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Starlux Roster Converter//Flighty Compatible//TW",
+        "CALSCALE:GREGORIAN",
+        "X-WR-CALNAME:STARLUX 班表",
+        "X-WR-TIMEZONE:Asia/Taipei",
+        "",
+        "BEGIN:VTIMEZONE",
+        "TZID:Asia/Taipei",
+        "BEGIN:STANDARD",
+        "DTSTART:19700101T000000",
+        "TZOFFSETFROM:+0800",
+        "TZOFFSETTO:+0800",
+        "END:STANDARD",
+        "END:VTIMEZONE"
+      ];
+
+      // ── Handle text-pasted flight events ──
+      if (textEvents && textEvents.length > 0) {
+        for (const evt of textEvents) {
+          const dateStr = `${evt.year}${String(evt.month).padStart(2,'0')}${String(evt.day).padStart(2,'0')}`;
+          const info = await lookupFlight(evt.flightNum);
+          const dep = info ? (info.DepartureAirportID || '') : '';
+          const arr = info ? (info.ArrivalAirportID || '') : '';
+          const loc = (dep && arr) ? `${dep} - ${arr}` : '';
+
+          ics.push("BEGIN:VEVENT");
+          ics.push(`UID:${uid()}@starlux-roster`);
+          ics.push(`DTSTART;TZID=Asia/Taipei:${dateStr}T${fmtTime(evt.depTime)}`);
+
+          let endDate = dateStr;
+          if (parseInt(evt.arrTime) < parseInt(evt.depTime)) {
+            const d = new Date(evt.year, evt.month - 1, evt.day + 1);
+            endDate = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+          }
+          ics.push(`DTEND;TZID=Asia/Taipei:${endDate}T${fmtTime(evt.arrTime)}`);
+          ics.push(`SUMMARY:JX ${evt.flightNum}`);
+          if (loc) ics.push(`LOCATION:${loc}`);
+          ics.push(`DESCRIPTION:STARLUX JX${evt.flightNum}${loc ? ' (' + loc + ')' : ''}`);
+          ics.push("END:VEVENT");
         }
-        
-        ics += "BEGIN:VEVENT\r\n";
-        ics += `DTSTART;VALUE=DATE:${dateStr}\r\n`;
-        ics += `DTEND;VALUE=DATE:${dateStr}\r\n`;
-        ics += `SUMMARY:${summary}\r\n`;
-        ics += `DESCRIPTION:${description}\r\n`;
-        ics += "END:VEVENT\r\n";
-      });
-      
-      ics += "END:VCALENDAR";
-      return ics;
+        ics.push("END:VCALENDAR");
+        return ics.join("\r\n");
+      }
+
+      // ── Handle OCR-parsed roster data ──
+      const uniqueFlights = new Set();
+      rosterData.forEach(d => parseFlightCodes(d.code).forEach(fn => uniqueFlights.add(fn)));
+
+      const status = document.getElementById('statusMsg');
+      if (uniqueFlights.size > 0) {
+        status.innerText = `正在查詢 ${uniqueFlights.size} 個航班時刻…`;
+        for (const fn of uniqueFlights) {
+          await lookupFlight(fn);
+        }
+      }
+
+      for (const data of rosterData) {
+        const yStr = data.year.toString();
+        const mStr = String(data.month).padStart(2, '0');
+        const dStr = String(data.day).padStart(2, '0');
+        const dateStr = `${yStr}${mStr}${dStr}`;
+        const rawCode = data.code;
+
+        const flightNums = parseFlightCodes(rawCode);
+
+        if (flightNums.length > 0) {
+          for (const fn of flightNums) {
+            const info = scheduleCache[fn] || null;
+            const dep = info ? (info.DepartureAirportID || '') : '';
+            const arr = info ? (info.ArrivalAirportID || '') : '';
+            const loc = (dep && arr) ? `${dep} - ${arr}` : '';
+
+            ics.push("BEGIN:VEVENT");
+            ics.push(`UID:${uid()}@starlux-roster`);
+
+            if (info && info.DepartureTime && info.ArrivalTime) {
+              const depT = fmtTime(info.DepartureTime.replace(':', ''));
+              const arrT = fmtTime(info.ArrivalTime.replace(':', ''));
+              ics.push(`DTSTART;TZID=Asia/Taipei:${dateStr}T${depT}`);
+
+              let endDate = dateStr;
+              if (parseInt(info.ArrivalTime.replace(':', '')) < parseInt(info.DepartureTime.replace(':', ''))) {
+                const d = new Date(data.year, data.month - 1, data.day + 1);
+                endDate = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+              }
+              ics.push(`DTEND;TZID=Asia/Taipei:${endDate}T${arrT}`);
+            } else {
+              ics.push(`DTSTART;VALUE=DATE:${dateStr}`);
+              ics.push(`DTEND;VALUE=DATE:${dateStr}`);
+            }
+
+            ics.push(`SUMMARY:JX ${fn}`);
+            if (loc) ics.push(`LOCATION:${loc}`);
+            ics.push(`DESCRIPTION:STARLUX JX${fn}${loc ? ' (' + loc + ')' : ''}`);
+            ics.push("END:VEVENT");
+          }
+        } else {
+          const dictEntry = DUTY_DICTIONARY[rawCode];
+          const summary = dictEntry ? `${rawCode} - ${dictEntry}` : rawCode;
+          const description = dictEntry || rawCode;
+
+          ics.push("BEGIN:VEVENT");
+          ics.push(`UID:${uid()}@starlux-roster`);
+          ics.push(`DTSTART;VALUE=DATE:${dateStr}`);
+          ics.push(`DTEND;VALUE=DATE:${dateStr}`);
+          ics.push(`SUMMARY:${summary}`);
+          ics.push(`DESCRIPTION:${description}`);
+          ics.push("END:VEVENT");
+        }
+      }
+
+      ics.push("END:VCALENDAR");
+      return ics.join("\r\n");
+    }
+
+    /* ── Main Conversion Entry ── */
+    async function startConversion() {
+      const btn = document.getElementById('convertBtn');
+      const status = document.getElementById('statusMsg');
+
+      if (currentTab === 'text') {
+        const text = document.getElementById('rosterText').value.trim();
+        if (!text) { alert("請貼上班表資料！"); return; }
+        btn.disabled = true;
+        btn.innerHTML = spinnerHTML();
+        status.innerText = "解析文字中…";
+        status.className = "text-center text-sm mt-4 text-blue-600 font-medium animate-pulse";
+        try {
+          const textEvents = parseRosterText(text);
+          if (textEvents.length === 0) throw new Error("未偵測到航班資料，請確認格式（如 JX233 0800L-0955L）");
+          status.innerText = `偵測到 ${textEvents.length} 段航班，正在查詢航線…`;
+          const icsString = await generateICS(null, textEvents);
+          status.innerText = `✅ 成功產生 ${textEvents.length} 段航班事件！`;
+          status.className = "text-center text-sm mt-4 text-emerald-600 font-medium";
+          downloadICS(icsString);
+        } catch (e) {
+          status.innerText = "❌ " + e.message;
+          status.className = "text-center text-sm mt-4 text-red-600 font-medium";
+        }
+        resetButton();
+        return;
+      }
+
+      // OCR mode
+      if (!base64String) { alert("請先上傳圖片！"); return; }
+      btn.disabled = true;
+      btn.innerHTML = spinnerHTML();
+      status.innerText = "正在使用本機端 OCR 引擎辨識網格（首次運行需時稍長）…";
+      status.className = "text-center text-sm mt-4 text-blue-600 font-medium animate-pulse";
+
+      try {
+        const result = await Tesseract.recognize(base64String, 'eng');
+        const words = result.data.words;
+        if (!words || words.length === 0) throw new Error("圖片中找不到任何文字，請確認截圖是否清晰！");
+
+        const annotations = words.map(w => ({
+          description: w.text,
+          boundingPoly: { vertices: [{ x: w.bbox.x0, y: w.bbox.y0 }] }
+        }));
+
+        const rosterData = extractGridData(annotations);
+        status.innerText = "正在產生 Flighty 相容事件…";
+        const icsString = await generateICS(rosterData, null);
+        const flightCount = rosterData.reduce((n, d) => n + Math.max(parseFlightCodes(d.code).length, 0), 0);
+        status.innerText = `✅ 轉換成功！共 ${rosterData.length} 天排程，${flightCount} 段航班事件`;
+        status.className = "text-center text-sm mt-4 text-emerald-600 font-medium";
+        downloadICS(icsString);
+      } catch (error) {
+        status.innerText = "❌ 系統錯誤：" + error.message;
+        status.className = "text-center text-sm mt-4 text-red-600 font-medium";
+      }
+      resetButton();
+    }
+
+    function spinnerHTML() {
+      return '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>處理中…';
     }
 
     function downloadICS(icsContent) {
@@ -236,7 +453,7 @@
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Starlux_Roster_${new Date().getTime()}.ics`;
+      a.download = `STARLUX_Flighty_${new Date().getTime()}.ics`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
