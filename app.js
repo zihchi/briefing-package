@@ -216,7 +216,7 @@ function formatColorTAF(rawTaf) {
           <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
               <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
               ${emojiHtml}
-              <span style="${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${cleanLine}</span>
+              <span style="${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${highlightWxKeywords(cleanLine)}</span>
           </div>
       `;
   });
@@ -672,7 +672,41 @@ window.fetchOpenMeteoForecast = async function(icao, lat, lng) {
 };
 
 // ------------------------------------------
-// ✈️ 地圖彈出視窗(Popup) 組件產生器
+// ⚠️ 原始電文重點字標紅（雷雨/CB/凍雨/陣風/低能見度）
+// ------------------------------------------
+function highlightWxKeywords(raw) {
+    if (!raw) return raw;
+    return String(raw)
+        // 顯著天氣現象：雷雨、CB、凍雨/凍毛雨/凍霧、冰雹、颮、漏斗雲、火山灰、垂直能見度
+        .replace(/(^|\s)([+-]?TS[A-Z]*|FZRA|FZDZ|FZFG|GR|GS|SQ|FC|VA|VV\d{3})(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
+        .replace(/\b(\d{3}|VRB)(\d{2,3})(G\d{2,3})(KT|MPS)\b/g, '$1$2<span class="wx-hl">$3</span>$4')
+        .replace(/\b(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)\b/g, '$1$2<span class="wx-hl">$3</span>')
+        // 低能見度：獨立 4 碼且小於 3000m 才標（前後需空白，避免誤標 Q1005 / 時間組）
+        .replace(/(^|\s)([0-2]\d{3})(?=\s|$)/g, '$1<span class="wx-hl">$2</span>');
+}
+
+// ------------------------------------------
+// 🗂️ 氣象內容大面板（取代原本錨在 marker 上的 Leaflet popup）
+// 開：點 marker；關：點 ✕ 或地圖空白處（上方留了一條地圖）或 Esc
+// ------------------------------------------
+function openWxSheet(airport, rawMetarText, rawTafText) {
+    const sheet = document.getElementById('wx-sheet');
+    const body = document.getElementById('wx-sheet-body');
+    if (!sheet || !body) return;
+    body.innerHTML = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
+    body.scrollTop = 0;
+    sheet.classList.add('open');
+    // 觸發開源氣象讀取（沿用原 popup 內的容器 id）
+    setTimeout(() => window.fetchOpenMeteoForecast(airport.icao, airport.lat, airport.lng), 50);
+}
+window.closeWxSheet = function() {
+    const sheet = document.getElementById('wx-sheet');
+    if (sheet) sheet.classList.remove('open');
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeWxSheet(); });
+
+// ------------------------------------------
+// ✈️ 氣象內容組件產生器（原 popup HTML，現在填入大面板）
 // ------------------------------------------
 function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
     const metarState = parseWeatherElements(rawMetarText, 999, 99999);
@@ -713,7 +747,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
                 </span>
                 <span style="margin-left:10px; display:inline-flex; align-items:center;">${metarAgeStr}</span>
             </div>
-            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; ${MONOSPACE_FONT} font-size: 13px;">${rawMetarText || "目前無有效 METAR 報文"}</div>
+            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; ${MONOSPACE_FONT} font-size: 13px;">${rawMetarText ? highlightWxKeywords(rawMetarText) : "目前無有效 METAR 報文"}</div>
         </div>
         
         <div class="data-block" style="margin-top: 15px;">
@@ -1229,34 +1263,26 @@ function renderFleetMarkers(fleetName) {
         if (airport.lat === 0 && airport.lng === 0) return; // 略過無座標的機場
         
         validBounds.push([airport.lat, airport.lng]);
-        const marker = L.marker([airport.lat, airport.lng]).addTo(fleetMarkersLayer);
+
+        // 依 METAR 判飛行條件決定圓點顏色（無報文 = 灰），掃一眼就知道哪個場站天氣差
+        const cache = weatherCache[airport.icao] || { metar: "", taf: "" };
+        let cat = 'unk';
+        if (cache.metar) {
+            const st = parseWeatherElements(cache.metar, 999, 99999);
+            cat = getFlightCategory(st.vis, st.ceil);
+        }
+        const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
+        const icon = L.divIcon({
+            className: 'wx-cat-marker',
+            html: `<span class="wx-dot" style="background:${catColors[cat]}"></span><span class="wx-tag">${airport.icao}</span>`,
+            iconSize: [52, 34],
+            iconAnchor: [26, 9]
+        });
+        const marker = L.marker([airport.lat, airport.lng], { icon: icon }).addTo(fleetMarkersLayer);
 
         marker.on('click', function() {
-            const mapElement = document.getElementById('map');
-            const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
-            const isMobile = window.innerWidth < 768;
-            
-            const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
-            const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
-            
-            const popupOpts = { 
-                maxWidth: dynamicMaxWidth, 
-                minWidth: dynamicMinWidth,
-                maxHeight: 450,
-                autoPanPadding: [20, 20], 
-                keepInView: true 
-            };
-
-            const cache = weatherCache[airport.icao] || { metar: "", taf: "" };
-            const popupHtml = buildAirportPopupHtml(airport, cache.metar, cache.taf);
-
-            L.popup(popupOpts)
-                .setLatLng(marker.getLatLng())
-                .setContent(popupHtml)
-                .openOn(window.aviationMapInstance);
-                
-            // 觸發開源氣象讀取
-            setTimeout(() => window.fetchOpenMeteoForecast(airport.icao, airport.lat, airport.lng), 50);
+            const c = weatherCache[airport.icao] || { metar: "", taf: "" };
+            openWxSheet(airport, c.metar, c.taf);
         });
     });
 
@@ -1285,6 +1311,9 @@ function initAviationMap() {
 
     fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
 
+    // 點地圖空白處 → 關閉氣象大面板（marker 點擊不會觸發 map click，兩者不衝突）
+    window.aviationMapInstance.on('click', function() { window.closeWxSheet(); });
+
     // iOS Safari 的 touch 不會自動 fire dblclick,Leaflet 內建 doubleClickZoom 因此失效;
     // 連 Leaflet 的 'click' 在連續快 tap 下也常被 tap recognizer 重置,沒辦法穩定偵測。
     // 改成直接綁原生 touchend 事件,自己算連續兩次 tap (400ms / 50px 內 + 同一點落地)。
@@ -1299,7 +1328,7 @@ function initAviationMap() {
             if (e.touches.length > 0 || e.changedTouches.length !== 1) {
                 _lastTapTs = 0; _lastTapXY = null; return;
             }
-            if (e.target && e.target.closest && e.target.closest('.leaflet-marker-pane')) {
+            if (e.target && e.target.closest && e.target.closest('.leaflet-marker-pane, .leaflet-popup-pane, .leaflet-control-container')) {
                 _lastTapTs = 0; _lastTapXY = null; return;
             }
             const t = e.changedTouches[0];
@@ -1333,6 +1362,7 @@ function initAviationMap() {
             this.classList.remove('inactive'); this.classList.add('active');
 
             currentFleet = this.getAttribute('data-fleet');
+            window.closeWxSheet();
             syncFleetWeather(currentFleet, false);
         });
     });
@@ -1405,28 +1435,13 @@ function initAviationMap() {
                     iconAnchor: [15, 30]
                 });
 
+                const searchedAirport = { icao: icao, name: siteName, lat: lat, lng: lon };
                 const customMarker = L.marker([lat, lon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
-
-                const mapElement = document.getElementById('map');
-                const mapWidth = mapElement ? mapElement.clientWidth : window.innerWidth;
-                const isMobile = window.innerWidth < 768;
-                const dynamicMaxWidth = isMobile ? Math.max(mapWidth - 50, 200) : Math.max(500, mapWidth * 0.70);
-                const dynamicMinWidth = isMobile ? Math.min(mapWidth - 60, 260) : 300;
-
-                const popupHtml = buildAirportPopupHtml({ icao: icao, name: siteName, lat: lat, lng: lon }, rawMetarText, rawTafText);
-
-                customMarker.bindPopup(popupHtml, {
-                    maxWidth: dynamicMaxWidth,
-                    minWidth: dynamicMinWidth,
-                    maxHeight: 450,
-                    autoPanPadding: [20, 20],
-                    keepInView: true
-                }).openPopup();
-                
-                // 觸發開源氣象讀取
-                setTimeout(() => window.fetchOpenMeteoForecast(icao, lat, lon), 50);
+                customMarker.on('click', function() { openWxSheet(searchedAirport, rawMetarText, rawTafText); });
 
                 window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
+                // 等飛行動畫結束再開大面板，不然地圖還在飛就被蓋住
+                setTimeout(() => openWxSheet(searchedAirport, rawMetarText, rawTafText), 1600);
 
                 btn.disabled = false;
                 btn.innerText = "🔍 搜尋";

@@ -138,6 +138,38 @@
        ========================================= */
     #map { height: 650px; width: 100%; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); border: 1px solid var(--border); z-index: 1; touch-action: manipulation; }
 
+    /* 🗂️ 氣象內容大面板：蓋住大部分地圖，只留上方一條地圖（點該處空白可關閉再選其他機場） */
+    #map-shell { position: relative; }
+    #wx-sheet {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: calc(100% - 64px);
+      background: var(--surface);
+      border: 1px solid var(--border); border-bottom: none;
+      border-radius: 16px 16px var(--radius-btn) var(--radius-btn);
+      box-shadow: 0 -10px 30px rgba(74,54,39,0.22);
+      z-index: 1200;
+      display: flex; flex-direction: column;
+      transform: translateY(105%);
+      transition: transform 0.3s cubic-bezier(0.3, 0.9, 0.3, 1);
+      overflow: hidden;
+    }
+    #wx-sheet.open { transform: translateY(0); }
+    .wx-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border); flex: none; background: var(--surface); }
+    .wx-sheet-hint { font-size: 12px; color: var(--text-faint); font-weight: 600; }
+    #wx-sheet-close { margin: 0; padding: 5px 14px; font-size: 13px; font-weight: bold; background: none; border: 2px solid var(--danger); color: var(--danger); border-radius: 8px; cursor: pointer; }
+    #wx-sheet-close:active { transform: scale(0.96); }
+    #wx-sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px 16px; }
+    /* 沿用原 popup 內容產生器，但在大面板裡取消小視窗的高度限制 */
+    #wx-sheet .weather-popup { max-height: none; overflow: visible; padding-right: 0; }
+
+    /* 🎯 機場 marker：依飛行條件變色的圓點 + ICAO 標籤（VFR 綠 / MVFR 藍 / IFR 紅 / LIFR 紫） */
+    .wx-cat-marker { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .wx-cat-marker .wx-dot { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.35); flex: none; }
+    .wx-cat-marker .wx-tag { font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; line-height: 1.5; color: var(--text); white-space: nowrap; }
+
+    /* ⚠️ METAR/TAF 原始電文重點字（雷雨/CB/陣風/低能見度）標紅 */
+    .wx-hl { color: var(--danger); font-weight: 800; }
+
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
     #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: var(--radius-pill); background-color: var(--text); color: white; transition: background-color 0.5s ease; box-shadow: var(--shadow-btn); }
     .status-loaded { background-color: var(--ok) !important; }
@@ -659,7 +691,16 @@
       </div>
 
     </div>
-    <div id="map"></div>
+    <div id="map-shell">
+      <div id="map"></div>
+      <div id="wx-sheet">
+        <div class="wx-sheet-head">
+          <span class="wx-sheet-hint">👆 點上方地圖空白處可關閉、再選其他機場</span>
+          <button id="wx-sheet-close" onclick="closeWxSheet()">✕ 關閉</button>
+        </div>
+        <div id="wx-sheet-body"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Windy 四宮格：即時雷達 / 衛星 / 地面風 / FL390 風（緊湊 2×2，減少留白）-->
@@ -795,7 +836,7 @@
   </script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="app.js?v=2.5"></script>
+<script src="app.js?v=2.6"></script>
 <script>
   // 航班速查（TDX 定期時刻表，經 Apps Script 代理）
   (function(){
