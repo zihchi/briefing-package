@@ -726,46 +726,87 @@
     </div>
   </div>
 
-  <!-- NCDR 各國颱風路徑（全寬，位於 Windy 之下、雷達之上）-->
+  <!-- NCDR 各國颱風路徑（全寬，位於 Windy 之下、雷達之上）
+       2026-07：NCDR 對 watch.ncdr.nat.gov.tw 加上 frame-ancestors 白名單，iframe 嵌入被拒。
+       改為直接播底層 MP4：先經 CORS 代理抓 /wh/jn_typhoon_mp4 清單取最新一筆，
+       再播 /00_Wxmap/0A3_TYPHOON_MP4/YYYYMM/xxx.mp4（媒體檔不受 frame-ancestors 限制）。 -->
   <div class="section windy-section">
     <h2>🌀 NCDR 各國颱風路徑</h2>
-    <!-- w_01 是 NCDR「各國颱風路徑」的獨立播放頁（內含一段 autoplay/loop 的 MP4）。
-         它是固定 1100px 寬的桌面版面，故用 transform:scale() 等比縮放塞進卡片，並裁掉下方下載表。 -->
-    <div id="ncdrTyphoonBox" style="position:relative; width:100%; overflow:hidden; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
-      <iframe id="ncdrTyphoon" src="https://watch.ncdr.nat.gov.tw/w_01" scrolling="no" loading="lazy"
-        title="NCDR 各國颱風路徑動畫"
-        style="position:absolute; top:0; left:0; width:1100px; height:575px; border:0; transform-origin:top left;"></iframe>
+    <div id="ncdrTyphoonMeta" style="font-size:0.85rem; color:var(--text-muted); font-weight:700; margin-bottom:8px;">⏳ 讀取最新颱風路徑動畫…</div>
+    <video id="ncdrTyphoonVideo" autoplay muted loop playsinline preload="metadata"
+      style="display:none; width:100%; height:auto; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;"></video>
+    <div id="ncdrTyphoonFallback" style="display:none; padding:24px; text-align:center; background:#f1f5f9; border-radius:8px;">
+      <a href="https://watch.ncdr.nat.gov.tw/w_01" target="_blank" rel="noopener" style="font-weight:bold; color:var(--brand);">動畫載入失敗，點此開啟 NCDR 原站 ↗</a>
     </div>
-    <script>
-      (function(){
-        var box=document.getElementById('ncdrTyphoonBox');
-        var fr=document.getElementById('ncdrTyphoon');
-        if(!box||!fr) return;
-        var DW=1100, DH=575, lastW=0;   // w_01 影片區的原始尺寸（1100×約573）
-        function fit(){
-          var w=box.clientWidth;
-          if(w===lastW) return;          // 寬度沒變就不動，避免 ResizeObserver 迴圈
-          lastW=w;
-          var s=w/DW;
-          fr.style.transform='scale('+s+')';
-          box.style.height=(DH*s)+'px';
-        }
-        fit();
-        if(window.ResizeObserver){ new ResizeObserver(fit).observe(box); }
-        window.addEventListener('resize', fit);
-      })();
-    </script>
   </div>
 
-  <!-- NCDR 即時回波與流場（w_05）。3:2 容器 + iframe 放大 1.27 倍置中、overflow:hidden 裁掉邊緣白邊 -->
+  <!-- NCDR 即時回波與流場：w_05 背後就是一支固定網址 MP4（ldbztracks），直接播 -->
   <div class="section windy-section">
     <h2>🌧️ NCDR 即時回波與流場</h2>
-    <div style="position:relative; width:100%; aspect-ratio:3 / 2; overflow:hidden; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
-      <iframe id="ncdrRain" src="https://watch.ncdr.nat.gov.tw/w_05" scrolling="no" loading="lazy"
-        title="NCDR 即時回波與流場動畫"
-        style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:127%; height:127%; border:0;"></iframe>
+    <video id="ncdrRainVideo" autoplay muted loop playsinline preload="metadata"
+      style="width:100%; height:auto; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;"></video>
+    <div id="ncdrRainFallback" style="display:none; padding:24px; text-align:center; background:#f1f5f9; border-radius:8px;">
+      <a href="https://watch.ncdr.nat.gov.tw/w_05" target="_blank" rel="noopener" style="font-weight:bold; color:var(--brand);">動畫載入失敗，點此開啟 NCDR 原站 ↗</a>
     </div>
   </div>
+
+  <script>
+    (function(){
+      // 「後設 src」的 autoplay 各家瀏覽器買單程度不一：載入事件 + 定時重試雙保險，開播為止
+      function ensurePlay(v){
+        function kick(){ if(v.paused && !v.error) { v.muted=true; v.play().catch(function(){}); } }
+        v.addEventListener('loadeddata', kick);
+        v.addEventListener('canplay', kick);
+        var tries=0;
+        var timer=setInterval(function(){
+          if(!v.paused || v.error || ++tries>10){ clearInterval(timer); return; }
+          kick();
+        }, 800);
+      }
+
+      // 回波與流場：固定網址 MP4，加時間戳抓最新
+      var rain=document.getElementById('ncdrRainVideo');
+      if(rain){
+        rain.src='https://watch.ncdr.nat.gov.tw/00_Wxmap/5A8_DBZ_TRACK/ldbztracks?tt='+Date.now();
+        rain.addEventListener('error', function(){
+          rain.style.display='none';
+          document.getElementById('ncdrRainFallback').style.display='block';
+        });
+        ensurePlay(rain);
+      }
+
+      // 颱風路徑：清單 JSON 沒開 CORS，走多條公用代理 race（同 app.js 抓氣象的做法）
+      var tv=document.getElementById('ncdrTyphoonVideo');
+      var meta=document.getElementById('ncdrTyphoonMeta');
+      function typhoonFail(){
+        meta.style.display='none'; tv.style.display='none';
+        document.getElementById('ncdrTyphoonFallback').style.display='block';
+      }
+      var listUrl='https://watch.ncdr.nat.gov.tw/wh/jn_typhoon_mp4?tt='+Date.now();
+      var racers=[
+        'https://corsproxy.io/?'+encodeURIComponent(listUrl),
+        'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(listUrl),
+        'https://api.allorigins.win/raw?url='+encodeURIComponent(listUrl)
+      ].map(function(u){
+        return fetch(u,{cache:'no-store'}).then(function(r){
+          if(!r.ok) throw new Error('HTTP '+r.status);
+          return r.json();
+        }).then(function(j){
+          if(!Array.isArray(j)||!j.length||!j[0].LINK) throw new Error('bad list');
+          return j;
+        });
+      });
+      Promise.any(racers).then(function(list){
+        var item=list[0];
+        var mp4='https://watch.ncdr.nat.gov.tw/00_Wxmap/0A3_TYPHOON_MP4/'+item.LINK.substr(0,6)+'/'+item.LINK;
+        meta.innerHTML='🕒 '+item.DATE+'　'+item.NAME;
+        tv.style.display='block';
+        tv.src=mp4;
+        tv.addEventListener('error', typhoonFail);
+        ensurePlay(tv);
+      }).catch(typhoonFail);
+    })();
+  </script>
 
   <!-- 即時圖：雷達 + 衛星（unibrief 來源）並列 -->
   <div class="windy-grid">
