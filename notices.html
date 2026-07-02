@@ -36,21 +36,17 @@
 
   .wrap{max-width:100%;margin:0;padding:6px 4px}
 
-  .top{display:flex;align-items:center;gap:10px;margin:2px 2px 6px}
-  .top .count{font-size:12px;color:var(--ink-faint);font-weight:600}
-  .top .refresh{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--brand);
-    background:none;border:0;cursor:pointer;padding:4px 6px}
-  .status{font-size:12px;color:var(--ink-faint);margin:0 2px 12px}
+  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 2px 4px}
+  .refresh{font-size:15px;font-weight:600;color:var(--brand);
+    background:none;border:1px solid var(--line);border-radius:10px;cursor:pointer;padding:6px 11px;flex:0 0 auto}
+  .status{font-size:12px;color:var(--ink-faint);margin:6px 2px 0}
   .status.err{color:var(--warn)}
 
-  .search{display:flex;align-items:center;gap:8px;background:var(--surface);
-    border:1px solid var(--line);border-radius:12px;padding:10px 13px;box-shadow:var(--shadow)}
-  .search svg{width:16px;height:16px;stroke:var(--ink-faint);flex:0 0 auto}
-  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-size:15px;font-family:inherit}
+  .search{display:flex;align-items:center;gap:6px;background:var(--surface);flex:1 1 170px;min-width:150px;
+    border:1px solid var(--line);border-radius:10px;padding:6px 11px;box-shadow:var(--shadow)}
+  .search svg{width:14px;height:14px;stroke:var(--ink-faint);flex:0 0 auto}
+  .search input{flex:1;width:100%;background:transparent;border:0;outline:0;color:var(--ink);font-size:14px;font-family:inherit}
   .search input::placeholder{color:var(--ink-faint)}
-
-  .fg{margin-top:12px}
-  .fg-label{font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:1.2px;margin:0 0 7px 2px}
   .filters{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
   .filters::-webkit-scrollbar{display:none}
   .chip-f{flex:0 0 auto;font-size:13px;font-weight:600;padding:7px 14px;border-radius:var(--radius-pill);
@@ -94,25 +90,16 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <span class="count" id="count"></span>
-    <button class="refresh" id="refresh">↻ 重新整理</button>
-  </div>
-  <div class="status" id="status">連線中…</div>
-
-  <div class="search">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input id="q" type="search" placeholder="搜尋標題、編號、內容…" autocomplete="off">
-  </div>
-
-  <div class="fg">
-    <p class="fg-label">來源</p>
+  <!-- 單列工具列：來源篩選 + 縮小版搜尋欄 + 重新整理（則數/連線狀態/機隊列已依需求移除） -->
+  <div class="bar">
     <div class="filters" id="srcFilters"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="q" type="search" placeholder="搜尋…" autocomplete="off">
+    </div>
+    <button class="refresh" id="refresh">↻</button>
   </div>
-  <div class="fg">
-    <p class="fg-label">機隊</p>
-    <div class="filters" id="fleetFilters"></div>
-  </div>
+  <div class="status err" id="status" style="display:none"></div>
 
   <main id="list"></main>
 </div>
@@ -201,18 +188,18 @@ const FLEET_FILTERS=["全部機隊","A321","A330","A350"];
 let activeSrc="全部", activeFleet="全部機隊", keyword="", DATA=[];
 
 async function loadData(){
+  // 連線成功不顯示狀態文字，只有失敗時才提示
   const st=document.getElementById("status");
-  st.textContent="連線中…"; st.className="status";
+  st.style.display="none";
   let data;
   try{
     const res=await fetch(CSV_URL,{cache:"no-store"});
     data=csvToData(await res.text());
     if(!data.length) throw new Error("empty");
-    st.textContent="✓ 即時連線 Google 試算表";
   }catch(e){
     data=FALLBACK;
     st.textContent="⚠ 暫時無法連線試算表，顯示範例資料";
-    st.className="status err";
+    st.style.display="block";
   }
   DATA=data.map(normalize).sort((a,b)=>(b._d?+b._d:0)-(a._d?+a._d:0));
   // NEW：今天起算 7 天內（含未來生效），會自動退場
@@ -243,7 +230,6 @@ function bodyHTML(it){
 }
 function render(){
   const list=document.getElementById("list"), rows=DATA.filter(matches);
-  document.getElementById("count").textContent=`${rows.length} 則`;
   if(!rows.length){ list.innerHTML=`<div class="empty">沒有符合的公告</div>`; return; }
   list.innerHTML=rows.map(it=>`
     <div class="card ${it.important?"important":""}">
@@ -261,7 +247,7 @@ function buildFilters(){
     box.querySelectorAll(".chip-f").forEach(b=>b.addEventListener("click",()=>{ set(b.dataset.f); buildFilters(); render(); }));
   };
   mk(SRC_FILTERS,activeSrc,"srcFilters",v=>activeSrc=v);
-  mk(FLEET_FILTERS,activeFleet,"fleetFilters",v=>activeFleet=v);
+  // 機隊列已依需求移除（activeFleet 固定「全部機隊」，matches() 不受影響）
 }
 document.getElementById("q").addEventListener("input",e=>{ keyword=e.target.value; render(); });
 document.getElementById("refresh").addEventListener("click",loadData);

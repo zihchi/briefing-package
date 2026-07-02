@@ -332,18 +332,21 @@ function refreshIframe(id) {
 // ------------------------------------------
 // 🌬️ Windy 氣象圖定位：預設台灣，若使用者允許則改用目前位置
 // ------------------------------------------
+// FL390 高空風固定 zoom 3 看整個亞洲區（噴射氣流尺度）；其餘維持 zoom 6 看台灣周邊
+// 注意：這裡的 p.zoom 會蓋過 setWindyLocation 的統一 zoom，之前改 HTML 預設值沒效就是被這裡重設回 6
 const WINDY_PANELS = [
     { id: 'windyRadar',       level: 'surface', overlay: 'radar' },
     { id: 'windySatellite',   level: 'surface', overlay: 'satellite' },
     { id: 'windyWindSurface', level: 'surface', overlay: 'wind' },
-    { id: 'windyWindFL390',   level: '200h',    overlay: 'wind' }
+    { id: 'windyWindFL390',   level: '200h',    overlay: 'wind', zoom: 3 }
 ];
 
 function setWindyLocation(lat, lon, zoom = 6) {
     WINDY_PANELS.forEach(p => {
         const iframe = document.getElementById(p.id);
         if (iframe) {
-            iframe.src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=${zoom}&level=${p.level}&overlay=${p.overlay}`;
+            const z = p.zoom || zoom;
+            iframe.src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=${z}&level=${p.level}&overlay=${p.overlay}`;
         }
     });
 }
@@ -1262,7 +1265,10 @@ function renderFleetMarkers(fleetName) {
     airports.forEach(airport => {
         if (airport.lat === 0 && airport.lng === 0) return; // 略過無座標的機場
         
-        validBounds.push([airport.lat, airport.lng]);
+        // 跨太平洋航線由西向東：西半球機場(經度為負)畫在 +360 的世界複本，
+        // 太平洋與美國顯示在台灣右邊，不會拆成兩個太平洋、兩個美洲
+        const plotLng = airport.lng < 0 ? airport.lng + 360 : airport.lng;
+        validBounds.push([airport.lat, plotLng]);
 
         // 依 METAR 判飛行條件決定圓點顏色（無報文 = 灰），掃一眼就知道哪個場站天氣差
         const cache = weatherCache[airport.icao] || { metar: "", taf: "" };
@@ -1278,7 +1284,7 @@ function renderFleetMarkers(fleetName) {
             iconSize: [52, 34],
             iconAnchor: [26, 9]
         });
-        const marker = L.marker([airport.lat, airport.lng], { icon: icon }).addTo(fleetMarkersLayer);
+        const marker = L.marker([airport.lat, plotLng], { icon: icon }).addTo(fleetMarkersLayer);
 
         marker.on('click', function() {
             const c = weatherCache[airport.icao] || { metar: "", taf: "" };
@@ -1436,10 +1442,11 @@ function initAviationMap() {
                 });
 
                 const searchedAirport = { icao: icao, name: siteName, lat: lat, lng: lon };
-                const customMarker = L.marker([lat, lon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
+                const plotLon = lon < 0 ? lon + 360 : lon; // 西半球畫在台灣右邊的世界複本（同機隊 marker 邏輯）
+                const customMarker = L.marker([lat, plotLon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
                 customMarker.on('click', function() { openWxSheet(searchedAirport, rawMetarText, rawTafText); });
 
-                window.aviationMapInstance.flyTo([lat, lon], 6, { duration: 1.5 });
+                window.aviationMapInstance.flyTo([lat, plotLon], 6, { duration: 1.5 });
                 // 等飛行動畫結束再開大面板，不然地圖還在飛就被蓋住
                 setTimeout(() => openWxSheet(searchedAirport, rawMetarText, rawTafText), 1600);
 
