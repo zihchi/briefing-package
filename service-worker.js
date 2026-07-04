@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v93';
+const CACHE_NAME = 'briefing-v94';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -41,6 +41,10 @@ const CDN_FILES = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://cdn.tailwindcss.com',
+  // Captain Logbook 圖表/天文計算相依，預先快取讓離線也能畫圖
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
+  'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js',
 ];
 
 // 🚫 即時動態資料：永遠直接走網路，不快取
