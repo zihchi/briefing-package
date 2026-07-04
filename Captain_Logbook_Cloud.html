@@ -13,9 +13,9 @@
     
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" async></script>
 
     <style>
         :root {
@@ -885,10 +885,9 @@
             return isNaN(dt.getTime()) ? new Date(log.date).getTime() || 0 : dt.getTime();
         }
 
-        window.onload = async () => {
-            if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
-                Chart.register(ChartDataLabels);
-            }
+        async function initApp() {
+            // 圖表庫若已從快取載入就立即註冊；否則等 async CDN 到位由 onChartLibReady 補上
+            if (window.onChartLibReady) window.onChartLibReady();
 
             cfData = {
                 flights: parseInt(CF_CONFIG.flights) || 0,
@@ -924,7 +923,26 @@
                 processSyncQueue(false).then(() => fetchDataFromCloud());
             });
             window.addEventListener('offline', updateOfflineBanner);
+        }
+
+        // 圖表庫（chart.js + datalabels，async 載入）就緒後才註冊並補畫圖表；
+        // 離線/慢網下函式庫尚未到位時，前面的文字資料照樣先渲染。
+        let chartLibRegistered = false;
+        window.onChartLibReady = function() {
+            if (chartLibRegistered) return;
+            if (typeof Chart === 'undefined' || typeof ChartDataLabels === 'undefined') return;
+            Chart.register(ChartDataLabels);
+            chartLibRegistered = true;
+            const statsView = document.getElementById('view-stats');
+            if (statsView && !statsView.classList.contains('hidden')) renderStats();
         };
+
+        // 一進來就用本機快取渲染，不等外部 CDN → 慢網/離線也能秒開，不再卡在預設佔位字
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
 
         function updateOfflineBanner() {
             const banner = document.getElementById('offline-banner');
@@ -1513,7 +1531,10 @@
         }
 
         function renderChart(logs) {
-            const ctx = document.getElementById('flightChart').getContext('2d');
+            const canvas = document.getElementById('flightChart');
+            // 圖表庫尚未載入（離線/慢網）→ 先略過，函式庫到位後由 onChartLibReady 補畫
+            if (!canvas || typeof Chart === 'undefined') return;
+            const ctx = canvas.getContext('2d');
             const monthMap = {};
             logs.forEach(l => {
                 if(!l.date) return;
