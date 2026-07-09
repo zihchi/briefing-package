@@ -1516,6 +1516,47 @@ function renderDashboardTab(container, data) {
   html += `</div>`;
 
   container.innerHTML = html;
+
+  // ── 橋接給父視窗 (LIDOPRO4 Quick Review) ──
+  // 送出四類缺陷的數量 + 精簡明細,讓上方 Quick Review 卡可點開展開
+  try {
+    if (window.parent && window.parent !== window) {
+      const briefDef = (d) => {
+        if (d == null) return { num: '', title: '', meta: '' };
+        if (typeof d !== 'object') return { num: String(d), title: '', meta: '' };
+        return {
+          num: fmt(d.recordName || d._id || d.faultNumber || d.id || ''),
+          title: fmt(d.faultDescription || d.title || ''),
+          meta: fmt(d.ataNum || d.ataCode || '')
+        };
+      };
+      const briefMel = (m) => {
+        const dl = melDaysLeft(m);
+        return {
+          num: fmt(m.deferralRefNum || m._action?.maintActionDeferral?.deferralRefNum || m.recordName || m._id || ''),
+          title: fmt(m.faultDescription || ''),
+          meta: melRefDoc(m) ? ('MEL ' + melRefDoc(m)) : '',
+          exp: dl == null ? '' : (dl < 0 ? 'EXPIRED' : dl + 'd')
+        };
+      };
+      window.parent.postMessage({
+        type: 'elb-quick-summary',
+        reg: selectedTail || '',
+        counts: {
+          defects: openDefCount,
+          mel: melsByType.mel.length,
+          inspection: melsByType.inspection.length,
+          acceptable: melsByType.acceptable.length
+        },
+        items: {
+          defects: openDefs.map(briefDef),
+          mel: melsByType.mel.map(briefMel),
+          inspection: melsByType.inspection.map(briefMel),
+          acceptable: melsByType.acceptable.map(briefMel)
+        }
+      }, '*');
+    }
+  } catch (e) { /* 橋接失敗不影響本頁 */ }
 }
 
 // 可收合卡片：有內容(count>0)預設展開，空的預設收合；點標題列切換
