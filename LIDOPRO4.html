@@ -208,26 +208,24 @@
 
                     <div id="qr-body" class="hidden flex-col gap-2.5 p-2.5 bg-[#fbf9f6] xl:max-h-[80vh] xl:overflow-y-auto">
 
-                        <!-- 1. 航班號 + 起訖地 + 時間 (Local / Zulu) 同一張卡 -->
-                        <div class="bg-white rounded-xl border border-stone-200 px-3 py-2.5 shadow-sm flex flex-col gap-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Flight</span>
-                                <span id="qr-flight" class="data-font font-black text-xl text-[#4a3627] leading-none">----</span>
+                        <!-- 1. 航班號 + 起訖地 + 時間 (航班號塞在同列最左,箭頭補中間留白) -->
+                        <div class="bg-white rounded-xl border border-stone-200 px-3 py-2.5 shadow-sm flex flex-col gap-1.5">
+                            <div class="flex items-baseline gap-2 flex-wrap">
+                                <span id="qr-flight" class="data-font font-black text-base text-[#8b5a2b] leading-none shrink-0">----</span>
+                                <span id="qr-dep-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span>
+                                <span id="qr-dep-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span>
+                                <svg class="w-4 h-4 text-stone-300 self-center shrink-0 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                <span id="qr-arr-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span>
+                                <span id="qr-arr-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span>
                             </div>
-                            <div class="grid grid-cols-2 gap-2 border-t border-stone-100 pt-2">
-                                <div class="flex flex-col">
-                                    <div class="flex items-baseline gap-1.5"><span id="qr-dep-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span><span id="qr-dep-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span></div>
-                                    <div class="mt-1.5 flex flex-col gap-0.5">
-                                        <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-dep-local">--:--</span></span>
-                                        <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-dep-zulu">--:--Z</span></span>
-                                    </div>
+                            <div class="grid grid-cols-2 gap-2 border-t border-stone-100 pt-1.5">
+                                <div class="flex flex-col gap-0.5">
+                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-dep-local">--:--</span></span>
+                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-dep-zulu">--:--Z</span></span>
                                 </div>
-                                <div class="flex flex-col items-end text-right">
-                                    <div class="flex items-baseline gap-1.5"><span id="qr-arr-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span><span id="qr-arr-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span></div>
-                                    <div class="mt-1.5 flex flex-col gap-0.5 items-end">
-                                        <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-arr-local">--:--</span></span>
-                                        <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-arr-zulu">--:--Z</span></span>
-                                    </div>
+                                <div class="flex flex-col gap-0.5 items-end">
+                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-arr-local">--:--</span></span>
+                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-arr-zulu">--:--Z</span></span>
                                 </div>
                             </div>
                         </div>
@@ -243,7 +241,7 @@
                         <div class="grid grid-cols-3 gap-2">
                             <div class="bg-white rounded-xl border border-stone-200 px-2 py-1.5 shadow-sm flex flex-col items-center"><span class="text-[9px] text-stone-400 font-bold uppercase tracking-wider">REG</span><span id="qr-reg" class="data-font font-black text-base text-[#8b5a2b] leading-none mt-1">----</span></div>
                             <div class="bg-white rounded-xl border border-stone-200 px-2 py-1.5 shadow-sm flex flex-col items-center"><span class="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Total Pax</span><input id="qr-pax" type="number" inputmode="numeric" oninput="onQrPaxInput()" class="data-font font-black text-base text-[#b35900] text-center w-full bg-transparent focus:outline-none focus:bg-amber-50 rounded mt-0.5" placeholder="---"></div>
-                            <div class="bg-white rounded-xl border border-stone-200 px-2 py-1.5 shadow-sm flex flex-col items-center"><span class="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Min Water</span><span id="qr-water" class="data-font font-black text-base text-blue-600 leading-none mt-1">--%</span></div>
+                            <div class="bg-white rounded-xl border border-stone-200 px-2 py-1.5 shadow-sm flex flex-col items-center"><span class="text-[9px] text-stone-400 font-bold uppercase tracking-wider">Min Water</span><div class="flex items-baseline mt-0.5"><input id="qr-water" type="number" inputmode="numeric" oninput="onQrWaterInput()" class="data-font font-black text-base text-blue-600 text-center w-9 bg-transparent focus:outline-none focus:bg-blue-50 rounded" placeholder="--"><span class="data-font font-black text-base text-blue-600">%</span></div></div>
                         </div>
 
                         <!-- ELB 缺點 (4 類,可點開明細) -->
@@ -377,10 +375,6 @@
                                     </div>
                                     <div class="text-5xl xl:text-6xl font-black text-[#4a3627] data-font leading-none" id="out-dep">----</div>
                                     <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-dep-icao">----</div>
-                                    <div id="out-dep-proc" class="hidden flex-wrap items-center gap-1.5 mt-1.5">
-                                        <span class="text-[9px] font-black data-font bg-[#b35900]/10 text-[#b35900] border border-[#b35900]/25 px-1.5 py-0.5 rounded tracking-wider">RWY <span id="out-dep-rwy" class="text-[#4a3627]">--</span></span>
-                                        <span id="out-dep-sid-chip" class="hidden text-[9px] font-black data-font bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded tracking-wider">SID <span id="out-dep-sid" class="text-stone-700">--</span></span>
-                                    </div>
                                     <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
                                         <div class="flex items-baseline gap-2">
                                             <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">當地</span>
@@ -405,10 +399,6 @@
                                     </div>
                                     <div class="text-5xl xl:text-6xl font-black text-[#4a3627] data-font leading-none" id="out-arr">----</div>
                                     <div class="text-[10px] text-stone-400 font-bold tracking-widest mt-1" id="out-arr-icao">----</div>
-                                    <div id="out-arr-proc" class="hidden flex-wrap items-center gap-1.5 mt-1.5">
-                                        <span class="text-[9px] font-black data-font bg-stone-400/10 text-stone-500 border border-stone-300/60 px-1.5 py-0.5 rounded tracking-wider">RWY <span id="out-arr-rwy" class="text-[#4a3627]">--</span></span>
-                                        <span id="out-arr-star-chip" class="hidden text-[9px] font-black data-font bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded tracking-wider">STAR <span id="out-arr-star" class="text-stone-700">--</span></span>
-                                    </div>
                                     <div class="mt-auto pt-3 border-t border-stone-100 flex flex-col gap-1.5">
                                         <div class="flex items-baseline gap-2">
                                             <span class="text-[10px] font-bold text-stone-500 tracking-wider shrink-0 w-8">當地</span>
@@ -972,6 +962,11 @@
         // Quick Review 用:ELB iframe 送來的缺陷摘要 + 抵達行李帶
         let elbQuickData = null;
         let quickArrBelt = '';
+
+        // 離場/進場 跑道與 SID/STAR (解析自 OFP,顯示於 AVIATION WEATHER 區塊與 Quick Review)
+        let currentDepRwy = '', currentSid = '', currentArrRwy = '', currentStar = '';
+        // Total Pax / Min Water 是否為手動最後輸入 (優先於自動載入)
+        let qrManual = { pax: false, water: false };
 
         // Toast Messages
         function showToast(msg, isError = false, duration = 3000) {
@@ -1818,6 +1813,9 @@
             localStorage.removeItem('dispatch_route_wpts');
             if (window.setFlightRoute) window.setFlightRoute([]);
             elbQuickData = null; quickArrBelt = ''; // 清掉 Quick Review 的 ELB 缺陷/行李帶快取
+            currentDepRwy = ''; currentSid = ''; currentArrRwy = ''; currentStar = '';
+            qrManual.pax = false; qrManual.water = false; // 換航班 → 手動輸入作廢,改吃新的自動值
+            localStorage.removeItem('dispatch_quick_pax'); localStorage.removeItem('dispatch_quick_water');
             
             const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
             if (rawInput2Placeholder) rawInput2Placeholder.classList.remove('hidden');
@@ -2505,24 +2503,15 @@
             document.getElementById('out-dep-utc').textContent = getUtcOffsetString(currentDepICAO);
             document.getElementById('out-arr-utc').textContent = getUtcOffsetString(currentArrICAO);
 
-            // 離場跑道+SID / 進場跑道+STAR 小標籤 (由 OFP NAVIGATION LOG 解析而來)
-            [
-                { box:'out-dep-proc', rwyId:'out-dep-rwy', procChip:'out-dep-sid-chip', procId:'out-dep-sid', rwyKey:'起飛跑道', procKey:'SID' },
-                { box:'out-arr-proc', rwyId:'out-arr-rwy', procChip:'out-arr-star-chip', procId:'out-arr-star', rwyKey:'落地跑道', procKey:'STAR' }
-            ].forEach(c => {
-                const box = document.getElementById(c.box);
-                if (!box) return;
-                const rwyRaw = extractData(rawText, c.rwyKey);
-                const procRaw = extractData(rawText, c.procKey);
-                const rwy = (rwyRaw && rwyRaw !== 'N/A') ? (rwyRaw.includes('/') ? rwyRaw.split('/').pop().trim() : rwyRaw.trim()) : '';
-                const proc = (procRaw && procRaw !== 'N/A' && procRaw !== '') ? procRaw.trim() : '';
-                if (!rwy && !proc) { box.classList.add('hidden'); box.classList.remove('flex'); return; }
-                box.classList.remove('hidden'); box.classList.add('flex');
-                document.getElementById(c.rwyId).textContent = rwy || '--';
-                const chip = document.getElementById(c.procChip);
-                if (proc) { chip.classList.remove('hidden'); document.getElementById(c.procId).textContent = proc; }
-                else chip.classList.add('hidden');
-            });
+            // 離場跑道+SID / 進場跑道+STAR (解析自 OFP;顯示於 AVIATION WEATHER 區塊 + Quick Review)
+            {
+                const rwyPart = (v) => (v && v !== 'N/A') ? (v.includes('/') ? v.split('/').pop().trim() : v.trim()) : '';
+                const procPart = (v) => (v && v !== 'N/A' && v !== '') ? v.trim() : '';
+                currentDepRwy = rwyPart(extractData(rawText, '起飛跑道'));
+                currentArrRwy = rwyPart(extractData(rawText, '落地跑道'));
+                currentSid = procPart(extractData(rawText, 'SID'));
+                currentStar = procPart(extractData(rawText, 'STAR'));
+            }
 
             let dateMatch = rawText.match(/\b(\d{4}-[A-Z]{3}-\d{2}|\d{2}[A-Z]{3}\d{2,4}|\d{2}-[A-Z]{3}-\d{4})\b/i);
             currentDateUTC = dateMatch ? dateMatch[0].toUpperCase() : (extractData(rawText, '日期') !== 'N/A' ? extractData(rawText, '日期') : '----');
@@ -3206,10 +3195,14 @@
         function createWeatherBlockHTML(icao) {
             let timeTag = icao === currentDepICAO && currentDepUTC ? `<span class="bg-[#e8dfd5] text-[#8b5a2b] px-2 py-0.5 rounded text-[10px] font-bold shadow-sm ml-2 tracking-wide">DEP: ${currentDepUTC}</span>` : (icao === currentArrICAO && currentArrUTC ? `<span class="bg-[#e8dfd5] text-[#8b5a2b] px-2 py-0.5 rounded text-[10px] font-bold shadow-sm ml-2 tracking-wide">ARR: ${currentArrUTC}</span>` : '');
             let rwyTag = runwayMap[icao] ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-300 px-2 py-0.5 rounded text-[11px] md:text-xs font-black shadow-sm ml-2 tracking-wider">RWY ${runwayMap[icao]}</span>` : '';
+            // 起飛地帶 SID、目的地帶 STAR (跟 RWY 一起顯示,一致化)
+            let procTag = '';
+            if (icao === currentDepICAO && currentSid) procTag = `<span class="bg-[#b35900]/10 text-[#b35900] border border-[#b35900]/30 px-2 py-0.5 rounded text-[11px] md:text-xs font-black shadow-sm ml-2 tracking-wider">SID ${currentSid}</span>`;
+            else if (icao === currentArrICAO && currentStar) procTag = `<span class="bg-teal-100 text-teal-800 border border-teal-300 px-2 py-0.5 rounded text-[11px] md:text-xs font-black shadow-sm ml-2 tracking-wider">STAR ${currentStar}</span>`;
             return `<div class="weather-block border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-white" data-html2canvas-ignore="false">
                 <div class="bg-stone-100/50 text-[#3b4c59] px-3 md:px-4 py-2 border-b border-stone-200 flex flex-col justify-center">
                     <div class="flex justify-between items-center w-full">
-                        <div class="flex items-center flex-wrap gap-y-1"><span class="text-lg md:text-xl font-bold tracking-widest data-font">${icao}</span>${rwyTag}${timeTag}</div>
+                        <div class="flex items-center flex-wrap gap-y-1"><span class="text-lg md:text-xl font-bold tracking-widest data-font">${icao}</span>${rwyTag}${procTag}${timeTag}</div>
                         <span id="sync-${icao}" class="text-[10px] px-2 py-0.5 rounded bg-stone-300 text-stone-600 font-bold tracking-wider shadow-sm ml-2 shrink-0">Loading...</span>
                     </div>
                     ${(icao === currentDepICAO || icao === currentArrICAO) ? `
@@ -3563,7 +3556,14 @@
 
         function onQrPaxInput() {
             const v = (document.getElementById('qr-pax').value || '').trim();
+            qrManual.pax = v !== '';
             try { if (v) localStorage.setItem('dispatch_quick_pax', v); else localStorage.removeItem('dispatch_quick_pax'); } catch (e) {}
+        }
+
+        function onQrWaterInput() {
+            const v = (document.getElementById('qr-water').value || '').trim();
+            qrManual.water = v !== '';
+            try { if (v) localStorage.setItem('dispatch_quick_water', v); else localStorage.removeItem('dispatch_quick_water'); } catch (e) {}
         }
 
         function onQrBayInput(side) {
@@ -3575,11 +3575,14 @@
         function qrElbItemHtml(it) {
             const meta = it.meta ? `<span class="text-[10px] font-black text-red-700 data-font">${qrEsc(it.meta)}</span>` : '';
             const exp = it.exp ? `<span class="text-[9px] font-black px-1.5 py-0.5 rounded ${/EXP/i.test(it.exp) ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${qrEsc(it.exp)}</span>` : '';
+            // 標題(faultDescription)用橘底醒目;內容(comments)在下方灰字,兩者都有才看得懂是什麼
+            const title = it.title ? `<div class="mt-0.5"><span class="inline-block bg-[#b35900]/12 text-[#9a3412] font-bold text-[11px] leading-snug px-1.5 py-0.5 rounded">${qrEsc(it.title)}</span></div>` : '';
+            const desc = it.desc ? `<div class="text-[11px] text-stone-500 leading-snug mt-0.5">${qrEsc(it.desc)}</div>` : '';
             return `<div class="flex flex-col gap-0.5 border-t border-stone-100 pt-1.5 first:border-t-0 first:pt-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="data-font text-[11px] font-black text-stone-700">${qrEsc(it.num) || '—'}</span>${meta}${exp}
                 </div>
-                ${it.title ? `<div class="text-[11px] text-stone-600 leading-snug">${qrEsc(it.title)}</div>` : ''}
+                ${title}${desc}
             </div>`;
         }
 
@@ -3640,10 +3643,10 @@
             const cruise = (txt('out-cruise-alt') + (txt('out-cruise-temp') || '')).trim();
             set('qr-cruise', cruise || '---');
             // 3. 跑道 + SID/STAR + 天氣
-            set('qr-dep-rwy', shown('out-dep-proc') ? (txt('out-dep-rwy') || '--') : '--');
-            set('qr-dep-sid', shown('out-dep-sid-chip') ? (txt('out-dep-sid') || '--') : '--');
-            set('qr-arr-rwy', shown('out-arr-proc') ? (txt('out-arr-rwy') || '--') : '--');
-            set('qr-arr-star', shown('out-arr-star-chip') ? (txt('out-arr-star') || '--') : '--');
+            set('qr-dep-rwy', currentDepRwy || '--');
+            set('qr-dep-sid', currentSid || '--');
+            set('qr-arr-rwy', currentArrRwy || '--');
+            set('qr-arr-star', currentStar || '--');
             // 天氣只留 圖示 + 溫度 + 狀況 (去掉「預計起飛/預計抵達/目前」與 and)
             const cleanWx = (descEl, iconEl) => {
                 if (!descEl || !iconEl || !descEl.textContent || /loading/i.test(descEl.textContent)) return '';
@@ -3652,14 +3655,23 @@
             };
             set('qr-dep-wx', cleanWx(document.getElementById('awc-wx-desc-' + currentDepICAO), document.getElementById('awc-wx-icon-' + currentDepICAO)));
             set('qr-arr-wx', cleanWx(document.getElementById('awc-wx-desc-' + currentArrICAO), document.getElementById('awc-wx-icon-' + currentArrICAO)));
-            // Total Pax (自動帶入,未輸入時用手動快取) + Water
+            // Total Pax / Min Water:優先顯示最後手動輸入(qrManual),否則自動帶入
             const paxInput = document.getElementById('qr-pax');
             if (paxInput && document.activeElement !== paxInput) {
-                const paxAuto = txt('out-pax');
-                if (paxAuto && /\d/.test(paxAuto)) paxInput.value = paxAuto;
-                else paxInput.value = localStorage.getItem('dispatch_quick_pax') || '';
+                if (qrManual.pax) paxInput.value = localStorage.getItem('dispatch_quick_pax') || '';
+                else {
+                    const paxAuto = txt('out-pax');
+                    paxInput.value = (paxAuto && /\d/.test(paxAuto)) ? paxAuto : (localStorage.getItem('dispatch_quick_pax') || '');
+                }
             }
-            set('qr-water', txt('out-water') || '--%');
+            const waterInput = document.getElementById('qr-water');
+            if (waterInput && document.activeElement !== waterInput) {
+                if (qrManual.water) waterInput.value = localStorage.getItem('dispatch_quick_water') || '';
+                else {
+                    const w = (txt('out-water') || '').replace(/[^\d.]/g, '');
+                    waterInput.value = w || (localStorage.getItem('dispatch_quick_water') || '');
+                }
+            }
             // 5. TOW/LDW + Fuel
             set('qr-tow', txt('out-tow') || '--.-');
             set('qr-ldw', txt('out-ldw') || '--.-');
