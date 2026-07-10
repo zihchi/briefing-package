@@ -206,35 +206,33 @@
                         <svg id="qr-chevron" class="w-5 h-5 shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
-                    <div id="qr-body" class="hidden flex-col gap-2.5 p-2.5 bg-[#fbf9f6] xl:max-h-[80vh] xl:overflow-y-auto">
+                    <div id="qr-body" class="hidden flex-col gap-1.5 p-2 bg-[#fbf9f6] xl:max-h-[80vh] xl:overflow-y-auto">
 
-                        <!-- 1. 航班號 + 起訖地 + 時間 (航班號塞在同列最左,箭頭補中間留白) -->
-                        <div class="bg-white rounded-xl border border-stone-200 px-3 py-2.5 shadow-sm flex flex-col gap-1.5">
+                        <!-- 1. Flight Information 整合:航班/起訖/時間/飛時/巡航 同一張卡 -->
+                        <div class="bg-white rounded-xl border border-stone-200 px-3 py-2 shadow-sm flex flex-col gap-1.5">
                             <div class="flex items-baseline gap-2 flex-wrap">
                                 <span id="qr-flight" class="data-font font-black text-base text-[#8b5a2b] leading-none shrink-0">----</span>
-                                <span id="qr-dep-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span>
+                                <span id="qr-dep-iata" class="data-font font-black text-xl text-[#4a3627] leading-none">---</span>
                                 <span id="qr-dep-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span>
                                 <svg class="w-4 h-4 text-stone-300 self-center shrink-0 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                                <span id="qr-arr-iata" class="data-font font-black text-2xl text-[#4a3627] leading-none">---</span>
+                                <span id="qr-arr-iata" class="data-font font-black text-xl text-[#4a3627] leading-none">---</span>
                                 <span id="qr-arr-icao" class="data-font text-[10px] text-stone-400 font-bold">----</span>
                             </div>
                             <div class="grid grid-cols-2 gap-2 border-t border-stone-100 pt-1.5">
-                                <div class="flex flex-col gap-0.5">
-                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-dep-local">--:--</span></span>
-                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-dep-zulu">--:--Z</span></span>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-0.5">L</span><span id="qr-dep-local">--:--</span></span>
+                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-0.5">Z</span><span id="qr-dep-zulu">--:--Z</span></span>
                                 </div>
-                                <div class="flex flex-col gap-0.5 items-end">
-                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-1">L</span><span id="qr-arr-local">--:--</span></span>
-                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-1">Z</span><span id="qr-arr-zulu">--:--Z</span></span>
+                                <div class="flex items-baseline gap-2 justify-end">
+                                    <span class="data-font text-sm font-black text-stone-800 leading-none"><span class="text-[9px] text-stone-400 mr-0.5">L</span><span id="qr-arr-local">--:--</span></span>
+                                    <span class="data-font text-[11px] font-bold text-stone-500 leading-none"><span class="text-[9px] text-stone-400 mr-0.5">Z</span><span id="qr-arr-zulu">--:--Z</span></span>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- 2. Flight Time + Cruise (醒目深色列) -->
-                        <div class="rounded-xl bg-[#344155] px-3 py-2.5 shadow-sm flex items-center justify-around gap-2">
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-white/50 font-bold uppercase tracking-wider">Flt Time</span><span id="qr-ete" class="data-font font-black text-xl text-[#f6ca6b] leading-none mt-0.5">--:--</span></div>
-                            <div class="w-px h-8 bg-white/15"></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-white/50 font-bold uppercase tracking-wider">Cruise</span><span id="qr-cruise" class="data-font font-black text-xl text-[#8bb4d6] leading-none mt-0.5">---</span></div>
+                            <div class="flex items-center justify-around gap-2 rounded-lg bg-[#344155] px-2 py-1">
+                                <span class="text-[9px] text-white/50 font-bold uppercase tracking-wider">Flt Time</span><span id="qr-ete" class="data-font font-black text-base text-[#f6ca6b] leading-none">--:--</span>
+                                <span class="w-px h-4 bg-white/15"></span>
+                                <span class="text-[9px] text-white/50 font-bold uppercase tracking-wider">Cruise</span><span id="qr-cruise" class="data-font font-black text-base text-[#8bb4d6] leading-none">---</span>
+                            </div>
                         </div>
 
                         <!-- 3. REG + Total Pax + Min Water,接 ELB -->
@@ -248,19 +246,19 @@
                         <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
                             <div class="bg-stone-100 px-3 py-1.5 text-[10px] font-black text-stone-600 uppercase tracking-wider flex items-center gap-1.5"><span>🛠</span>ELB<span id="qr-elb-reg" class="data-font text-[#8b5a2b]">----</span><span id="qr-elb-status" class="ml-auto text-[9px] font-bold text-stone-400 normal-case tracking-normal">—</span></div>
                             <div id="qr-elb-defects" class="border-t border-stone-100">
-                                <button class="w-full flex items-center gap-2 px-3 py-2 text-left active:bg-stone-50" onclick="toggleQrElb('defects')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-red-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Defects & Reporting</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+                                <button class="w-full flex items-center gap-2 px-3 py-1.5 text-left active:bg-stone-50" onclick="toggleQrElb('defects')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-red-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Defects & Reporting</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
                                 <div class="qr-elb-detail hidden px-3 pb-2.5 flex-col gap-1.5"></div>
                             </div>
                             <div id="qr-elb-mel" class="border-t border-stone-100">
-                                <button class="w-full flex items-center gap-2 px-3 py-2 text-left active:bg-stone-50" onclick="toggleQrElb('mel')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-amber-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">MEL Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+                                <button class="w-full flex items-center gap-2 px-3 py-1.5 text-left active:bg-stone-50" onclick="toggleQrElb('mel')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-amber-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">MEL Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
                                 <div class="qr-elb-detail hidden px-3 pb-2.5 flex-col gap-1.5"></div>
                             </div>
                             <div id="qr-elb-inspection" class="border-t border-stone-100">
-                                <button class="w-full flex items-center gap-2 px-3 py-2 text-left active:bg-stone-50" onclick="toggleQrElb('inspection')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-blue-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Inspection Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+                                <button class="w-full flex items-center gap-2 px-3 py-1.5 text-left active:bg-stone-50" onclick="toggleQrElb('inspection')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-blue-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Inspection Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
                                 <div class="qr-elb-detail hidden px-3 pb-2.5 flex-col gap-1.5"></div>
                             </div>
                             <div id="qr-elb-acceptable" class="border-t border-stone-100">
-                                <button class="w-full flex items-center gap-2 px-3 py-2 text-left active:bg-stone-50" onclick="toggleQrElb('acceptable')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-stone-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Acceptable Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+                                <button class="w-full flex items-center gap-2 px-3 py-1.5 text-left active:bg-stone-50" onclick="toggleQrElb('acceptable')"><span class="qr-elb-dot w-2 h-2 rounded-full bg-stone-500 shrink-0" style="opacity:.25"></span><span class="text-xs font-bold text-stone-700 flex-1">Acceptable Deferred</span><span class="qr-elb-cnt data-font font-black text-sm text-stone-400 bg-stone-100 px-2 rounded">0</span><svg class="qr-elb-chev w-4 h-4 text-stone-300 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
                                 <div class="qr-elb-detail hidden px-3 pb-2.5 flex-col gap-1.5"></div>
                             </div>
                         </div>
@@ -290,14 +288,14 @@
                         <!-- 6. Turbli 今日亂流縮圖 (點擊捲到完整區塊) -->
                         <div id="qr-turbli-wrap" class="hidden bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden cursor-pointer" onclick="document.getElementById('turbli-auto').scrollIntoView({behavior:'smooth',block:'center'})">
                             <div class="bg-indigo-50 px-3 py-1.5 text-[10px] font-black text-indigo-700 uppercase tracking-wider flex items-center gap-1.5"><span>🌀</span>Turbli 今日亂流<span class="ml-auto text-[9px] font-bold text-indigo-400 normal-case tracking-normal">點擊看完整</span></div>
-                            <img id="qr-turbli-img" class="w-full h-auto block" alt="Turbli 今日亂流預測">
+                            <img id="qr-turbli-img" class="w-full max-h-[100px] object-contain block bg-white" alt="Turbli 今日亂流預測">
                         </div>
 
                         <!-- 7. 重量 + 油量 + 備降 (TOW / Total Fuel 醒目) -->
                         <div class="bg-white rounded-xl border border-stone-200 px-3 py-2.5 shadow-sm flex flex-col gap-2">
                             <div class="grid grid-cols-2 gap-2">
-                                <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3 py-1.5 flex flex-col items-center"><span class="text-[9px] text-[#8b5a2b] font-bold uppercase tracking-wider">TOW</span><span id="qr-tow" class="data-font font-black text-2xl text-[#4a3627] leading-none mt-0.5">--.-</span></div>
-                                <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3 py-1.5 flex flex-col items-center"><span class="text-[9px] text-[#8b5a2b] font-bold uppercase tracking-wider">Total Fuel</span><span id="qr-total-fuel" class="data-font font-black text-2xl text-[#6e4620] leading-none mt-0.5">--.-</span></div>
+                                <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3 py-1 flex flex-col items-center"><span class="text-[9px] text-[#8b5a2b] font-bold uppercase tracking-wider">TOW</span><span id="qr-tow" class="data-font font-black text-2xl text-[#4a3627] leading-none mt-0.5">--.-</span></div>
+                                <div class="bg-[#f7efe6] border border-[#e8dfd5] rounded-lg px-3 py-1 flex flex-col items-center"><span class="text-[9px] text-[#8b5a2b] font-bold uppercase tracking-wider">Total Fuel</span><span id="qr-total-fuel" class="data-font font-black text-2xl text-[#6e4620] leading-none mt-0.5">--.-</span></div>
                             </div>
                             <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
                                 <div class="flex justify-between items-baseline"><span class="text-[10px] text-stone-400 font-bold">LDW</span><span id="qr-ldw" class="data-font font-black text-sm text-[#4a3627]">--.-</span></div>
