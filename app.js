@@ -1662,9 +1662,8 @@ function initCurfewCalculator() {
                 txo = 0; txi = 0;
             } else {
                 txo = intVal(s.querySelector('.cf-txo'));
-                const trip = parseHM(s.querySelector('.cf-trip').value) || 0;
                 txi = intVal(s.querySelector('.cf-txi'));
-                dur = txo + trip + txi;
+                dur = txo + (parseHM(s.querySelector('.cf-trip').value) || 0) + txi;
             }
             s.querySelector('.cf-dur').textContent = fmtDur(dur);
             durs.push({ dur, txo, txi });
