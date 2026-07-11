@@ -218,8 +218,7 @@ function metaHTML(it){
   if(it.src.code) h+=`<span class="code">${it.src.code}</span>`;
   if(it.isNew)    h+=`<span class="new">NEW</span>`;
   h+=`<span class="spacer"></span>`;
-  const ft=it.fleet.includes("ALL")?"全機隊":it.fleet.join(" · ");
-  h+=`<span class="fleet ${it.fleet.includes("ALL")?"all":""}">${ft}</span><span class="date">${it.date}</span>`;
+  h+=`<span class="date">${it.date}</span>`;
   return h;
 }
 function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
@@ -232,7 +231,7 @@ function render(){
   const list=document.getElementById("list"), rows=DATA.filter(matches);
   if(!rows.length){ list.innerHTML=`<div class="empty">沒有符合的公告</div>`; return; }
   list.innerHTML=rows.map(it=>`
-    <div class="card ${it.important?"important":""}">
+    <div class="card">
       <div class="meta">${metaHTML(it)}</div>
       <div class="title">${esc(it.title)}</div>
       <span class="chev">▼</span>
