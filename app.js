@@ -1502,7 +1502,7 @@ function initCurfewCalculator() {
     const tzLabel = () => { const t = tzVal(); return `UTC${t > 0 ? '+' : (t === 0 ? '±' : '')}${t}`; };
     const dual = (utc) => `<div class="cf-lcl" style="font-weight:800;">${fullDT(toLcl(utc))} L ${tzLabel()}</div><div class="cf-utc" style="font-weight:700;font-size:.92em;">${fullDT(utc)} Z</div>`;
 
-    const state = { type: 'parking', mode: 'zulu', sectorCount: 1 };
+    const state = { type: 'parking', mode: 'zulu', sectorCount: 1, inputMode: 'block' };
     let gFirstOut = null; // latest Sector-1 off-block (UTC) for the countdown
 
     // ---- dest-TZ select ----
@@ -1522,10 +1522,16 @@ function initCurfewCalculator() {
                 <span class="cf-label">Sector ${i}</span>
                 <span class="cf-label">Dur <span class="cf-dur" style="font-family:ui-monospace,monospace;color:#4a3627;">0:00</span></span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                <div><div class="cf-label" style="text-align:center;">Taxi Out(m)</div><input class="cf-in cf-nint cf-txo" inputmode="numeric" placeholder="0" value="15"></div>
-                <div><div class="cf-label" style="text-align:center;">Trip</div><input class="cf-in cf-ntime cf-trip" inputmode="numeric" placeholder="HH:MM"></div>
-                <div><div class="cf-label" style="text-align:center;">Taxi In(m)</div><input class="cf-in cf-nint cf-txi" inputmode="numeric" placeholder="0" value="15"></div>
+            <div class="cf-block-mode">
+                <div class="cf-label" style="text-align:center;">Total Block Time (HH:MM)</div>
+                <input class="cf-in cf-ntime cf-block" inputmode="numeric" placeholder="HH:MM">
+            </div>
+            <div class="cf-detail-mode hide">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                    <div><div class="cf-label" style="text-align:center;">Taxi Out(m)</div><input class="cf-in cf-nint cf-txo" inputmode="numeric" placeholder="0" value="15"></div>
+                    <div><div class="cf-label" style="text-align:center;">Trip</div><input class="cf-in cf-ntime cf-trip" inputmode="numeric" placeholder="HH:MM"></div>
+                    <div><div class="cf-label" style="text-align:center;">Taxi In(m)</div><input class="cf-in cf-nint cf-txi" inputmode="numeric" placeholder="0" value="15"></div>
+                </div>
             </div>
         </div>`;
     }
@@ -1583,6 +1589,17 @@ function initCurfewCalculator() {
         box.querySelectorAll('.cf-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === state.type));
         $('cfTypePill').style.transform = state.type === 'landing' ? 'translateX(0)' : 'translateX(100%)';
     }
+    function updateInputModeUI() {
+        const isBlock = state.inputMode === 'block';
+        box.querySelectorAll('.cf-imode-btn').forEach(b => b.classList.toggle('active', b.dataset.imode === state.inputMode));
+        $('cfInputModePill').style.transform = isBlock ? 'translateX(0)' : 'translateX(100%)';
+        box.querySelectorAll('.cf-block-mode').forEach(el => el.classList.toggle('hide', !isBlock));
+        box.querySelectorAll('.cf-detail-mode').forEach(el => el.classList.toggle('hide', isBlock));
+        $('cfSecLabel').textContent = isBlock
+            ? 'Sectors 航段（Total Block Time，HH:MM）'
+            : 'Sectors 航段（Taxi Out / Trip / Taxi In，分鐘/HH:MM）';
+        $('cfBlockHint').classList.toggle('hide', !isBlock);
+    }
     function setDefaultDate() {
         const n = new Date();
         $('cfDate').value = `${n.getUTCFullYear()}-${pad(n.getUTCMonth() + 1)}-${pad(n.getUTCDate())}`;
@@ -1634,13 +1651,21 @@ function initCurfewCalculator() {
                 : `<span class="cf-utc">${fullDT(u0)} Z</span>`)
             : '';
 
+        const isBlock = state.inputMode === 'block';
+        $('cfTakeoffRow').classList.toggle('hide', isBlock);
         const secs = [...box.querySelectorAll('.cf-sector:not(.hide)')];
         const durs = []; let total = 0; let lastTxi = 0;
         secs.forEach((s, idx) => {
-            const txo = intVal(s.querySelector('.cf-txo'));
-            const trip = parseHM(s.querySelector('.cf-trip').value) || 0;
-            const txi = intVal(s.querySelector('.cf-txi'));
-            const dur = txo + trip + txi;
+            let dur, txo, txi;
+            if (isBlock) {
+                dur = parseHM(s.querySelector('.cf-block').value) || 0;
+                txo = 0; txi = 0;
+            } else {
+                txo = intVal(s.querySelector('.cf-txo'));
+                const trip = parseHM(s.querySelector('.cf-trip').value) || 0;
+                txi = intVal(s.querySelector('.cf-txi'));
+                dur = txo + trip + txi;
+            }
             s.querySelector('.cf-dur').textContent = fmtDur(dur);
             durs.push({ dur, txo, txi });
             total += dur;
@@ -1707,6 +1732,7 @@ function initCurfewCalculator() {
 
     // ---- events ----
     box.querySelectorAll('.cf-type-btn').forEach(b => b.onclick = () => { state.type = b.dataset.type; updateTypeUI(); recompute(); });
+    box.querySelectorAll('.cf-imode-btn').forEach(b => b.onclick = () => { state.inputMode = b.dataset.imode; updateInputModeUI(); recompute(); });
     $('cfBadge').onclick = () => {
         const cur = curfewUTC();
         state.mode = state.mode === 'zulu' ? 'local' : 'zulu';
@@ -1730,31 +1756,32 @@ function initCurfewCalculator() {
     $('cfAddBtn').onclick = addSector;
     $('cfRemoveBtn').onclick = removeSector;
     $('cfClearBtn').onclick = () => {
-        box.querySelectorAll('.cf-trip').forEach(i => i.value = '');
+        box.querySelectorAll('.cf-block, .cf-trip').forEach(i => i.value = '');
         box.querySelectorAll('.cf-txo, .cf-txi').forEach(i => i.value = '15');
         box.querySelectorAll('.cf-ta-in').forEach(i => i.value = '01:00');
         $('cfTime').value = '';
         recompute();
     };
     $('resetCurfewBtn').onclick = () => {
-        state.type = 'parking'; state.mode = 'zulu';
+        state.type = 'parking'; state.mode = 'zulu'; state.inputMode = 'block';
         while (state.sectorCount > 1) {
             box.querySelector(`.cf-sector[data-sec="${state.sectorCount}"]`).classList.add('hide');
             const ta = box.querySelector(`.cf-ta[data-ta="${state.sectorCount - 1}"]`); if (ta) ta.classList.add('hide');
             state.sectorCount--;
         }
         $('cfTz').value = '8';
-        box.querySelectorAll('.cf-trip').forEach(i => i.value = '');
+        box.querySelectorAll('.cf-block, .cf-trip').forEach(i => i.value = '');
         box.querySelectorAll('.cf-txo, .cf-txi').forEach(i => i.value = '15');
         box.querySelectorAll('.cf-ta-in').forEach(i => i.value = '01:00');
         setDefaultDate(); $('cfTime').value = '';
-        updateTypeUI(); updateBadge(); renderSectorButtons(); recompute();
+        updateTypeUI(); updateBadge(); updateInputModeUI(); renderSectorButtons(); recompute();
     };
 
     // ---- init ----
     setDefaultDate();
     updateTypeUI();
     updateBadge();
+    updateInputModeUI();
     renderSectorButtons();
     recompute();
     if (curfewClockInterval) clearInterval(curfewClockInterval);

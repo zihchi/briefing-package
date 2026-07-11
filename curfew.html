@@ -75,7 +75,13 @@
 
     <!-- Sectors -->
     <div>
-      <div class="cf-label" style="margin-bottom:6px;">Sectors 航段（Taxi Out / Trip / Taxi In，分鐘/HH:MM）</div>
+      <div class="cf-label" id="cfSecLabel" style="margin-bottom:6px;">Sectors 航段（Block Time，HH:MM）</div>
+      <div class="app-toggle" id="cfInputModeToggle" style="margin-bottom:8px;">
+        <button class="app-toggle-btn cf-imode-btn active" data-imode="block">Block Time</button>
+        <button class="app-toggle-btn cf-imode-btn" data-imode="detail">Taxi 明細</button>
+        <div class="app-toggle-pill" id="cfInputModePill" style="transform:translateX(0);"></div>
+      </div>
+      <div class="cf-label" id="cfBlockHint" style="margin:-2px 2px 8px;color:#a8a29e;font-weight:600;text-transform:none;letter-spacing:0;">ℹ️ Block 模式僅算最晚後推；起飛時間與落地宵禁請切換 Taxi 明細</div>
       <div id="cfSectors" style="display:flex;flex-direction:column;gap:10px;"></div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button id="cfAddBtn" class="cf-btn" style="color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe;">+ 航段</button>
@@ -93,8 +99,10 @@
       <div style="border-top:1px solid #e7ddd0;margin-top:10px;padding-top:10px;">
         <div class="cf-label">Latest Off-Block 最晚後推 (Sector 1 OUT)</div>
         <div id="cfPushback" style="font-family:ui-monospace,monospace;color:#a8a29e;margin-top:2px;">輸入宵禁與航段後計算</div>
-        <div class="cf-label" style="margin-top:8px;">Latest Takeoff 最晚起飛 (Sector 1 OFF)</div>
-        <div id="cfTakeoff" style="font-family:ui-monospace,monospace;color:#a8a29e;margin-top:2px;">--</div>
+        <div id="cfTakeoffRow">
+          <div class="cf-label" style="margin-top:8px;">Latest Takeoff 最晚起飛 (Sector 1 OFF)</div>
+          <div id="cfTakeoff" style="font-family:ui-monospace,monospace;color:#a8a29e;margin-top:2px;">--</div>
+        </div>
       </div>
       <div id="cfSchedule" class="hide" style="border-top:1px solid #e7ddd0;margin-top:10px;padding-top:10px;"></div>
       <div id="cfTimelineWrap" class="hide" style="border-top:1px solid #e7ddd0;margin-top:10px;padding-top:10px;">
