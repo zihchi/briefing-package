@@ -738,9 +738,6 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         
         ${timeHtml}
 
-        <div id="os-weather-${airport.icao}" style="margin-bottom: 15px;">
-            <div style="font-size:12px; color:#64748b; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">⏳ 正在擷取開源氣象資料...</div>
-        </div>
 
         <div class="data-block">
             <div class="section-title">
@@ -766,6 +763,10 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
                 📻 獲取 ${airport.icao} 即時 D-ATIS
             </button>
             <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;"></div>
+        </div>
+
+   <div id="os-weather-${airport.icao}" style="margin-bottom: 15px;">
+            <div style="font-size:12px; color:#64748b; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">⏳ 正在擷取開源氣象資料...</div>
         </div>
 
         <div class="data-block" style="border-bottom: none; margin-top: 15px; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
