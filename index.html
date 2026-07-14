@@ -945,7 +945,9 @@
     function saveSel(flightNo){ try{ sessionStorage.setItem(FD_KEY, flightNo); }catch(e){} }
     function clearSel(){ try{ sessionStorage.removeItem(FD_KEY); }catch(e){} }
 
-    var SCHED_GAS = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
+    // 航班時間改走 AeroDataBox（經 Cloudflare Worker 代理，key 藏在 worker secret，
+    // 與 LIDOPRO4 共用同一支 /api/aerodatabox）。回傳含表定/預計/實際時間。
+    var ELB_WORKER_URL = "https://briefing-package.zihchi.workers.dev";
     var FIDS_GAS  = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec";
     // IATA → [緯度, 經度]（星宇航點，取自 app.js coordsDB）
     var AP = {
@@ -973,8 +975,22 @@
       if(c>=95) return ['⛈️','雷雨'];
       return ['🌡️','—'];
     }
-    function fmtAt(utcMs, offSec){ var d=new Date(utcMs+offSec*1000); return {t:p2(d.getUTCHours())+':'+p2(d.getUTCMinutes()), d:p2(d.getUTCDate())+' '+MON[d.getUTCMonth()]+' 週'+WK[d.getUTCDay()]}; }
-    function fmtZ(utcMs){ var d=new Date(utcMs); return {t:p2(d.getUTCHours())+':'+p2(d.getUTCMinutes())+'Z', d:p2(d.getUTCDate())+' '+MON[d.getUTCMonth()]}; }
+    // 解析 AeroDataBox 時間物件 {utc:"2026-07-13 00:05Z", local:"2026-07-13 08:05+08:00"}
+    // → { loc:{t,d}, utc:{t,d} }，格式與面板一致（當地含星期、UTC 帶 Z）。
+    function fmtADB(o){
+      function parse(str){
+        var m=String(str||'').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+        if(!m) return null;
+        var y=+m[1], mo=+m[2]-1, da=+m[3], wd=new Date(Date.UTC(y,mo,da)).getUTCDay();
+        return {mo:mo, da:da, wd:wd, hh:m[4], mm:m[5]};
+      }
+      if(!o) return {loc:null, utc:null};
+      var L=parse(o.local), U=parse(o.utc);
+      return {
+        loc: L ? {t:L.hh+':'+L.mm, d:p2(L.da)+' '+MON[L.mo]+' 週'+WK[L.wd]} : null,
+        utc: U ? {t:U.hh+':'+U.mm+'Z', d:p2(U.da)+' '+MON[U.mo]} : null
+      };
+    }
     function todayTPE(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'}); }
     function addDays(s,n){ var d=new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
 
@@ -997,13 +1013,23 @@
         .then(function(j){ return {off:(j.utc_offset_seconds||0), temp:(j.current?j.current.temperature_2m:null), code:(j.current?j.current.weather_code:null)}; })
         .catch(function(){ return null; });
     }
-    function getSchedule(flightNo){
-      return fetch(SCHED_GAS+'?flight=JX'+flightNo,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
-        if(!j.ok||!j.schedules||!j.schedules.length) return null;
-        var t=todayTPE();
-        var v=j.schedules.filter(function(s){var a=(s.ScheduleStartDate||'').slice(0,10),b=(s.ScheduleEndDate||'').slice(0,10);return (!a||a<=t)&&(!b||b>=t);});
-        return v[0]||j.schedules[0];
-      }).catch(function(){ return null; });
+    // 打 worker → AeroDataBox「flight by number」，回傳配對到起訖站的那一筆
+    function getAdb(flightNo, orig, dest){
+      var date=todayTPE();
+      return fetch(ELB_WORKER_URL+'/api/aerodatabox?flight=JX'+flightNo+'&date='+date,{cache:'no-store'})
+        .then(function(r){return r.json();})
+        .then(function(j){
+          if(!j||!j.ok||!Array.isArray(j.flights)||!j.flights.length) return null;
+          return pickAdb(j.flights, orig, dest);
+        }).catch(function(){ return null; });
+    }
+    function pickAdb(flights, orig, dest){
+      function dep(f,ia){ return f.departure && f.departure.iata===ia; }
+      function arr(f,ia){ return f.arrival && f.arrival.iata===ia; }
+      return flights.find(function(f){ return dep(f,orig) && arr(f,dest); })
+          || flights.find(function(f){ return dep(f,orig); })
+          || flights.find(function(f){ return arr(f,dest); })
+          || (flights.length===1 ? flights[0] : null);
     }
     var _fids=null;
     function getFids(){ if(_fids) return Promise.resolve(_fids); return fetch(FIDS_GAS,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){_fids=j;return j;}).catch(function(){return {departures:[],arrivals:[]};}); }
@@ -1026,20 +1052,13 @@
       var ic=wxOf(w.code); el.textContent = ic[0]+' '+ic[1]+' '+Math.round(w.temp)+'°C';
     }
 
-    function parseHM(s){ var m=String(s||'').match(/(\d{1,2}):(\d{2})(?:\s*\+\s*(\d+))?/); return m?{h:+m[1],mm:+m[2],plus:m[3]?+m[3]:0}:null; }
-    function renderTimes(sched, wO, wD){
-      if(!sched){ setTimes('dep',null,null); setTimes('arr',null,null); return; }
-      var offO=wO?wO.off:0, offD=wD?wD.off:0;
-      var originNow=new Date(Date.now()+offO*1000);
-      var y=originNow.getUTCFullYear(), mo=originNow.getUTCMonth(), da=originNow.getUTCDate();
-      var dpt=parseHM(sched.DepartureTime), art=parseHM(sched.ArrivalTime), depBase=null;
-      if(dpt){ var depUtc=Date.UTC(y,mo,da,dpt.h,dpt.mm)-offO*1000+dpt.plus*864e5; depBase=depUtc; setTimes('dep', fmtAt(depUtc,offO), fmtZ(depUtc)); }
-      else setTimes('dep',null,null);
-      if(art){
-        var arrUtc=Date.UTC(y,mo,da,art.h,art.mm)-offD*1000+art.plus*864e5;
-        if(art.plus===0 && depBase!=null && arrUtc<=depBase) arrUtc+=864e5;  // 無 +N 標記時用啟發式判跨日
-        setTimes('arr', fmtAt(arrUtc,offD), fmtZ(arrUtc));
-      } else setTimes('arr',null,null);
+    // 每端優先序：預計(revised，即時變動) → 表定(scheduled) → 實際(runway)
+    function pickAdbTime(side){ return side ? (side.revisedTime||side.scheduledTime||side.runwayTime||null) : null; }
+    function renderTimesADB(m){
+      if(!m){ setTimes('dep',null,null); setTimes('arr',null,null); return; }
+      var D=fmtADB(pickAdbTime(m.departure)), A=fmtADB(pickAdbTime(m.arrival));
+      setTimes('dep', D.loc, D.utc);
+      setTimes('arr', A.loc, A.utc);
     }
     function renderFids(f, tpeIsOrigin){
       var box=document.getElementById('fd-fids');
@@ -1094,9 +1113,10 @@
       document.getElementById('fd-fids').innerHTML='<span class="fd-note">載入中…</span>';
       renderTurb(flightNo, info.route);
       panel.classList.add('open');
-      // 時間 + 天氣（一組）
-      Promise.all([ getSchedule(flightNo), openMeteo(orig), openMeteo(dest) ]).then(function(res){
-        try{ setWx('dep',res[1]); setWx('arr',res[2]); renderTimes(res[0], res[1], res[2]); }catch(e){}
+      // 時間（AeroDataBox）+ 天氣（open-meteo），各自獨立不互相卡
+      getAdb(flightNo, orig, dest).then(function(m){ try{ renderTimesADB(m); }catch(e){} });
+      Promise.all([ openMeteo(orig), openMeteo(dest) ]).then(function(res){
+        try{ setWx('dep',res[0]); setWx('arr',res[1]); }catch(e){}
       });
       // 桃機 FIDS（獨立載入，不被上面卡住）
       getFids().then(function(fids){

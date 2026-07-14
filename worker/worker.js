@@ -660,6 +660,9 @@ async function handleAeroDataBox(request, origin, env, ctx) {
   let data;
   try { data = await res.json(); } catch { data = null; }
   const list = Array.isArray(data) ? data : (data ? [data] : []);
+  // AeroDataBox 的時間欄位皆為 { utc, local } 物件（local 自帶時區位移）：
+  //   scheduledTime = 表定、revisedTime = 預計（即時變動）、runwayTime = 實際起降
+  const slimTime = t => (t && (t.utc || t.local)) ? { utc: t.utc || '', local: t.local || '' } : null;
   const slim = list.map(f => ({
     number: f.number || '',
     status: f.status || '',
@@ -668,6 +671,9 @@ async function handleAeroDataBox(request, origin, env, ctx) {
       iata: f.departure.airport?.iata || '',
       terminal: f.departure.terminal || '',
       gate: f.departure.gate || '',
+      scheduledTime: slimTime(f.departure.scheduledTime),
+      revisedTime: slimTime(f.departure.revisedTime),
+      runwayTime: slimTime(f.departure.runwayTime),
     } : null,
     arrival: f.arrival ? {
       icao: f.arrival.airport?.icao || '',
@@ -675,6 +681,9 @@ async function handleAeroDataBox(request, origin, env, ctx) {
       terminal: f.arrival.terminal || '',
       gate: f.arrival.gate || '',
       baggageBelt: f.arrival.baggageBelt || '',
+      scheduledTime: slimTime(f.arrival.scheduledTime),
+      revisedTime: slimTime(f.arrival.revisedTime),
+      runwayTime: slimTime(f.arrival.runwayTime),
     } : null,
   }));
 
