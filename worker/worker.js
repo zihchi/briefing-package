@@ -606,10 +606,11 @@ async function handleProxy(request, origin) {
 
 // ──────────────────────────────────────────
 // /api/aerodatabox?flight=JX123&date=2026-06-08  GET
-// 用 AeroDataBox (RapidAPI 免費額度) 查非桃園機場的 gate/terminal
+// 用 AeroDataBox (RapidAPI 免費額度) 查航班起訖時間（表定/預計/實際）
+//   · index.html 頂部航班面板用；gate/terminal/行李轉盤已不再回傳
 //   · API key 走 secret env.AERODATABOX_KEY,不入前端、不入 git
 //   · 伺服器端 Cloudflare Cache 快取 1 小時,跨裝置共用、省免費額度
-//   · 回傳精簡欄位,單次查詢同時涵蓋 dep + arr 兩側機坪
+//   · 回傳精簡欄位,單次查詢同時涵蓋 dep + arr 兩側時間
 // ──────────────────────────────────────────
 async function handleAeroDataBox(request, origin, env, ctx) {
   // 只服務 allowlist 來源(瀏覽器會帶 Origin),擋掉非預期的額度消耗
@@ -660,21 +661,25 @@ async function handleAeroDataBox(request, origin, env, ctx) {
   let data;
   try { data = await res.json(); } catch { data = null; }
   const list = Array.isArray(data) ? data : (data ? [data] : []);
+  // AeroDataBox 的時間欄位皆為 { utc, local } 物件（local 自帶時區位移）：
+  //   scheduledTime = 表定、revisedTime = 預計（即時變動）、runwayTime = 實際起降
+  const slimTime = t => (t && (t.utc || t.local)) ? { utc: t.utc || '', local: t.local || '' } : null;
   const slim = list.map(f => ({
     number: f.number || '',
     status: f.status || '',
     departure: f.departure ? {
       icao: f.departure.airport?.icao || '',
       iata: f.departure.airport?.iata || '',
-      terminal: f.departure.terminal || '',
-      gate: f.departure.gate || '',
+      scheduledTime: slimTime(f.departure.scheduledTime),
+      revisedTime: slimTime(f.departure.revisedTime),
+      runwayTime: slimTime(f.departure.runwayTime),
     } : null,
     arrival: f.arrival ? {
       icao: f.arrival.airport?.icao || '',
       iata: f.arrival.airport?.iata || '',
-      terminal: f.arrival.terminal || '',
-      gate: f.arrival.gate || '',
-      baggageBelt: f.arrival.baggageBelt || '',
+      scheduledTime: slimTime(f.arrival.scheduledTime),
+      revisedTime: slimTime(f.arrival.revisedTime),
+      runwayTime: slimTime(f.arrival.runwayTime),
     } : null,
   }));
 

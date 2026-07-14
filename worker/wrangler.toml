@@ -1,4 +1,7 @@
-name = "elb"
+# 名稱對齊前端實際呼叫的 https://briefing-package.zihchi.workers.dev
+# （index.html 航班時間、LIDOPRO4 登入/氣象都打這支）。
+# 舊的 elb.zihchi.workers.dev 為同碼另一支部署，僅 LIDOPRO4 的 /api/wx 仍指向它。
+name = "briefing-package"
 main = "worker.js"
 compatibility_date = "2024-12-01"
 
