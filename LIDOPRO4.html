@@ -2938,29 +2938,6 @@
                 }
             }
 
-            // 非桃園機場:背景用 AeroDataBox 免費額度補 gate/terminal(不阻塞解析)
-            const depIsTPE = (currentDepICAO === 'RCTP' || currentDepICAO === 'TPE');
-            const arrIsTPE = (currentArrICAO === 'RCTP' || currentArrICAO === 'TPE');
-            const needAdbDep = !depIsTPE && currentDepICAO !== '----';
-            const needAdbArr = !arrIsTPE && currentArrICAO !== '----';
-            if ((needAdbDep || needAdbArr) && targetAirline && targetFlightNum) {
-                const depDateISO = toISODate(calcLocalDate(currentDateUTC, currentDepUTC, currentDepICAO));
-                if (depDateISO) {
-                    const seq = ++gateEnrichSeq;
-                    enrichGatesFromAeroDataBox({
-                        seq,
-                        flightCode: targetAirline + targetFlightNum,
-                        depDateISO,
-                        depICAO: currentDepICAO,
-                        arrICAO: currentArrICAO,
-                        needDep: needAdbDep,
-                        needArr: needAdbArr,
-                    });
-                }
-            } else {
-                gateEnrichSeq++; // 桃園↔桃園或無班號:作廢任何在途補強,避免套到新班
-            }
-
             altnRwys.forEach(alt => {
                 if (alt !== 'N/A' && alt !== '----' && alt !== '') {
                     const icao = alt.split('/')[0].trim();
@@ -3419,102 +3396,6 @@
             } catch (err) {
                 console.error("Background TDX Data Link Error:", err);
             }
-        }
-
-        // ──────────────────────────────────────────
-        // AeroDataBox 機坪補強(非桃園機場)
-        // 桃園仍走 TDX;非桃園 dep/arr 透過 worker /api/aerodatabox 代理
-        //（key 走 secret）查 gate/terminal。自動查 + 瀏覽器積極快取省免費額度。
-        // ──────────────────────────────────────────
-        const ADB_CACHE_PREFIX = 'adbGate:';
-        const ADB_TTL_MS = 2 * 60 * 60 * 1000; // 2 小時內的快取視為新鮮,不再打 API
-        let gateEnrichSeq = 0;                  // 換航班時讓在途請求作廢的序號
-
-        function toISODate(monStr) {
-            // calcLocalDate 回傳 "2026-JUN-08" → 轉成 AeroDataBox 要的 "2026-06-08"
-            if (!monStr) return null;
-            const p = String(monStr).split('-');
-            if (p.length !== 3) return null;
-            const m = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
-            const mm = isNaN(p[1]) ? (m[p[1].toUpperCase()] || '') : String(p[1]).padStart(2, '0');
-            if (!mm) return null;
-            return `${p[0]}-${mm}-${String(p[2]).padStart(2, '0')}`;
-        }
-
-        async function fetchAeroDataBoxFlight(flightCode, depDateISO) {
-            const cacheKey = ADB_CACHE_PREFIX + flightCode + ':' + depDateISO;
-            let cached = null;
-            try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) {}
-            if (cached && cached.ts && (Date.now() - cached.ts) < ADB_TTL_MS) {
-                return cached.flights; // 還新鮮,0 次 API
-            }
-            try {
-                const r = await fetch(`${ELB_WORKER_URL}/api/aerodatabox?flight=${encodeURIComponent(flightCode)}&date=${encodeURIComponent(depDateISO)}`);
-                const j = await r.json();
-                if (j && j.ok && Array.isArray(j.flights)) {
-                    try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), flights: j.flights })); } catch (e) {}
-                    return j.flights;
-                }
-                if (j && j.rateLimited) console.warn('AeroDataBox 額度用罄/被限流,改用舊快取(若有)');
-            } catch (e) {
-                console.warn('AeroDataBox 查詢失敗:', e);
-            }
-            // 失敗 / 額度用罄 → 退回舊快取(即使過期),沒有就回 null
-            return cached && Array.isArray(cached.flights) ? cached.flights : null;
-        }
-
-        function pickAdbFlight(flights, depICAO, arrICAO) {
-            const depIata = airportMap[depICAO] || '';
-            const arrIata = airportMap[arrICAO] || '';
-            const hit = (apt, icao, iata) => !!apt && ((icao && apt.icao === icao) || (iata && apt.iata === iata));
-            return flights.find(f => hit(f.departure, depICAO, depIata) && hit(f.arrival, arrICAO, arrIata))
-                || flights.find(f => hit(f.departure, depICAO, depIata))
-                || flights.find(f => hit(f.arrival, arrICAO, arrIata))
-                || (flights.length === 1 ? flights[0] : null);
-        }
-
-        function applyAdbBay(side, info) {
-            if (!info) return;
-            const gate = (info.gate || '').trim();
-            const terminal = (info.terminal || '').trim();
-            const label = side === 'dep' ? '出發' : '抵達';
-            const bayEl = document.getElementById(`out-pld-${side}-bay`);
-            if (gate && bayEl) {
-                const cur = (bayEl.textContent || '').trim();
-                if (cur && cur !== '--' && cur !== gate) {
-                    showToastMessage(`ℹ️ ${label}機坪:OFP(${cur}) vs AeroDataBox(${gate}),已採用 AeroDataBox。`);
-                }
-                bayEl.textContent = gate;
-            }
-            if (terminal) {
-                const termFmt = /^t/i.test(terminal) ? terminal.toUpperCase() : ('T' + terminal);
-                if (side === 'dep') {
-                    const row = document.getElementById('out-pld-dep-term-row');
-                    if (row) { row.classList.remove('hidden'); row.classList.add('flex'); }
-                    const tEl = document.getElementById('out-pld-dep-terminal'); if (tEl) tEl.textContent = termFmt;
-                    const cEl = document.getElementById('out-pld-dep-counter');
-                    if (cEl && !(cEl.textContent || '').trim()) cEl.textContent = '--';
-                } else {
-                    const row = document.getElementById('out-pld-arr-term-row');
-                    if (row) row.classList.remove('hidden');
-                    const tEl = document.getElementById('out-pld-arr-terminal'); if (tEl) tEl.textContent = termFmt;
-                }
-            }
-        }
-
-        async function enrichGatesFromAeroDataBox(opts) {
-            const { seq, flightCode, depDateISO, depICAO, arrICAO, needDep, needArr } = opts;
-            const flights = await fetchAeroDataBoxFlight(flightCode, depDateISO);
-            if (seq !== gateEnrichSeq) return;          // 使用者已換航班,丟棄過期結果
-            if (!flights || flights.length === 0) return;
-            const m = pickAdbFlight(flights, depICAO, arrICAO);
-            if (!m) return;
-            if (needDep) applyAdbBay('dep', m.departure);
-            if (needArr) applyAdbBay('arr', m.arrival);
-            if (needArr && m.arrival && (m.arrival.baggageBelt || m.arrival.baggageClaim)) {
-                quickArrBelt = String(m.arrival.baggageBelt || m.arrival.baggageClaim).trim();
-            }
-            refreshQuickReview(); // gate/belt 補強後刷新 Quick Review
         }
 
         function getTaiwanDateString(offsetDays = 0) {
