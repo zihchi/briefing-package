@@ -565,24 +565,35 @@ window.fetchPopupAtis = function(icao) {
 // ✈️ 智慧時間與分類標籤產生器
 // ------------------------------------------
 function getAirportTimeHTML(lng) {
+    // 🎨 Champagne Ivory 設計：暖象牙白 + 咖啡金，配合星宇色系；日期去西元年（15 JUL）
     const now = new Date();
-    const utcString = now.toISOString().substring(0, 16).replace('T', ' ') + 'Z';
-    
+    const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const p2 = n => String(n).padStart(2, '0');
+
+    // UTC（航空慣用，保留 Z）
+    const uTime = `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}`;
+    const uDate = `${p2(now.getUTCDate())} ${MON[now.getUTCMonth()]}`;
+
+    // 當地（以經度粗估時區位移）
     const offsetHours = Math.round(lng / 15);
     const local = new Date(now.getTime() + offsetHours * 3600 * 1000);
-    
-    const YYYY = local.getUTCFullYear();
-    const MM = String(local.getUTCMonth() + 1).padStart(2, '0');
-    const DD = String(local.getUTCDate()).padStart(2, '0');
-    const HH = String(local.getUTCHours()).padStart(2, '0');
-    const MIN = String(local.getUTCMinutes()).padStart(2, '0');
+    const lTime = `${p2(local.getUTCHours())}:${p2(local.getUTCMinutes())}`;
     const sign = offsetHours >= 0 ? '+' : '';
-    const localString = `${YYYY}-${MM}-${DD} ${HH}:${MIN} (UTC${sign}${offsetHours})`;
+    const lDate = `${p2(local.getUTCDate())} ${MON[local.getUTCMonth()]} · UTC${sign}${offsetHours}`;
+
+    const MONO = "font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums;";
+    const cell = (lab, time, z, date) => `
+            <div style="min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#a07539; font-weight:800; margin-bottom:5px;"><span style="color:#c19a5b;">✦</span> ${lab}</div>
+                <div style="${MONO} font-size:22px; font-weight:600; color:#3f2e20; letter-spacing:0.02em; line-height:1;">${time}${z ? `<span style="font-size:12px; color:#a07539; margin-left:3px; font-weight:700;">${z}</span>` : ''}</div>
+                <div style="${MONO} font-size:11px; color:#8a7c68; margin-top:6px; letter-spacing:0.06em;">${date}</div>
+            </div>`;
 
     return `
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #64748b; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <div style="flex: 1; min-width: 140px;"><span style="font-weight:bold; color:#475569;">🕒 UTC:</span> ${utcString}</div>
-            <div style="flex: 1; min-width: 140px;"><span style="font-weight:bold; color:#475569;">📍 Local:</span> ${localString}</div>
+        <div style="display:grid; grid-template-columns:1fr 1px 1fr; align-items:center; gap:14px; margin-bottom:12px; background:linear-gradient(#fdf9f1,#f5eddd); border:1px solid #e7dbc7; border-radius:13px; padding:15px 18px; box-shadow:0 1px 2px rgba(139,90,43,0.06);">
+            ${cell('UTC', uTime, 'Z', uDate)}
+            <div style="width:1px; align-self:stretch; background:linear-gradient(180deg,transparent,#d9c39a,transparent);"></div>
+            ${cell('Local', lTime, '', lDate)}
         </div>
     `;
 }
