@@ -82,6 +82,13 @@
   .body{display:none;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
   .card.open .body{display:block}
   .content{font-size:14px;line-height:1.7;color:var(--ink-soft);white-space:pre-line;margin:0 0 12px}
+  .points{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  .points li{position:relative;padding-left:18px;font-size:14px;line-height:1.7;color:var(--ink-soft)}
+  .points li::before{content:"";position:absolute;left:3px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--brand)}
+  .action{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:11px 13px;
+    border:1px solid #f0c48a;background:#fdf3e6;border-radius:10px;
+    color:var(--warn);font-size:13.5px;font-weight:700;line-height:1.5}
+  .action .bolt{flex:0 0 auto;font-size:14px}
   .foot{display:flex;gap:16px;font-size:12px;color:var(--ink-faint)}
   .foot b{color:var(--ink-soft);font-weight:600}
 
@@ -178,7 +185,7 @@ function normalize(row){
   // 緊急度：只看「緊急度」欄（urgent/important 才標橘色重點），不再用關鍵字猜
   const urg=(row.緊急度||"").toLowerCase();
   return {date:row.日期||"",_d:parseDate(row.日期),src,fleet,
-    important:(urg==="urgent"||urg==="important"),urgency:urg,
+    important:(urg==="urgent"||urg==="important"|| /需要動作[：:]/.test(sum)),urgency:urg,
     title:(lines[0]||"（無標題）").trim(),
     rest:lines.slice(1).join("\n").trim(),full:sum,source:row.來源||""};
 }
@@ -223,7 +230,17 @@ function metaHTML(it){
 }
 function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function bodyHTML(it){
-  let h=it.rest?`<div class="content">${esc(it.rest)}</div>`:`<div class="content" style="color:var(--ink-faint)">（無更多內容）</div>`;
+  // 內文每行一個重點 → 項目符號；「需要動作：…」那行抽出來做成標章
+  const lines=(it.rest||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  let action=""; const points=[];
+  lines.forEach(l=>{
+    const m=l.match(/^[⚡\s]*需要動作[：:]\s*(.*)$/);
+    if(m) action=m[1].trim(); else points.push(l);
+  });
+  let h="";
+  if(points.length) h+=`<ul class="points">${points.map(p=>`<li>${esc(p)}</li>`).join("")}</ul>`;
+  else if(!action)  h+=`<div class="content" style="color:var(--ink-faint)">（無更多內容）</div>`;
+  if(action) h+=`<div class="action"><span class="bolt">⚡</span><span>需要動作：${esc(action)}</span></div>`;
   h+=`<div class="foot"><span>來源 <b>${esc(it.source)||"—"}</b></span><span>日期 <b>${esc(it.date)||"—"}</b></span></div>`;
   return h;
 }
@@ -231,7 +248,7 @@ function render(){
   const list=document.getElementById("list"), rows=DATA.filter(matches);
   if(!rows.length){ list.innerHTML=`<div class="empty">沒有符合的公告</div>`; return; }
   list.innerHTML=rows.map(it=>`
-    <div class="card">
+    <div class="card${it.important?" important":""}">
       <div class="meta">${metaHTML(it)}</div>
       <div class="title">${esc(it.title)}</div>
       <span class="chev">▼</span>
