@@ -1052,13 +1052,34 @@
       var ic=wxOf(w.code); el.textContent = ic[0]+' '+ic[1]+' '+Math.round(w.temp)+'°C';
     }
 
-    // 每端優先序：預計(revised，即時變動) → 表定(scheduled) → 實際(runway)
+    // 每端優先序：預計(revised/estimated) → 表定(scheduled) → 實際(runway/actual)
     function pickAdbTime(side){ return side ? (side.revisedTime||side.scheduledTime||side.runwayTime||null) : null; }
-    function renderTimesADB(m){
-      if(!m){ setTimes('dep',null,null); setTimes('arr',null,null); return; }
-      var D=fmtADB(pickAdbTime(m.departure)), A=fmtADB(pickAdbTime(m.arrival));
-      setTimes('dep', D.loc, D.utc);
-      setTimes('arr', A.loc, A.utc);
+    // 外站端走 AeroDataBox；TPE 端交給 FIDS/TDX（免費、不受 AeroDataBox 額度限制），此處略過不覆蓋
+    function renderTimesADB(m, depIsTPE, arrIsTPE){
+      var dep = m && m.departure ? pickAdbTime(m.departure) : null;
+      var arr = m && m.arrival ? pickAdbTime(m.arrival) : null;
+      if(!depIsTPE){ var D=fmtADB(dep); setTimes('dep', D.loc, D.utc); }
+      if(!arrIsTPE){ var A=fmtADB(arr); setTimes('arr', A.loc, A.utc); }
+    }
+    // TPE 端時間直接吃桃機 FIDS/TDX（台北當地 UTC+8）；沿用同一筆 FIDS 記錄
+    function fmtTPE(iso){
+      var m=String(iso||'').match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if(!m) return null;
+      var y=+m[1], mo=+m[2]-1, da=+m[3], hh=+m[4], mi=+m[5];
+      var wd=new Date(Date.UTC(y,mo,da)).getUTCDay();
+      var u=new Date(Date.UTC(y,mo,da,hh,mi)-8*3600*1000); // 台北 = UTC+8 → 反推 UTC
+      return {
+        loc:{t:m[4]+':'+m[5], d:p2(da)+' '+MON[mo]+' 週'+WK[wd]},
+        utc:{t:p2(u.getUTCHours())+':'+p2(u.getUTCMinutes())+'Z', d:p2(u.getUTCDate())+' '+MON[u.getUTCMonth()]}
+      };
+    }
+    function renderFidsTimes(rec, tpeIsOrigin){
+      if(!rec) return;
+      var iso = tpeIsOrigin
+        ? (rec.EstimatedDepartureTime||rec.ScheduleDepartureTime||rec.ActualDepartureTime)
+        : (rec.EstimatedArrivalTime||rec.ScheduleArrivalTime||rec.ActualArrivalTime);
+      var F = fmtTPE(iso);
+      if(F) setTimes(tpeIsOrigin?'dep':'arr', F.loc, F.utc);
     }
     function renderFids(f, tpeIsOrigin){
       var box=document.getElementById('fd-fids');
@@ -1105,6 +1126,7 @@
       if(!info){ panel.classList.remove('open'); clearSel(); return; }
       saveSel(flightNo);
       var parts=info.route.split('/'), orig=parts[0], dest=parts[1], tpeIsOrigin=(orig==='TPE');
+      var depIsTPE=(orig==='TPE'), arrIsTPE=(dest==='TPE');
       document.getElementById('fd-no').textContent='JX'+flightNo;
       document.getElementById('fd-route').textContent=orig+' → '+dest;
       document.getElementById('fd-dep-ap').textContent=orig;
@@ -1113,14 +1135,18 @@
       document.getElementById('fd-fids').innerHTML='<span class="fd-note">載入中…</span>';
       renderTurb(flightNo, info.route);
       panel.classList.add('open');
-      // 時間（AeroDataBox）+ 天氣（open-meteo），各自獨立不互相卡
-      getAdb(flightNo, orig, dest).then(function(m){ try{ renderTimesADB(m); }catch(e){} });
+      // 時間：外站端走 AeroDataBox、TPE 端走 FIDS/TDX；天氣走 open-meteo，各自獨立不互相卡
+      getAdb(flightNo, orig, dest).then(function(m){ try{ renderTimesADB(m, depIsTPE, arrIsTPE); }catch(e){} });
       Promise.all([ openMeteo(orig), openMeteo(dest) ]).then(function(res){
         try{ setWx('dep',res[0]); setWx('arr',res[1]); }catch(e){}
       });
-      // 桃機 FIDS（獨立載入，不被上面卡住）
+      // 桃機 FIDS：填 GATE/TERM/BELT，並用同一筆記錄補 TPE 端時間（免費、不受額度限制）
       getFids().then(function(fids){
-        try{ renderFids(findFids(fids, flightNo, tpeIsOrigin), tpeIsOrigin); }
+        try{
+          var rec=findFids(fids, flightNo, tpeIsOrigin);
+          renderFids(rec, tpeIsOrigin);
+          renderFidsTimes(rec, tpeIsOrigin);
+        }
         catch(e){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">FIDS 載入失敗</span>'; }
       });
     }
