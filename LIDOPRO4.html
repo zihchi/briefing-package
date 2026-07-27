@@ -842,9 +842,12 @@
 
                     <!-- NOTAM 座標地圖（自動解析載入的 NOTAM 並標示，無資料時自動隱藏） -->
                     <div id="notam-map-card" class="border border-stone-200 rounded-2xl overflow-hidden shadow-sm bg-white flex flex-col w-full mt-2 md:mt-3" style="display:none">
-                        <div class="bg-gradient-to-r from-[#8b5a2b] to-[#6f4720] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
-                            NOTAM 座標地圖 (自動標示)
+                        <div class="bg-gradient-to-r from-[#8b5a2b] to-[#6f4720] text-white text-[10px] md:text-xs font-bold uppercase tracking-wider px-4 py-2.5 flex items-center justify-between gap-1.5">
+                            <span class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                                NOTAM 座標地圖 (自動標示)
+                            </span>
+                            <button id="btn-toggle-firing" onclick="const on=window.toggleFiringAreas&&window.toggleFiringAreas(); this.classList.toggle('opacity-40', !on);" class="normal-case tracking-normal text-[10px] font-bold bg-red-500/85 hover:bg-red-500 border border-red-300/60 px-2 py-0.5 rounded shadow-sm no-print flex items-center gap-1" title="切換日本射擊訓練區疊圖">🎯 訓練區</button>
                         </div>
                         <div class="p-3 md:p-4 bg-[#fbf9f6] flex flex-col gap-3">
                             <div class="relative w-full">
@@ -856,6 +859,7 @@
                                         <div><span class="dot" style="background:#7c3aed"></span>障礙物</div>
                                         <div><span class="dot" style="background:#2563eb"></span>一般區域</div>
                                         <div><span class="dot" style="background:#0d9488"></span>飛行航線</div>
+                                        <div><span class="dot" style="background:#dc2626;border:1px dashed #fff"></span>日本射擊訓練</div>
                                     </div>
                                 </div>
                             </div>
@@ -3847,6 +3851,33 @@
         let _route = [];             // 航線航點 [{n,lat,lng}]
         let _notamText = '';         // 目前 NOTAM 文字
 
+        // ── 日本 射擊訓練區（AIP SUP NR140/26，2026；有效至 31 AUG 2026）常設參考疊圖 ──
+        // 邊界為官方 ATTACHMENT 圖之凸包近似（保守外擴，不低估危險範圍），實際以正式 AIP 為準。
+        const FIRING_AREAS = [
+            { id:'1', alt:'SFC–30,000ft', ring:[[41.76083,142.08806],[41.33611,142.12972],[41.33611,142.99611],[41.71917,142.99611],[41.73583,142.96278]] },
+            { id:'2', alt:'SFC–UNL',      ring:[[41.33611,142.12972],[41.16944,142.16306],[41.16944,143.32944],[41.55278,143.49611],[41.67917,143.44056],[41.63722,142.99611]] },
+            { id:'3', alt:'SFC–35,000ft', ring:[[41.16944,142.16306],[40.83611,142.17972],[40.73611,142.99611],[40.88611,143.22944],[41.16944,143.32944]] },
+            { id:'4', alt:'SFC–35,000ft', ring:[[39.24944,138.09361],[38.80028,138.65111],[39.34083,138.99667],[40.00278,138.99667],[40.00278,138.38111]] },
+            { id:'5', alt:'SFC–35,000ft', ring:[[34.59472,129.76444],[34.41972,129.93111],[34.28667,130.21444],[34.76972,130.53083],[35.00306,130.03111]] },
+            { id:'6', alt:'SFC–80,000ft', ring:[[37.66944,133.41389],[36.55306,134.74722],[37.23639,136.16361],[39.45278,136.16361],[38.55278,134.03056]] },
+            { id:'7', alt:'SFC–40,000ft', ring:[[36.08333,141.34667],[36.08333,141.76778],[36.16639,141.99778],[36.67861,142.17944],[36.64333,141.34667]] },
+        ];
+        let firingLayers = [];
+        let firingVisible = true;
+        function drawFiringAreas() {
+            firingLayers.forEach(l => { if (notamMapInstance) notamMapInstance.removeLayer(l); });
+            firingLayers = [];
+            if (!firingVisible || !notamMapInstance) return;
+            FIRING_AREAS.forEach(a => {
+                const poly = L.polygon(a.ring, { color:'#dc2626', weight:2, fillColor:'#dc2626', fillOpacity:0.12, dashArray:'5,4' });
+                poly.bindTooltip(`射擊訓練區 #${a.id}`, { sticky:true, direction:'top' });
+                poly.bindPopup(`<b>日本 射擊訓練區 #${a.id}</b><br>高度：${a.alt}<br>時段：見 AIP（多為 SAT/SUN、假日除外）<br>來源：AIP SUP NR140/26 · ATTACHMENT-${a.id}<br><span style="color:#dc2626">邊界為官方圖凸包近似，請以正式 AIP 為準</span>`);
+                poly.addTo(notamMapInstance);
+                firingLayers.push(poly);
+            });
+        }
+        window.toggleFiringAreas = function () { firingVisible = !firingVisible; drawFiringAreas(); return firingVisible; };
+
         function initNotamRadar() {
             if (notamMapInstance !== null) {
                 notamMapInstance.remove();
@@ -4302,6 +4333,7 @@
 
             drawFlightRoute();
             processNotamData(_notamText);
+            drawFiringAreas();   // 日本射擊訓練區常設疊圖
 
             // 若 NOTAM 與航線都無實際圖徵 → 收起卡片
             if (notamFeatures.length === 0 && notamRoutes.length === 0 && notamRouteLayers.length === 0) {
