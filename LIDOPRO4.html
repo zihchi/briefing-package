@@ -190,7 +190,33 @@
             </div>
         </div>
 
-        <div class="flex flex-col xl:flex-row gap-6 items-start">
+        <!-- 擷取列（固定於分頁列上方，兩個分頁共用） -->
+        <div id="fetch-bar-slot" class="mb-4 no-print"></div>
+
+        <!-- 分頁列 -->
+        <div id="tab-bar" class="flex gap-2 mb-5 no-print">
+            <button id="tab-btn-quick" onclick="switchTab('quick')" class="flex-1 py-2.5 px-4 rounded-xl font-black text-sm tracking-wide transition-all bg-gradient-to-r from-[#8b5a2b] to-[#b37a4c] text-white shadow-md">⚡ 速覽</button>
+            <button id="tab-btn-full" onclick="switchTab('full')" class="flex-1 py-2.5 px-4 rounded-xl font-black text-sm tracking-wide transition-all bg-white text-stone-500 border border-stone-200 shadow-sm">📋 完整資訊</button>
+        </div>
+
+        <!-- 分頁一：速覽（Quick Review + 一鍵複製 NOTAM + NOTAM 座標地圖 + ATC Flight Plan） -->
+        <div id="tab-quick" class="flex flex-col gap-4 w-full max-w-3xl mx-auto">
+            <!-- #quick-review 由 JS 移入此處（置頂） -->
+            <!-- 一鍵複製全文 NOTAM -->
+            <div id="qr-notam-copy-card" class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+                <button onclick="copyFullNotam(this)" class="w-full flex items-center gap-2.5 px-4 py-3 text-left active:scale-[0.99] transition-transform">
+                    <span class="text-lg leading-none">📋</span>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span class="text-[10px] font-bold tracking-[0.2em] text-stone-400 uppercase">NOTAM</span>
+                        <span class="font-black text-sm text-[#4a3627] leading-tight">一鍵複製全文 NOTAM</span>
+                    </div>
+                    <span id="notam-copy-hint" class="shrink-0 text-[11px] font-bold text-stone-400"></span>
+                </button>
+            </div>
+            <!-- #notam-map-card 與 #atc-fp-card 由 JS 移入此處 -->
+        </div>
+
+        <div id="tab-full" class="flex flex-col xl:flex-row gap-6 items-start">
              <!-- Sidebar Controls -->
             <div class="w-full xl:w-[340px] shrink-0 flex flex-col gap-4 xl:sticky xl:top-6 z-40 no-print">
 
@@ -285,9 +311,17 @@
                             </div>
                         </div>
 
-                        <!-- 6. Turbli 今日亂流縮圖 (點擊捲到完整區塊) -->
-                        <div id="qr-turbli-wrap" class="hidden bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden cursor-pointer" onclick="document.getElementById('turbli-auto').scrollIntoView({behavior:'smooth',block:'center'})">
-                            <div class="bg-indigo-50 px-3 py-1.5 text-[10px] font-black text-indigo-700 uppercase tracking-wider flex items-center gap-1.5"><span>🌀</span>Turbli 今日亂流<span class="ml-auto text-[9px] font-bold text-indigo-400 normal-case tracking-normal">點擊看完整</span></div>
+                        <!-- 6. Turbli 今日亂流縮圖 (標題含 MAX SHEAR + WNI 快捷) -->
+                        <div id="qr-turbli-wrap" class="hidden bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+                            <div class="bg-indigo-50 px-2.5 py-1.5 flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+                                <span class="text-[10px] leading-none">🌀</span>
+                                <span class="text-[10px] font-black text-indigo-700 uppercase tracking-tight">Turbli 今日亂流</span>
+                                <span class="inline-flex items-center gap-1 bg-red-500/90 border border-red-400 rounded px-1.5 py-0.5 shrink-0">
+                                    <span class="text-[8px] font-bold text-white/85 tracking-tight uppercase">Max Shear</span>
+                                    <span class="data-font text-[10px] font-black text-white leading-none" id="qr-mxsh">---</span>
+                                </span>
+                                <button onclick="qrWniAction(this)" class="ml-auto shrink-0 text-[9px] font-black text-indigo-600 bg-indigo-100 hover:bg-indigo-600 hover:text-white border border-indigo-200 px-2 py-0.5 rounded transition-colors">WNI</button>
+                            </div>
                             <img id="qr-turbli-img" class="w-full max-h-[100px] object-contain block bg-white" alt="Turbli 今日亂流預測">
                         </div>
 
@@ -299,7 +333,7 @@
                             </div>
                             <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
                                 <div class="flex justify-between items-baseline"><span class="text-[10px] text-stone-400 font-bold">LDW</span><span id="qr-ldw" class="data-font font-black text-sm text-[#4a3627]">--.-</span></div>
-                                <div class="flex justify-between items-baseline"><span class="text-[10px] text-stone-400 font-bold">Spare</span><span id="qr-spare" class="data-font font-black text-sm text-[#4b6b3e]">--.-</span></div>
+                                <div class="flex justify-between items-baseline"><span class="text-[9px] text-stone-400 font-bold whitespace-nowrap">Spare (CONT included)</span><span id="qr-spare" class="data-font font-black text-sm text-[#4b6b3e]">--.-</span></div>
                                 <div class="flex justify-between items-baseline col-span-2 border-t border-stone-100 pt-1.5"><span class="text-[10px] text-stone-400 font-bold">1st ALTN</span><span id="qr-altn" class="data-font font-bold text-xs text-stone-700 text-right">--</span></div>
                             </div>
                         </div>
@@ -307,7 +341,7 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 p-4 md:p-5 bg-white rounded-2xl border border-stone-200 shadow-sm">
+                <div id="target-lock-card" class="flex flex-col gap-3 p-4 md:p-5 bg-white rounded-2xl border border-stone-200 shadow-sm">
                     <label class="text-sm font-bold text-stone-600 tracking-wide flex items-center gap-1.5"><span>🎯</span> 目標航班鎖定</label>
                     <div class="flex shadow-inner rounded-xl overflow-hidden border border-stone-300 focus-within:border-[#8b5a2b] focus-within:ring-2 focus-within:ring-[#8b5a2b]/30 bg-stone-50 transition-all">
                         <span class="inline-flex items-center px-4 text-sm text-stone-500 font-bold border-r border-stone-200 bg-stone-100">SJX</span>
@@ -708,7 +742,7 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
+                    <div id="atc-fp-card" class="flex flex-col h-48 bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden relative w-full">
                         <div class="bg-stone-100 px-4 py-2 border-b border-stone-200 flex justify-between items-center z-10 sticky top-0">
                             <span class="font-bold text-stone-600 text-xs tracking-widest">ATC Flight Plan</span>
                             <div class="flex items-center gap-2 no-print">
@@ -1836,6 +1870,27 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            // ── 分頁架構：把 Quick Review / NOTAM 地圖 / ATC Flight Plan 搬進「速覽」分頁 ──
+            (function setupQuickTab() {
+                const tabQuick = document.getElementById('tab-quick');
+                const fetchSlot = document.getElementById('fetch-bar-slot');
+                const lock = document.getElementById('target-lock-card');
+                const qr = document.getElementById('quick-review');
+                const copyCard = document.getElementById('qr-notam-copy-card');
+                const map = document.getElementById('notam-map-card');
+                const atc = document.getElementById('atc-fp-card');
+                if (lock && fetchSlot) fetchSlot.appendChild(lock);            // 擷取列移到分頁上方
+                if (qr && tabQuick && copyCard) tabQuick.insertBefore(qr, copyCard); // Quick Review 置頂
+                if (map && tabQuick) tabQuick.appendChild(map);               // NOTAM 座標地圖
+                if (atc && tabQuick) tabQuick.appendChild(atc);               // ATC Flight Plan
+                // 預設展開 Quick Review
+                const body = document.getElementById('qr-body');
+                const chev = document.getElementById('qr-chevron');
+                if (body) body.classList.remove('hidden');
+                if (chev) chev.style.transform = 'rotate(180deg)';
+            })();
+            if (typeof switchTab === 'function') switchTab('quick');           // 預設顯示速覽分頁
+
             const savedInput1 = localStorage.getItem('dispatch_rawInput_1');
             const savedInput2 = localStorage.getItem('dispatch_rawInput_2');
             const savedNotam = localStorage.getItem('dispatch_notam_input');
@@ -3723,6 +3778,51 @@
                     wrap.classList.add('hidden');
                 }
             }
+            // MAX SHEAR 同步進 Turbli 標題
+            set('qr-mxsh', txt('out-mxsh') || '---');
+        }
+
+        // 分頁切換：速覽 / 完整
+        function switchTab(which) {
+            const q = document.getElementById('tab-quick');
+            const f = document.getElementById('tab-full');
+            const bq = document.getElementById('tab-btn-quick');
+            const bf = document.getElementById('tab-btn-full');
+            if (!q || !f) return;
+            const on = 'bg-gradient-to-r from-[#8b5a2b] to-[#b37a4c] text-white shadow-md';
+            const off = 'bg-white text-stone-500 border border-stone-200 shadow-sm';
+            const base = 'flex-1 py-2.5 px-4 rounded-xl font-black text-sm tracking-wide transition-all ';
+            const quick = which === 'quick';
+            q.style.display = quick ? '' : 'none';
+            f.style.display = quick ? 'none' : '';
+            if (bq) bq.className = base + (quick ? on : off);
+            if (bf) bf.className = base + (quick ? off : on);
+            if (quick) {
+                refreshQuickReview();
+                if (window.invalidateNotamMap) window.invalidateNotamMap();
+            }
+        }
+
+        // 一鍵複製全文 NOTAM
+        function copyFullNotam(btn) {
+            const val = (document.getElementById('raw-notam-input')?.value || '').trim();
+            const hint = document.getElementById('notam-copy-hint');
+            const flash = (msg) => { if (hint) { hint.textContent = msg; setTimeout(() => { hint.textContent = ''; }, 1600); } };
+            if (!val) { flash('無 NOTAM'); return; }
+            navigator.clipboard.writeText(val).then(() => flash('已複製 ✓')).catch(() => flash('複製失敗'));
+        }
+
+        // Quick Review 內 WNI 快捷：複製 ATC Flight Plan 內容後開啟 WNI Editor
+        function qrWniAction(btn) {
+            const val = (document.getElementById('atc-display')?.value || '').trim();
+            const url = 'https://flight-plan-editor.weathernews.com/flight_plan_editor/#login';
+            const open = () => window.open(url, '_blank');
+            const invalid = !val || val === '未尋獲 ATC 報文' || val === '資料處理中...';
+            if (invalid) { open(); return; }
+            navigator.clipboard.writeText(val).then(() => {
+                if (btn) { const o = btn.textContent; btn.textContent = '已複製'; setTimeout(() => { btn.textContent = o; }, 1200); }
+                open();
+            }).catch(open);
         }
 
         // 接收 ELB iframe (ELB_Fleet.html) 的缺陷摘要
@@ -4219,6 +4319,7 @@
 
         // 對外入口
         window.renderNotamMap = function (text) { _notamText = (text || '').trim(); renderMapAll(); };
+        window.invalidateNotamMap = function () { if (notamMapInstance) setTimeout(function () { notamMapInstance.invalidateSize(); }, 80); };
         window.setFlightRoute = function (wpts) {
             _route = Array.isArray(wpts) ? wpts.filter(w => w && isFinite(w.lat) && isFinite(w.lng)) : [];
             renderMapAll();
