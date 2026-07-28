@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v101';
+const CACHE_NAME = 'briefing-v102';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -70,6 +70,7 @@ const BYPASS_HOSTNAMES = [
   'flight-plan-editor.weathernews.com',
   'skyinfo.jp',
   'tono2.net',
+  'metar-taf.com',
 ];
 
 // ⏳ 2 秒超時（舊版 5 秒，斷網/弱網體感快很多）

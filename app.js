@@ -723,6 +723,11 @@ function openWxSheet(airport, rawMetarText, rawTafText) {
 window.closeWxSheet = function() {
     const sheet = document.getElementById('wx-sheet');
     if (sheet) sheet.classList.remove('open');
+    // 徹底清掉面板內容（含 metar-taf widget、其 <style> 與動態 <script>），
+    // 避免關閉後仍殘留造成的任何導航/捲動副作用；下次開啟會重建。
+    const body = document.getElementById('wx-sheet-body');
+    if (body) { body.innerHTML = ''; body.scrollTop = 0; }
+    window._wxSheetAirport = null;
 };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeWxSheet(); });
 
@@ -784,11 +789,15 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         ${timeHtml}
 
         <!-- metar-taf.com 天氣小工具（沿用使用者的 target 設定：已關 QNH/濕度）。
-             ICAO 走路徑決定機場、target 決定顯示設定；腳本由 openWxSheet 動態載入。
-             寬度 100%（上限 360）自適應，同時兼顧 iPhone 直向與 iPad 橫向。 -->
-        <div class="mt-embed" style="margin: 2px 0 14px;">
-            <a href="https://metar-taf.com/metar/${airport.icao}" id="metartaf-IVVp4q0e"
-               style="display:block; width:100%; max-width:240px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none;">METAR ${airport.name}</a>
+             ⚠️ 刻意不放 href：metar-taf 只檢查「元素是 <a> 且開頭為 'METAR '」才渲染，
+             不檢查 href。若帶 href，整塊 widget 會變成全區連結，點到附近會導航/頁面跳動。
+             拿掉 href 後 widget 照常渲染，但不再是連結。想開完整報告改用下方小字連結（新分頁）。 -->
+        <div class="mt-embed" style="margin: 2px 0 10px;">
+            <a id="metartaf-IVVp4q0e"
+               style="display:block; width:100%; max-width:240px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.name}</a>
+            <div style="text-align:center; margin-top:4px;">
+                <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com ↗</a>
+            </div>
         </div>
 
         <div class="data-block">
