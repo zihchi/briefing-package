@@ -693,6 +693,10 @@ function highlightWxKeywords(raw) {
     return String(raw)
         // 顯著天氣現象：雷雨、CB、凍雨/凍毛雨/凍霧、冰雹、颮、漏斗雲、火山灰、垂直能見度
         .replace(/(^|\s)([+-]?TS[A-Z]*|FZRA|FZDZ|FZFG|GR|GS|SQ|FC|VA|VV\d{3})(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
+        // 🌧️ 雨 RA（含強度 +/-、陣性/雷雨等前綴，及 RASN 等組合）
+        .replace(/(^|\s)([+\-]?(?:VC|MI|BC|DR|BL|SH|TS|RE)?RA(?:SN|DZ|GR|GS|PL)?)(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
+        // 🌬️ 風切變 WS（單獨 WS、WS ALL RWY 的 WS，或 TAF 的 WSnnn/dddffKT）
+        .replace(/(^|\s)(WS(?:\d{3}\/\d{5,6}KT)?)(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
         .replace(/\b(\d{3}|VRB)(\d{2,3})(G\d{2,3})(KT|MPS)\b/g, '$1$2<span class="wx-hl">$3</span>$4')
         .replace(/\b(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)\b/g, '$1$2<span class="wx-hl">$3</span>')
         // 低能見度：獨立 4 碼且小於 3000m 才標（前後需空白，避免誤標 Q1005 / 時間組）
@@ -707,6 +711,7 @@ function openWxSheet(airport, rawMetarText, rawTafText) {
     const sheet = document.getElementById('wx-sheet');
     const body = document.getElementById('wx-sheet-body');
     if (!sheet || !body) return;
+    window._wxSheetAirport = airport; // 記住目前開啟的機場，供「重新取得」用
     body.innerHTML = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
     body.scrollTop = 0;
     sheet.classList.add('open');
@@ -718,6 +723,30 @@ window.closeWxSheet = function() {
     if (sheet) sheet.classList.remove('open');
 };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeWxSheet(); });
+
+// 🔄 只重新取得單一機場的 METAR/TAF（不重抓整個機隊，省時間與請求）
+window.refetchAirportWx = async function(icao) {
+    const airport = window._wxSheetAirport;
+    if (!airport || airport.icao !== icao) return;
+    const btn = document.getElementById('wx-refetch-btn-' + icao);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 取得中…'; btn.style.opacity = '0.7'; btn.style.cursor = 'progress'; }
+    try {
+        const [metars, tafs] = await Promise.all([
+            fetchBulkWeatherFast(icao, 'metar'),
+            fetchBulkWeatherFast(icao, 'taf')
+        ]);
+        if (!weatherCache[icao]) weatherCache[icao] = { metar: "", taf: "" };
+        const m = (metars || []).find(x => x.icaoId === icao) || (metars || [])[0];
+        const t = (tafs || []).find(x => x.icaoId === icao) || (tafs || [])[0];
+        if (m) weatherCache[icao].metar = m.rawOb || m.raw || weatherCache[icao].metar;
+        if (t) weatherCache[icao].taf = t.rawTAF || t.raw || weatherCache[icao].taf;
+        // 重新渲染此機場面板（更新報文與時效徽章）
+        openWxSheet(airport, weatherCache[icao].metar, weatherCache[icao].taf);
+    } catch (e) {
+        console.warn('refetchAirportWx 失敗:', e);
+        if (btn) { btn.disabled = false; btn.textContent = '⚠️ 重試'; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+    }
+};
 
 // ------------------------------------------
 // ✈️ 氣象內容組件產生器（原 popup HTML，現在填入大面板）
@@ -744,7 +773,10 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
     <div class="weather-popup">
         <div class="airport-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <span>${airport.name} (${airport.icao})</span>
-            ${fleetBadgeHtml}
+            <span style="display:inline-flex; align-items:center; gap:8px;">
+                ${fleetBadgeHtml}
+                <button id="wx-refetch-btn-${airport.icao}" onclick="refetchAirportWx('${airport.icao}')" title="只重新取得此機場的 METAR/TAF（不會重抓全部機隊）" style="margin:0; padding:4px 10px; font-size:12px; font-weight:bold; background:#fff; border:1px solid #8b5a2b; color:#8b5a2b; border-radius:6px; cursor:pointer; white-space:nowrap;">🔄 重新取得</button>
+            </span>
         </div>
         
         ${timeHtml}
@@ -1304,11 +1336,10 @@ function renderFleetMarkers(fleetName) {
         });
     });
 
-    if (validBounds.length > 0 && window.aviationMapInstance) {
-        const bounds = L.latLngBounds(validBounds);
-        if(bounds.isValid()) {
-            window.aviationMapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
-        }
+    // 預設視角固定以台灣為中心（比例參考截圖）；不再依機隊 fitBounds 縮到很遠、手機上看不清。
+    // 外站機場可自行平移／縮放檢視。
+    if (window.aviationMapInstance) {
+        window.aviationMapInstance.setView([24.0, 121.0], 6);
     }
 }
 
@@ -1320,7 +1351,7 @@ function initAviationMap() {
         window.aviationMapInstance.remove();
     }
 
-    window.aviationMapInstance = L.map('map').setView([23.5, 121.0], 4);
+    window.aviationMapInstance = L.map('map').setView([24.0, 121.0], 6);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
