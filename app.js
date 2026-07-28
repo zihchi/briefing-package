@@ -565,38 +565,31 @@ window.fetchPopupAtis = function(icao) {
 // ✈️ 智慧時間與分類標籤產生器
 // ------------------------------------------
 function getAirportTimeHTML(lng) {
-    // 🎨 Champagne Ivory 設計：暖象牙白 + 咖啡金，配合星宇色系；日期去西元年（15 JUL）
-    const now = new Date();
-    const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const p2 = n => String(n).padStart(2, '0');
-
-    // UTC（航空慣用，保留 Z）
-    const uTime = `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}`;
-    const uDate = `${p2(now.getUTCDate())} ${MON[now.getUTCMonth()]}`;
-
-    // 當地（以經度粗估時區位移）
+    // 🎨 Champagne Ivory：單列只顯示「當地時間（月/日 時:分:秒）+ 與 UTC 差異」。
+    // UTC 已在置頂列常駐，這裡省略以節省上下空間；秒數由 updateWxLocalClock() 每秒更新。
     const offsetHours = Math.round(lng / 15);
-    const local = new Date(now.getTime() + offsetHours * 3600 * 1000);
-    const lTime = `${p2(local.getUTCHours())}:${p2(local.getUTCMinutes())}`;
     const sign = offsetHours >= 0 ? '+' : '';
-    const lDate = `${p2(local.getUTCDate())} ${MON[local.getUTCMonth()]} · UTC${sign}${offsetHours}`;
-
     const MONO = "font-family:ui-monospace,'SF Mono',Menlo,monospace; font-variant-numeric:tabular-nums;";
-    const cell = (lab, time, z, date) => `
-            <div style="min-width:0;">
-                <div style="display:flex; align-items:center; gap:6px; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#a07539; font-weight:800; margin-bottom:5px;"><span style="color:#c19a5b;">✦</span> ${lab}</div>
-                <div style="${MONO} font-size:22px; font-weight:600; color:#3f2e20; letter-spacing:0.02em; line-height:1;">${time}${z ? `<span style="font-size:12px; color:#a07539; margin-left:3px; font-weight:700;">${z}</span>` : ''}</div>
-                <div style="${MONO} font-size:11px; color:#8a7c68; margin-top:6px; letter-spacing:0.06em;">${date}</div>
-            </div>`;
-
     return `
-        <div style="display:grid; grid-template-columns:1fr 1px 1fr; align-items:center; gap:14px; margin-bottom:12px; background:linear-gradient(#fdf9f1,#f5eddd); border:1px solid #e7dbc7; border-radius:13px; padding:15px 18px; box-shadow:0 1px 2px rgba(139,90,43,0.06);">
-            ${cell('UTC', uTime, 'Z', uDate)}
-            <div style="width:1px; align-self:stretch; background:linear-gradient(180deg,transparent,#d9c39a,transparent);"></div>
-            ${cell('Local', lTime, '', lDate)}
+        <div id="wx-localclock" data-off="${offsetHours}" style="display:flex; align-items:center; gap:10px; flex-wrap:nowrap; margin-bottom:12px; background:linear-gradient(#fdf9f1,#f5eddd); border:1px solid #e7dbc7; border-radius:11px; padding:9px 14px; box-shadow:0 1px 2px rgba(139,90,43,0.06); overflow-x:auto;">
+            <span style="display:inline-flex; align-items:center; gap:5px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:#a07539; font-weight:800; white-space:nowrap; flex:0 0 auto;"><span style="color:#c19a5b;">✦</span> Local</span>
+            <span class="wx-lc-time" style="${MONO} font-size:17px; font-weight:600; color:#3f2e20; letter-spacing:0.02em; white-space:nowrap; flex:0 0 auto;">--/-- --:--:--</span>
+            <span style="${MONO} font-size:12px; font-weight:700; color:#a07539; white-space:nowrap; flex:0 0 auto; margin-left:auto;">UTC${sign}${offsetHours}</span>
         </div>
     `;
 }
+
+// ⏱️ 每秒更新機場面板的當地時鐘（含秒）。單一 sheet 開啟時才有元素，找不到就跳過。
+function updateWxLocalClock() {
+    const el = document.getElementById('wx-localclock');
+    if (!el) return;
+    const off = parseInt(el.getAttribute('data-off'), 10) || 0;
+    const d = new Date(Date.now() + off * 3600 * 1000);
+    const p2 = n => String(n).padStart(2, '0');
+    const t = el.querySelector('.wx-lc-time');
+    if (t) t.textContent = `${p2(d.getUTCMonth()+1)}/${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`;
+}
+if (!window._wxLocalClockTimer) window._wxLocalClockTimer = setInterval(updateWxLocalClock, 1000);
 
 function getCategoryBadge(typeStr) {
     if (!typeStr) return '';
@@ -715,6 +708,15 @@ function openWxSheet(airport, rawMetarText, rawTafText) {
     body.innerHTML = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
     body.scrollTop = 0;
     sheet.classList.add('open');
+    updateWxLocalClock(); // 立即填當地時鐘，不等下一個 setInterval tick
+    // metar-taf.com 小工具：動態塞 <script> 才會執行（innerHTML 內的 script 不會跑）。
+    // 附在 sheet body 內，下次開啟時 innerHTML 被覆蓋即自動清除，不會累積。
+    try {
+        const s = document.createElement('script');
+        s.async = true; s.defer = true; s.crossOrigin = 'anonymous';
+        s.src = `https://metar-taf.com/embed-js/${encodeURIComponent(airport.icao)}?target=IVVp4q0e`;
+        body.appendChild(s);
+    } catch (e) { /* 小工具載入失敗不影響其餘內容 */ }
     // 觸發開源氣象讀取（沿用原 popup 內的容器 id）
     setTimeout(() => window.fetchOpenMeteoForecast(airport.icao, airport.lat, airport.lng), 50);
 }
@@ -781,6 +783,13 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         
         ${timeHtml}
 
+        <!-- metar-taf.com 天氣小工具（沿用使用者的 target 設定：已關 QNH/濕度）。
+             ICAO 走路徑決定機場、target 決定顯示設定；腳本由 openWxSheet 動態載入。
+             寬度 100%（上限 360）自適應，同時兼顧 iPhone 直向與 iPad 橫向。 -->
+        <div class="mt-embed" style="margin: 2px 0 14px;">
+            <a href="https://metar-taf.com/metar/${airport.icao}" id="metartaf-IVVp4q0e"
+               style="display:block; width:100%; max-width:360px; margin:0 auto; font-size:15px; font-weight:500; color:#4a3627; text-decoration:none;">METAR ${airport.name}</a>
+        </div>
 
         <div class="data-block">
             <div class="section-title">
@@ -1168,8 +1177,24 @@ const fleets = {
 };
 
 const weatherCache = {};
-let currentFleet = "A330"; 
+let currentFleet = "A330";
 let fleetMarkersLayer;
+
+// 📍 使用者定位（若允許）：地圖預設以此為中心，否則退回台灣
+let userLatLng = null;
+const TAIWAN_CENTER = [24.0, 121.0];
+function wxDefaultCenter() { return userLatLng || TAIWAN_CENTER; }
+function requestUserLocation() {
+    if (!('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            userLatLng = [pos.coords.latitude, pos.coords.longitude];
+            if (window.aviationMapInstance) window.aviationMapInstance.setView(userLatLng, 6);
+        },
+        () => { /* 拒絕/失敗：維持台灣中心 */ },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+    );
+}
 
 // 🌍 全域共用：並行 race 多條 proxy 鏈路,第一個拿到資料就回傳 — 比序列備援快 + 不會被單條卡住
 const fetchBulkWeatherFast = async (icaoList, type) => {
@@ -1336,10 +1361,10 @@ function renderFleetMarkers(fleetName) {
         });
     });
 
-    // 預設視角固定以台灣為中心（比例參考截圖）；不再依機隊 fitBounds 縮到很遠、手機上看不清。
-    // 外站機場可自行平移／縮放檢視。
+    // 預設視角：以使用者定位為中心（未開啟定位則退回台灣），zoom 6。
+    // 不再依機隊 fitBounds 縮到很遠、手機上看不清；外站機場可自行平移／縮放。
     if (window.aviationMapInstance) {
-        window.aviationMapInstance.setView([24.0, 121.0], 6);
+        window.aviationMapInstance.setView(wxDefaultCenter(), 6);
     }
 }
 
@@ -1351,7 +1376,8 @@ function initAviationMap() {
         window.aviationMapInstance.remove();
     }
 
-    window.aviationMapInstance = L.map('map').setView([24.0, 121.0], 6);
+    window.aviationMapInstance = L.map('map').setView(wxDefaultCenter(), 6);
+    requestUserLocation(); // 非同步取得定位，成功後自動把地圖移到使用者位置
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
