@@ -788,7 +788,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
              寬度 100%（上限 360）自適應，同時兼顧 iPhone 直向與 iPad 橫向。 -->
         <div class="mt-embed" style="margin: 2px 0 14px;">
             <a href="https://metar-taf.com/metar/${airport.icao}" id="metartaf-IVVp4q0e"
-               style="display:block; width:100%; max-width:360px; margin:0 auto; font-size:15px; font-weight:500; color:#4a3627; text-decoration:none;">METAR ${airport.name}</a>
+               style="display:block; width:100%; max-width:240px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none;">METAR ${airport.name}</a>
         </div>
 
         <div class="data-block">
@@ -1389,44 +1389,8 @@ function initAviationMap() {
     // 點地圖空白處 → 關閉氣象大面板（marker 點擊不會觸發 map click，兩者不衝突）
     window.aviationMapInstance.on('click', function() { window.closeWxSheet(); });
 
-    // iOS Safari 的 touch 不會自動 fire dblclick,Leaflet 內建 doubleClickZoom 因此失效;
-    // 連 Leaflet 的 'click' 在連續快 tap 下也常被 tap recognizer 重置,沒辦法穩定偵測。
-    // 改成直接綁原生 touchend 事件,自己算連續兩次 tap (400ms / 50px 內 + 同一點落地)。
-    // - 多指 / pinch 不算
-    // - tap 在 marker 上不算 (讓 marker 單擊照常開 popup)
-    // - 桌面瀏覽器有 dblclick 事件,Leaflet 內建 doubleClickZoom 仍會運作 — 兩條路不衝突
-    const mapEl = document.getElementById('map');
-    if (mapEl && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-        let _lastTapTs = 0;
-        let _lastTapXY = null;
-        mapEl.addEventListener('touchend', function(e) {
-            if (e.touches.length > 0 || e.changedTouches.length !== 1) {
-                _lastTapTs = 0; _lastTapXY = null; return;
-            }
-            if (e.target && e.target.closest && e.target.closest('.leaflet-marker-pane, .leaflet-popup-pane, .leaflet-control-container')) {
-                _lastTapTs = 0; _lastTapXY = null; return;
-            }
-            const t = e.changedTouches[0];
-            const now = Date.now();
-            if (_lastTapXY && (now - _lastTapTs) < 400) {
-                const dx = t.clientX - _lastTapXY.x;
-                const dy = t.clientY - _lastTapXY.y;
-                if (dx*dx + dy*dy < 50*50) {
-                    const map = window.aviationMapInstance;
-                    const rect = mapEl.getBoundingClientRect();
-                    const x = t.clientX - rect.left;
-                    const y = t.clientY - rect.top;
-                    const latlng = map.containerPointToLatLng([x, y]);
-                    map.setView(latlng, Math.min(map.getZoom() + 1, map.getMaxZoom()), { animate: true });
-                    _lastTapTs = 0; _lastTapXY = null;
-                    e.preventDefault();
-                    return;
-                }
-            }
-            _lastTapTs = now;
-            _lastTapXY = { x: t.clientX, y: t.clientY };
-        }, { passive: false });
-    }
+    // （已移除自製「連點兩下放大」touchend 手勢：與觸控/顯示有干擾，且已預設 zoom 6，
+    //   不需再放大。保留 Leaflet 原生的平移／雙指縮放，維持最順的原裝觸控體驗。）
 
     // 綁定機隊切換按鈕
     document.querySelectorAll('.fleet-btn').forEach(btn => {
