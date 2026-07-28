@@ -792,13 +792,22 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
              ⚠️ 刻意不放 href：metar-taf 只檢查「元素是 <a> 且開頭為 'METAR '」才渲染，
              不檢查 href。若帶 href，整塊 widget 會變成全區連結，點到附近會導航/頁面跳動。
              拿掉 href 後 widget 照常渲染，但不再是連結。想開完整報告改用下方小字連結（新分頁）。 -->
-        <div class="mt-embed" style="margin: 2px 0 10px;">
-            <a id="metartaf-IVVp4q0e"
-               style="display:block; width:100%; max-width:240px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.name}</a>
-            <div style="text-align:center; margin-top:4px;">
-                <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com ↗</a>
-            </div>
-        </div>
+        <div class="mt-embed" style="margin: 2px 0 10px; width: 100%;">
+    <!-- 拔除了 max-width 限制，讓寬度 100% 自動適應螢幕 -->
+    <a href="https://metar-taf.com/metar/${airport.icao}" 
+       id="metartaf-${airport.icao}" 
+       style="display:block; width:100%; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">
+       METAR ${airport.name}
+    </a>
+    
+    <!-- 官方渲染腳本 -->
+    <script async defer crossorigin="anonymous" src="https://metar-taf.com/embed-js/${airport.icao}?layout=landscape&target=metartaf-${airport.icao}"></script>
+
+    <!-- 底部外連標籤 -->
+    <div style="text-align:center; margin-top:4px;">
+        <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com ↗</a>
+    </div>
+</div>
 
         <div class="data-block">
             <div class="section-title">
