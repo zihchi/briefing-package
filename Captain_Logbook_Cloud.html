@@ -697,6 +697,12 @@
             if(!isLoading) setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+        // 立即收起 toast（含轉圈）。用於離線/同步未完成時，避免 spinner 永遠卡住。
+        function hideToast() {
+            const toast = document.getElementById('sync-toast');
+            if (toast) toast.classList.remove('show');
+        }
+
         function generateUUID() {
             if(crypto && crypto.randomUUID) return crypto.randomUUID();
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -968,7 +974,14 @@
         async function processSyncQueue(isManual = false) {
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
             if (queue.length === 0) return;
-            
+
+            // 離線（飛航模式）時不嘗試同步，也不顯示轉圈 → 避免 spinner 永遠卡在畫面上方。
+            // 佇列保留，等 'online' 事件觸發時再自動重試。手動刷新則提示使用者目前離線。
+            if (!navigator.onLine) {
+                if (isManual) showToast(`Offline — ${queue.length} items will sync when back online.`);
+                return;
+            }
+
             if (isManual || queue.length >= 1) {
                 showToast(`Syncing ${queue.length} updates...`, true);
             }
@@ -1000,8 +1013,12 @@
                 if(!document.getElementById('view-recent').classList.contains('hidden')) renderRecentFlights();
             }
             else {
+                // 未全部完成：務必收起轉圈 toast，否則自動同步失敗時 spinner 會永遠卡住。
                 if (isManual) showToast(`Weak network. ${remainingQueue.length} items waiting.`);
-                else console.warn(`Sync incomplete, ${remainingQueue.length} items left in queue due to network/timeout.`);
+                else {
+                    hideToast();
+                    console.warn(`Sync incomplete, ${remainingQueue.length} items left in queue due to network/timeout.`);
+                }
             }
         }
 
