@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v102';
+const CACHE_NAME = 'briefing-v105';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -12,6 +12,8 @@ const LOCAL_FILES = [
   './ATIS.html',
   './Captain_Logbook_Cloud.html',
   './Captain_Logbook_Cloud.webmanifest',
+  './logbook.tailwind.css',
+  './logbook-ofp-ocr.js',
   './FDP.html',
   './FIDS.html',
   './LIDOPRO4.html',
@@ -40,11 +42,15 @@ const LOCAL_FILES = [
 const CDN_FILES = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  // 註：Captain_Logbook_Cloud.html 已改用本地預編譯 CSS（見 LOCAL_FILES logbook.tailwind.css）；
+  // 其餘頁面（index/LIDOPRO4/FDP…）仍使用下列 Play CDN，故保留預快取。
   'https://cdn.tailwindcss.com',
   // Captain Logbook 圖表/天文計算相依，預先快取讓離線也能畫圖
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
   'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js',
+  // OFP 截圖 OCR：Tesseract.js 主程式（worker/core/語言檔於首次使用時由 track-2 快取，之後離線可用）
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
 ];
 
 // 🚫 即時動態資料：永遠直接走網路，不快取
