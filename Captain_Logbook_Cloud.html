@@ -16,6 +16,8 @@
          不再依賴執行期 cdn.tailwindcss.com（該 CDN 為盡力快取，斷網抓不到就會整頁破版）。
          若日後在本檔新增 Tailwind class，需重新編譯此檔（見 scripts/ 或 README）。 -->
     <link rel="stylesheet" href="./logbook.tailwind.css">
+    <!-- OFP 截圖自動填入模組（本地 OCR；Tesseract 由模組延遲載入） -->
+    <script src="./logbook-ofp-ocr.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" async></script>
@@ -196,7 +198,31 @@
 
         <main class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto mt-2 px-0 md:px-4">
             <input type="hidden" id="inp-index">
-            
+
+            <!-- OFP 截圖自動填入（OCR / 免費 / 離線） -->
+            <div id="ofp-import" class="mx-4 md:mx-0 mb-3 mt-1">
+                <button type="button" id="ofp-import-btn" onclick="ofpImportTrigger()" class="w-full flex items-center justify-center gap-2 bg-[var(--jx-dark)] text-[var(--jx-gold)] font-bold text-[15px] py-3 rounded-xl shadow-sm active:scale-[0.99] transition-transform">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    貼上 / 選擇 OFP 截圖自動填入
+                </button>
+                <p class="text-[11px] text-[var(--jx-gray)] text-center mt-1.5 leading-snug px-2">
+                    截 EFB 的 OFP／Journey Log 畫面 → 貼上或選檔，自動填 日期 / 航班 / 航路 / 機號 / OOOI 時間 / 起降。Pilot、Pax、油量、進場 請自行補。
+                </p>
+                <input type="file" id="ofp-file" accept="image/*" class="hidden" onchange="ofpImportFromFile(event)">
+
+                <div id="ofp-progress" class="hidden mt-2 flex items-center gap-2 justify-center text-[13px] text-[var(--jx-gold-dark)] font-semibold">
+                    <div class="spinner"></div><span id="ofp-progress-text">辨識中…</span>
+                </div>
+
+                <div id="ofp-summary" class="hidden mt-2 bg-white border border-[var(--jx-divider)] rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-3 py-2 bg-[#F4F0EB] border-b border-[var(--jx-divider)] flex justify-between items-center">
+                        <span class="text-[13px] font-bold text-[var(--jx-dark)]">已自動填入，請核對後儲存</span>
+                        <button type="button" onclick="document.getElementById('ofp-summary').classList.add('hidden')" class="text-[var(--jx-gray)] font-bold text-lg leading-none">&times;</button>
+                    </div>
+                    <div id="ofp-summary-body" class="p-3 text-[12px] text-[var(--jx-dark)] space-y-1 leading-relaxed"></div>
+                </div>
+            </div>
+
             <div class="md:grid md:grid-cols-2 md:gap-8">
                 <!-- Left Column -->
                 <div class="space-y-4">
@@ -1963,6 +1989,136 @@
             if (errorCount === 0) content.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><svg class="w-14 h-14 text-[#34C759] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="font-bold text-lg text-[var(--jx-dark)]">System Green</p></div>`;
             else content.insertAdjacentHTML('afterbegin', `<p class="mb-3 text-sm font-bold text-red-600">Found ${errorCount} suspicious entries:</p>`);
             document.getElementById('audit-modal').classList.remove('hidden');
+        }
+    </script>
+
+    <!-- ===== OFP 截圖自動填入：控制器（非破壞性，失敗不影響手動輸入） ===== -->
+    <script>
+        function ofpImportTrigger() {
+            // 先試讀剪貼簿圖片；失敗或無圖 → 開啟選檔
+            if (navigator.clipboard && navigator.clipboard.read) {
+                navigator.clipboard.read().then(async (items) => {
+                    for (const it of items) {
+                        const type = it.types.find(t => t.startsWith('image/'));
+                        if (type) { const blob = await it.getType(type); return ofpImportRun(blob); }
+                    }
+                    document.getElementById('ofp-file').click();
+                }).catch(() => document.getElementById('ofp-file').click());
+            } else {
+                document.getElementById('ofp-file').click();
+            }
+        }
+
+        function ofpImportFromFile(e) {
+            const f = e.target.files && e.target.files[0];
+            if (f) ofpImportRun(f);
+            e.target.value = '';
+        }
+
+        // Cmd+V 貼上（僅在 Entry 頁生效）
+        document.addEventListener('paste', (e) => {
+            const entry = document.getElementById('view-entry');
+            if (!entry || entry.classList.contains('hidden')) return;
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (const it of items) {
+                if (it.type && it.type.startsWith('image/')) {
+                    const blob = it.getAsFile();
+                    if (blob) { e.preventDefault(); ofpImportRun(blob); }
+                    return;
+                }
+            }
+        });
+
+        async function ofpImportRun(src) {
+            if (!window.OFPImport) { showToast('OCR 模組尚未載入，請稍候再試'); return; }
+            if (!navigator.onLine && !window.Tesseract) showToast('OCR 首次需連線下載辨識引擎（約數 MB），之後即可離線使用');
+            const prog = document.getElementById('ofp-progress');
+            const ptext = document.getElementById('ofp-progress-text');
+            document.getElementById('ofp-summary').classList.add('hidden');
+            prog.classList.remove('hidden');
+            document.getElementById('ofp-import-btn').disabled = true;
+            try {
+                const parsed = await window.OFPImport.extract(src, (p) => {
+                    ptext.textContent = '辨識中… ' + Math.round(p * 100) + '%';
+                });
+                ofpApplyToForm(parsed);
+            } catch (err) {
+                showToast('OFP 辨識失敗：' + (err && err.message ? err.message : err));
+            } finally {
+                prog.classList.add('hidden');
+                document.getElementById('ofp-import-btn').disabled = false;
+            }
+        }
+
+        function ofpSet(id, val) {
+            const el = document.getElementById(id);
+            if (el && val != null && val !== '') { el.value = val; return true; }
+            return false;
+        }
+
+        function ofpSetReg(reg) {
+            const sel = document.getElementById('inp-reg');
+            if (!sel) return false;
+            const target = String(reg).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            for (const opt of sel.options) {
+                if (opt.value.replace(/[^A-Z0-9]/gi, '').toUpperCase() === target) { sel.value = opt.value; return true; }
+            }
+            return false;
+        }
+
+        function ofpApplyToForm(parsed) {
+            const f = (parsed && parsed.fields) || {};
+            const filled = [], missing = [], notes = [];
+
+            if (ofpSet('inp-date', f.date)) filled.push('日期 ' + f.date);
+            if (ofpSet('inp-flt', f.flt)) filled.push('航班 JX' + f.flt);
+            if (ofpSet('inp-dep', f.dep)) filled.push('出發 ' + f.dep);
+            if (ofpSet('inp-arr', f.arr)) filled.push('目的 ' + f.arr);
+            if (f.reg) { const ok = ofpSetReg(f.reg); filled.push('機號 ' + f.reg + (ok ? '' : '（機隊清單找不到，請確認）')); }
+            if (ofpSet('inp-out', f.out)) filled.push('BLOCK OUT ' + f.out);
+            if (ofpSet('inp-off', f.off)) filled.push('TAKE OFF ' + f.off);
+            if (ofpSet('inp-on', f.on)) filled.push('LAND ON ' + f.on);
+            if (ofpSet('inp-in', f.in)) filled.push('BLOCK IN ' + f.in);
+
+            // 觸發既有計算（夜航時間、儀表板、航路記憶、起降）
+            if (typeof updateEntryDash === 'function') updateEntryDash();
+            if (typeof handleRegistrationChange === 'function') handleRegistrationChange();
+            if (typeof saveRouteMemory === 'function') saveRouteMemory();
+            if (typeof calculateTimes === 'function') calculateTimes();
+
+            // 起降圓圈
+            const chkTo = document.getElementById('chk-to'), chkLdg = document.getElementById('chk-ldg');
+            if (f.chk_to === true || f.chk_to === false) chkTo.checked = f.chk_to;
+            if (f.chk_ld === true || f.chk_ld === false) chkLdg.checked = f.chk_ld;
+            if (typeof evaluateOperations === 'function') evaluateOperations();
+            if (f.chk_to === true) filled.push('PF Takeoff ✔'); else if (f.chk_to === false) filled.push('PF Takeoff ✘');
+            if (f.chk_ld === true) filled.push('PF Landing ✔'); else if (f.chk_ld === false) filled.push('PF Landing ✘');
+            if (!parsed.radioConfident) notes.push('⚠️ 起飛/落地判讀信心較低，請務必自行確認勾選');
+
+            // 交叉驗算：算出的 AIR/BLK 是否吻合 OFP 的 FLT/BLK TIME
+            let cross = '';
+            const airEl = document.getElementById('dash-air-time');
+            const blkEl = document.getElementById('dash-block-time-top');
+            if (f.ref_air && airEl) cross += (airEl.textContent === f.ref_air ? '✅' : '⚠️') + ' AIR ' + airEl.textContent + ' / OFP ' + f.ref_air + '　';
+            if (f.ref_block && blkEl) cross += (blkEl.textContent === f.ref_block ? '✅' : '⚠️') + ' BLK ' + blkEl.textContent + ' / OFP ' + f.ref_block;
+
+            ['date', 'flt', 'dep', 'arr', 'reg', 'out', 'off', 'on', 'in'].forEach(k => { if (!f[k]) missing.push(k); });
+            (parsed.notes || []).forEach(n => notes.push('• ' + n));
+            notes.push('• Pilot、Passengers、Approach、油量：此畫面沒有，請手動補');
+
+            ofpRenderSummary(filled, missing, notes, cross);
+        }
+
+        function ofpRenderSummary(filled, missing, notes, cross) {
+            const body = document.getElementById('ofp-summary-body');
+            let html = '';
+            if (filled.length) html += '<div class="font-semibold text-[var(--jx-gold-dark)]">已填：</div><div>' + filled.join('、') + '</div>';
+            if (cross) html += '<div class="mt-1 font-mono text-[11px]">' + cross + '</div>';
+            if (notes.length) html += '<div class="mt-1 text-red-600">' + notes.join('<br>') + '</div>';
+            if (missing.length) html += '<div class="mt-1 text-[var(--jx-gray)]">未讀到（請手動）：' + missing.join(', ') + '</div>';
+            body.innerHTML = html;
+            document.getElementById('ofp-summary').classList.remove('hidden');
         }
     </script>
 </body>

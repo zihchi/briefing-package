@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v104';
+const CACHE_NAME = 'briefing-v105';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -13,6 +13,7 @@ const LOCAL_FILES = [
   './Captain_Logbook_Cloud.html',
   './Captain_Logbook_Cloud.webmanifest',
   './logbook.tailwind.css',
+  './logbook-ofp-ocr.js',
   './FDP.html',
   './FIDS.html',
   './LIDOPRO4.html',
@@ -48,6 +49,8 @@ const CDN_FILES = [
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2',
   'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js',
+  // OFP 截圖 OCR：Tesseract.js 主程式（worker/core/語言檔於首次使用時由 track-2 快取，之後離線可用）
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
 ];
 
 // 🚫 即時動態資料：永遠直接走網路，不快取
