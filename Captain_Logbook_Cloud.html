@@ -56,13 +56,20 @@
         #sync-toast.show { opacity: 1; }
         .spinner { width: 14px; height: 14px; border: 2px solid rgba(194,163,112,0.3); border-top-color: var(--jx-gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 儲存成功動畫 */
+        .save-success-card { animation: save-pop .28s ease; }
+        @keyframes save-pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .save-check-svg { width: 76px; height: 76px; }
+        .save-check-bg { fill: #34C759; }
+        .save-check-mark { stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: save-check-draw .4s .14s ease forwards; }
+        @keyframes save-check-draw { to { stroke-dashoffset: 0; } }
         
         #edit-banner { display: none; background: var(--jx-gold-dark); color: white; text-align: center; padding: calc(env(safe-area-inset-top) + 6px) 0 6px 0; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
         #edit-banner.show { display: block; }
 
         body.view-mode .ios-input, body.view-mode .jx-checkbox, body.view-mode textarea { pointer-events: none; opacity: 0.8; }
         body.view-mode select.ios-input { background-image: none; padding-right: 0; }
-        body.view-mode #btn-toggle-fuel { display: none; }
 
         @media (min-width: 768px) {
             .stat-card { scroll-snap-align: none; min-width: 0; }
@@ -88,13 +95,35 @@
         ✈ 離線模式 — 顯示本機快取資料
     </div>
 
+    <!-- Save Success Overlay -->
+    <div id="save-success" class="hidden fixed inset-0 z-[200] flex items-center justify-center" style="background:rgba(0,0,0,0.35);">
+        <div class="save-success-card bg-white rounded-2xl shadow-xl px-8 py-7 flex flex-col items-center gap-2 mx-8">
+            <svg viewBox="0 0 52 52" class="save-check-svg"><circle class="save-check-bg" cx="26" cy="26" r="25"/><path class="save-check-mark" fill="none" d="M14 27l8 8 16-18"/></svg>
+            <p class="text-lg font-bold text-[var(--jx-dark)] mt-1">已儲存</p>
+            <p id="save-success-detail" class="text-sm text-[var(--jx-gray)] font-medium text-center font-mono"></p>
+        </div>
+    </div>
+
     <!-- Sync Toast -->
     <div id="sync-toast">
         <div class="spinner"></div>
         <span id="sync-toast-text">Syncing...</span>
     </div>
 
-    <datalist id="pilot-datalist"></datalist>
+    <!-- 新增機師到資料庫 Modal -->
+    <div id="add-pilot-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div class="p-4 bg-[var(--jx-dark)] flex justify-between items-center">
+                <h2 class="font-bold text-[var(--jx-gold)] tracking-wide">新增機師到資料庫</h2>
+                <button onclick="closeAddPilotModal()" class="text-[var(--jx-gray)] hover:text-white font-bold text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 space-y-3">
+                <div class="ios-list-item !px-0"><span class="text-[15px] font-medium">Name</span><input type="text" id="add-pilot-name" class="ios-input !text-[var(--jx-dark)]" placeholder="e.g. 陳登星"></div>
+                <div class="ios-list-item !px-0"><span class="text-[15px] font-medium">Nickname</span><input type="text" id="add-pilot-nick" class="ios-input !text-[var(--jx-dark)]" placeholder="e.g. Jack"></div>
+                <button onclick="saveNewPilot()" class="w-full bg-[var(--jx-gold-dark)] text-white font-bold py-3 rounded-xl shadow-sm active:scale-95 transition-all">儲存到資料庫</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Data Audit Modal -->
     <div id="audit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 transition-opacity">
@@ -205,9 +234,6 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     貼上 / 選擇 OFP 截圖自動填入
                 </button>
-                <p class="text-[11px] text-[var(--jx-gray)] text-center mt-1.5 leading-snug px-2">
-                    截 EFB 的 OFP／Journey Log 畫面 → 貼上或選檔，自動填 日期 / 航班 / 航路 / 機號 / OOOI 時間 / 起降。Pilot、Pax、油量、進場 請自行補。
-                </p>
                 <input type="file" id="ofp-file" accept="image/*" class="hidden" onchange="ofpImportFromFile(event)">
 
                 <div id="ofp-progress" class="hidden mt-2 flex items-center gap-2 justify-center text-[13px] text-[var(--jx-gold-dark)] font-semibold">
@@ -277,59 +303,29 @@
 
                     <!-- Flight Crew -->
                     <div>
-                        <div class="section-title md:mt-2">Flight Crew</div>
+                        <div class="section-title md:mt-2 flex justify-between items-center pr-4">
+                            <span>Flight Crew</span>
+                            <button type="button" onclick="openAddPilotModal()" class="text-xs bg-[var(--jx-gold-dark)] text-white px-2.5 py-1.5 rounded-md font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                新增機師
+                            </button>
+                        </div>
                         <div class="ios-list shadow-sm">
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 1</span>
-                                <input type="text" id="inp-pilot1" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot1')">
+                                <input type="text" id="inp-pilot1" autocomplete="off" class="ios-input" placeholder="Search name..." oninput="pilotSuggest('pilot1')" onfocus="pilotSuggest('pilot1')" onblur="pilotBlur('pilot1')">
                             </div>
-                            <div id="pilot1-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                                    <input type="text" id="inp-pilot1-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
-                                </div>
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                                    <input type="text" id="inp-pilot1-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                                </div>
-                                <div class="w-full flex justify-end">
-                                    <button onclick="saveNewPilotToCloud('pilot1')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                                </div>
-                            </div>
+                            <div id="pilot1-suggest" class="hidden bg-white border-t border-[var(--jx-divider)] max-h-48 overflow-y-auto"></div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 2</span>
-                                <input type="text" id="inp-pilot2" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot2')">
+                                <input type="text" id="inp-pilot2" autocomplete="off" class="ios-input" placeholder="Search name..." oninput="pilotSuggest('pilot2')" onfocus="pilotSuggest('pilot2')" onblur="pilotBlur('pilot2')">
                             </div>
-                            <div id="pilot2-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                                    <input type="text" id="inp-pilot2-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
-                                </div>
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                                    <input type="text" id="inp-pilot2-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                                </div>
-                                <div class="w-full flex justify-end">
-                                    <button onclick="saveNewPilotToCloud('pilot2')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                                </div>
-                            </div>
+                            <div id="pilot2-suggest" class="hidden bg-white border-t border-[var(--jx-divider)] max-h-48 overflow-y-auto"></div>
                             <div class="ios-list-item">
                                 <span class="text-[17px] font-medium text-[var(--jx-gray)]">Pilot 3</span>
-                                <input type="text" id="inp-pilot3" list="pilot-datalist" class="ios-input" placeholder="Search name..." onchange="checkNewPilot(this, 'pilot3')">
+                                <input type="text" id="inp-pilot3" autocomplete="off" class="ios-input" placeholder="Search name..." oninput="pilotSuggest('pilot3')" onfocus="pilotSuggest('pilot3')" onblur="pilotBlur('pilot3')">
                             </div>
-                            <div id="pilot3-custom-wrapper" class="ios-list-item bg-[#FDFBF7] hidden flex-col items-start fade-in gap-3 border-l-4 border-[var(--jx-gold)]">
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Name</span>
-                                    <input type="text" id="inp-pilot3-custom-name" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. 陳登星">
-                                </div>
-                                <div class="flex justify-between w-full items-center">
-                                    <span class="text-[15px] text-[var(--jx-gray)]">Nickname</span>
-                                    <input type="text" id="inp-pilot3-custom-nick" class="ios-input !text-[var(--jx-dark)] !text-[15px]" placeholder="e.g. Jack">
-                                </div>
-                                <div class="w-full flex justify-end">
-                                    <button onclick="saveNewPilotToCloud('pilot3')" class="text-sm bg-[var(--jx-gold-dark)] text-white px-4 py-1.5 rounded-md shadow-sm font-medium">Save to Database</button>
-                                </div>
-                            </div>
+                            <div id="pilot3-suggest" class="hidden bg-white border-t border-[var(--jx-divider)] max-h-48 overflow-y-auto"></div>
                             <div class="ios-list-item bg-[#FDFBF7] border-t-2 border-[var(--jx-divider)]">
                                 <div class="flex flex-col">
                                     <span class="text-[17px] text-[var(--jx-gold-dark)] font-bold">Self (Me)</span>
@@ -374,25 +370,6 @@
                                 <input type="tel" id="inp-night" class="ios-input font-mono tracking-wider text-[var(--jx-dark)] font-bold text-lg bg-[#F8F6F3] rounded px-3 py-1 !w-24 focus:ring-1 focus:ring-[var(--jx-gold)] border border-[var(--jx-divider)] shadow-inner" placeholder="00:00" maxlength="5" oninput="handleNightInput(event)">
                             </div>
                             
-                            <div class="p-3 border-t border-[var(--jx-divider)] bg-white">
-                                <button id="btn-toggle-fuel" onclick="document.getElementById('fuel-section').classList.toggle('hidden')" class="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--jx-gray)] hover:text-[var(--jx-gold-dark)] transition-colors">
-                                    ⛽️ Toggle Fuel Info (FOB)
-                                </button>
-                                <div id="fuel-section" class="hidden mt-4 flex flex-col gap-4">
-                                    <div class="flex justify-between gap-4">
-                                        <div class="w-1/2">
-                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">Block Out Fuel (t)</div>
-                                            <input type="text" inputmode="numeric" id="inp-fob-out" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 24.3" oninput="handleFuelInput(event, 'inp-fob-in')">
-                                        </div>
-                                        <div class="w-1/2">
-                                            <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase mb-1 tracking-wider text-center">Block In Fuel (t)</div>
-                                            <input type="text" inputmode="numeric" id="inp-fob-in" class="w-full text-center font-mono text-lg font-bold text-[var(--jx-dark)] bg-[#FDFBF7] border border-[#E5E5EA] rounded-md py-1.5 outline-none focus:ring-2 focus:ring-[var(--jx-gold)]" placeholder="e.g. 15.2" oninput="handleFuelInput(event, null)">
-                                        </div>
-                                    </div>
-                                    <p class="text-[10px] text-[var(--jx-gray)] text-center w-full">Shortcut: Type 3 digits directly (e.g., 243 → 24.3)</p>
-                                </div>
-                            </div>
-
                             <div class="flex justify-between items-center p-3 bg-[#FDFBF7] border-t border-[var(--jx-divider)]">
                                 <div class="text-center w-1/3 border-r border-[var(--jx-divider)]">
                                     <div class="text-[10px] text-[var(--jx-gray)] font-semibold uppercase tracking-wider mb-1">Air Time</div>
@@ -718,6 +695,18 @@
             document.getElementById('inp-date').valueAsDate = utcDate;
         }
 
+        // 儲存成功的完成感：綠勾動畫 + 航班摘要，短暫顯示後淡出
+        function showSaveSuccess(detail) {
+            const el = document.getElementById('save-success');
+            if (!el) return;
+            document.getElementById('save-success-detail').textContent = detail || '';
+            el.classList.remove('hidden');
+            const mark = el.querySelector('.save-check-mark');
+            if (mark) { mark.style.animation = 'none'; void mark.offsetWidth; mark.style.animation = ''; }
+            clearTimeout(window._saveSuccessTimer);
+            window._saveSuccessTimer = setTimeout(() => el.classList.add('hidden'), 1600);
+        }
+
         function showToast(message, isLoading = false) {
             const toast = document.getElementById('sync-toast');
             document.getElementById('sync-toast-text').textContent = message;
@@ -783,19 +772,6 @@
             e.target.value = formatted;
             document.getElementById('inp-night').dataset.manual = 'true';
             document.getElementById('dash-night-time').textContent = formatted || "00:00";
-        }
-
-        function handleFuelInput(e, nextId) {
-            let val = e.target.value;
-            // 當偵測到嚴格的 3 碼數字（無任何小數點）時，自動補小數點並跳轉
-            if (/^\d{3}$/.test(val)) {
-                e.target.value = val.substring(0, 2) + '.' + val.substring(2, 3);
-                // 僅在用戶"輸入"時跳轉，避免在"刪除"時誤觸發
-                if (nextId && (!e.inputType || !e.inputType.includes('delete'))) {
-                    const nextField = document.getElementById(nextId);
-                    if (nextField) nextField.focus();
-                }
-            }
         }
 
         function normalizeTimeDisplay(val) {
@@ -1188,7 +1164,6 @@
         function setFormMode(mode) {
             const inputs = document.querySelectorAll('#view-entry input, #view-entry select, #view-entry textarea');
             inputs.forEach(inp => inp.disabled = (mode === 'view'));
-            document.getElementById('btn-toggle-fuel').style.display = (mode === 'view') ? 'none' : 'flex';
             document.getElementById('btn-clear-form').style.display = (mode === 'view') ? 'none' : 'flex';
 
             document.getElementById('action-create').classList.toggle('hidden', mode !== 'create');
@@ -1643,10 +1618,68 @@
         }
 
         function populatePilotDropdown() {
-            const datalist = document.getElementById('pilot-datalist');
-            datalist.innerHTML = '';
-            dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
-            dbPilots.forEach(p => datalist.innerHTML += `<option value="${p.formattedName}">`);
+            // 不再使用原生 <datalist>（iOS PWA 會黑屏）；改由 pilotSuggest() 自訂下拉。
+            if (Array.isArray(dbPilots)) dbPilots.sort((a, b) => a.formattedName.localeCompare(b.formattedName, 'zh-TW'));
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+            ));
+        }
+
+        // 打字時列出資料庫既有機師（自訂下拉，非原生 datalist → 不黑屏）
+        function pilotSuggest(type) {
+            const input = document.getElementById('inp-' + type);
+            const box = document.getElementById(type + '-suggest');
+            if (!input || !box) return;
+            const q = input.value.trim().toLowerCase();
+            let list = Array.isArray(dbPilots) ? dbPilots.slice() : [];
+            if (q) list = list.filter(p => (p.formattedName || '').toLowerCase().includes(q));
+            list = list.slice(0, 30);
+            if (!list.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            box.innerHTML = list.map(p => {
+                const nm = escapeHtml(p.formattedName);
+                return `<div class="px-4 py-2.5 text-[15px] text-[var(--jx-dark)] border-b border-[var(--jx-divider)] active:bg-[var(--jx-bg)] cursor-pointer" data-name="${nm}" onmousedown="selectPilot('${type}', this)">${nm}</div>`;
+            }).join('');
+            box.classList.remove('hidden');
+        }
+
+        function selectPilot(type, el) {
+            const input = document.getElementById('inp-' + type);
+            const box = document.getElementById(type + '-suggest');
+            if (input) input.value = el.getAttribute('data-name') || '';
+            if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+        }
+
+        function pilotBlur(type) {
+            // 延遲隱藏，讓點選(onmousedown/tap)有時間觸發
+            setTimeout(() => { const box = document.getElementById(type + '-suggest'); if (box) box.classList.add('hidden'); }, 200);
+        }
+
+        function openAddPilotModal() {
+            document.getElementById('add-pilot-name').value = '';
+            document.getElementById('add-pilot-nick').value = '';
+            document.getElementById('add-pilot-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('add-pilot-name').focus(), 50);
+        }
+
+        function closeAddPilotModal() {
+            document.getElementById('add-pilot-modal').classList.add('hidden');
+        }
+
+        function saveNewPilot() {
+            const name = document.getElementById('add-pilot-name').value.trim();
+            const nick = document.getElementById('add-pilot-nick').value.trim();
+            if (!name) { showToast('請輸入姓名'); return; }
+            const finalName = nick ? `${name} (${nick})` : name;
+            if (dbPilots.some(p => p.formattedName === finalName)) { showToast('此機師已存在'); closeAddPilotModal(); return; }
+            dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
+            localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
+            populatePilotDropdown();
+            queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
+            closeAddPilotModal();
+            showToast(`已新增機師：${finalName}`);
         }
 
         function matchPilotName(rawName) {
@@ -1658,39 +1691,6 @@
             return String(rawName).trim();
         }
         
-        function checkNewPilot(inputElem, type) {
-            const val = inputElem.value.trim();
-            if(!val) return;
-            const wrapperId = `${type}-custom-wrapper`;
-            const exists = dbPilots.some(p => p.formattedName === val);
-            if(!exists) {
-                document.getElementById(wrapperId).classList.remove('hidden');
-                document.getElementById(wrapperId).classList.add('flex');
-                document.getElementById(`inp-${type}-custom-name`).value = val;
-                document.getElementById(`inp-${type}-custom-nick`).focus();
-            } else {
-                document.getElementById(wrapperId).classList.add('hidden');
-                document.getElementById(wrapperId).classList.remove('flex');
-            }
-        }
-
-        function saveNewPilotToCloud(type) {
-            const name = document.getElementById(`inp-${type}-custom-name`).value.trim();
-            const nick = document.getElementById(`inp-${type}-custom-nick`).value.trim();
-            const inputId = `inp-${type}`;
-            const wrapperId = `${type}-custom-wrapper`;
-            if (name) {
-                const finalName = nick ? `${name} (${nick})` : name;
-                dbPilots.push({ id: generateUUID(), name: name, nickname: nick, formattedName: finalName });
-                localStorage.setItem(CACHE_PILOTS, JSON.stringify(dbPilots));
-                populatePilotDropdown();
-                document.getElementById(inputId).value = finalName;
-                queueAction({ action: 'add_pilot', id: generateUUID(), name: name, nickname: nick }, true);
-            }
-            document.getElementById(wrapperId).classList.add('hidden');
-            document.getElementById(wrapperId).classList.remove('flex');
-        }
-
         function renderRecentFlights() {
             const container = document.getElementById('recent-list-container');
             const searchInput = document.getElementById('inp-search-recent');
@@ -1790,15 +1790,10 @@
             document.getElementById('chk-ldg').checked = false;
             document.getElementById('inp-remarks').value = '';
             document.getElementById('inp-pax').value = ''; 
-            document.getElementById('inp-app').value = 'ILS'; 
-            document.getElementById('inp-rwy').value = ''; 
-            
-            // Fuel
-            document.getElementById('inp-fob-out').value = ''; 
-            document.getElementById('inp-fob-in').value = '';
-            document.getElementById('fuel-section').classList.add('hidden');
-            
-            document.getElementById('inp-pilot1').value = ''; 
+            document.getElementById('inp-app').value = 'ILS';
+            document.getElementById('inp-rwy').value = '';
+
+            document.getElementById('inp-pilot1').value = '';
             document.getElementById('inp-pilot2').value = ''; 
             document.getElementById('inp-pilot3').value = '';
             document.getElementById('inp-duty').value = 'FO'; 
@@ -1842,19 +1837,10 @@
             document.getElementById('inp-app').value = log.app || '';
             document.getElementById('inp-rwy').value = log.rwy || '';
             document.getElementById('inp-remarks').value = log.remarks || '';
-            
-            // Fuel
-            document.getElementById('inp-fob-out').value = log.fob_out || '';
-            document.getElementById('inp-fob-in').value = log.fob_in || '';
-            if(log.fob_out || log.fob_in) document.getElementById('fuel-section').classList.remove('hidden');
-            else document.getElementById('fuel-section').classList.add('hidden');
-            
+
             document.getElementById('inp-pilot1').value = matchPilotName(log.pilot1);
             document.getElementById('inp-pilot2').value = matchPilotName(log.pilot2);
             document.getElementById('inp-pilot3').value = matchPilotName(log.pilot3);
-            document.getElementById('pilot1-custom-wrapper').classList.add('hidden');
-            document.getElementById('pilot2-custom-wrapper').classList.add('hidden');
-            document.getElementById('pilot3-custom-wrapper').classList.add('hidden');
             
             setFormMode('view'); 
             updateEntryDash(); 
@@ -1921,8 +1907,8 @@
                     pilot1: document.getElementById('inp-pilot1').value.trim() || '', pilot2: document.getElementById('inp-pilot2').value.trim() || '', pilot3: document.getElementById('inp-pilot3').value.trim() || '', 
                     pilot4: 'Self', custom_fields: '', remarks: document.getElementById('inp-remarks').value, tags: '',
                     approach1_airport: arrICAO, approach1_type: document.getElementById('inp-app').value,
-                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), fob_out: document.getElementById('inp-fob-out').value,
-                    fob_off: '', fob_on: '', fob_in: document.getElementById('inp-fob-in').value
+                    approach1_runway: document.getElementById('inp-rwy').value.toUpperCase(), fob_out: '',
+                    fob_off: '', fob_on: '', fob_in: ''
                 };
 
                 const localLog = {
@@ -1939,17 +1925,18 @@
                 const acftData = dbAircrafts.find(a => a.aircraft_id === localLog.reg);
                 localLog.acft = acftData ? acftData.type : 'A339';
 
+                const savedSummary = `JX${localLog.flt}　${localLog.dep || '---'} → ${localLog.arr || '---'}　${minsToStr(localLog.totalMins)}`;
                 if(actionType === 'update') {
                     const idx = flightLogs.findIndex(l => String(l.index) === String(payloadData.index));
-                    if(idx !== -1) flightLogs[idx] = localLog; 
+                    if(idx !== -1) flightLogs[idx] = localLog;
                     cancelEntry();
-                } else { 
-                    flightLogs.push(localLog); 
-                    cancelEntry(); 
+                } else {
+                    flightLogs.push(localLog);
+                    cancelEntry();
                 }
-                
+
                 localStorage.setItem(CACHE_FLIGHTS, JSON.stringify(flightLogs));
-                showToast("Saved offline instantly! (Pending Sync)");
+                showSaveSuccess(savedSummary);
             }
 
             let queue = JSON.parse(localStorage.getItem(SYNC_QUEUE)) || [];
@@ -2105,7 +2092,7 @@
 
             ['date', 'flt', 'dep', 'arr', 'reg', 'out', 'off', 'on', 'in'].forEach(k => { if (!f[k]) missing.push(k); });
             (parsed.notes || []).forEach(n => notes.push('• ' + n));
-            notes.push('• Pilot、Passengers、Approach、油量：此畫面沒有，請手動補');
+            notes.push('• Pilot、Passengers、Approach：此畫面沒有，請手動補');
 
             ofpRenderSummary(filled, missing, notes, cross);
         }
