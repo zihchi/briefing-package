@@ -12,7 +12,10 @@
     <title>Pilot Logbook</title>
     
     <!-- External Libraries -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind：改用本地預編譯 CSS（同源、必被 SW 快取），離線/弱網也能完整排版；
+         不再依賴執行期 cdn.tailwindcss.com（該 CDN 為盡力快取，斷網抓不到就會整頁破版）。
+         若日後在本檔新增 Tailwind class，需重新編譯此檔（見 scripts/ 或 README）。 -->
+    <link rel="stylesheet" href="./logbook.tailwind.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" async onload="window.onChartLibReady && window.onChartLibReady()"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js" async></script>
