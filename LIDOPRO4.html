@@ -1001,6 +1001,7 @@
         let notamAirportIcaos = [];
         
         let fidsFlightData = { departures: [], arrivals: [] };
+        let fidsLastFetch = 0;   // TDX/FIDS 上次成功抓取時間(ms),擷取新航班時若過期會重抓以確保機坪最新
 
         // Quick Review 用:ELB iframe 送來的缺陷摘要 + 抵達行李帶
         let elbQuickData = null;
@@ -1487,6 +1488,9 @@
             clearData(true);
             document.getElementById('target-flight').value = currentTargetVal;
 
+            // TDX 快照若超過 3 分鐘就背景重抓,確保新航班機坪/航廈為最新(抓完會自動重新解析)
+            if (Date.now() - fidsLastFetch > 3 * 60 * 1000) fetchFIDSDataSilent();
+
             fetchBtn.disabled = true;
             document.getElementById('loading-spinner').classList.remove('hidden');
             document.getElementById('atc-display').value = '資料處理中...';
@@ -1849,16 +1853,20 @@
             document.getElementById('target-flight').value = '';
             document.getElementById('raw-notam-input').value = '';
             
-            localStorage.removeItem('dispatch_rawInput_1');
-            localStorage.removeItem('dispatch_rawInput_2');
-            localStorage.removeItem('dispatch_notam_input');
-            localStorage.removeItem('dispatch_atc_input');
-            localStorage.removeItem('dispatch_route_wpts');
+            // 一次清除所有航班相關 localStorage(dispatch_* 與 AeroDataBox adbGate:* 快取),
+            // 只保留登入/連線設定(elbSession / elbWorkerUrl)。避免舊班機坪/人數/gate 殘留。
+            try {
+                Object.keys(localStorage).forEach(k => {
+                    if (k.indexOf('dispatch_') === 0 || k.indexOf('adbGate:') === 0) localStorage.removeItem(k);
+                });
+            } catch (e) {}
             if (window.setFlightRoute) window.setFlightRoute([]);
-            elbQuickData = null; quickArrBelt = ''; // 清掉 Quick Review 的 ELB 缺陷/行李帶快取
+            gateEnrichSeq++;                           // 作廢任何在途 AeroDataBox 補強,避免舊班 gate 回填
+            elbQuickData = null; quickArrBelt = '';    // 清掉 Quick Review 的 ELB 缺陷/行李帶快取
             currentDepRwy = ''; currentSid = ''; currentArrRwy = ''; currentStar = '';
             qrManual.pax = false; qrManual.water = false; // 換航班 → 手動輸入作廢,改吃新的自動值
-            localStorage.removeItem('dispatch_quick_pax'); localStorage.removeItem('dispatch_quick_water');
+            // 清空 Quick Review 手動輸入欄位顯示值,避免殘留舊班機坪/人數/加水
+            ['qr-dep-bay', 'qr-arr-bay', 'qr-pax', 'qr-water'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             
             const rawInput2Placeholder = document.getElementById('rawInput2-placeholder');
             if (rawInput2Placeholder) rawInput2Placeholder.classList.remove('hidden');
@@ -3478,7 +3486,8 @@
 
                 fidsFlightData.departures = Array.isArray(data.departures) ? data.departures : [];
                 fidsFlightData.arrivals = Array.isArray(data.arrivals) ? data.arrivals : [];
-                
+                fidsLastFetch = Date.now();
+
                 if (document.getElementById('rawInput').value) {
                     debouncedParseData();
                 }
