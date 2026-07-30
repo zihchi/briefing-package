@@ -714,7 +714,7 @@ function openWxSheet(airport, rawMetarText, rawTafText) {
     try {
         const s = document.createElement('script');
         s.async = true; s.defer = true; s.crossOrigin = 'anonymous';
-        s.src = `https://metar-taf.com/embed-js/${encodeURIComponent(airport.icao)}?target=IVVp4q0e`;
+        s.src = `https://metar-taf.com/embed-js/${encodeURIComponent(airport.icao)}?layout=landscape&qnh=hPa&rh=rh&target=AbBgCGMQ`;
         body.appendChild(s);
     } catch (e) { /* 小工具載入失敗不影響其餘內容 */ }
     // 觸發開源氣象讀取（沿用原 popup 內的容器 id）
@@ -788,13 +788,14 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         
         ${timeHtml}
 
-        <!-- metar-taf.com 天氣小工具（沿用使用者的 target 設定：已關 QNH/濕度）。
-             ⚠️ 刻意不放 href：metar-taf 只檢查「元素是 <a> 且開頭為 'METAR '」才渲染，
-             不檢查 href。若帶 href，整塊 widget 會變成全區連結，點到附近會導航/頁面跳動。
-             拿掉 href 後 widget 照常渲染，但不再是連結。想開完整報告改用下方小字連結（新分頁）。 -->
+        <!-- metar-taf.com 天氣小工具（landscape 版；設定走網址參數 layout=landscape&qnh=hPa&rh=rh，
+             見 openWxSheet 的 script src；target=AbBgCGMQ 當作 DOM 綁定 id，ICAO 走路徑套各機場）。
+             ⚠️ 刻意不放 href：metar-taf 只檢查「元素是 <a> 且開頭為 'METAR '」才渲染，不檢查 href。
+             若帶 href，整塊 widget 會變成全區連結，點到附近會導航/頁面跳動。拿掉後照常渲染但不再是連結。
+             想開完整報告改用下方小字連結（新分頁）。 -->
         <div class="mt-embed" style="margin: 2px 0 10px;">
-            <a id="metartaf-IVVp4q0e"
-               style="display:block; width:100%; max-width:240px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.name}</a>
+            <a id="metartaf-AbBgCGMQ"
+               style="display:block; width:100%; max-width:320px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.name}</a>
             <div style="text-align:center; margin-top:4px;">
                 <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com ↗</a>
             </div>
