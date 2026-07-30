@@ -206,6 +206,7 @@
                             <h2 class="text-lg font-bold text-slate-700">✈️ 航班操作評估</h2>
                             <!-- 機型選擇下拉選單 -->
                             <select id="aircraftSelect" class="text-sm font-bold border-2 border-blue-200 text-blue-700 bg-blue-50 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm">
+                                <option value="A330_900_WV906" selected>A330-900 (WV906)</option>
                                 <option value="A330_900">A330-900 (WV920)</option>
                                 <option value="A321_NEO">A321NEO (WV053)</option>
                             </select>
@@ -442,6 +443,44 @@
 
         // --- 2. 內建機型資料庫 (Multi-Aircraft Database: ACN & ACR 雙軌) ---
         const aircraftDatabase = {
+            'A330_900_WV906': {
+                name: "A330-900 (WV906)",
+                maxWeight: 215900,
+                minWeight: 140000,
+                tirePressureMPa: 1.49,
+                tirePressurePsi: 216,
+                acn: {
+                    'R': {
+                        'A': { max: 49, min: 32 },
+                        'B': { max: 58, min: 33 },
+                        'C': { max: 68, min: 38 },
+                        'D': { max: 79, min: 44 }
+                    },
+                    'F': {
+                        'A': { max: 54, min: 32 },
+                        'B': { max: 57, min: 33 },
+                        'C': { max: 66, min: 37 },
+                        'D': { max: 89, min: 46 }
+                    }
+                },
+                acr: {
+                    // max = 215 900 kg 列（圖1 ACR 表 WV906）；
+                    // min = 140 000 kg 列（圖1 ACR 表未提供該列，暫沿用 WV920 的 140t 值，
+                    //       因同機型於相同 140t 重量下 ACR 幾乎一致；有精確值再替換）
+                    'R': {
+                        'A': { max: 570, min: 362 },
+                        'B': { max: 650, min: 372 },
+                        'C': { max: 720, min: 403 },
+                        'D': { max: 810, min: 443 }
+                    },
+                    'F': {
+                        'A': { max: 530, min: 300 },
+                        'B': { max: 550, min: 311 },
+                        'C': { max: 590, min: 319 },
+                        'D': { max: 720, min: 367 }
+                    }
+                }
+            },
             'A330_900': {
                 name: "A330-900 (WV920)",
                 maxWeight: 251900,
