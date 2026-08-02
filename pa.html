@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PA 廣播稿</title>
-<style>html,body{margin:0;padding:0;background:#f4ece4;} @media(prefers-color-scheme:dark){html,body{background:#1c1714;}} body{padding:14px;}</style>
+<style>html,body{margin:0;padding:0;background:#f4ece4;} body{padding:14px;}</style>
 </head>
 <body>
 <!-- 📢 PA 廣播稿工具 — 星宇 FOM Ch.8 範本 + 溫度換算 + 班號帶入起訖地與時差（全離線） -->
@@ -19,13 +19,6 @@
     color:var(--pa-text);
     -webkit-text-size-adjust:100%;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
-  }
-  @media (prefers-color-scheme: dark){
-    #paTool{
-      --pa-bg:#1c1714; --pa-surface:#26201b; --pa-card:#2c251f;
-      --pa-border:#3a3129; --pa-text:#ece3d8; --pa-muted:#b3a794; --pa-faint:#8a7d6c;
-      --pa-blue:#93b4ff; --pa-blue-bg:#26314d; --pa-fill:#e0a96d; --pa-fill-bg:#3a2e1e;
-    }
   }
   #paTool *{box-sizing:border-box;}
   #paTool .pa-wrap{display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:16px;}
@@ -46,6 +39,7 @@
 
   /* 航班 */
   #paTool .pa-flt-in{text-transform:uppercase; letter-spacing:.05em;}
+  #paTool .pa-flt-in::placeholder{text-transform:none; letter-spacing:normal;}
   #paTool .pa-btn{border:none; background:var(--pa-brand); color:#fff; font-weight:800; padding:10px 14px; border-radius:10px; cursor:pointer; font-size:.95rem;}
   #paTool .pa-btn:active{transform:scale(.97);}
   #paTool .pa-btn.ghost{background:transparent; color:var(--pa-brand); border:1px solid var(--pa-border);}
@@ -105,10 +99,10 @@
     <!-- 航班 -->
     <div class="pa-card">
       <h3>✈️ 航班資訊</h3>
-      <p class="pa-sub">輸入班號，自動帶出起訖地、目的地當地日期與時差（離線）。查不到可用下方手動選目的地。</p>
+      <p class="pa-sub">輸入班號，自動帶出起訖地、目的地當地日期與時差（離線）。</p>
       <label class="pa-lbl">班號 Flight No.</label>
       <div class="pa-in-row">
-        <input id="paFlt" class="pa-in pa-flt-in" inputmode="text" autocomplete="off" placeholder="JX012" spellcheck="false">
+        <input id="paFlt" class="pa-in pa-flt-in" inputmode="text" autocomplete="off" placeholder="ex. 012" spellcheck="false">
         <button id="paFltBtn" class="pa-btn">查詢</button>
       </div>
       <div id="paRoute" class="pa-route">
@@ -120,12 +114,8 @@
         <div class="pa-dest-meta">
           <div class="pa-meta-row"><span class="k">目的地當地時間</span><span class="v big" id="paDestTime">--:--</span></div>
           <div class="pa-meta-row"><span class="k">當地日期</span><span class="v" id="paDestDate">—</span></div>
-          <div class="pa-meta-row"><span class="k">與台北時差</span><span class="v" id="paDestDiff">—</span></div>
+          <div class="pa-meta-row"><span class="k">與出發地時差</span><span class="v" id="paDestDiff">—</span></div>
         </div>
-      </div>
-      <div style="margin-top:12px;">
-        <label class="pa-lbl">或手動選目的地</label>
-        <select id="paDestSel" class="pa-sel"><option value="">— 選擇航點 —</option></select>
       </div>
     </div>
 
@@ -134,17 +124,17 @@
       <h3>🌡️ 溫度換算</h3>
       <p class="pa-sub">攝氏 ⇄ 華氏雙向連動，自動帶入 Descent 廣播稿的溫度欄。</p>
       <div class="pa-temp">
-        <div><label class="pa-lbl">°C 攝氏</label><input id="paC" class="pa-in" inputmode="decimal" placeholder="30"></div>
+        <div><label class="pa-lbl">°C 攝氏</label><input id="paC" class="pa-in" inputmode="decimal" placeholder="??"></div>
         <div class="swap">⇄</div>
-        <div><label class="pa-lbl">°F 華氏</label><input id="paF" class="pa-in" inputmode="decimal" placeholder="86"></div>
+        <div><label class="pa-lbl">°F 華氏</label><input id="paF" class="pa-in" inputmode="decimal" placeholder="??"></div>
       </div>
     </div>
 
-    <!-- 站點時間 -->
+    <!-- 站點時間（預設收合，點標題展開）-->
     <div class="pa-card">
-      <h3>🕒 當地時間對照</h3>
-      <p class="pa-sub">星宇航點即時當地時間（離線計算，含日光節約）。點一下設為 PA 目的地。</p>
-      <div id="paStations" class="pa-stations"></div>
+      <h3 id="paStHead" style="cursor:pointer; user-select:none;">🕒 當地時間對照 <span id="paStCaret" style="font-size:.8em; color:var(--pa-faint); font-weight:400;">▸ 展開</span></h3>
+      <p class="pa-sub" id="paStSub" style="display:none;">星宇航點即時當地時間（離線計算，含日光節約）。點一下設為 PA 目的地。</p>
+      <div id="paStations" class="pa-stations" style="display:none;"></div>
     </div>
   </div>
 
@@ -207,14 +197,17 @@
   function ampm(h){ return h < 12 ? 'a.m.' : 'p.m.'; }
   function to12(h){ h=h%12; return h===0?12:h; }
   function pad(n){ return (n<10?'0':'')+n; }
+  var MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  function monEN(mm){ return MON[parseInt(mm,10)-1] || mm; }
 
-  function diffText(tz){
-    var d = (offsetMin(tz) - offsetMin('Asia/Taipei'))/60;
-    if(Math.abs(d) < 0.01) return '與台北相同';
+  function diffText(destTz, fromCode){
+    var fromTz = (AP[fromCode] || AP.TPE).tz;
+    var d = (offsetMin(destTz) - offsetMin(fromTz))/60;
+    if(Math.abs(d) < 0.01) return '與出發地相同';
     var sign = d>0 ? '快' : '慢';
     var h = Math.abs(d);
     var hs = (h % 1 === 0) ? h.toFixed(0) : h.toFixed(1);
-    return '比台北' + sign + ' ' + hs + ' 小時';
+    return '比出發地' + sign + ' ' + hs + ' 小時';
   }
 
   // ---------- 廣播稿範本 ----------
@@ -263,9 +256,9 @@
   var ORDER = ['welcome','delay','descent','turb','deice','missed','divert','cat','unruly','bomb'];
 
   // ---------- 狀態 ---------
-  var state = { dest:'', flt:'', c:'', f:'', tab:'descent' };
+  var state = { dest:'', from:'TPE', flt:'', c:'', f:'', tab:'welcome' };
 
-  // ---------- 目的地下拉 & 站表 ----------
+  // ---------- 站表分組 ----------
   var GROUPS = [
     ['日本 UTC+9', ['NRT','KIX','NGO','FUK','CTS','SDJ','HKD','OKA','KMJ','UKB','SHI']],
     ['韓國 UTC+9', ['PUS','ICN']],
@@ -276,20 +269,6 @@
     ['美西', ['SFO','LAX','SEA','ONT','PHX']]
   ];
 
-  (function buildDestSel(){
-    var sel = $('paDestSel');
-    GROUPS.forEach(function(g){
-      var og = document.createElement('optgroup'); og.label = g[0];
-      g[1].forEach(function(code){
-        if(!AP[code]) return;
-        var o = document.createElement('option'); o.value = code; o.textContent = code + ' ' + AP[code].zh;
-        og.appendChild(o);
-      });
-      sel.appendChild(og);
-    });
-    sel.addEventListener('change', function(){ if(sel.value){ setDest(sel.value); $('paFlt').value=''; hideRoute(); } });
-  })();
-
   function buildStations(){
     var box = $('paStations'); box.innerHTML='';
     GROUPS.forEach(function(g){
@@ -299,7 +278,7 @@
         var row = document.createElement('div'); row.className='pa-st'; row.dataset.code=code;
         row.innerHTML = '<span class="st-code">'+code+'</span><span class="st-zh">'+AP[code].zh+'</span>'
           + '<span class="st-time" data-t="'+code+'">--:--</span><span class="st-off" data-o="'+code+'"></span>';
-        row.addEventListener('click', function(){ setDest(code); $('paFlt').value=''; hideRoute(); $('paDestSel').value=code; });
+        row.addEventListener('click', function(){ state.from='TPE'; setDest(code); $('paFlt').value=''; hideRoute(); });
         box.appendChild(row);
       });
     });
@@ -345,8 +324,8 @@
     var p = parts(AP[code].tz);
     var h = parseInt(p.hour,10);
     $('paDestTime').textContent = to12(h)+':'+p.minute+' '+ampm(h);
-    $('paDestDate').textContent = WD_ZH[p.weekday]+' '+p.month+'/'+p.day;
-    $('paDestDiff').textContent = diffText(AP[code].tz);
+    $('paDestDate').textContent = WD_ZH[p.weekday]+' '+monEN(p.month)+'/'+p.day;
+    $('paDestDiff').textContent = diffText(AP[code].tz, state.from);
   }
   function queryFlt(){
     var v = ($('paFlt').value||'').toUpperCase().replace(/[\s-]/g,'');
@@ -359,11 +338,11 @@
     else {
       hideRoute();
       $('paToCode').textContent='—';
-      alert('查無班號 '+v+'（本表為 2026/07/27–08/02 定期班表；可改用下方手動選目的地）。');
+      alert('查無班號 '+v+'（本表為 2026/07/27–08/02 定期班表；可改用下方「當地時間對照」點選目的地）。');
       return;
     }
+    state.from = from;
     showRoute(from, to);
-    $('paDestSel').value = (AP[to]?to:'');
     setDest(to);
   }
 
@@ -394,8 +373,8 @@
       case 'temp_f': return state.f || '';
       case 'local_en': if(!ap) return ''; { var p=parts(ap.tz); var h=parseInt(p.hour,10); return to12(h)+':'+p.minute+' '+ampm(h); }
       case 'local_zh': if(!ap) return ''; { var q=parts(ap.tz); var hh=parseInt(q.hour,10); var mer=hh<12?'上午':'下午'; return mer+' '+to12(hh)+':'+q.minute; }
-      case 'daydate_en': if(!ap) return ''; { var r=parts(ap.tz); return WD_EN[r.weekday]+' '+r.month+'/'+r.day; }
-      case 'daydate_zh': if(!ap) return ''; { var s=parts(ap.tz); return s.month+'月'+parseInt(s.day,10)+'號'+WD_ZH[s.weekday]; }
+      case 'daydate_en': if(!ap) return ''; { var r=parts(ap.tz); return WD_EN[r.weekday]+' '+monEN(r.month)+'/'+r.day; }
+      case 'daydate_zh': if(!ap) return ''; { var s=parts(ap.tz); return monEN(s.month)+'/'+s.day+' '+WD_ZH[s.weekday]; }
     }
     return '';
   }
@@ -461,6 +440,15 @@
   // ---------- 綁定 ----------
   $('paFltBtn').addEventListener('click', queryFlt);
   $('paFlt').addEventListener('keydown', function(e){ if(e.key==='Enter') queryFlt(); });
+
+  // 當地時間對照：預設收合，點標題展開/收合
+  $('paStHead').addEventListener('click', function(){
+    var box=$('paStations'), sub=$('paStSub'), caret=$('paStCaret');
+    var open = box.style.display !== 'none';
+    box.style.display = open ? 'none' : 'block';
+    sub.style.display = open ? 'none' : 'block';
+    caret.textContent = open ? '▸ 展開' : '▾ 收合';
+  });
 
   buildStations();
   buildTabs();
