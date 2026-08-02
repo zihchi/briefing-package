@@ -599,6 +599,7 @@
   </h2>
   
   <div class="tool-grid">
+    <button class="btn" onclick="loadFrame('pa.html')">📢 PA 廣播稿</button>
     <button class="btn" onclick="loadPage('fuel.html')">⛽ 加油時間</button>
     <button class="btn" onclick="loadPage('time.html')">⏱️ 時間計算機</button>
     <button class="btn" onclick="loadFrame('aviation-calculator.html')">✈️ 航空計算機</button>
@@ -763,10 +764,16 @@
   <!-- NCDR 即時回波與流場：w_05 背後就是一支固定網址 MP4（ldbztracks），直接播 -->
   <div class="section windy-section">
     <h2>🌧️ NCDR 即時回波與流場 <a href="https://watch.ncdr.nat.gov.tw/watch_page_rain_v3" target="_blank" rel="noopener" style="font-size:0.7em; font-weight:bold; color:var(--brand); text-decoration:none; border:2px solid var(--brand); border-radius:8px; padding:3px 10px; margin-left:10px; vertical-align:middle;">原站 ↗</a></h2>
-    <video id="ncdrRainVideo" autoplay muted loop playsinline preload="metadata"
-      style="width:100%; height:auto; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;"></video>
+    <div id="ncdrRainMeta" style="display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-muted); font-weight:700; margin-bottom:8px;">
+      <button id="ncdrRainPlay" style="background:none; border:2px solid var(--brand); border-radius:8px; padding:3px 12px; color:var(--brand); font-weight:bold; cursor:pointer;">⏸ 暫停</button>
+      <span id="ncdrRainTime">⏳ 載入回波動畫…</span>
+    </div>
+    <div id="ncdrRainStage" style="position:relative; width:100%; aspect-ratio:4400/3400; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1); background:#0b1020;">
+      <img id="ncdrRainBase" alt="衛星底圖" style="position:absolute; inset:0; width:100%; height:100%; object-fit:fill;">
+      <img id="ncdrRainEcho" alt="雷達回波" style="position:absolute; inset:0; width:100%; height:100%; object-fit:fill;">
+    </div>
     <div id="ncdrRainFallback" style="display:none; padding:24px; text-align:center; background:#f1f5f9; border-radius:8px;">
-      <a href="https://watch.ncdr.nat.gov.tw/w_05" target="_blank" rel="noopener" style="font-weight:bold; color:var(--brand);">動畫載入失敗，點此開啟 NCDR 原站 ↗</a>
+      <a href="https://watch.ncdr.nat.gov.tw/watch_page_rain_v3" target="_blank" rel="noopener" style="font-weight:bold; color:var(--brand);">動畫載入失敗，點此開啟 NCDR 原站 ↗</a>
     </div>
   </div>
 
@@ -784,16 +791,61 @@
         }, 800);
       }
 
-      // 回波與流場：固定網址 MP4，加時間戳抓最新
-      var rain=document.getElementById('ncdrRainVideo');
-      if(rain){
-        rain.src='https://watch.ncdr.nat.gov.tw/00_Wxmap/5A8_DBZ_TRACK/ldbztracks?tt='+Date.now();
-        rain.addEventListener('error', function(){
-          rain.style.display='none';
-          document.getElementById('ncdrRainFallback').style.display='block';
-        });
-        ensurePlay(rain);
-      }
+      // 即時雷達回波：衛星底圖 + 每 10 分一張回波 PNG（UTC 整十分）序列動畫
+      (function(){
+        var NB='https://watch.ncdr.nat.gov.tw';
+        var base=document.getElementById('ncdrRainBase');
+        var echo=document.getElementById('ncdrRainEcho');
+        var timeEl=document.getElementById('ncdrRainTime');
+        var playBtn=document.getElementById('ncdrRainPlay');
+        var stage=document.getElementById('ncdrRainStage');
+        var fb=document.getElementById('ncdrRainFallback');
+        if(!base||!echo) return;
+        base.src=NB+'/icon/radar_nowcast_bk_hi.jpg';
+        base.addEventListener('error', function(){ stage.style.display='none'; fb.style.display='block'; });
+        function p2(n){ return (n<10?'0':'')+n; }
+        function frameUrl(d){
+          var Y=d.getUTCFullYear(), M=p2(d.getUTCMonth()+1), D=p2(d.getUTCDate()), h=p2(d.getUTCHours()), m=p2(d.getUTCMinutes());
+          return NB+'/00_Wxmap/7F13_NOWCAST/OBS/'+Y+M+'/'+Y+M+D+'/oLI_s'+Y+M+D+h+m+'.png';
+        }
+        function labelTaipei(d){
+          try{ return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d); }
+          catch(e){ return d.toISOString(); }
+        }
+        function candidates(){
+          var now=new Date(); now.setUTCSeconds(0,0); now.setUTCMinutes(Math.floor(now.getUTCMinutes()/10)*10);
+          var arr=[]; for(var i=0;i<16;i++){ arr.push(new Date(now.getTime()-i*10*60000)); }
+          return arr;
+        }
+        function preload(times){
+          return Promise.all(times.map(function(t){
+            return new Promise(function(res){
+              var im=new Image();
+              im.onload=function(){ res({t:t, url:im.src, ok:true}); };
+              im.onerror=function(){ res({ok:false}); };
+              im.src=frameUrl(t)+'?tt='+Math.floor(Date.now()/60000);
+            });
+          })).then(function(list){ return list.filter(function(x){return x.ok;}); });
+        }
+        var frames=[], idx=0, timer=null, playing=true;
+        function show(i){
+          if(!frames.length) return;
+          idx=(i+frames.length)%frames.length;
+          echo.src=frames[idx].url;
+          timeEl.textContent='🕒 '+labelTaipei(frames[idx].t)+'（每 10 分更新）';
+        }
+        function stepFn(){ if(!playing) return; var last=idx===frames.length-1; show(idx+1); timer=setTimeout(stepFn, last?1400:520); }
+        function setPlaying(p){ playing=p; playBtn.textContent=p?'⏸ 暫停':'▶ 播放'; if(timer){clearTimeout(timer);timer=null;} if(p) stepFn(); }
+        playBtn.addEventListener('click', function(){ setPlaying(!playing); });
+        function load(){
+          preload(candidates()).then(function(ok){
+            if(!ok.length){ stage.style.display='none'; fb.style.display='block'; return; }
+            frames=ok.slice().reverse(); idx=frames.length-1; show(idx); setPlaying(true);
+          });
+        }
+        load();
+        setInterval(load, 5*60000);
+      })();
 
       // 颱風路徑：清單 JSON 沒開 CORS，走多條公用代理 race（同 app.js 抓氣象的做法）
       var tv=document.getElementById('ncdrTyphoonVideo');

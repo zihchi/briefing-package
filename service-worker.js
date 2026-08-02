@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v108';
+const CACHE_NAME = 'briefing-v109';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -25,6 +25,7 @@ const LOCAL_FILES = [
   './curfew.html',
   './fpl_decoder.html',
   './fuel.html',
+  './pa.html',
   './notam.html',
   './swap.html',
   './pilot-rest.html',
