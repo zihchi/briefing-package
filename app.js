@@ -1271,19 +1271,16 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
 };
 
 // 更新右上角狀態膠囊 (現在它本身就是「重新整理」按鈕)
-// opts: { count 機場站數, justUpdated 是否剛手動重新整理過 }
-let syncLabelToken = 0;
-const setSyncStatus = (state, fleetName, opts = {}) => {
+const setSyncStatus = (state, fleetName) => {
     const el = document.getElementById('sync-status');
     if (!el) return;
-    const token = ++syncLabelToken; // 讓「已更新」提示可在稍後自動還原，且不被舊計時器覆蓋
     el.classList.remove('status-loaded', 'status-error', 'is-syncing');
     el.style.opacity = '1';
     el.style.cursor = 'pointer';
     el.disabled = false;
     el.style.backgroundColor = '';
     if (state === 'syncing') {
-        el.innerHTML = `<span class="sync-ico">⟳</span> 載入 ${fleetName} 氣象中…`;
+        el.innerHTML = `<span class="sync-ico">⟳</span> 載入中…`;
         el.classList.add('is-syncing');
         el.style.backgroundColor = '#f39c12';
         el.style.cursor = 'progress';
@@ -1291,27 +1288,15 @@ const setSyncStatus = (state, fleetName, opts = {}) => {
         el.disabled = true;
         el.title = '氣象載入中，請稍候';
     } else if (state === 'loaded') {
-        const n = opts.count ? `（${opts.count} 站全就緒）` : '（已就緒）';
+        el.innerHTML = `✅ ${fleetName} (點此重整)`;
         el.classList.add('status-loaded');
-        el.title = `目前 ${fleetName} 機隊所有 METAR/TAF 皆已載入完成，點一下即重新抓取最新報文`;
-        if (opts.justUpdated) {
-            // 手動重新整理後：先給明確的「已更新 時間」回饋，2.8 秒後還原成常態就緒標籤
-            const t = new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
-            el.innerHTML = `🔄 已於 ${t} 更新完成 · 可再次點此重整`;
-            setTimeout(() => {
-                if (token === syncLabelToken && !el.disabled) {
-                    el.innerHTML = `✅ ${fleetName} 氣象${n} · <span class="sync-ico">↻</span> 點此重新整理`;
-                }
-            }, 2800);
-        } else {
-            el.innerHTML = `✅ ${fleetName} 氣象${n} · <span class="sync-ico">↻</span> 點此重新整理`;
-        }
+        el.title = `${fleetName} 機隊 METAR/TAF 皆已就緒，點一下即重新抓取最新報文`;
     } else if (state === 'error') {
-        el.innerHTML = '❌ 氣象載入失敗 · <span class="sync-ico">↻</span> 點此重試';
+        el.innerHTML = '❌ 載入失敗 (點此重試)';
         el.classList.add('status-error');
         el.title = '載入失敗，點一下重試';
     } else if (state === 'idle') {
-        el.innerHTML = '⏸️ 系統初始化中…';
+        el.innerHTML = '⏸️ 初始化中…';
         el.title = '';
     }
 };
@@ -1354,7 +1339,7 @@ const syncFleetWeather = async (fleetName, forceRefresh = false, _retried = fals
             }
         }
 
-        setSyncStatus('loaded', fleetName, { count: airports.length, justUpdated: forceRefresh });
+        setSyncStatus('loaded', fleetName);
         renderFleetMarkers(fleetName);
 
     } catch (error) {
