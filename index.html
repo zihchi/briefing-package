@@ -222,6 +222,9 @@
     /* sync-status 兼任「重新整理」按鈕 — hover 微微抬高提示可點 */
     #sync-status:hover:not(:disabled) { filter: brightness(1.1); }
     #sync-status:active:not(:disabled) { transform: scale(0.97); }
+    #sync-status .sync-ico { display: inline-block; }
+    #sync-status.is-syncing .sync-ico { animation: syncSpin 0.8s linear infinite; }
+    @keyframes syncSpin { to { transform: rotate(360deg); } }
 
     /* 👇 優化：確保彈出視窗不出界，且隱藏橫向卷軸 */
     .weather-popup { 
