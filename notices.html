@@ -37,10 +37,18 @@
   .wrap{max-width:100%;margin:0;padding:6px 4px}
 
   .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 2px 4px}
-  .refresh{font-size:15px;font-weight:600;color:var(--brand);
-    background:none;border:1px solid var(--line);border-radius:10px;cursor:pointer;padding:6px 11px;flex:0 0 auto}
+  .refresh{font-size:15px;font-weight:600;color:var(--brand);display:inline-flex;align-items:center;gap:5px;
+    background:none;border:1px solid var(--line);border-radius:10px;cursor:pointer;padding:6px 11px;flex:0 0 auto;
+    transition:background .15s,color .15s,border-color .15s}
+  .refresh:active{transform:scale(.96)}
+  .refresh .ico{display:inline-block}
+  .refresh.loading{color:var(--ink-faint);cursor:progress}
+  .refresh.loading .ico{animation:spin .8s linear infinite}
+  .refresh.done{color:#16a34a;border-color:#16a34a}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .status{font-size:12px;color:var(--ink-faint);margin:6px 2px 0}
   .status.err{color:var(--warn)}
+  .status.ok{color:#16a34a}
 
   .search{display:flex;align-items:center;gap:6px;background:var(--surface);flex:1 1 170px;min-width:150px;
     border:1px solid var(--line);border-radius:10px;padding:6px 11px;box-shadow:var(--shadow)}
@@ -104,7 +112,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input id="q" type="search" placeholder="搜尋…" autocomplete="off">
     </div>
-    <button class="refresh" id="refresh">↻</button>
+    <button class="refresh" id="refresh" title="重新整理公告"><span class="ico">↻</span><span class="txt">重新整理</span></button>
   </div>
   <div class="status err" id="status" style="display:none"></div>
 
@@ -197,22 +205,53 @@ let activeSrc="全部", activeFleet="全部機隊", keyword="", DATA=[];
 async function loadData(){
   // 連線成功不顯示狀態文字，只有失敗時才提示
   const st=document.getElementById("status");
-  st.style.display="none";
-  let data;
+  st.style.display="none"; st.className="status";
+  let data, ok=true;
   try{
     const res=await fetch(CSV_URL,{cache:"no-store"});
     data=csvToData(await res.text());
     if(!data.length) throw new Error("empty");
   }catch(e){
+    ok=false;
     data=FALLBACK;
     st.textContent="⚠ 暫時無法連線試算表，顯示範例資料";
-    st.style.display="block";
+    st.className="status err"; st.style.display="block";
   }
   DATA=data.map(normalize).sort((a,b)=>(b._d?+b._d:0)-(a._d?+a._d:0));
   // NEW：今天起算 7 天內（含未來生效），會自動退場
   const cutoff=new Date(); cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate()-6);
   DATA.forEach(x=> x.isNew = x._d && x._d>=cutoff );
   render();
+  return ok;
+}
+
+// 手動「重新整理」：給明確的按下→轉圈→完成回饋，避免使用者不確定有沒有按到
+let refreshing=false;
+async function manualRefresh(){
+  if(refreshing) return;
+  refreshing=true;
+  const btn=document.getElementById("refresh");
+  const st=document.getElementById("status");
+  const txt=btn.querySelector(".txt");
+  btn.classList.remove("done"); btn.classList.add("loading"); btn.disabled=true;
+  if(txt) txt.textContent="更新中…";
+  st.className="status"; st.style.display="block"; st.textContent="⏳ 正在重新整理公告…";
+  const started=Date.now();
+  let ok=false;
+  try{ ok=await loadData(); }catch(e){ ok=false; }
+  // 至少轉半秒，讓「有按到」的回饋看得見
+  const wait=Math.max(0,550-(Date.now()-started));
+  await new Promise(r=>setTimeout(r,wait));
+  btn.classList.remove("loading"); btn.disabled=false;
+  if(txt) txt.textContent="重新整理";
+  if(ok){
+    const t=new Date().toLocaleTimeString("zh-TW",{hour12:false,hour:"2-digit",minute:"2-digit"});
+    btn.classList.add("done");
+    st.className="status ok"; st.style.display="block"; st.textContent=`✅ 公告已更新（${t}）`;
+    setTimeout(()=>{ btn.classList.remove("done"); if(st.classList.contains("ok")){st.style.display="none";} },3000);
+  }
+  // 失敗時 loadData 已把 err 訊息寫進 status，保留顯示
+  refreshing=false;
 }
 function matches(it){
   if(activeSrc!=="全部" && it.src.cat!==activeSrc) return false;
@@ -266,7 +305,7 @@ function buildFilters(){
   // 機隊列已依需求移除（activeFleet 固定「全部機隊」，matches() 不受影響）
 }
 document.getElementById("q").addEventListener("input",e=>{ keyword=e.target.value; render(); });
-document.getElementById("refresh").addEventListener("click",loadData);
+document.getElementById("refresh").addEventListener("click",manualRefresh);
 buildFilters(); loadData();
 </script>
 </body>

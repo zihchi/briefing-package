@@ -930,14 +930,17 @@ const coordsDB = {
     "KOAK": [37.7213, -122.2207], "KONT": [34.0560, -117.6012], "KPDX": [45.5898, -122.5951], "KPHX": [33.4342, -112.0080], "KSEA": [47.4489, -122.3094],
     "KSFO": [37.6189, -122.3750], "KSMF": [38.6954, -121.5908], "KTUS": [32.1161, -110.9410], "LKPR": [50.1008, 14.2600], "LOWL": [48.2332, 14.1875],
     "LOWW": [48.1103, 16.5697], "PACD": [55.2045, -162.7246], "PAFA": [64.8151, -147.8563], "PAKN": [58.6768, -156.6492], "PANC": [61.1743, -149.9962],
-    "PASY": [52.7123, 174.1136], "PHNL": [21.3187, -157.9225], "PMDY": [28.2015, -177.3800], "PWAK": [19.2815, 166.6358]
+    "PASY": [52.7123, 174.1136], "PHNL": [21.3187, -157.9225], "PMDY": [28.2015, -177.3800], "PWAK": [19.2815, 166.6358],
+    "LTAC": [40.1281, 32.9951], "LTFM": [41.2622, 28.7278], "OIIE": [35.4161, 51.1522], "OMAA": [24.4441, 54.6511], "OMDB": [25.2528, 55.3644],
+    "OOMS": [23.5933, 58.2844], "OPKC": [24.9065, 67.1608], "OPLA": [31.5216, 74.4036], "OTBD": [25.2611, 51.5651], "UBBB": [40.4675, 50.0467],
+    "UGTB": [41.6692, 44.9547], "VAAH": [23.0772, 72.6347], "VABB": [19.0887, 72.8679], "VDTI": [11.3703, 104.8446], "VECC": [22.6547, 88.4467],
+    "VIDP": [28.5562, 77.1000], "VOMM": [12.9941, 80.1709], "VYYY": [16.9073, 96.1332]
 };
 
 const rawA321 = `
 PGSN / Saipan Intl. / Saipan, Northern Mariana / A
 PGUM / Guam Intl. / Agana, Guam, USA / R
 PTRO / Roman Tmetuchl Intl. / Koror, Palau / A
-RCFN / Taitung Airport / Taitung, Taiwan / P, S
 RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / P, S
 RCMQ / Taichung Intl. / Taichung, Taiwan / R
 RCNN / Tainan Airport / Tainan, Taiwan / P
@@ -1029,6 +1032,9 @@ WMKP / Penang Intl. / Penang, Malaysia / R
 WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / R
 WSSS / Singapore Changi. / Singapore / R`;
 
+// A350 機隊＝A350-941 與 A350-1041 兩型別的核准機場聯集
+// （來源：CAA OpSpecs Part C 6.4 核准機場清單，Amendment 075，生效 JUL 31 2026）
+// 前段為 A350-941、後段為 A350-1041；parseFleetData 依 ICAO 自動去重合併
 const rawA350 = `
 CYVR / Vancouver Intl. / Vancouver, Canada / A
 EDDB / Berlin Brandenburg Airport / Brandenburg, Germany / A
@@ -1047,6 +1053,15 @@ KTUS / Tucson Intl. / Tucson, AZ, USA / A
 LKPR / Prague Intl. / Prague, Czech / R
 LOWL / Linz Airport / Hörsching, Austria / A
 LOWW / Vienna Intl. / Schwechat, Austria / A
+LTAC / Esenboğa Airport / Ankara, Turkey / A
+LTFM / Istanbul Airport / Istanbul, Turkey / A
+OIIE / Imam Khomeini Intl. / Tehran, Iran / A
+OMAA / Abu Dhabi Intl. / Abu Dhabi, UAE / A
+OMDB / Dubai Intl. / Dubai, UAE / A
+OOMS / Muscat Intl. / Muscat, Oman / A
+OPKC / Jinnah Intl. / Karachi, Pakistan / A
+OPLA / Allama Iqbal Intl. / Lahore, Pakistan / A
+OTBD / Hamad Intl. / Doha, Qatar / A
 PACD / Cold Bay Airport / Cold Bay, AK, USA / A
 PAFA / Fairbanks Intl. / Fairbanks, AK, USA / A
 PAKN / King Salmon Airport / King Salmon, AK, USA / A
@@ -1075,8 +1090,16 @@ ROAH / Naha Airport / Naha, Japan / R
 RPLC / Clark Intl. / Angel City, Philippines / A
 RPLL / Ninoy Aquino Intl / Manila, Philippines / R
 RPVM / Mactan Cebu Intl. / Lapu Lapu, Philippines / A
+UBBB / Heydar Aliyev Intl. / Baku, Azerbaijan / A
+UGTB / Shota Rustaveli Tbilisi Intl. / Tbilisi, Georgia / A
+VAAH / Sardar Vallabhbhai Patel Intl. / Ahmedabad, India / A
+VABB / Chhatrapati Shivaji Maharaj Intl. / Mumbai, India / A
+VDTI / Techo Intl. / Kandal, Cambodia / A
+VECC / Netaji Subhas Chandra Bose Intl. / Kolkata, India / A
+VIDP / Indira Gandhi Intl. / Delhi, India / A
 VHHH / Hong Kong Intl. / Hong Kong, China / R, S
 VMMC / Macao Intl. / Macao, China / R
+VOMM / Chennai Intl. / Chennai, India / A
 VTBD / Don Mueang Intl. / Bangkok, Thailand / A
 VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
 VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
@@ -1086,11 +1109,41 @@ VVDN / Danang Intl. / Danang, Vietnam / A
 VVNB / Noi bai Intl. / Hanoi, Vietnam / R
 VVPQ / Phu Quoc Intl. / Kiên Giang, Vietnam / A
 VVTS / Tan Son Nhat Intl. / Ho Chi Minh, Vietnam / R
+VYYY / Yangon Intl. / Yangon, Myanmar / A
 WARR / Juanda Intl. / Surabaya, Indonesia / A
 WIII / Soekarno Hatta Intl. / Jakarta, Indonesia / A
 WMKP / Penang Intl. / Penang, Malaysia / A
 WMKK / Kuala Lumpur Intl. / Kuala Lumpur, Malaysia / A
 WSSS / Singapore Changi. / Singapore / R
+EDDB / Berlin Brandenburg Airport / Brandenburg, Germany / A
+EDDM / Munich Airport / Bavaria, Germany / A
+EPWA / Warsaw Chopin Airport / Warsaw, Poland / A
+KLAS / Harry Reid Intl. / Las Vegas, NV, USA / A
+KLAX / Los Angeles Intl. / Los Angeles, CA, USA / A
+KONT / Ontario Intl. / Ontario, CA, USA / A, S
+KPHX / Phoenix Sky Harbor Intl. / Phoenix, AZ, USA / R
+KSEA / Seattle Intl. / SeaTac, WA, USA / A
+KTUS / Tucson Intl. / Tucson, AZ, USA / A
+LKPR / Prague Intl. / Prague, Czech / R
+LOWW / Vienna Intl. / Schwechat, Austria / A
+LTAC / Esenboğa Airport / Ankara, Turkey / A
+LTFM / Istanbul Airport / Istanbul, Turkey / A
+OIIE / Imam Khomeini Intl. / Tehran, Iran / A
+OMAA / Abu Dhabi Intl. / Abu Dhabi, UAE / A
+OMDB / Dubai Intl. / Dubai, UAE / A
+OOMS / Muscat Intl. / Muscat, Oman / A
+OPKC / Jinnah Intl. / Karachi, Pakistan / A
+OPLA / Allama Iqbal Intl. / Lahore, Pakistan / A
+OTBD / Hamad Intl. / Doha, Qatar / A
+PACD / Cold Bay Airport / Cold Bay, AK, USA / A
+PAFA / Fairbanks Intl. / Fairbanks, AK, USA / A
+PAKN / King Salmon Airport / King Salmon, AK, USA / A
+PANC / Ted Stevens Anchorage Intl. / Anchorage, AK, USA / A
+PASY / Eareckson Air Station / Shemya, AK, USA / A
+PGSN / Saipan Intl. / Saipan, Northern Mariana / A
+PGUM / Guam Intl. / Agana, Guam, USA / A
+PHNL / Inouye Intl. / Honolulu, HI, USA / A
+PMDY / Henderson Field / Midway Island / A
 RCKH / Kaohsiung Intl. / Kaohsiung, Taiwan / A, S
 RCTP / Taiwan Taoyuan Intl. / Taoyuan, Taiwan / R
 RJAA / New Tokyo (Narita) Intl. / Tokyo, Japan / R
@@ -1103,12 +1156,23 @@ RJTT / Tokyo (Haneda) Intl. / Tokyo, Japan / A
 ROAH / Naha Airport / Naha, Japan / A
 RPLC / Clark Intl. / Angel City, Philippines / A
 RPLL / Ninoy Aquino Intl / Manila, Philippines / A
+UBBB / Heydar Aliyev Intl. / Baku, Azerbaijan / A
+UGTB / Shota Rustaveli Tbilisi Intl. / Tbilisi, Georgia / A
+VAAH / Sardar Vallabhbhai Patel Intl. / Ahmedabad, India / A
+VABB / Chhatrapati Shivaji Maharaj Intl. / Mumbai, India / A
+VDTI / Techo Intl. / Kandal, Cambodia / A
+VECC / Netaji Subhas Chandra Bose Intl. / Kolkata, India / A
+VIDP / Indira Gandhi Intl. / Delhi, India / A
 VHHH / Hong Kong Intl. / Hong Kong, China / A, S
 VMMC / Macao Intl. / Macao, China / A
+VOMM / Chennai Intl. / Chennai, India / A
 VTBD / Don Mueang Intl. / Bangkok, Thailand / A
 VTBS / Suvarnabhumi Intl. / Bangkok, Thailand / R
 VTBU / U-Tapao Rayong Pattaya Intl. / Rayong, Thailand / A
-VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / A`;
+VTCC / Chiang Mai Intl. / Chiang Mai, Thailand / A
+VVNB / Noi bai Intl. / Hanoi, Vietnam / A
+VVTS / Tan Son Nhat Intl. / Ho Chi Minh, Vietnam / A
+VYYY / Yangon Intl. / Yangon, Myanmar / A`;
 
 const rawDomestic = `
 RCTP / 桃園國際機場 / Taoyuan, Taiwan / D
@@ -1157,21 +1221,9 @@ const weatherCache = {};
 let currentFleet = "A330";
 let fleetMarkersLayer;
 
-// 📍 使用者定位（若允許）：地圖預設以此為中心，否則退回台灣
-let userLatLng = null;
+// 🗺️ 地圖預設一律以台灣為中心（不再使用瀏覽器定位）
 const TAIWAN_CENTER = [24.0, 121.0];
-function wxDefaultCenter() { return userLatLng || TAIWAN_CENTER; }
-function requestUserLocation() {
-    if (!('geolocation' in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-        pos => {
-            userLatLng = [pos.coords.latitude, pos.coords.longitude];
-            if (window.aviationMapInstance) window.aviationMapInstance.setView(userLatLng, 6);
-        },
-        () => { /* 拒絕/失敗：維持台灣中心 */ },
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
-    );
-}
+function wxDefaultCenter() { return TAIWAN_CENTER; }
 
 // 🌍 全域共用：並行 race 多條 proxy 鏈路,第一個拿到資料就回傳 — 比序列備援快 + 不會被單條卡住
 const fetchBulkWeatherFast = async (icaoList, type) => {
@@ -1222,28 +1274,29 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
 const setSyncStatus = (state, fleetName) => {
     const el = document.getElementById('sync-status');
     if (!el) return;
-    el.classList.remove('status-loaded', 'status-error');
+    el.classList.remove('status-loaded', 'status-error', 'is-syncing');
     el.style.opacity = '1';
     el.style.cursor = 'pointer';
     el.disabled = false;
     el.style.backgroundColor = '';
     if (state === 'syncing') {
-        el.innerText = `🚀 同步 ${fleetName} 機隊中...`;
+        el.innerHTML = `<span class="sync-ico">⟳</span> 載入中…`;
+        el.classList.add('is-syncing');
         el.style.backgroundColor = '#f39c12';
         el.style.cursor = 'progress';
-        el.style.opacity = '0.85';
+        el.style.opacity = '0.9';
         el.disabled = true;
-        el.title = '同步中,請稍候';
+        el.title = '氣象載入中，請稍候';
     } else if (state === 'loaded') {
-        el.innerText = `✅ ${fleetName} 氣象就緒 · ⟳`;
+        el.innerHTML = `✅ ${fleetName} (點此重整)`;
         el.classList.add('status-loaded');
-        el.title = '點一下重新整理目前機隊氣象';
+        el.title = `${fleetName} 機隊 METAR/TAF 皆已就緒，點一下即重新抓取最新報文`;
     } else if (state === 'error') {
-        el.innerText = '❌ 氣象同步失敗 · 點此重試';
+        el.innerHTML = '❌ 載入失敗 (點此重試)';
         el.classList.add('status-error');
-        el.title = '點一下重試';
+        el.title = '載入失敗，點一下重試';
     } else if (state === 'idle') {
-        el.innerText = '⏸️ 系統初始化中...';
+        el.innerHTML = '⏸️ 初始化中…';
         el.title = '';
     }
 };
@@ -1338,7 +1391,7 @@ function renderFleetMarkers(fleetName) {
         });
     });
 
-    // 預設視角：以使用者定位為中心（未開啟定位則退回台灣），zoom 6。
+    // 預設視角：以台灣為中心，zoom 6。
     // 不再依機隊 fitBounds 縮到很遠、手機上看不清；外站機場可自行平移／縮放。
     if (window.aviationMapInstance) {
         window.aviationMapInstance.setView(wxDefaultCenter(), 6);
@@ -1354,7 +1407,6 @@ function initAviationMap() {
     }
 
     window.aviationMapInstance = L.map('map').setView(wxDefaultCenter(), 6);
-    requestUserLocation(); // 非同步取得定位，成功後自動把地圖移到使用者位置
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
