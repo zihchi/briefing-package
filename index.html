@@ -118,6 +118,23 @@
     .checklist label { font-size: 1em; display: flex; align-items: center; gap: 10px; cursor: pointer; }
     .checklist input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand); }
 
+    /* 檢查清單下拉：預設收合，點一下標題全部展開 */
+    .checklist-details { border: 1px solid var(--border); border-radius: var(--radius-btn, 12px); overflow: hidden; }
+    .checklist-details > summary {
+      list-style: none; cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 16px; font-size: 1.1em; font-weight: bold; color: var(--brand-dark, var(--brand));
+      background-color: var(--brand-soft, #f1f5f9);
+    }
+    .checklist-details > summary::-webkit-details-marker { display: none; }
+    .checklist-details > summary::after {
+      content: "▸"; font-size: 0.95em; color: var(--brand); transition: transform 0.2s ease;
+    }
+    .checklist-details[open] > summary::after { transform: rotate(90deg); }
+    .checklist-details > summary:hover { filter: brightness(0.97); }
+    .checklist-body { padding: 4px 16px 8px; }
+    .checklist-body h3:first-child { margin-top: 0.6em; }
+
     /* ⛽ Fuel Calculator 區塊 */
     .fuel-box h2 { font-size: 1.3rem; margin-top: 0; display: flex; align-items: center; gap: 0.3em; }
     .fuel-box h3 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.3rem; border-left: 4px solid var(--warn); padding-left: 8px;}
@@ -617,25 +634,30 @@
 
   
   <div class="section">
-    <h3>🧳 個人裝備檢查表</h3>
-    <ul class="checklist" id="personalChecklist">
-      <li><label><input type="checkbox"> Sign On</label></li>
-      <li><label><input type="checkbox"> 更新：Flysmart (確認版本) / FD PRO</label></li>
-      <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
-      <li><label><input type="checkbox"> 入境登記</label></li>
-    </ul>
+    <details class="checklist-details">
+      <summary>🧳 出勤 / 簡報檢查清單</summary>
+      <div class="checklist-body">
+        <h3>🧳 個人裝備檢查表</h3>
+        <ul class="checklist" id="personalChecklist">
+          <li><label><input type="checkbox"> Sign On</label></li>
+          <li><label><input type="checkbox"> 更新：Flysmart (確認版本) / FD PRO</label></li>
+          <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
+          <li><label><input type="checkbox"> 入境登記</label></li>
+        </ul>
 
-    <h3>📋 簡報檢查清單（PIREPS）</h3>
-    <ul class="checklist" id="briefingChecklist1">
-      <li><label><input type="checkbox"> Personal equipments</label></li>
-      <li><label><input type="checkbox"> Information : 班號、飛時、巡航高度</label></li>
-      <li><label><input type="checkbox"> Registration : 機號、旅客、水量、MEL、停機位</label></li>
-      <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
-      <li><label><input type="checkbox"> Performance : 油量、起重、落地重、MEL</label></li>
-      <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
-      <li><label><input type="checkbox"> Fleet Notice Reviewed and ✅ </label></li>
-      <li><label><input type="checkbox"> OFP Signed </label></li>
-    </ul>
+        <h3>📋 簡報檢查清單（PIREPS）</h3>
+        <ul class="checklist" id="briefingChecklist1">
+          <li><label><input type="checkbox"> Personal equipments</label></li>
+          <li><label><input type="checkbox"> Information : 班號、飛時、巡航高度</label></li>
+          <li><label><input type="checkbox"> Registration : 機號、旅客、水量、MEL、停機位</label></li>
+          <li><label><input type="checkbox"> Enroute Wx : 出發地、目的地、航路、備降</label></li>
+          <li><label><input type="checkbox"> Performance : 油量、起重、落地重、MEL</label></li>
+          <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
+          <li><label><input type="checkbox"> Fleet Notice Reviewed and ✅ </label></li>
+          <li><label><input type="checkbox"> OFP Signed </label></li>
+        </ul>
+      </div>
+    </details>
   </div>
 
   <div class="section">
