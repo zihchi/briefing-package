@@ -15,6 +15,7 @@ let atcRouteLayers = [];      // ATC 航路具現化：地圖圖層
 let atcWaypointDB = null;     // 航點座標資料庫 (data/waypoints.json)
 let atcWaypointDBLoading = null;
 let curfewClockInterval = null;
+let currentToolUrl = null;    // 目前開啟中的工具；再次點選同一鍵即關閉
 
 // ✈️ Turbli 航班資料庫
 const flightGroups = [
@@ -244,8 +245,11 @@ function cleanUpPanel() {
 }
 
 function loadPage(pageUrl) {
+    // 再次點選同一工具 → 收合關閉
+    if (currentToolUrl === pageUrl) { closePanel(); return; }
+    currentToolUrl = pageUrl;
     const displayArea = document.getElementById('content-display');
-    cleanUpPanel(); 
+    cleanUpPanel();
 
     displayArea.innerHTML = '<div style="text-align: center; padding: 2em; color: #3c79ff; font-weight: bold;">讀取模組中 (Loading)...</div>';
 
@@ -291,6 +295,9 @@ function loadPage(pageUrl) {
 
 // 以 iframe 載入「獨立完整工具」（自帶樣式/腳本，與本站隔離，避免 CSS/JS 衝突）
 function loadFrame(pageUrl) {
+    // 再次點選同一工具 → 收合關閉
+    if (currentToolUrl === pageUrl) { closePanel(); return; }
+    currentToolUrl = pageUrl;
     const displayArea = document.getElementById('content-display');
     cleanUpPanel();
     displayArea.innerHTML =
@@ -299,6 +306,7 @@ function loadFrame(pageUrl) {
 }
 
 function closePanel() {
+    currentToolUrl = null;
     const displayArea = document.getElementById('content-display');
     cleanUpPanel();
     displayArea.innerHTML = `
@@ -2338,9 +2346,10 @@ function processNotamData() {
     const input = inputEl.value;
     if (!input.trim()) return;
 
-    notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
-    notamActiveLayers = [];
-    notamFeatures = [];
+    // 累加模式：不清除既有圖徵，讓多則 NOTAM 逐一疊加。
+    // 「清空重置」才會全部清掉。記錄本次掃描前的數量以判斷是否有新增。
+    const beforeFeatures = notamFeatures.length;
+    const beforeRoutes = notamRoutes.length;
 
     let blocks = splitBulletin(input);
     if (blocks.length === 0) blocks = [{ id: 'NOTAM', raw: input }];
@@ -2417,13 +2426,23 @@ function processNotamData() {
     renderNotamList();
     renderNotamRoutes();
 
+    const addedFeatures = notamFeatures.length - beforeFeatures;
+    const addedRoutes = notamRoutes.length - beforeRoutes;
+
     // 自動縮放只看「目前顯示」的圖徵，避免被離群點拉太遠
     const b = L.latLngBounds([]);
     notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
     if (b.isValid()) {
         notamMapInstance.fitBounds(b, { padding: [40, 40] });
-    } else if (notamFeatures.length === 0 && notamRoutes.length === 0) {
-        alert('未在文字中偵測到可繪製的座標。');
+    }
+
+    if (addedFeatures === 0 && addedRoutes === 0) {
+        // 本則沒有可繪製座標：保留輸入內容，提示使用者
+        alert('本則未偵測到可繪製的座標。');
+    } else {
+        // 具象化成功 → 清空輸入框，等待下一則
+        inputEl.value = '';
+        inputEl.focus();
     }
 }
 
