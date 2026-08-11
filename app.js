@@ -11,6 +11,9 @@ let notamMapInstance = null;
 let notamActiveLayers = [];
 let notamFeatures = [];
 let notamRoutes = [];
+let atcRouteLayers = [];      // ATC 航路具現化：地圖圖層
+let atcWaypointDB = null;     // 航點座標資料庫 (data/waypoints.json)
+let atcWaypointDBLoading = null;
 let curfewClockInterval = null;
 
 // ✈️ Turbli 航班資料庫
@@ -2121,6 +2124,7 @@ function initNotamRadar() {
     notamActiveLayers = [];
     notamFeatures = [];
     notamRoutes = [];
+    atcRouteLayers = [];
     renderNotamList();
     renderNotamRoutes();
 
@@ -2129,6 +2133,11 @@ function initNotamRadar() {
 
     const btnClear = document.getElementById('btn-clear-notam');
     if (btnClear) btnClear.onclick = clearNotamAll;
+
+    const btnRoute = document.getElementById('btn-draw-route');
+    if (btnRoute) btnRoute.onclick = drawAtcRoute;
+
+    loadAtcWaypointDB();  // 預先載入航點資料庫
 }
 
 // ──────────────────────────────────────────
@@ -2516,13 +2525,142 @@ function renderNotamRoutes() {
 function clearNotamAll() {
     if (notamMapInstance) {
         notamActiveLayers.forEach(l => notamMapInstance.removeLayer(l));
+        atcRouteLayers.forEach(l => notamMapInstance.removeLayer(l));
         notamMapInstance.setView([25.03, 121.5], 6);
     }
     notamActiveLayers = [];
     notamFeatures = [];
     notamRoutes = [];
+    atcRouteLayers = [];
     renderNotamList();
     renderNotamRoutes();
     const inputEl = document.getElementById('notamInput');
     if (inputEl) inputEl.value = '';
+    const routeEl = document.getElementById('routeInput');
+    if (routeEl) routeEl.value = '';
+    const routeStatus = document.getElementById('route-status');
+    if (routeStatus) routeStatus.innerHTML = '';
+}
+
+// ==========================================
+// ✈️ ATC 航路具現化 (Route Visualization)
+// ==========================================
+// 貼上一段 ATC Route，例如：
+//   RCTP CHALI1B CHALI T3 MKG A1 KADLO T1 KAPLI DCT MADRU DCT SULUX ... VTBS
+// 依 data/waypoints.json 逐點查座標，將航路以折線畫在地圖上。
+// 航路代號 (T3/A1/Y20…) 與 DCT 為連接元素，資料庫查無即略過；
+// SID/STAR 程序 (CHALI1B/EASTE1C) 會退回去掉程序序號的基本航點 (CHALI/EASTE)。
+
+// 載入航點資料庫 (只載一次，之後重用)
+function loadAtcWaypointDB() {
+    if (atcWaypointDB || atcWaypointDBLoading) return atcWaypointDBLoading;
+    atcWaypointDBLoading = fetch('data/waypoints.json', { cache: 'no-cache' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(doc => { atcWaypointDB = doc.points || {}; return atcWaypointDB; })
+        .catch(err => { console.error('航點資料庫載入失敗:', err); atcWaypointDB = {}; return atcWaypointDB; });
+    return atcWaypointDBLoading;
+}
+
+// 把一段 ATC route 拆成 token，去掉速度/高度後綴 (…/M082F400) 與括號備註
+function tokenizeRoute(text) {
+    return text
+        .replace(/[\r\n\t]+/g, ' ')
+        .split(/\s+/)
+        .map(t => t.split('/')[0].trim().toUpperCase())  // IKELA/M082F400 -> IKELA
+        .filter(Boolean);
+}
+
+// 於資料庫解析單一 token；查無回傳 null (視為航路代號/DCT 而略過)
+function resolveWaypoint(token, db) {
+    if (token === 'DCT' || token === 'SID' || token === 'STAR') return null;
+    if (db[token]) return { name: token, ...db[token] };
+    // SID/STAR：去掉結尾的程序序號 (數字[+字母])，如 CHALI1B -> CHALI、EASTE1C -> EASTE
+    if (token.length >= 5) {
+        const base = token.replace(/\d+[A-Z]?$/, '');
+        if (base.length >= 3 && db[base]) return { name: base, ...db[base] };
+    }
+    return null;
+}
+
+function drawAtcRoute() {
+    const inputEl = document.getElementById('routeInput');
+    const statusEl = document.getElementById('route-status');
+    if (!inputEl || !notamMapInstance) return;
+    const raw = inputEl.value.trim();
+    if (!raw) return;
+
+    loadAtcWaypointDB().then(db => {
+        // 清掉舊航路
+        atcRouteLayers.forEach(l => notamMapInstance.removeLayer(l));
+        atcRouteLayers = [];
+
+        const tokens = tokenizeRoute(raw);
+        const pts = [];        // 解析成功的點
+        const missing = [];    // 查無座標、但看起來像航點的 token
+        const seenMissing = new Set();
+
+        tokens.forEach(tok => {
+            const wp = resolveWaypoint(tok, db);
+            if (wp) {
+                // 避免連續重複點 (如 SID 名與其基本航點相鄰)
+                const last = pts[pts.length - 1];
+                if (!last || last.name !== wp.name) pts.push(wp);
+            } else if (/^[A-Z]{3,5}\d{0,2}$/.test(tok) && tok !== 'DCT' &&
+                       !/^[A-Z]\d{1,3}$/.test(tok) && !seenMissing.has(tok)) {
+                // 排除航路代號 (單字母+數字，如 A1/T3/Y20)，其餘視為缺漏航點
+                missing.push(tok);
+                seenMissing.add(tok);
+            }
+        });
+
+        if (pts.length < 2) {
+            if (statusEl) statusEl.innerHTML =
+                `<span style="color:#dc2626">無法繪製：僅解析到 ${pts.length} 個航點` +
+                (missing.length ? `，缺漏：${missing.join(', ')}` : '') + '</span>';
+            return;
+        }
+
+        const latlngs = pts.map(p => pacify([p.lat, p.lng]));
+
+        // 航路折線 (橘色虛線，與 NOTAM 圖徵區隔)
+        const line = L.polyline(latlngs, { color: '#f59e0b', weight: 3, opacity: 0.9, dashArray: '1,0' });
+        line.addTo(notamMapInstance);
+        atcRouteLayers.push(line);
+
+        // 各航點標記：起點/終點用機場圖示色、途中航點用小圓點
+        pts.forEach((p, i) => {
+            const isEnd = (i === 0 || i === pts.length - 1);
+            const isApt = (p.type === 'airport');
+            const mk = L.circleMarker(pacify([p.lat, p.lng]), {
+                radius: (isEnd || isApt) ? 6 : 4,
+                color: '#b45309',
+                fillColor: (isEnd || isApt) ? '#f59e0b' : '#fff',
+                fillOpacity: 1, weight: 2
+            });
+            mk.bindPopup(
+                `<div style="min-width:150px"><div style="font-weight:700;color:#92400e">${p.name}` +
+                `<span style="background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px">` +
+                `${isApt ? '機場' : '航點'} ${i + 1}/${pts.length}</span></div>` +
+                `<div style="font-size:11px;color:#8b7355;margin-top:2px">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</div>` +
+                (p.src ? `<div style="font-size:10px;color:#a8a29e">來源: ${escNotamHtml(p.src)}</div>` : '') + `</div>`
+            );
+            const label = L.tooltip({ permanent: true, direction: 'top', className: 'atc-wp-label', offset: [0, -4] })
+                .setContent(p.name);
+            mk.bindTooltip(label);
+            mk.addTo(notamMapInstance);
+            atcRouteLayers.push(mk);
+        });
+
+        // 自動縮放至航路範圍
+        notamMapInstance.fitBounds(line.getBounds(), { padding: [50, 50] });
+
+        if (statusEl) {
+            let msg = `<span style="color:#059669">已繪製航路：${pts.length} 個航點</span>`;
+            if (missing.length) {
+                msg += `<br><span style="color:#dc2626">⚠ 資料庫查無 ${missing.length} 點（已跳過）：${missing.join(', ')}</span>` +
+                       `<br><span style="color:#8b7355;font-size:11px">把含這些航點的 OFP 餵給我，即可補進資料庫。</span>`;
+            }
+            statusEl.innerHTML = msg;
+        }
+    });
 }
