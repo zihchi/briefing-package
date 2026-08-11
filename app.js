@@ -2347,10 +2347,7 @@ function processNotamData() {
     if (!input.trim()) return;
 
     // 累加模式：不清除既有圖徵，讓多則 NOTAM 逐一疊加。
-    // 「清空重置」才會全部清掉。記錄本次掃描前的數量以判斷是否有新增。
-    const beforeFeatures = notamFeatures.length;
-    const beforeRoutes = notamRoutes.length;
-
+    // 「清空重置」才會全部清掉。
     let blocks = splitBulletin(input);
     if (blocks.length === 0) blocks = [{ id: 'NOTAM', raw: input }];
 
@@ -2426,9 +2423,6 @@ function processNotamData() {
     renderNotamList();
     renderNotamRoutes();
 
-    const addedFeatures = notamFeatures.length - beforeFeatures;
-    const addedRoutes = notamRoutes.length - beforeRoutes;
-
     // 自動縮放只看「目前顯示」的圖徵，避免被離群點拉太遠
     const b = L.latLngBounds([]);
     notamFeatures.forEach(f => { if (f.visible && f.bounds && f.bounds.isValid()) b.extend(f.bounds); });
@@ -2436,14 +2430,9 @@ function processNotamData() {
         notamMapInstance.fitBounds(b, { padding: [40, 40] });
     }
 
-    if (addedFeatures === 0 && addedRoutes === 0) {
-        // 本則沒有可繪製座標：保留輸入內容，提示使用者
-        alert('本則未偵測到可繪製的座標。');
-    } else {
-        // 具象化成功 → 清空輸入框，等待下一則
-        inputEl.value = '';
-        inputEl.focus();
-    }
+    // 掃描後一律清空輸入框，等待下一則
+    inputEl.value = '';
+    inputEl.focus();
 }
 
 // ──────────────────────────────────────────
