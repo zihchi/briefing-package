@@ -1,7 +1,7 @@
 {
   "meta": {
     "updated": "2026-08-11",
-    "count": 280,
+    "count": 317,
     "sources": [
       "SJX201/10AUG26",
       "SJX202/11AUG26",
@@ -16,9 +16,12 @@
       "SJX804/11AUG26",
       "SJX805/11AUG26",
       "SJX820/11AUG26",
+      "SJX821/11AUG26",
       "SJX838/11AUG26",
       "SJX839/11AUG26",
-      "SJX846/10AUG26"
+      "SJX846/10AUG26",
+      "SJX847/11AUG26",
+      "SJX862/11AUG26"
     ],
     "format": "度分 DDMM.m 轉十進位度；經度為 Pacific 世界；type: waypoint/airport"
   },
@@ -70,6 +73,12 @@
       "lng": 122.49833,
       "type": "waypoint",
       "src": "SJX839/11AUG26"
+    },
+    "AIZUH": {
+      "lat": 37.76167,
+      "lng": 139.72333,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "AJENT": {
       "lat": 24.005,
@@ -149,6 +158,12 @@
       "type": "waypoint",
       "src": "SJX711/10AUG26"
     },
+    "ATPOD": {
+      "lat": 35.68167,
+      "lng": 133.64167,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "AUGUR": {
       "lat": 25.4,
       "lng": 121.46333,
@@ -196,6 +211,12 @@
       "lng": 134.94167,
       "type": "waypoint",
       "src": "SJX820/11AUG26"
+    },
+    "BESMU": {
+      "lat": 34.81333,
+      "lng": 131.965,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "BESTO": {
       "lat": 26.13833,
@@ -443,6 +464,12 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "EBISU": {
+      "lat": 34.03833,
+      "lng": 130.59167,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "EGERU": {
       "lat": 32.63333,
       "lng": 133.61167,
@@ -461,11 +488,23 @@
       "type": "waypoint",
       "src": "SJX234/11AUG26"
     },
+    "EMVEN": {
+      "lat": 34.20333,
+      "lng": 134.73167,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
+    },
     "ENKOV": {
       "lat": 33.305,
       "lng": 133.92833,
       "type": "waypoint",
       "src": "SJX820/11AUG26"
+    },
+    "ENKUD": {
+      "lat": 34.31,
+      "lng": 134.955,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "ENPET": {
       "lat": 22.29333,
@@ -473,11 +512,23 @@
       "type": "waypoint",
       "src": "SJX233/11AUG26"
     },
+    "ENSIP": {
+      "lat": 34.02667,
+      "lng": 134.42167,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
+    },
     "ENVAR": {
       "lat": 21.99167,
       "lng": 117.5,
       "type": "waypoint",
       "src": "SJX234/11AUG26"
+    },
+    "ESBIS": {
+      "lat": 31.25333,
+      "lng": 127.38167,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "ESGEN": {
       "lat": 13.99667,
@@ -485,11 +536,23 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "ESMAD": {
+      "lat": 37.32167,
+      "lng": 138.61833,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "ESPAN": {
       "lat": 34.18667,
       "lng": 136.585,
       "type": "waypoint",
       "src": "SJX839/11AUG26"
+    },
+    "ETIGO": {
+      "lat": 37.56167,
+      "lng": 139.215,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "EXTRA": {
       "lat": 22.4,
@@ -521,6 +584,30 @@
       "type": "waypoint",
       "src": "SJX804/11AUG26"
     },
+    "FT700": {
+      "lat": 32.90833,
+      "lng": 130.80333,
+      "type": "waypoint",
+      "src": "SJX847/11AUG26"
+    },
+    "FT701": {
+      "lat": 32.88167,
+      "lng": 130.73833,
+      "type": "waypoint",
+      "src": "SJX847/11AUG26"
+    },
+    "FUBOU": {
+      "lat": 37.92833,
+      "lng": 140.59833,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
+    "FUE": {
+      "lat": 32.66833,
+      "lng": 128.82667,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "GEMNI": {
       "lat": 25.685,
       "lng": 126.92167,
@@ -538,6 +625,12 @@
       "lng": 136.62167,
       "type": "waypoint",
       "src": "SJX838/11AUG26"
+    },
+    "GOTVI": {
+      "lat": 33.92167,
+      "lng": 134.23833,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "GRACE": {
       "lat": 25.10667,
@@ -677,11 +770,23 @@
       "type": "waypoint",
       "src": "SJX846/10AUG26"
     },
+    "HKC": {
+      "lat": 31.69667,
+      "lng": 130.58333,
+      "type": "waypoint",
+      "src": "SJX847/11AUG26"
+    },
     "IBURA": {
       "lat": 35.70333,
       "lng": 140.63333,
       "type": "waypoint",
       "src": "SJX805/11AUG26"
+    },
+    "IGBOD": {
+      "lat": 32.98,
+      "lng": 132.37833,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "IGLEG": {
       "lat": 18.905,
@@ -736,6 +841,12 @@
       "lng": 129.65333,
       "type": "waypoint",
       "src": "SJX805/11AUG26"
+    },
+    "IVTER": {
+      "lat": 33.025,
+      "lng": 132.75667,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "JAKAL": {
       "lat": 33.06167,
@@ -815,6 +926,12 @@
       "type": "waypoint",
       "src": "SJX805/11AUG26"
     },
+    "KMC": {
+      "lat": 36.39667,
+      "lng": 136.405,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "KOSHI": {
       "lat": 31.28833,
       "lng": 129.965,
@@ -826,6 +943,12 @@
       "lng": 121.99167,
       "type": "waypoint",
       "src": "SJX804/11AUG26"
+    },
+    "LANCE": {
+      "lat": 37.90667,
+      "lng": 140.47667,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "LASSO": {
       "lat": 22.67833,
@@ -844,6 +967,12 @@
       "lng": 100.81167,
       "type": "waypoint",
       "src": "SJX746/11AUG26"
+    },
+    "LELUS": {
+      "lat": 34.41,
+      "lng": 135.05333,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "LENKO": {
       "lat": 17.41667,
@@ -875,6 +1004,12 @@
       "type": "waypoint",
       "src": "SJX804/11AUG26"
     },
+    "LOTVO": {
+      "lat": 33.43333,
+      "lng": 133.42,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
+    },
     "LUBMO": {
       "lat": 21.965,
       "lng": 114.53167,
@@ -904,6 +1039,12 @@
       "lng": 117.16333,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "MADUL": {
+      "lat": 35.98333,
+      "lng": 134.77,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "MAGOG": {
       "lat": 22.29667,
@@ -1018,6 +1159,18 @@
       "lng": 131.37,
       "type": "waypoint",
       "src": "SJX820/11AUG26"
+    },
+    "MIFNE": {
+      "lat": 32.63833,
+      "lng": 130.76,
+      "type": "waypoint",
+      "src": "SJX847/11AUG26"
+    },
+    "MIHOU": {
+      "lat": 35.53167,
+      "lng": 133.09333,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "MISMI": {
       "lat": 32.75667,
@@ -1145,6 +1298,12 @@
       "type": "waypoint",
       "src": "SJX711/10AUG26"
     },
+    "NUPNU": {
+      "lat": 33.63833,
+      "lng": 133.76333,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
+    },
     "OCTAN": {
       "lat": 25.38833,
       "lng": 121.28167,
@@ -1156,6 +1315,12 @@
       "lng": 134.21167,
       "type": "waypoint",
       "src": "SJX820/11AUG26"
+    },
+    "OMGOR": {
+      "lat": 34.155,
+      "lng": 134.64833,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "ONIKU": {
       "lat": 32.195,
@@ -1319,6 +1484,12 @@
       "type": "airport",
       "src": "SJX838/11AUG26"
     },
+    "RJSS": {
+      "lat": 38.14,
+      "lng": 140.91667,
+      "type": "airport",
+      "src": "SJX862/11AUG26"
+    },
     "ROBIN": {
       "lat": 25.42,
       "lng": 122.20833,
@@ -1349,11 +1520,23 @@
       "type": "waypoint",
       "src": "SJX804/11AUG26"
     },
+    "RUTIR": {
+      "lat": 33.31167,
+      "lng": 129.73,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "SABTU": {
       "lat": 34.48833,
       "lng": 134.48,
       "type": "waypoint",
       "src": "SJX805/11AUG26"
+    },
+    "SAKYU": {
+      "lat": 35.91667,
+      "lng": 134.51833,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "SALMI": {
       "lat": 28.315,
@@ -1408,6 +1591,18 @@
       "lng": 113.98167,
       "type": "waypoint",
       "src": "SJX201/10AUG26"
+    },
+    "SNOOK": {
+      "lat": 37.98333,
+      "lng": 140.915,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
+    "SONBU": {
+      "lat": 36.19167,
+      "lng": 135.58333,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "SOVKI": {
       "lat": 14.05833,
@@ -1613,17 +1808,35 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "UBMIL": {
+      "lat": 34.265,
+      "lng": 130.885,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
+    },
     "UPGEB": {
       "lat": 33.03167,
       "lng": 133.46167,
       "type": "waypoint",
       "src": "SJX820/11AUG26"
     },
+    "UPNIP": {
+      "lat": 32.585,
+      "lng": 131.81667,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
+    },
     "URUMA": {
       "lat": 28.97,
       "lng": 126.58,
       "type": "waypoint",
       "src": "SJX839/11AUG26"
+    },
+    "VALVU": {
+      "lat": 32.02167,
+      "lng": 131.03,
+      "type": "waypoint",
+      "src": "SJX821/11AUG26"
     },
     "VANPU": {
       "lat": 22.06667,
@@ -1654,6 +1867,12 @@
       "lng": 113.915,
       "type": "airport",
       "src": "SJX233/11AUG26"
+    },
+    "VIKET": {
+      "lat": 37.70167,
+      "lng": 139.57,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     },
     "VMMC": {
       "lat": 22.15,
@@ -1702,6 +1921,12 @@
       "lng": 141.03167,
       "type": "waypoint",
       "src": "SJX804/11AUG26"
+    },
+    "ZUWAI": {
+      "lat": 36.63,
+      "lng": 136.95,
+      "type": "waypoint",
+      "src": "SJX862/11AUG26"
     }
   }
 }
