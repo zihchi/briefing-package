@@ -28,6 +28,20 @@
         color: #4a3627;
     }
 
+    /* ---- ATC 航路航點標籤 ---- */
+    .atc-wp-label {
+        background: rgba(255,255,255,0.9);
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        color: #92400e;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .atc-wp-label::before { display: none; }
+
     /* ---- 標題與分隔線 ---- */
     .notam-header { border-bottom-color: #8b5a2b !important; }
     .notam-header h1 { color: #4a3627 !important; }
@@ -224,14 +238,13 @@
     <header class="notam-header mb-6 flex justify-between items-end border-b-2 border-blue-600 pb-4">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">NOTAM Radar</h1>
-            <p class="text-slate-500 mt-1 font-medium">NOTAM 視覺化 <span class="notam-badge text-blue-500 text-xs ml-2 px-2 py-0.5 bg-blue-50 rounded-full border border-blue-100">雙引擎防護版</span></p>
         </div>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
         <div class="lg:col-span-4 space-y-4">
             <!-- 輸入區塊 -->
-            <div class="notam-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 transition-all hover:shadow-md h-full flex flex-col">
+            <div class="notam-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 transition-all hover:shadow-md flex flex-col">
                 <label class="notam-label block text-sm font-bold mb-3 text-slate-700 flex items-center">
                     <svg class="w-4 h-4 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path></svg>
                     貼入 NOTAM / AIP 原始文本
@@ -254,6 +267,23 @@
                 <div id="notam-results" class="notam-results">
                     <div class="notam-results-empty">尚無偵測結果。貼上 NOTAM 文本後按「座標掃描」。</div>
                 </div>
+            </div>
+
+            <!-- ✈️ ATC 航路具現化 -->
+            <div class="notam-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 transition-all hover:shadow-md flex flex-col">
+                <label class="notam-label block text-sm font-bold mb-3 text-slate-700 flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                    貼入 ATC Route（航路具現化）
+                    <span class="text-amber-600 text-xs ml-2 px-2 py-0.5 bg-amber-50 rounded-full border border-amber-200 font-semibold">🧪 測試中 Beta</span>
+                </label>
+                <textarea id="routeInput"
+                    class="notam-textarea w-full min-h-[90px] p-4 text-sm font-mono border border-slate-200 rounded-xl focus:ring-4 focus:ring-amber-100 focus:border-amber-500 focus:outline-none bg-slate-50 transition-all text-slate-700 placeholder-slate-400"
+                    placeholder="貼入 ATC Route，例如：&#10;RCTP CHALI1B CHALI T3 MKG A1 KADLO T1 KAPLI DCT MADRU DCT SULUX DCT IGLEG DCT IKELA/M082F400 A1 DAN/N0474F400 A1 UBL Y20 GRASO Y13 RUKSA DCT EASTE VTBS&#10;系統會依航點資料庫把航路畫在地圖上（航路代號 T3/A1 與 DCT 會自動略過）。"></textarea>
+                <button id="btn-draw-route" class="notam-btn-primary bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-amber-200 flex items-center justify-center mt-3">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    航路具現化
+                </button>
+                <div id="route-status" class="text-xs mt-3 leading-relaxed"></div>
             </div>
         </div>
 
