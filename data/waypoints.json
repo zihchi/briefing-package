@@ -1,18 +1,135 @@
 {
   "meta": {
     "updated": "2026-08-11",
-    "count": 43,
+    "count": 280,
     "sources": [
-      "SJX745/11AUG26"
+      "SJX201/10AUG26",
+      "SJX202/11AUG26",
+      "SJX233/11AUG26",
+      "SJX234/11AUG26",
+      "SJX235/11AUG26",
+      "SJX236/11AUG26",
+      "SJX711/10AUG26",
+      "SJX712/11AUG26",
+      "SJX745/11AUG26",
+      "SJX746/11AUG26",
+      "SJX804/11AUG26",
+      "SJX805/11AUG26",
+      "SJX820/11AUG26",
+      "SJX838/11AUG26",
+      "SJX839/11AUG26",
+      "SJX846/10AUG26"
     ],
     "format": "度分 DDMM.m 轉十進位度；經度為 Pacific 世界；type: waypoint/airport"
   },
   "points": {
+    "AA451": {
+      "lat": 35.24667,
+      "lng": 140.98667,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "AA452": {
+      "lat": 35.325,
+      "lng": 141.04167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "AA453": {
+      "lat": 35.41333,
+      "lng": 141.06167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "ABBEY": {
+      "lat": 22.27,
+      "lng": 114.92333,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "ADNOK": {
+      "lat": 32.04333,
+      "lng": 130.37833,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "AGIMO": {
+      "lat": 33.44333,
+      "lng": 138.31333,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "AIPOM": {
+      "lat": 26.65667,
+      "lng": 123.425,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "AISAR": {
+      "lat": 25.94333,
+      "lng": 122.49833,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
     "AJENT": {
       "lat": 24.005,
       "lng": 119.95167,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "AKTAP": {
+      "lat": 30.81167,
+      "lng": 133.73333,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "AKVAS": {
+      "lat": 29.58667,
+      "lng": 127.465,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "ALBAT": {
+      "lat": 33.365,
+      "lng": 135.44167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "ANDRE": {
+      "lat": 21.74167,
+      "lng": 119.99167,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "ANLIK": {
+      "lat": 31.59167,
+      "lng": 130.13,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "ANPOG": {
+      "lat": 22.605,
+      "lng": 117.955,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "ANSUP": {
+      "lat": 10.98,
+      "lng": 107.23167,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "ARIES": {
+      "lat": 35.935,
+      "lng": 140.25167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "ARIGI": {
+      "lat": 34.195,
+      "lng": 133.155,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
     },
     "ASABO": {
       "lat": 15.20333,
@@ -20,11 +137,113 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "ASOVO": {
+      "lat": 32.885,
+      "lng": 128.72167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "ASUKU": {
+      "lat": 15.60667,
+      "lng": 109.245,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "AUGUR": {
+      "lat": 25.4,
+      "lng": 121.46333,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "AZAMA": {
+      "lat": 26.16167,
+      "lng": 127.8,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "BAFFY": {
+      "lat": 34.345,
+      "lng": 139.975,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "BAKER": {
+      "lat": 25.64333,
+      "lng": 121.88,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "BALIE": {
+      "lat": 33.915,
+      "lng": 132.2,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "BEGUL": {
+      "lat": 35.25833,
+      "lng": 137.8,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "BERBA": {
+      "lat": 27.07833,
+      "lng": 123.0,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "BERRY": {
+      "lat": 34.25,
+      "lng": 134.94167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "BESTO": {
+      "lat": 26.13833,
+      "lng": 122.25833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "BINKU": {
       "lat": 16.56,
       "lng": 108.97333,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "BMT": {
+      "lat": 12.66667,
+      "lng": 108.12333,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "BOCCA": {
+      "lat": 23.47833,
+      "lng": 119.78833,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "BOMSU": {
+      "lat": 10.91,
+      "lng": 106.9,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "BONSO": {
+      "lat": 30.47833,
+      "lng": 125.14833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "BRAVO": {
+      "lat": 24.675,
+      "lng": 120.61167,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "BRENT": {
+      "lat": 25.01833,
+      "lng": 123.18333,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
     },
     "BS501": {
       "lat": 13.91333,
@@ -44,6 +263,48 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "BS932": {
+      "lat": 13.555,
+      "lng": 100.57167,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "BS933": {
+      "lat": 13.755,
+      "lng": 100.65333,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "BS940": {
+      "lat": 13.525,
+      "lng": 100.69667,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "BS942": {
+      "lat": 13.75333,
+      "lng": 101.00167,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "BS943": {
+      "lat": 13.75167,
+      "lng": 101.23167,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "BULAN": {
+      "lat": 27.09167,
+      "lng": 124.0,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "BUMDI": {
+      "lat": 22.36167,
+      "lng": 114.315,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
     "BUNTA": {
       "lat": 16.83333,
       "lng": 109.395,
@@ -56,11 +317,29 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "CAMAS": {
+      "lat": 32.72333,
+      "lng": 128.26167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "CANDY": {
       "lat": 24.455,
       "lng": 120.3,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "CARDS": {
+      "lat": 34.41833,
+      "lng": 136.40167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "CASAR": {
+      "lat": 22.295,
+      "lng": 120.07667,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
     },
     "CHALI": {
       "lat": 24.73,
@@ -68,11 +347,53 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "CHINU": {
+      "lat": 33.515,
+      "lng": 130.44167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "COMBO": {
       "lat": 22.26167,
       "lng": 118.135,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "CONGA": {
+      "lat": 21.73333,
+      "lng": 116.785,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "COPRA": {
+      "lat": 25.725,
+      "lng": 121.94333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "DADON": {
+      "lat": 22.27667,
+      "lng": 118.00333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "DAKIG": {
+      "lat": 21.84833,
+      "lng": 114.44333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "DALAP": {
+      "lat": 11.01333,
+      "lng": 107.39,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "DALOL": {
+      "lat": 21.74333,
+      "lng": 114.84667,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
     },
     "DAN": {
       "lat": 16.05333,
@@ -80,11 +401,83 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "DECOY": {
+      "lat": 25.205,
+      "lng": 121.01833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "DELFI": {
+      "lat": 34.76333,
+      "lng": 136.72667,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "DOVIN": {
+      "lat": 11.91667,
+      "lng": 108.10833,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "DRAKE": {
+      "lat": 25.615,
+      "lng": 122.07833,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "DUBAN": {
+      "lat": 27.93833,
+      "lng": 123.695,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "DUMEP": {
+      "lat": 21.74333,
+      "lng": 115.21333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
     "EASTE": {
       "lat": 14.31,
       "lng": 101.28667,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "EGERU": {
+      "lat": 32.63333,
+      "lng": 133.61167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "ELATO": {
+      "lat": 22.33333,
+      "lng": 117.5,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "ELBER": {
+      "lat": 24.11167,
+      "lng": 120.21833,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "ENKOV": {
+      "lat": 33.305,
+      "lng": 133.92833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "ENPET": {
+      "lat": 22.29333,
+      "lng": 115.69,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "ENVAR": {
+      "lat": 21.99167,
+      "lng": 117.5,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
     },
     "ESGEN": {
       "lat": 13.99667,
@@ -92,11 +485,65 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "ESPAN": {
+      "lat": 34.18667,
+      "lng": 136.585,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
     "EXTRA": {
       "lat": 22.4,
       "lng": 118.215,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "FANPY": {
+      "lat": 25.125,
+      "lng": 122.05833,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "FISHA": {
+      "lat": 22.28333,
+      "lng": 115.33667,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "FITCH": {
+      "lat": 26.685,
+      "lng": 122.68833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "FREED": {
+      "lat": 25.47833,
+      "lng": 126.54167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "GEMNI": {
+      "lat": 25.685,
+      "lng": 126.92167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "GG600": {
+      "lat": 34.83167,
+      "lng": 136.71167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "GG650": {
+      "lat": 34.5,
+      "lng": 136.62167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "GRACE": {
+      "lat": 25.10667,
+      "lng": 122.29,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
     },
     "GRASO": {
       "lat": 15.155,
@@ -104,17 +551,227 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "GREEN": {
+      "lat": 32.89833,
+      "lng": 133.56667,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "GUGOT": {
+      "lat": 13.66167,
+      "lng": 100.575,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "GULID": {
+      "lat": 35.65667,
+      "lng": 140.475,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "GUPER": {
+      "lat": 33.745,
+      "lng": 138.905,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "HABAR": {
+      "lat": 34.32,
+      "lng": 133.58833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "HALON": {
+      "lat": 33.24833,
+      "lng": 134.99667,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "HAZEL": {
+      "lat": 22.02333,
+      "lng": 113.68167,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "HH411": {
+      "lat": 22.285,
+      "lng": 113.865,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH412": {
+      "lat": 22.25333,
+      "lng": 113.81333,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH413": {
+      "lat": 22.19667,
+      "lng": 113.81167,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH414": {
+      "lat": 22.16167,
+      "lng": 113.85333,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH421": {
+      "lat": 22.25833,
+      "lng": 113.73667,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "HH422": {
+      "lat": 22.21667,
+      "lng": 113.70833,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "HH423": {
+      "lat": 22.12333,
+      "lng": 113.75,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "HH471": {
+      "lat": 22.125,
+      "lng": 114.06,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH472": {
+      "lat": 22.09833,
+      "lng": 114.21833,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "HH477": {
+      "lat": 21.95833,
+      "lng": 114.215,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "HH484": {
+      "lat": 22.04,
+      "lng": 113.93333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "HH511": {
+      "lat": 21.89167,
+      "lng": 114.19167,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "HH512": {
+      "lat": 22.02333,
+      "lng": 114.53167,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "HINAG": {
+      "lat": 32.395,
+      "lng": 130.515,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "IBURA": {
+      "lat": 35.70333,
+      "lng": 140.63333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "IGLEG": {
       "lat": 18.905,
       "lng": 112.42833,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "IGMON": {
+      "lat": 27.62167,
+      "lng": 124.72,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "IGNOT": {
+      "lat": 35.345,
+      "lng": 139.47167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "IKASU": {
+      "lat": 31.81833,
+      "lng": 130.255,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "IKEDO": {
+      "lat": 31.72,
+      "lng": 125.66333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "IKELA": {
       "lat": 18.66167,
       "lng": 112.245,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "IMPAL": {
+      "lat": 33.1,
+      "lng": 135.20167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "INVAM": {
+      "lat": 30.23167,
+      "lng": 128.99833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "ISAKY": {
+      "lat": 33.20667,
+      "lng": 129.65333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "JAKAL": {
+      "lat": 33.06167,
+      "lng": 134.235,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "JAMMY": {
+      "lat": 24.91833,
+      "lng": 120.85333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "JARED": {
+      "lat": 35.17333,
+      "lng": 140.87167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "JEDAI": {
+      "lat": 30.775,
+      "lng": 129.20167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "JUNTA": {
+      "lat": 25.29,
+      "lng": 121.325,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "JUROR": {
+      "lat": 25.345,
+      "lng": 121.39333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
     },
     "KADLO": {
       "lat": 22.955,
@@ -128,11 +785,47 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "KANKA": {
+      "lat": 31.53167,
+      "lng": 125.585,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
     "KAPLI": {
       "lat": 21.16667,
       "lng": 117.5,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "KEC": {
+      "lat": 33.44833,
+      "lng": 135.795,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "KIKIT": {
+      "lat": 25.88167,
+      "lng": 123.59167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "KINAI": {
+      "lat": 34.65667,
+      "lng": 135.39833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "KOSHI": {
+      "lat": 31.28833,
+      "lng": 129.965,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "KUDOS": {
+      "lat": 25.13167,
+      "lng": 121.99167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
     },
     "LASSO": {
       "lat": 22.67833,
@@ -140,11 +833,71 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "LATOP": {
+      "lat": 22.28167,
+      "lng": 113.64333,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "LELIS": {
+      "lat": 13.755,
+      "lng": 100.81167,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
     "LENKO": {
       "lat": 17.41667,
       "lng": 110.3,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "LILRA": {
+      "lat": 24.83,
+      "lng": 124.87167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "LIMES": {
+      "lat": 22.10667,
+      "lng": 113.775,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "LIPLI": {
+      "lat": 14.175,
+      "lng": 101.965,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "LOTTO": {
+      "lat": 25.1,
+      "lng": 122.345,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "LUBMO": {
+      "lat": 21.965,
+      "lng": 114.53167,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "LUKBU": {
+      "lat": 22.37833,
+      "lng": 113.88333,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "LUTRI": {
+      "lat": 11.16167,
+      "lng": 107.23667,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "MADOG": {
+      "lat": 32.125,
+      "lng": 132.39667,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
     },
     "MADRU": {
       "lat": 21.16333,
@@ -152,11 +905,149 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "MAGOG": {
+      "lat": 22.29667,
+      "lng": 115.825,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "MAGUT": {
+      "lat": 32.56333,
+      "lng": 133.44333,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "MAMAS": {
+      "lat": 34.46,
+      "lng": 140.15,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "MAMOD": {
+      "lat": 26.97833,
+      "lng": 124.42833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "MAYOR": {
+      "lat": 25.20333,
+      "lng": 121.21333,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "MC314": {
+      "lat": 22.27833,
+      "lng": 114.04,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "MC315": {
+      "lat": 22.19,
+      "lng": 114.18,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "MC411": {
+      "lat": 22.36167,
+      "lng": 113.79333,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "MC420": {
+      "lat": 22.34167,
+      "lng": 113.695,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
+    },
+    "MC601": {
+      "lat": 22.32833,
+      "lng": 113.945,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "MEBKI": {
+      "lat": 21.74167,
+      "lng": 115.58167,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "MEBNI": {
+      "lat": 35.27833,
+      "lng": 138.14,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "MEICH": {
+      "lat": 23.705,
+      "lng": 120.275,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "MELEN": {
+      "lat": 29.52667,
+      "lng": 127.96667,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "MENON": {
+      "lat": 22.805,
+      "lng": 120.155,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "MEOTO": {
+      "lat": 34.575,
+      "lng": 136.68167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "MEVOL": {
+      "lat": 32.275,
+      "lng": 136.09333,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "MEXIR": {
+      "lat": 32.82167,
+      "lng": 134.07333,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "MIDAI": {
+      "lat": 31.60667,
+      "lng": 131.37,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "MISMI": {
+      "lat": 32.75667,
+      "lng": 130.655,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "MITOP": {
+      "lat": 35.32,
+      "lng": 138.93,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "MJC": {
+      "lat": 24.77667,
+      "lng": 125.29333,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
     "MKG": {
       "lat": 23.595,
       "lng": 119.63667,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "MOE": {
+      "lat": 34.07167,
+      "lng": 139.56167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
     },
     "MOLIT": {
       "lat": 24.155,
@@ -164,11 +1055,125 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "MOLKA": {
+      "lat": 26.65833,
+      "lng": 124.0,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "MOMPA": {
+      "lat": 30.845,
+      "lng": 129.915,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "MORTU": {
+      "lat": 19.71,
+      "lng": 114.385,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "MUGUS": {
+      "lat": 30.0,
+      "lng": 124.95333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "MUKEP": {
+      "lat": 33.0,
+      "lng": 134.79167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "MUMBA": {
+      "lat": 27.39833,
+      "lng": 124.99833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
     "MUMUP": {
       "lat": 13.83333,
       "lng": 100.88667,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "MUSEL": {
+      "lat": 22.265,
+      "lng": 114.78167,
+      "type": "waypoint",
+      "src": "SJX233/11AUG26"
+    },
+    "NALTO": {
+      "lat": 34.15,
+      "lng": 134.72,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "NATCH": {
+      "lat": 34.19167,
+      "lng": 136.195,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "NEDLE": {
+      "lat": 22.38667,
+      "lng": 114.7,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "NIRAT": {
+      "lat": 32.065,
+      "lng": 126.05833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "NIXOV": {
+      "lat": 33.61167,
+      "lng": 134.46167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "NOBAD": {
+      "lat": 20.245,
+      "lng": 115.51,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "NOBID": {
+      "lat": 13.31167,
+      "lng": 108.58167,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "OCTAN": {
+      "lat": 25.38833,
+      "lng": 121.28167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "OLBUG": {
+      "lat": 33.46833,
+      "lng": 134.21167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "ONIKU": {
+      "lat": 32.195,
+      "lng": 126.655,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "OSTAR": {
+      "lat": 26.33167,
+      "lng": 123.0,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "PABSO": {
+      "lat": 25.63833,
+      "lng": 122.86667,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
     },
     "PAKRI": {
       "lat": 14.86667,
@@ -182,11 +1187,71 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "PARPA": {
+      "lat": 22.03167,
+      "lng": 120.03667,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "PARTO": {
+      "lat": 25.03667,
+      "lng": 123.0,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "PATMA": {
+      "lat": 12.33667,
+      "lng": 107.81,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
     "PATNO": {
       "lat": 15.965,
       "lng": 107.885,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "PCA": {
+      "lat": 13.95667,
+      "lng": 109.04333,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "PEAKS": {
+      "lat": 35.41833,
+      "lng": 140.73167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "PEKBA": {
+      "lat": 14.80167,
+      "lng": 103.79333,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "PONIK": {
+      "lat": 32.00667,
+      "lng": 125.78333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "PONTI": {
+      "lat": 22.37167,
+      "lng": 114.46333,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "PORCO": {
+      "lat": 35.60667,
+      "lng": 140.31167,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "POTET": {
+      "lat": 32.28,
+      "lng": 127.04,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
     },
     "POTEV": {
       "lat": 15.365,
@@ -194,11 +1259,77 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "PROBE": {
+      "lat": 34.59,
+      "lng": 136.87,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
     "RCTP": {
-      "lat": 25.0777,
-      "lng": 121.2325,
+      "lat": 25.08,
+      "lng": 121.23167,
       "type": "airport",
-      "src": "ARP-ref"
+      "src": "SJX839/11AUG26"
+    },
+    "RECON": {
+      "lat": 21.38,
+      "lng": 118.40833,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "REDEK": {
+      "lat": 35.47833,
+      "lng": 139.89333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "RENOT": {
+      "lat": 22.56833,
+      "lng": 118.51167,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "RIVMI": {
+      "lat": 22.40167,
+      "lng": 114.32,
+      "type": "waypoint",
+      "src": "SJX235/11AUG26"
+    },
+    "RJAA": {
+      "lat": 35.765,
+      "lng": 140.385,
+      "type": "airport",
+      "src": "SJX804/11AUG26"
+    },
+    "RJBB": {
+      "lat": 34.435,
+      "lng": 135.23333,
+      "type": "airport",
+      "src": "SJX820/11AUG26"
+    },
+    "RJFT": {
+      "lat": 32.83667,
+      "lng": 130.855,
+      "type": "airport",
+      "src": "SJX846/10AUG26"
+    },
+    "RJGG": {
+      "lat": 34.85833,
+      "lng": 136.805,
+      "type": "airport",
+      "src": "SJX838/11AUG26"
+    },
+    "ROBIN": {
+      "lat": 25.42,
+      "lng": 122.20833,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "ROONY": {
+      "lat": 35.88833,
+      "lng": 140.67333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
     },
     "RUKSA": {
       "lat": 14.565,
@@ -206,11 +1337,101 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "RUSAR": {
+      "lat": 29.865,
+      "lng": 127.83667,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "RUTAS": {
+      "lat": 34.73,
+      "lng": 140.67667,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "SABTU": {
+      "lat": 34.48833,
+      "lng": 134.48,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "SALMI": {
+      "lat": 28.315,
+      "lng": 124.0,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "SAMMI": {
+      "lat": 22.46667,
+      "lng": 115.96167,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "SAPET": {
+      "lat": 28.63667,
+      "lng": 126.13167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "SASIK": {
+      "lat": 32.3,
+      "lng": 130.52167,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
+    },
+    "SEDKU": {
+      "lat": 24.93333,
+      "lng": 124.0,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "SEPIA": {
+      "lat": 25.48667,
+      "lng": 121.575,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "SHIBK": {
+      "lat": 29.65333,
+      "lng": 132.08,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "SIRON": {
+      "lat": 33.86,
+      "lng": 135.89167,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "SMT": {
+      "lat": 22.33833,
+      "lng": 113.98167,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
     "SOVKI": {
       "lat": 14.05833,
       "lng": 101.07167,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "SUBTA": {
+      "lat": 28.95333,
+      "lng": 124.51,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "SUC": {
+      "lat": 32.75667,
+      "lng": 132.99667,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "SUDVA": {
+      "lat": 22.07333,
+      "lng": 114.36,
+      "type": "waypoint",
+      "src": "SJX202/11AUG26"
     },
     "SULUX": {
       "lat": 20.34833,
@@ -224,11 +1445,47 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "SUNAM": {
+      "lat": 35.01167,
+      "lng": 136.79833,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "SUPAD": {
+      "lat": 22.00167,
+      "lng": 114.125,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "TAMAK": {
+      "lat": 27.53167,
+      "lng": 129.09833,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
     "TANNA": {
       "lat": 15.90333,
       "lng": 107.65833,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "TEDUR": {
+      "lat": 22.18833,
+      "lng": 114.39833,
+      "type": "waypoint",
+      "src": "SJX235/11AUG26"
+    },
+    "TEKEL": {
+      "lat": 35.24333,
+      "lng": 137.6,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "TEMIP": {
+      "lat": 32.11833,
+      "lng": 130.42,
+      "type": "waypoint",
+      "src": "SJX846/10AUG26"
     },
     "TERIB": {
       "lat": 13.96667,
@@ -236,17 +1493,173 @@
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "TNN": {
+      "lat": 23.135,
+      "lng": 120.20667,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "TOKOM": {
+      "lat": 34.43333,
+      "lng": 134.18333,
+      "type": "waypoint",
+      "src": "SJX805/11AUG26"
+    },
+    "TONGA": {
+      "lat": 23.17667,
+      "lng": 119.59167,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "TP230": {
+      "lat": 25.03833,
+      "lng": 121.17167,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
     "TP240": {
       "lat": 25.02667,
       "lng": 121.18,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
     },
+    "TS442": {
+      "lat": 11.24,
+      "lng": 106.955,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "TS444": {
+      "lat": 11.21,
+      "lng": 107.05167,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "TS446": {
+      "lat": 11.15333,
+      "lng": 107.13333,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "TS448": {
+      "lat": 11.075,
+      "lng": 107.195,
+      "type": "waypoint",
+      "src": "SJX711/10AUG26"
+    },
+    "TS612": {
+      "lat": 10.78833,
+      "lng": 106.57333,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TS626": {
+      "lat": 10.63667,
+      "lng": 106.63333,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TS628": {
+      "lat": 10.66833,
+      "lng": 106.71667,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TS632": {
+      "lat": 10.715,
+      "lng": 106.84333,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TS814": {
+      "lat": 10.895,
+      "lng": 107.07333,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TS816": {
+      "lat": 11.02833,
+      "lng": 107.155,
+      "type": "waypoint",
+      "src": "SJX712/11AUG26"
+    },
+    "TUBBY": {
+      "lat": 22.50667,
+      "lng": 116.67333,
+      "type": "waypoint",
+      "src": "SJX201/10AUG26"
+    },
+    "TUNAS": {
+      "lat": 33.67,
+      "lng": 135.72,
+      "type": "waypoint",
+      "src": "SJX838/11AUG26"
+    },
+    "TURFY": {
+      "lat": 33.16333,
+      "lng": 134.64167,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "TYLER": {
+      "lat": 35.44667,
+      "lng": 140.635,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
     "UBL": {
       "lat": 15.245,
       "lng": 104.86667,
       "type": "waypoint",
       "src": "SJX745/11AUG26"
+    },
+    "UPGEB": {
+      "lat": 33.03167,
+      "lng": 133.46167,
+      "type": "waypoint",
+      "src": "SJX820/11AUG26"
+    },
+    "URUMA": {
+      "lat": 28.97,
+      "lng": 126.58,
+      "type": "waypoint",
+      "src": "SJX839/11AUG26"
+    },
+    "VANPU": {
+      "lat": 22.06667,
+      "lng": 113.80167,
+      "type": "waypoint",
+      "src": "SJX234/11AUG26"
+    },
+    "VEDMU": {
+      "lat": 22.13667,
+      "lng": 113.91833,
+      "type": "waypoint",
+      "src": "SJX236/11AUG26"
+    },
+    "VELNO": {
+      "lat": 25.89667,
+      "lng": 127.31,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "VENUS": {
+      "lat": 35.07833,
+      "lng": 140.72,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "VHHH": {
+      "lat": 22.30833,
+      "lng": 113.915,
+      "type": "airport",
+      "src": "SJX233/11AUG26"
+    },
+    "VMMC": {
+      "lat": 22.15,
+      "lng": 113.59167,
+      "type": "airport",
+      "src": "SJX201/10AUG26"
     },
     "VTBD": {
       "lat": 13.9126,
@@ -265,6 +1678,30 @@
       "lng": 99.1355,
       "type": "airport",
       "src": "ARP-ref"
+    },
+    "VVTS": {
+      "lat": 10.82,
+      "lng": 106.66167,
+      "type": "airport",
+      "src": "SJX711/10AUG26"
+    },
+    "XIKMA": {
+      "lat": 14.37667,
+      "lng": 102.60667,
+      "type": "waypoint",
+      "src": "SJX746/11AUG26"
+    },
+    "YULIA": {
+      "lat": 31.71667,
+      "lng": 135.07667,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
+    },
+    "YUMIL": {
+      "lat": 35.53333,
+      "lng": 141.03167,
+      "type": "waypoint",
+      "src": "SJX804/11AUG26"
     }
   }
 }
