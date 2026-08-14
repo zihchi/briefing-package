@@ -359,6 +359,8 @@
                         擷取中
                         <svg id="loading-spinner" class="animate-spin ml-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </button>
+                    <!-- ⏱ 後端各步耗時(擷取後顯示,固定不消失,方便截圖診斷) -->
+                    <div id="lido-perf-readout" class="hidden data-font text-[11px] font-bold text-stone-500 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-center break-words"></div>
                 </div>
 
                 <div class="flex flex-col h-48 bg-orange-50/50 rounded-2xl border border-orange-200/60 shadow-sm overflow-hidden relative">
@@ -1538,7 +1540,9 @@
 
                 const responseData = await performLidoFetch(target, legIdForThisCall);
 
-                // ⏱ 後端各步耗時(GAS 回傳 _perf 時才有):方便診斷慢在哪一步
+                // ⏱ 後端各步耗時(GAS 回傳 _perf 時才有):方便診斷慢在哪一步。
+                // 存成 perfSummary,稍後併進「成功」訊息一起顯示,避免被後續 toast 蓋掉。
+                let perfSummary = '';
                 if (responseData && responseData._perf) {
                     const p = responseData._perf;
                     console.log('[LIDO _perf]', p);
@@ -1549,7 +1553,10 @@
                     if (p.docs_ms != null) parts.push(`文件 ${(p.docs_ms/1000).toFixed(1)}s`);
                     if (p.img_b64_kb != null) parts.push(`圖 ${p.img_b64_kb}KB`);
                     if (p.total_response_kb != null) parts.push(`總量 ${p.total_response_kb}KB`);
-                    if (parts.length) showToast('⏱ ' + parts.join(' · '), false, 8000);
+                    perfSummary = parts.join(' · ');
+                    // 同步寫進畫面上的固定小欄位(不會被 toast 蓋掉,方便截圖)
+                    const perfEl = document.getElementById('lido-perf-readout');
+                    if (perfEl && perfSummary) { perfEl.textContent = '⏱ ' + perfSummary; perfEl.classList.remove('hidden'); }
                 }
 
                 // ★ 多筆同班號 → 跳 picker
@@ -1873,7 +1880,7 @@
                     debouncedParseData();
                     parseNotams();
                     pushFlightRouteToMap();
-                    showToast('資料取得成功！版面已更新。');
+                    showToast(perfSummary ? ('✅ 成功  ⏱ ' + perfSummary) : '資料取得成功！版面已更新。', false, perfSummary ? 12000 : 3000);
                 } else {
                     showToast(`擷取失敗：${responseData.message}`, true);
                 }
