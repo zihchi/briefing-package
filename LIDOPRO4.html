@@ -1422,30 +1422,15 @@
             }
         }
 
-        // 判斷 CF 端的錯誤是否屬於「基礎設施/連不到 LIDO」→ 值得退回 GAS
-        // (相對於「找不到航班」這種正常結果,不該退回)
-        function shouldFallbackToGas(data) {
-            if (!data || data.status !== 'error') return false;
-            return /總表取得失敗|連線|逾時|timeout|abort|secret|未完整設定|HTTP\s*\d/i.test(data.message || '');
-        }
-
         // 把 fetch 邏輯抽出來,picker 選擇後可以用同函式帶 legId 重新打一次
-        // 策略:先試 Cloudflare(快);連不到 LIDO / worker 未就緒就自動退回 GAS(慢但相容)
+        // ★ 實測:LIDO(Azure WAF)對 Cloudflare 出口 IP 回 503 軟性阻擋,只有 Google IP
+        //   拿得到 200,所以 LIDO 擷取只能走 GAS。日期(date)仍會帶給後端,待 GAS
+        //   端支援後即生效。
         async function performLidoFetch(target, legId) {
             const body = { username: savedLidoUser, password: savedLidoPass, targetFlight: target };
             if (legId) body.legId = legId;
             const dateVal = (document.getElementById('flight-date')?.value || '').trim();
             if (dateVal) body.date = dateVal;
-
-            // 1) 優先走 Cloudflare
-            try {
-                const data = await postLido(LIDO_CF_URL, body);
-                if (shouldFallbackToGas(data)) throw new Error('cf-infra:' + (data.message || ''));
-                return data;   // 成功、multiple、或「找不到航班」都直接用 CF 結果
-            } catch (e) {
-                console.warn('[LIDO] Cloudflare 路徑失敗,退回 GAS:', e.message);
-            }
-            // 2) 退回 GAS(Google IP)
             return await postLido(LIDO_GAS_URL, body);
         }
 
