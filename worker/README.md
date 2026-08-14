@@ -54,8 +54,48 @@ Published https://elb.<你的帳號>.workers.dev
 | GET    | `/api/aircraft/<tail>`        | 探測多個單機 endpoint，回報哪個能用 |
 | GET    | `/api/proxy?path=/elb/...`    | 萬用轉發器，給除錯用 |
 | GET    | `/api/aerodatabox?flight=JX123&date=2026-06-08` | 查非桃園機場 gate/terminal（AeroDataBox） |
+| POST   | `/api/lido`                   | `{username, password, targetFlight, legId?, date?}` → LIDO 航班簡報（取代舊 GAS） |
+| GET    | `/api/lido-probe`             | 探針:測 Cloudflare 出口能不能連到 LIDO（只需 `LIDO_BASE_URL`） |
 
-所有需要登入的請求要帶 `X-Session-Token: <session>` header。
+所有需要登入的請求要帶 `X-Session-Token: <session>` header（`/api/lido` 例外，帳密放在 body）。
+
+---
+
+## LIDO 航班擷取提速（把 GAS 搬到這支 worker）
+
+LIDOPRO4 原本主航班擷取走 Google Apps Script，冷啟動 + 逐步 fetch 常要 10~20s。
+現在 worker 內建 `/api/lido`(文件平行下載,通常 2~4s)。前端**先試 worker、打不通自動退回 GAS**,
+所以「設好 secret 前」照樣能用,設好且連得到 LIDO 就自動提速,不會壞。
+
+### 1. 先確認 Cloudflare 到底連不連得到 LIDO(關鍵)
+
+舊註解曾說「LIDO 防火牆擋 Cloudflare IP」。先設一個 secret 就能一翻兩瞪眼:
+
+```bash
+cd ~/briefing-package/worker
+wrangler secret put LIDO_BASE_URL      # 輸入 LIDO 網址,例如 https://sjx.lido.aero
+wrangler deploy
+```
+
+瀏覽器開 `https://briefing-package.<你的帳號>.workers.dev/api/lido-probe`：
+- 看到 `"reachable": true` / `verdict: Cloudflare 可到達 LIDO` → 繼續下一步,提速生效
+- 看到 `"reachable": false` / 連不到 → 防火牆屬實,**維持 GAS**(前端會自動退回,不用改)
+
+### 2. 連得到 → 補齊另外 3 個 secret
+
+值請從舊的 GAS 程式碼複製，不要外流：
+
+```bash
+wrangler secret put LIDO_CUSTOMER_ID    # 例如 LSY
+wrangler secret put LIDO_AUTH_REALM      # 例如 LAS
+wrangler secret put LIDO_DWR_SESSION_ID  # 一長串 scriptSessionId
+wrangler deploy
+```
+
+完成後 LIDOPRO4 擷取就走 worker(快)。`wrangler secret list` 應看到 4 個 LIDO_* secret。
+
+> 日期選擇:LIDOPRO4 的「📅 日期 (Z)」預設今天(UTC),擷取時帶 `date` 給 worker,
+> 讓航班總表窗口移到那天。此功能走 worker;若退回 GAS 則以 GAS 既有的「現在 ±24h」為準。
 
 ---
 
