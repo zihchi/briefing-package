@@ -729,6 +729,288 @@ async function handleWx(url, origin) {
   }
 }
 
+// ══════════════════════════════════════════
+// ✈️  LIDO 航班擷取 — /api/lido POST
+// ──────────────────────────────────────────
+// 取代舊的 Google Apps Script 端點（GAS 冷啟動 + UrlFetchApp 慢，
+// 一次擷取要 10~20s；Worker 跑在邊緣、文件平行下載，通常 2~4s）。
+//
+// body: { username, password, targetFlight, legId?, date? }
+//   date  — 選填 'YYYY-MM-DD'（UTC 日），有給就把航班總表窗口移到那天，
+//           並只保留該日的候選；沒給則沿用「現在 ±24h」。
+//   legId — 選填，picker 選定後帶回來直接抓那一班。
+//
+// 回傳（與前端相容）：
+//   { status:'success',  data: <chosen 含 ofpDetails / rawTexts> }
+//   { status:'multiple', candidates: [...] }   ← 同日多班同號時交給 picker
+//
+// 所需 secret（設在 briefing-package 這支 worker 上）：
+//   LIDO_BASE_URL / LIDO_CUSTOMER_ID / LIDO_AUTH_REALM / LIDO_DWR_SESSION_ID
+// ══════════════════════════════════════════
+const LIDO_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+// 帶逾時的 fetch：LIDO 若被防火牆擋而 hang，會快速中止，讓前端能及時退回 GAS
+function lfetch(url, opts = {}, ms = 9000) {
+  return fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
+}
+
+// /api/lido-probe GET — 只戳公開的 login.jsp，判斷「Cloudflare 出口能不能到 LIDO」。
+// 只需要 LIDO_BASE_URL 這一個 secret；不碰帳密，login.jsp 是公開頁。
+async function handleLidoProbe(origin, env) {
+  const BASE = env.LIDO_BASE_URL;
+  if (!BASE) return jsonResp({ ok: false, reachable: false, error: 'LIDO_BASE_URL 未設定，先 wrangler secret put LIDO_BASE_URL' }, 200, origin);
+  const t0 = Date.now();
+  try {
+    const r = await lfetch(`${BASE}/lido/las/login.jsp`, { method: 'GET', redirect: 'manual', headers: { 'User-Agent': LIDO_UA } }, 10000);
+    return jsonResp({
+      ok: true,
+      reachable: r.status > 0,
+      httpStatus: r.status,
+      ms: Date.now() - t0,
+      verdict: (r.status >= 200 && r.status < 500) ? 'Cloudflare 可到達 LIDO（防火牆未擋）' : `回應狀態 ${r.status}，需再看細節`,
+    }, 200, origin);
+  } catch (e) {
+    return jsonResp({
+      ok: false,
+      reachable: false,
+      ms: Date.now() - t0,
+      error: String(e?.message || e),
+      verdict: 'Cloudflare 連不到 LIDO（可能真的被防火牆擋，維持 GAS）',
+    }, 200, origin);
+  }
+}
+
+async function handleLido(request, origin, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResp({ status: 'error', message: '請求格式錯誤 (非 JSON)' }, 200, origin);
+  }
+  const { username, password, targetFlight, legId, date } = body || {};
+  if (!username || !password || !targetFlight) {
+    return jsonResp({ status: 'error', message: '未提供完整的帳號、密碼或目標航班號。' }, 200, origin);
+  }
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return jsonResp({ status: 'error', message: '日期格式錯誤，需為 YYYY-MM-DD。' }, 200, origin);
+  }
+  try {
+    const target = String(targetFlight).replace(/\s+/g, '').toUpperCase();
+    const result = await fetchLidoBriefing(env, username, password, target, targetFlight, legId, date);
+    return jsonResp(result, 200, origin);
+  } catch (e) {
+    return jsonResp({ status: 'error', message: String(e?.message || e) }, 200, origin);
+  }
+}
+
+async function fetchLidoBriefing(env, username, password, target, targetRawForMsg, legId, date) {
+  const BASE     = env.LIDO_BASE_URL;
+  const CUSTOMER = env.LIDO_CUSTOMER_ID;
+  const REALM    = env.LIDO_AUTH_REALM;
+  const DWR_SS   = env.LIDO_DWR_SESSION_ID;
+  if (!BASE || !CUSTOMER || !REALM || !DWR_SS) {
+    throw new Error('Worker LIDO secrets 未完整設定，請執行 wrangler secret put（LIDO_BASE_URL / LIDO_CUSTOMER_ID / LIDO_AUTH_REALM / LIDO_DWR_SESSION_ID）。');
+  }
+
+  // 1. 初始 GET → 拿 initial cookies
+  const initialUrl = `${BASE}/lido/las/login.jsp?DESMON_RESULT_PAGE=${BASE}/briefing/`;
+  const r1 = await lfetch(initialUrl, { method: 'GET', redirect: 'manual' });
+  let cookies = lidoExtractCookies(r1.headers);
+
+  // 2. DWR login POST
+  const dwrUrl = `${BASE}/lido/las/dwr/call/plaincall/LoginBean.login.dwr`;
+  const dwrPayload =
+    'callCount=1\nnextReverseAjaxIndex=0\nc0-scriptName=LoginBean\nc0-methodName=login\nc0-id=0\n' +
+    'c0-param0=string:' + username + '\n' +
+    'c0-param1=string:' + password + '\n' +
+    'c0-param2=string:\nc0-param3=string:LIDO\nc0-param4=string:en\n' +
+    'batchId=0\ninstanceId=0\n' +
+    'page=%2Flido%2Flas%2Flogin.jsp%3FDESMON_RESULT_PAGE%3D' + encodeURIComponent(BASE) +
+    '%2Fbriefing%26DESMON_CODE%3DLAS_001%26DESMON_LANG%3Dnull\n' +
+    'scriptSessionId=' + DWR_SS + '\n';
+
+  const r2 = await lfetch(dwrUrl, {
+    method: 'POST',
+    body: dwrPayload,
+    redirect: 'manual',
+    headers: { 'Cookie': cookies, 'Content-Type': 'text/plain', 'User-Agent': LIDO_UA },
+  });
+  cookies = lidoCombineCookies(cookies, lidoExtractCookies(r2.headers));
+
+  // 3. 取航班總表。有指定日期 → 以該 UTC 日為中心（前一天 00:00Z 到後一天 24:00Z，
+  //    涵蓋跨日紅眼班）；否則沿用現在 ±24h。
+  let startTime, endTime;
+  if (date) {
+    const dayMs = new Date(date + 'T00:00:00.000Z').getTime();
+    startTime = new Date(dayMs - 24 * 3600 * 1000).toISOString();
+    endTime   = new Date(dayMs + 48 * 3600 * 1000).toISOString();
+  } else {
+    const now = Date.now();
+    startTime = new Date(now - 24 * 3600 * 1000).toISOString();
+    endTime   = new Date(now + 24 * 3600 * 1000).toISOString();
+  }
+  const listUrl = `${BASE}/lido/lcb/ui/flightlist?startDateTime=${startTime}&endDateTime=${endTime}`;
+  const lidoCsrf = lidoGetCookieValue(cookies, 'lido_csrf') || '';
+
+  const makeHeaders = (businessId) => ({
+    'Cookie': cookies,
+    'Accept': 'application/vnd.lsy.lido.lcb.v1.hal+json, application/json, text/plain, */*',
+    'User-Agent': LIDO_UA,
+    'Referer': `${BASE}/briefing/`,
+    'X-Requested-With': 'XMLHttpRequest',
+    'x-lido-applicationid': 'lido-lcb',
+    'x-lido-auth': REALM,
+    'x-lido-businessid': businessId,
+    'x-lido-clientid': 'lido-lcb-ui',
+    'x-lido-customerid': CUSTOMER,
+    'x-lido-csrf': lidoCsrf,
+    'x-lido-timestamp': new Date().toISOString(),
+    'x-lido-traceid': lidoUuid(),
+  });
+
+  const listResp = await lfetch(listUrl, { method: 'GET', headers: makeHeaders('SearchFlights'), redirect: 'manual' });
+  if (listResp.status !== 200) {
+    throw new Error(`總表取得失敗，HTTP 狀態碼：${listResp.status}（可能 LIDO session 失效或 secret 有誤）。`);
+  }
+  let flights = JSON.parse(await listResp.text());
+  if (!Array.isArray(flights)) flights = [flights];
+
+  // 4. 比對目標班號
+  const digits = target.replace(/[^0-9]/g, '');
+  let matched = flights.filter(f => {
+    const code = `${f.aircraftOperator || ''}${f.flightNumber || ''}`.replace(/\s+/g, '').toUpperCase();
+    return code === target || String(f.flightNumber || '') === digits;
+  });
+  if (matched.length === 0) {
+    throw new Error(`找不到代號為 ${targetRawForMsg} 的航班${date ? `（${date}）` : ''}。`);
+  }
+
+  const originDay = (f) => (f.flightOriginDate || f.scheduledDepartureTime || '').slice(0, 10);
+
+  let chosen;
+  if (legId) {
+    // picker 已選定：直接鎖這一班（總表窗口可能沒涵蓋時退回最小物件）
+    chosen = matched.find(f => f.legId === legId) || flights.find(f => f.legId === legId) || { legId };
+  } else {
+    // 有指定日期 → 只留該日；同日仍多班同號才交給 picker
+    if (date) {
+      const sameDay = matched.filter(f => originDay(f) === date);
+      if (sameDay.length > 0) matched = sameDay;
+    }
+    if (matched.length > 1) {
+      return { status: 'multiple', candidates: matched };
+    }
+    chosen = matched[0];
+  }
+
+  // 5. 取該航班 briefing 詳細
+  const encodedLegId = encodeURIComponent(chosen.legId);
+  const detailUrl = `${BASE}/lido/lcb/ui/${encodedLegId}/briefing`;
+  const detailResp = await lfetch(detailUrl, { method: 'GET', headers: makeHeaders('GetFlightBriefing'), redirect: 'manual' });
+  if (detailResp.status !== 200) {
+    chosen.ofpDetails = { error: 'OFP 詳細資料取得失敗' };
+    return { status: 'success', data: chosen };
+  }
+  const briefingData = JSON.parse(await detailResp.text());
+  chosen.ofpDetails = briefingData;
+  chosen.rawTexts = {};
+
+  // 6. 平行下載各類文件 / 圖檔
+  try {
+    const cats = briefingData.categories
+              || (briefingData.briefingPackages && briefingData.briefingPackages[0] && briefingData.briefingPackages[0].categories)
+              || [];
+    const requiredTypes = ['OFP', 'ATS', 'NOTAM', 'CREWINFO', 'RAIM', 'VERTPROF', 'SIGWXROUTE', 'IWFR'];
+    const multiImageTypes = new Set(['SIGWXROUTE']);
+    const multiTextTypes = new Set(['IWFR']);
+
+    const docTasks = [];
+    for (const cat of cats) {
+      if (!requiredTypes.includes(cat.type) || !cat.documents) continue;
+      const isMulti = multiImageTypes.has(cat.type);
+      const isMultiText = multiTextTypes.has(cat.type);
+      for (let d = 0; d < cat.documents.length; d++) {
+        const doc = cat.documents[d];
+        const mt = doc.mediaType || '';
+        if (mt === 'text/plain' || mt.includes('image') || isMulti) {
+          docTasks.push({
+            url: `${BASE}/lido/lcb/ui/${encodedLegId}/briefing/${doc.fileId}/docs`,
+            key: isMulti ? `${cat.type}_${d}` : cat.type,
+            append: isMultiText,
+          });
+          if (!isMulti && !isMultiText) break;
+        }
+      }
+    }
+
+    if (docTasks.length > 0) {
+      const responses = await Promise.all(docTasks.map(t => {
+        const hdrs = makeHeaders('GetDocument');
+        hdrs['Accept'] = 'text/plain, image/*, */*';
+        return lfetch(t.url, { method: 'GET', headers: hdrs, redirect: 'manual' }, 12000);
+      }));
+      for (let i = 0; i < responses.length; i++) {
+        const r = responses[i];
+        const k = docTasks[i].key;
+        if (r.status !== 200) { if (!(docTasks[i].append && chosen.rawTexts[k])) chosen.rawTexts[k] = '下載失敗'; continue; }
+        const cType = r.headers.get('Content-Type') || '';
+        const isImg = cType.includes('image') || k.indexOf('VERTPROF') !== -1 || k.indexOf('SIGWXROUTE') !== -1;
+        if (isImg) {
+          const buf = await r.arrayBuffer();
+          const mime = (cType.split(';')[0] || '').trim() || 'image/png';
+          chosen.rawTexts[k] = `data:${mime};base64,${lidoAb2b64(buf)}`;
+        } else {
+          const txt = await r.text();
+          chosen.rawTexts[k] = (docTasks[i].append && chosen.rawTexts[k])
+            ? chosen.rawTexts[k] + '\n' + txt
+            : txt;
+        }
+      }
+    }
+  } catch (e) {
+    chosen.rawTextsError = String(e?.message || e);
+  }
+
+  return { status: 'success', data: chosen };
+}
+
+// LIDO 專用小工具（與上方 ELB 的 cookie 物件版分開，避免混淆）
+function lidoExtractCookies(headers) {
+  let raw;
+  if (typeof headers.getSetCookie === 'function') raw = headers.getSetCookie();
+  else { raw = []; headers.forEach((v, k) => { if (k.toLowerCase() === 'set-cookie') raw.push(v); }); }
+  return raw.map(c => c.split(';')[0]).join('; ');
+}
+function lidoCombineCookies(oldC, newC) {
+  if (!newC) return oldC || '';
+  if (!oldC) return newC;
+  const map = new Map();
+  for (const part of `${oldC}; ${newC}`.split('; ')) {
+    if (!part) continue;
+    const eq = part.indexOf('=');
+    if (eq < 0) continue;
+    map.set(part.slice(0, eq), part.slice(eq + 1));
+  }
+  return [...map].map(([k, v]) => `${k}=${v}`).join('; ');
+}
+function lidoGetCookieValue(cookieStr, name) {
+  if (!cookieStr) return null;
+  const m = cookieStr.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+  return m ? m[3] : null;
+}
+function lidoUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function lidoAb2b64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  return btoa(bin);
+}
+
 // ──────────────────────────────────────────
 // Router
 // ──────────────────────────────────────────
@@ -756,6 +1038,12 @@ export default {
       }
       if (url.pathname === '/api/login' && request.method === 'POST') {
         return await handleLogin(request, origin);
+      }
+      if (url.pathname === '/api/lido' && request.method === 'POST') {
+        return await handleLido(request, origin, env);
+      }
+      if (url.pathname === '/api/lido-probe' && request.method === 'GET') {
+        return await handleLidoProbe(origin, env);
       }
       if (url.pathname === '/api/cookie-login' && request.method === 'POST') {
         return await handleCookieLogin(request, origin);

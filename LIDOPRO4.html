@@ -348,6 +348,13 @@
                         <span class="inline-flex items-center px-4 text-sm text-stone-500 font-bold border-r border-stone-200 bg-stone-100">SJX</span>
                         <input type="text" id="target-flight" class="w-full px-3 py-3 bg-transparent focus:outline-none text-[#8b5a2b] font-black tracking-widest text-xl" placeholder="航班號碼" autocomplete="off">
                     </div>
+                    <div class="flex items-center gap-2">
+                        <label for="flight-date" class="text-[11px] font-bold text-stone-500 tracking-wide shrink-0 flex items-center gap-1">📅 日期 <span class="text-[9px] text-stone-400 font-black">Z</span></label>
+                        <div class="flex flex-1 shadow-inner rounded-xl overflow-hidden border border-stone-300 focus-within:border-[#8b5a2b] focus-within:ring-2 focus-within:ring-[#8b5a2b]/30 bg-stone-50 transition-all">
+                            <input type="date" id="flight-date" class="w-full px-3 py-2 bg-transparent focus:outline-none text-stone-700 font-bold data-font text-sm">
+                        </div>
+                        <button type="button" id="flight-date-today" class="shrink-0 text-[11px] font-bold text-[#8b5a2b] bg-[#8b5a2b]/10 hover:bg-[#8b5a2b]/20 px-3 py-2 rounded-lg transition-colors border border-[#8b5a2b]/30" title="設為今天 (UTC)">今天</button>
+                    </div>
                     <button id="fetch-data-btn" class="w-full py-3.5 bg-gradient-to-r from-[#8b5a2b] to-[#b37a4c] hover:from-[#7a4e23] hover:to-[#a3693b] text-white font-bold tracking-widest rounded-xl shadow-md transition-all active:scale-95 flex justify-center items-center mt-1">
                         擷取中
                         <svg id="loading-spinner" class="animate-spin ml-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -933,9 +940,14 @@
         })();
 
         // Variables
-        // LIDO 後端:Google Apps Script (LIDO 防火牆擋 Cloudflare IP,只能走 Google IP)
-        // 對應的 GAS 程式碼結構參考 worker-lido/worker.js (邏輯相同,語法是 GAS 版)
-        const LIDO_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyUEGkCXK8lxcDZ13Ue1IEXsLxhIexHJQBPIyKPSPZv6INwFNQIMN5SRRJklHpY-ZSIxQ/exec';
+        // LIDO 後端 — 雙軌:
+        //   1) 優先走 Cloudflare Worker /api/lido(邊緣、文件平行下載,通常 2~4s)
+        //   2) 打不進 LIDO(舊註解稱防火牆擋 Cloudflare IP)就自動退回 GAS(Google IP,較慢但相容)
+        // 只要 Cloudflare 通,就享受提速;不通則行為與過去完全一致,不會壞。
+        const LIDO_CF_URL  = 'https://briefing-package.zihchi.workers.dev/api/lido';
+        const LIDO_GAS_URL = 'https://script.google.com/macros/s/AKfycbyUEGkCXK8lxcDZ13Ue1IEXsLxhIexHJQBPIyKPSPZv6INwFNQIMN5SRRJklHpY-ZSIxQ/exec';
+        // 保留舊變數名以相容其他引用
+        const LIDO_BACKEND_URL = LIDO_GAS_URL;
         // ELB Cloudflare Worker — 從 briefing-package CF project 自動部署 (worker/worker.js)
         // 跟 ELB_Fleet.html 共用 session 透過 localStorage.elbWorkerUrl + elbSession
         const ELB_WORKER_URL = 'https://briefing-package.zihchi.workers.dev';
@@ -1378,26 +1390,63 @@
 
         const fetchBtn = document.getElementById('fetch-data-btn');
 
-        // 把 fetch 邏輯抽出來,picker 選擇後可以用同函式帶 legId 重新打一次
-        async function performLidoFetch(target, legId) {
-            const body = { username: savedLidoUser, password: savedLidoPass, targetFlight: target };
-            if (legId) body.legId = legId;
-            const response = await fetch(LIDO_BACKEND_URL, {
+        // 日期選擇器:預設為「現在 (UTC 今天)」,可自行改。用 UTC 對齊 LIDO 的 flightOriginDate。
+        function utcTodayStr() {
+            const d = new Date();
+            return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        }
+        (function initFlightDate() {
+            const el = document.getElementById('flight-date');
+            if (el && !el.value) el.value = utcTodayStr();
+            const todayBtn = document.getElementById('flight-date-today');
+            if (todayBtn) todayBtn.addEventListener('click', () => { if (el) el.value = utcTodayStr(); });
+        })();
+
+        // 對單一後端 POST 並解析 JSON(GAS/CF 回應格式一致)
+        async function postLido(url, body) {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(body),
             });
             if (!response.ok && response.status !== 200) {
-                throw new Error(`後端回應異常 (HTTP ${response.status})。GAS deployment 可能失效,需重新部署或檢查授權。`);
+                throw new Error(`後端回應異常 (HTTP ${response.status})`);
             }
             const textResponse = await response.text();
             try { return JSON.parse(textResponse); }
             catch (parseError) {
                 const looksLikeHtml = textResponse.trim().startsWith('<');
                 throw new Error(looksLikeHtml
-                    ? `LIDO 後端端點失效 (回傳 HTML 而非 JSON)。可能 GAS 部署被回收或權限被改,需要重新部署。`
+                    ? `後端回傳 HTML 而非 JSON(端點失效)`
                     : `後端回應格式無效。原文前 100 字: ${textResponse.slice(0, 100)}`);
             }
+        }
+
+        // 判斷 CF 端的錯誤是否屬於「基礎設施/連不到 LIDO」→ 值得退回 GAS
+        // (相對於「找不到航班」這種正常結果,不該退回)
+        function shouldFallbackToGas(data) {
+            if (!data || data.status !== 'error') return false;
+            return /總表取得失敗|連線|逾時|timeout|abort|secret|未完整設定|HTTP\s*\d/i.test(data.message || '');
+        }
+
+        // 把 fetch 邏輯抽出來,picker 選擇後可以用同函式帶 legId 重新打一次
+        // 策略:先試 Cloudflare(快);連不到 LIDO / worker 未就緒就自動退回 GAS(慢但相容)
+        async function performLidoFetch(target, legId) {
+            const body = { username: savedLidoUser, password: savedLidoPass, targetFlight: target };
+            if (legId) body.legId = legId;
+            const dateVal = (document.getElementById('flight-date')?.value || '').trim();
+            if (dateVal) body.date = dateVal;
+
+            // 1) 優先走 Cloudflare
+            try {
+                const data = await postLido(LIDO_CF_URL, body);
+                if (shouldFallbackToGas(data)) throw new Error('cf-infra:' + (data.message || ''));
+                return data;   // 成功、multiple、或「找不到航班」都直接用 CF 結果
+            } catch (e) {
+                console.warn('[LIDO] Cloudflare 路徑失敗,退回 GAS:', e.message);
+            }
+            // 2) 退回 GAS(Google IP)
+            return await postLido(LIDO_GAS_URL, body);
         }
 
         // 顯示候選航班 picker,讓使用者挑
