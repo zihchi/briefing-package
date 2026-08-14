@@ -1538,6 +1538,20 @@
 
                 const responseData = await performLidoFetch(target, legIdForThisCall);
 
+                // ⏱ 後端各步耗時(GAS 回傳 _perf 時才有):方便診斷慢在哪一步
+                if (responseData && responseData._perf) {
+                    const p = responseData._perf;
+                    console.log('[LIDO _perf]', p);
+                    const parts = [];
+                    if (p.login_ms != null) parts.push(`登入 ${(p.login_ms/1000).toFixed(1)}s${p.login_from_cache ? '(快取)' : ''}`);
+                    if (p.list_ms != null) parts.push(`總表 ${(p.list_ms/1000).toFixed(1)}s`);
+                    if (p.detail_ms != null) parts.push(`明細 ${(p.detail_ms/1000).toFixed(1)}s`);
+                    if (p.docs_ms != null) parts.push(`文件 ${(p.docs_ms/1000).toFixed(1)}s`);
+                    if (p.img_b64_kb != null) parts.push(`圖 ${p.img_b64_kb}KB`);
+                    if (p.total_response_kb != null) parts.push(`總量 ${p.total_response_kb}KB`);
+                    if (parts.length) showToast('⏱ ' + parts.join(' · '), false, 8000);
+                }
+
                 // ★ 多筆同班號 → 跳 picker
                 if (responseData.status === 'multiple' && Array.isArray(responseData.candidates)) {
                     fetchBtn.disabled = false;
