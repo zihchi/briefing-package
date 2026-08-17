@@ -1,16 +1,15 @@
 name: Turbli 湍流圖預先抓取
 
 on:
-  # 每 3 小時自動跑一次 (UTC 0,3,6,9,12,15,18,21 ≈ 台北 8,11,14,17,20,23,02,05)
-  schedule:
-    - cron: '0 */3 * * *'
-  # 也可手動觸發
+  # ⚠️ 自動排程已暫停：turbli 的 Cloudflare 目前 100% 硬擋 GitHub Actions 的資料中心 IP
+  #    （「Just a moment」managed challenge 完全不放行，headed/stealth 皆無效），
+  #    每 3 小時跑只會空轉、抓 0 張、浪費 Actions 額度。前端已改為 cache miss 時
+  #    讓使用者用自己的瀏覽器即時開 turbli（app.js 的即時退路）。
+  #    若日後想恢復伺服器端預抓：改走住宅代理／付費 scraping API，再取消下面註解。
+  # schedule:
+  #   - cron: '0 */3 * * *'
+  # 保留手動觸發，方便日後測試是否已可再抓
   workflow_dispatch:
-  # push 程式改動時順便跑一次（方便部署）
-  push:
-    paths:
-      - 'scripts/generate_charts.py'
-      - '.github/workflows/turbli-cache.yml'
 
 # 允許 workflow 把產生的 PNG 推回 repo
 permissions:
