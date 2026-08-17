@@ -406,6 +406,12 @@ function formatAge(lastModified) {
   return `${Math.floor(hr/24)} 天前抓的`;
 }
 
+// turbli 官網單一航班網址（班號不補零，例如 JX-2 而非 JX-002；與預抓腳本一致）
+function turbliLiveUrl(flight, date, route) {
+  const fnum = /^\d+$/.test(flight) ? String(parseInt(flight, 10)) : flight;
+  return `https://turbli.com/${route}/${date}/JX-${fnum}/`;
+}
+
 async function loadOneTurbliCell(cellEl, flight, date, route) {
   const dateEl = cellEl.querySelector(".turbli-cell-date");
   const ageEl = cellEl.querySelector(".turbli-cell-age");
@@ -430,7 +436,18 @@ async function loadOneTurbliCell(cellEl, flight, date, route) {
     const ageStr = formatAge(res.headers.get("Last-Modified"));
     if (ageEl) ageEl.textContent = ageStr;
   } catch (_) {
-    body.innerHTML = `<div class="turbli-cell-status empty">無資料</div>`;
+    // turbli 的 Cloudflare 目前 100% 硬擋 GitHub Actions 機房 IP，伺服器端已無法預抓此圖。
+    // 退路：讓使用者用自己的瀏覽器（住宅 IP + 真瀏覽器，最容易通過 Cloudflare）即時開啟 turbli。
+    const url = turbliLiveUrl(flight, date, route);
+    body.innerHTML = `
+      <div class="turbli-cell-status empty" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 8px; text-align:center;">
+        <span style="color:#64748b; font-size:13px; line-height:1.5;">⚠️ turbli 阻擋伺服器自動抓圖<br>目前僅能由你的裝置即時開啟</span>
+        <a href="${url}" target="_blank" rel="noopener"
+           style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:2px solid #3c79ff; border-radius:8px; color:#3c79ff; font-weight:bold; font-size:13px; text-decoration:none; background:#fff;">
+          🌐 即時開啟 turbli ↗
+        </a>
+        <span style="color:#94a3b8; font-size:11px;">點上方按鈕用你的瀏覽器查看即時亂流圖</span>
+      </div>`;
     if (ageEl) ageEl.textContent = "";
   }
 }
