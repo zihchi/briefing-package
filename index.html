@@ -1042,6 +1042,8 @@
     // 與 LIDOPRO4 共用同一支 /api/aerodatabox）。回傳含表定/預計/實際時間。
     var ELB_WORKER_URL = "https://briefing-package.zihchi.workers.dev";
     var FIDS_GAS  = "https://script.google.com/macros/s/AKfycbwXSiowQfKGfdLA38DUGOg-uVa13w1CViYnWWa3x2VpQS-tqoJeBV3R4qfNZRV5RulV/exec";
+    // TDX 定期時刻表（與「🗓️ 定期航班」同一支）：AeroDataBox 查無外站時間時的「表定時間」退路
+    var SCHED_GAS = "https://script.google.com/macros/s/AKfycby4YvzFSEGIWYZUzxZl69veO3WygygGj6Q8lqoOq8i9nHqTKUbaeLm1jarSstRHCQ84/exec";
     // IATA → [緯度, 經度]（星宇航點，取自 app.js coordsDB）
     var AP = {
       TPE:[25.0777,121.2328], NRT:[35.7647,140.3863], KIX:[34.4273,135.2440], UKB:[34.6328,135.2239],
@@ -1126,6 +1128,56 @@
     }
     var _fids=null;
     function getFids(){ if(_fids) return Promise.resolve(_fids); return fetch(FIDS_GAS,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){_fids=j;return j;}).catch(function(){return {departures:[],arrivals:[]};}); }
+
+    // ---- 外站時間退路：TDX 定期時刻表（表定 HH:MM，當地時間）----
+    var _sched={};
+    function pickSched(list){
+      if(!list||!list.length) return null;
+      var today=todayTPE();
+      var v=list.filter(function(s){
+        var a=(s.ScheduleStartDate||'').slice(0,10), b=(s.ScheduleEndDate||'').slice(0,10);
+        return (!a||a<=today)&&(!b||b>=today);
+      });
+      return v[0]||list[0];
+    }
+    function getSched(flt){
+      if(_sched[flt]!==undefined) return Promise.resolve(_sched[flt]);
+      return fetch(SCHED_GAS+'?flight='+encodeURIComponent(flt),{cache:'no-store'})
+        .then(function(r){return r.json();})
+        .then(function(j){ var s=(j&&j.ok&&Array.isArray(j.schedules))?pickSched(j.schedules):null; _sched[flt]=s; return s; })
+        .catch(function(){ _sched[flt]=null; return null; });
+    }
+    // 由表定當地 HH:MM + 該站 UTC 偏移（秒）反推 UTC HH:MMZ
+    function schedUTC(hhmm, offSec){
+      var m=String(hhmm||'').match(/^(\d{1,2}):(\d{2})$/);
+      if(!m || offSec==null) return null;
+      var mins=(+m[1])*60+(+m[2])-Math.round(offSec/60);
+      mins=((mins%1440)+1440)%1440;
+      return {t:p2(Math.floor(mins/60))+':'+p2(mins%60)+'Z', d:''};
+    }
+    // 兩種來源都查不到時，顯示明確訊息，避免看起來像壞掉
+    function markNoTime(side){
+      var lt=document.getElementById('fd-'+side+'-lt');
+      var ld=document.getElementById('fd-'+side+'-ld');
+      var ut=document.getElementById('fd-'+side+'-ut');
+      var ud=document.getElementById('fd-'+side+'-ud');
+      if(lt){ lt.textContent='—'; }
+      if(ut){ ut.textContent=''; }
+      if(ud){ ud.textContent=''; }
+      if(ld){ ld.textContent='查無班表資料'; ld.title='AeroDataBox 與 TDX 定期時刻表均查無此班時間'; }
+    }
+    // 外站端（非 TPE）AeroDataBox 沒填到時間 → 改用表定 → 仍無則標記
+    function fillSchedFallback(flightNo, side, offSec){
+      var ltEl=document.getElementById('fd-'+side+'-lt');
+      if(!ltEl || ltEl.textContent!=='--:--') return; // 期間已被別處填好
+      getSched('JX'+flightNo).then(function(s){
+        var el=document.getElementById('fd-'+side+'-lt');
+        if(!el || el.textContent!=='--:--') return;
+        var hhmm = s ? (side==='arr' ? s.ArrivalTime : s.DepartureTime) : null;
+        if(!hhmm){ markNoTime(side); return; }
+        setTimes(side, {t:hhmm, d:'表定'}, schedUTC(hhmm, offSec));
+      }).catch(function(){ markNoTime(side); });
+    }
     function findFids(fids, flightNo, tpeIsOrigin){
       var arr = tpeIsOrigin ? (fids.departures||[]) : (fids.arrivals||[]);
       var n=parseInt(flightNo,10), t=todayTPE();
@@ -1229,10 +1281,21 @@
       renderTurb(flightNo, info.route);
       panel.classList.add('open');
       // 時間：外站端走 AeroDataBox、TPE 端走 FIDS/TDX；天氣走 open-meteo，各自獨立不互相卡
-      getAdb(flightNo, orig, dest).then(function(m){ try{ renderTimesADB(m, depIsTPE, arrIsTPE); }catch(e){} });
-      Promise.all([ openMeteo(orig), openMeteo(dest) ]).then(function(res){
+      var adbP = getAdb(flightNo, orig, dest).then(function(m){ try{ renderTimesADB(m, depIsTPE, arrIsTPE); }catch(e){} return m; });
+      var wxP = Promise.all([ openMeteo(orig), openMeteo(dest) ]).then(function(res){
         try{ setWx('dep',res[0]); setWx('arr',res[1]); }catch(e){}
+        return res;
       });
+      // 外站端時間退路：AeroDataBox 查無（外站欄仍是 --:--）→ 改用 TDX 表定 → 仍無則顯示明確訊息。
+      // 需等 AeroDataBox 與 open-meteo（取該站 UTC 偏移）都回來後才判斷。
+      if(!(depIsTPE && arrIsTPE)){
+        var outSide = arrIsTPE ? 'dep' : 'arr'; // 非 TPE 的那一端
+        Promise.all([adbP, wxP]).then(function(r){
+          var offSec=null;
+          try{ var res=r[1]; var w=(outSide==='arr')?res[1]:res[0]; if(w) offSec=w.off; }catch(e){}
+          fillSchedFallback(flightNo, outSide, offSec);
+        });
+      }
       // 桃機 FIDS：填 GATE/TERM/BELT，並用同一筆記錄補 TPE 端時間（免費、不受額度限制）
       getFids().then(function(fids){
         try{
