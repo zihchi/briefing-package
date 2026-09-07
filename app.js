@@ -309,11 +309,7 @@ function closePanel() {
     currentToolUrl = null;
     const displayArea = document.getElementById('content-display');
     cleanUpPanel();
-    displayArea.innerHTML = `
-        <div class="section" style="text-align: center; color: #666;">
-            <h3>👈 請點擊上方按鈕載入計算工具</h3>
-        </div>
-    `;
+    displayArea.innerHTML = '';
 }
 
 // ------------------------------------------
@@ -1436,9 +1432,11 @@ function initAviationMap() {
 
     window.aviationMapInstance = L.map('map').setView(wxDefaultCenter(), 6);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap & CARTO',
-        maxZoom: 20
+    // 底圖：改用 OpenStreetMap 官方圖磚（免 API key）。CARTO 免費底圖已改為需金鑰，
+    // 未帶 key 會在圖磚上烤入「API KEY REQUIRED」浮水印，故改回 OSM。
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
     }).addTo(window.aviationMapInstance);
 
     fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
@@ -2142,8 +2140,10 @@ function initNotamRadar() {
 
     notamMapInstance = L.map('notam-map', { zoomControl: false }).setView([25.03, 121.5], 6);
     L.control.zoom({ position: 'bottomright' }).addTo(notamMapInstance);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap'
+    // 底圖：改用 OpenStreetMap 官方圖磚（免 API key，避免 CARTO 未帶金鑰的浮水印）。
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
     }).addTo(notamMapInstance);
 
     notamActiveLayers = [];

@@ -435,6 +435,26 @@
         copyText(box); var old=btn.textContent; btn.textContent='已複製 ✓'; setTimeout(function(){btn.textContent=old;},1200);
       });
     });
+    wireSync();
+  }
+
+  // 中英文填空同步：同一則廣播的英文/中文填空內容相同（姓名、時間、分鐘、高度、天氣…），
+  // 依位置一一對應；在任一側輸入時，即時同步到另一側對應的空格。
+  function wireSync(){
+    var en = $('paEn'), zh = $('paZh');
+    if(!en || !zh) return;
+    var ephs = en.querySelectorAll('.ph'), zphs = zh.querySelectorAll('.ph');
+    var n = Math.min(ephs.length, zphs.length);
+    for(var i=0;i<n;i++){ ephs[i].dataset.idx = i; zphs[i].dataset.idx = i; }
+    function bind(el, other){
+      el.addEventListener('input', function(){
+        var idx = el.dataset.idx; if(idx==null) return;
+        var mate = other.querySelector('.ph[data-idx="'+idx+'"]');
+        // 直接改 textContent 不會觸發對方的 input 事件，故不會造成迴圈
+        if(mate && mate.textContent !== el.textContent){ mate.textContent = el.textContent; }
+      });
+    }
+    for(var a=0;a<n;a++){ bind(ephs[a], zh); bind(zphs[a], en); }
   }
 
   // ---------- 綁定 ----------

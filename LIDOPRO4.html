@@ -3940,8 +3940,9 @@ const ENR_AREAS=[{a:'1',c:'1',b:'low',alt:'SFC–5000',arc:0,r:[[36.66972,140.59
 
             notamMapInstance = L.map('notam-map', { zoomControl: false }).setView([25.03, 121.5], 4);
             L.control.zoom({ position: 'bottomright' }).addTo(notamMapInstance);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap'
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19
             }).addTo(notamMapInstance);
 
             notamActiveLayers = [];
