@@ -834,7 +834,7 @@
   async function fetchMetarRaw(icao){
     var clean='https://aviationweather.gov/api/data/metar?ids='+encodeURIComponent(icao)+'&format=json';
     var sources=[
-      'https://elb.zihchi.workers.dev/api/wx?type=metar&ids='+encodeURIComponent(icao),
+      'https://briefing-package.zihchi.workers.dev/api/wx?type=metar&ids='+encodeURIComponent(icao),
       'https://corsproxy.io/?'+encodeURIComponent(clean),
       'https://api.allorigins.win/raw?url='+encodeURIComponent(clean)
     ];

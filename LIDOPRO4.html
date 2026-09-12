@@ -3458,7 +3458,7 @@
             };
 
             // 首選：自有 Cloudflare Worker 直打 NOAA（快又新鮮）；其餘公用代理留作備援
-            const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`;
+            const wxWorker = `https://briefing-package.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`;
             const racers = [
                 jsonRacer(wxWorker, 8000, 'worker'),
                 jsonRacer(cleanUrl, 8000, 'direct-json'),

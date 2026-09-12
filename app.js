@@ -870,7 +870,7 @@ window.fetchHistoryMetarPopup = async function(icao) {
         };
 
         // 並行 race,第一個成功就用（首選自有 worker 直打 NOAA）
-        const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=metar&ids=${encodeURIComponent(icao)}&hours=24`;
+        const wxWorker = `https://briefing-package.zihchi.workers.dev/api/wx?type=metar&ids=${encodeURIComponent(icao)}&hours=24`;
         let data;
         try {
             data = await Promise.any([
@@ -1251,12 +1251,9 @@ function wxDefaultCenter() { return TAIWAN_CENTER; }
 
 // 🌍 全域共用：並行 race 多條 proxy 鏈路,第一個拿到資料就回傳 — 比序列備援快 + 不會被單條卡住
 const fetchBulkWeatherFast = async (icaoList, type) => {
-    if(!icaoList) return [];
-    // ⏱️ 加唯一時間戳：讓公用代理(corsproxy/codetabs/allorigins)的伺服器端快取認不得此網址、被迫向 NOAA 取最新
-    //    → 解決「明明有新報文、按重新整理卻一直是舊的」(代理回舊快取且常贏過 worker)
-    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_=${Date.now()}`;
+    if (!icaoList) return [];
 
-    const fetchWithTimeout = async (url, timeoutMs, label) => {
+    const fetchJson = async (url, timeoutMs, label) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -1268,28 +1265,30 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
             const data = JSON.parse(text);
             if (!Array.isArray(data)) throw new Error(`${label}: not array`);
             return data;
-        } catch (err) {
-            clearTimeout(id);
-            throw err;
-        }
+        } catch (err) { clearTimeout(id); throw err; }
     };
 
-    // 首選：自有 Cloudflare Worker 直打 NOAA（快又新鮮）；其餘公用代理留作備援
-    const wxWorker = `https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icaoList)}`;
-    const racers = [
-        fetchWithTimeout(wxWorker, 8000, 'worker'),
-        fetchWithTimeout(cleanUrl, 8000, 'direct'),
-        fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`, 9000, 'corsproxy'),
-        fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
-        fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 9000, 'allorigins'),
-    ];
+    // 首選：自有 Worker（後端以 NOAA tgftp 原始檔為主來源＝新鮮，AWC JSON API 為退路）。
+    //   刻意「先等 worker」而非與各源賽跑先到先贏 —— AWC 的 /api/data 近期嚴重延遲，
+    //   會回數小時前的舊報文；賽跑常被它先搶到，導致「怎麼重新整理都是舊天氣」。
+    const wxWorker = `https://briefing-package.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icaoList)}`;
+    try {
+        const viaWorker = await fetchJson(wxWorker, 8000, 'worker');
+        if (viaWorker && viaWorker.length) return viaWorker;
+    } catch (e) { /* worker 失敗 → 落到公用備援 */ }
 
+    // 備援：直連 AWC + 公用代理（僅 worker 掛掉時才用；此路資料可能較舊）
+    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_=${Date.now()}`;
+    const racers = [
+        fetchJson(cleanUrl, 8000, 'direct'),
+        fetchJson(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
+        fetchJson(`https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 9000, 'allorigins'),
+    ];
     try {
         return await Promise.any(racers);
     } catch (e) {
-        // Promise.any 失敗會帶 AggregateError,把每條的錯誤訊息列出來給 console 看
         const reasons = (e && e.errors) ? e.errors.map(x => (x && x.message) || String(x)).join(' | ') : String(e);
-        console.error(`[fetchBulkWeatherFast ${type}] all racers failed: ${reasons}`);
+        console.error(`[fetchBulkWeatherFast ${type}] fallback failed: ${reasons}`);
         throw new Error(`無法連接至氣象資料庫`);
     }
 };
@@ -1411,7 +1410,11 @@ function renderFleetMarkers(fleetName) {
 
         marker.on('click', function() {
             const c = weatherCache[airport.icao] || { metar: "", taf: "" };
-            openWxSheet(airport, c.metar, c.taf);
+            openWxSheet(airport, c.metar, c.taf); // 先用快取即時開，避免空白
+            // 背景抓最新（tgftp 優先）覆蓋：解決總覽批次走 AWC 時面板顯示舊報文
+            if (typeof window.refetchAirportWx === 'function') {
+                window.refetchAirportWx(airport.icao);
+            }
         });
     });
 

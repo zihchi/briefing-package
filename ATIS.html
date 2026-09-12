@@ -399,7 +399,7 @@
 
     // 📍 階段零：自有 Cloudflare Worker 直打 NOAA（首選，快又新鮮）
     try {
-        const dataW = await executeFetch(`https://elb.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`, 6000);
+        const dataW = await executeFetch(`https://briefing-package.zihchi.workers.dev/api/wx?type=${type}&ids=${encodeURIComponent(icao)}`, 6000);
         return extractData(dataW);
     } catch (errorW) {
         console.warn(`[Worker 失效] ${type.toUpperCase()} 改走原備援鏈路...`);
