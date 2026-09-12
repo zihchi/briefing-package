@@ -1,0 +1,31 @@
+name: Deploy Briefing Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'wrangler.jsonc'
+      - '.github/workflows/worker-deploy.yml'
+  # 允許從 Actions 頁面手動觸發
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # 使用 repo 根目錄的 wrangler.jsonc（name = briefing-package，main = worker/worker.js）
+          # 部署到 https://briefing-package.zihchi.workers.dev
+          # 已在 Worker 上設好的 secrets（LIDO_* / AeroDataBox 等）不會被此步驟覆蓋。

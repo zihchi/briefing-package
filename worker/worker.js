@@ -700,6 +700,33 @@ function putAdbCache(ctx, cache, cacheKey, slim) {
 // 取代免費公用代理（corsproxy/codetabs/allorigins，慢/不穩/自帶舊快取）；
 // 直打 NOAA + 邊緣短快取 45s → 又快又新鮮。
 // ──────────────────────────────────────────
+// tgftp 原始檔解析：第一行為 "YYYY/MM/DD HH:MM"，其後為報文本體（TAF 可能多行）
+function parseTgftpText(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n').map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return '';
+  if (/^\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}$/.test(lines[0])) lines.shift();
+  const body = lines.join(' ').trim();
+  return body.length >= 6 ? body : '';
+}
+// 逐站抓 NOAA tgftp 原始檔並整理成 [{icaoId, rawOb|rawTAF}]
+async function fetchTgftpRows(idList, type) {
+  const sub = type === 'taf' ? 'forecasts/taf/stations' : 'observations/metar/stations';
+  const key = type === 'taf' ? 'rawTAF' : 'rawOb';
+  const rows = await Promise.all(idList.map(async (icao) => {
+    const u = `https://tgftp.nws.noaa.gov/data/${sub}/${icao}.TXT`;
+    try {
+      const r = await fetch(u, {
+        cf: { cacheTtl: 45, cacheEverything: true },
+        headers: { 'User-Agent': UA, 'Accept': 'text/plain' },
+      });
+      if (!r.ok) return null;
+      const body = parseTgftpText(await r.text());
+      return body ? { icaoId: icao, [key]: body } : null;
+    } catch (e) { return null; }
+  }));
+  return rows.filter(Boolean);
+}
+
 async function handleWx(url, origin) {
   const type = (url.searchParams.get('type') || 'metar').toLowerCase();
   const ids = (url.searchParams.get('ids') || '').trim();
@@ -707,6 +734,28 @@ async function handleWx(url, origin) {
   const format = url.searchParams.get('format') || 'json';
   if (type !== 'metar' && type !== 'taf') return jsonResp({ error: 'type 必須是 metar 或 taf' }, 400, origin);
   if (!ids) return jsonResp({ error: '缺少 ids（機場 ICAO，可逗號分隔）' }, 400, origin);
+
+  // 主來源：NOAA tgftp 原始檔（新鮮）。AWC 的 /api/data JSON 近期嚴重延遲，會回數小時前的舊報文。
+  // 需要歷史序列（hours>0）時 tgftp 只有單筆最新，故此情況直接走 AWC。
+  if (!hours) {
+    try {
+      const idList = ids.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      const rows = await fetchTgftpRows(idList, type);
+      if (rows.length) {
+        return new Response(JSON.stringify(rows), {
+          status: 200,
+          headers: {
+            ...cors(origin),
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'public, max-age=45',
+            'X-Proxy-By': 'elb-worker-wx-tgftp',
+          },
+        });
+      }
+    } catch (e) { /* 落到 AWC 退路 */ }
+  }
+
+  // 退路：AWC JSON API（tgftp 全數失敗、或需要 hours 歷史序列時）
   let target = `https://aviationweather.gov/api/data/${type}?ids=${encodeURIComponent(ids)}&format=${encodeURIComponent(format)}`;
   if (hours) target += `&hours=${encodeURIComponent(hours)}`;
   try {
@@ -721,7 +770,7 @@ async function handleWx(url, origin) {
         ...cors(origin),
         'Content-Type': up.headers.get('Content-Type') || 'application/json; charset=utf-8',
         'Cache-Control': 'public, max-age=45',
-        'X-Proxy-By': 'elb-worker-wx',
+        'X-Proxy-By': 'elb-worker-wx-awc',
       },
     });
   } catch (e) {
