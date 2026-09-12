@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
-      - 'wrangler.jsonc'
       - '.github/workflows/worker-deploy.yml'
   # 允許從 Actions 頁面手動觸發
   workflow_dispatch:
@@ -26,6 +25,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # 使用 repo 根目錄的 wrangler.jsonc（name = briefing-package，main = worker/worker.js）
-          # 部署到 https://briefing-package.zihchi.workers.dev
+          # 從 worker/ 目錄部署（wrangler.toml：name = briefing-package，main = worker.js）
+          # → https://briefing-package.zihchi.workers.dev
+          # 用 .toml 而非根目錄的 .jsonc：wrangler-action 預設安裝的舊版 wrangler 不解析 .jsonc。
           # 已在 Worker 上設好的 secrets（LIDO_* / AeroDataBox 等）不會被此步驟覆蓋。
+          workingDirectory: worker
