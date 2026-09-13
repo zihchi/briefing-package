@@ -848,8 +848,9 @@ window.fetchHistoryMetarPopup = async function(icao) {
     container.innerHTML = `<div style="text-align: center; color: #8e44ad; font-size: 0.9em; padding: 20px;">🔄 正在獲取 ${icao} 過去 24 小時紀錄...</div>`;
 
     try {
-        // ⏱️ 時間戳破代理快取(同 fetchBulkWeatherFast)，確保歷史紀錄也抓最新
-        const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24&_=${Date.now()}`;
+        // 注意：AWC /api/data 現在會拒絕未知查詢參數（如 _=timestamp → "Unexpected query parameter"），
+        //   故不可再加時間戳；改用 cache:'no-store' 破瀏覽器快取即可。
+        const cleanUrl = `https://aviationweather.gov/api/data/metar?ids=${icao}&format=json&hours=24`;
 
         const fetchWithTimeout = async (url, ms, label) => {
             const controller = new AbortController();
@@ -1278,7 +1279,8 @@ const fetchBulkWeatherFast = async (icaoList, type) => {
     } catch (e) { /* worker 失敗 → 落到公用備援 */ }
 
     // 備援：直連 AWC + 公用代理（僅 worker 掛掉時才用；此路資料可能較舊）
-    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json&_=${Date.now()}`;
+    // 注意：AWC 現在會拒絕未知查詢參數（_=timestamp → "Unexpected query parameter"），不可加時間戳。
+    const cleanUrl = `https://aviationweather.gov/api/data/${type}?ids=${icaoList}&format=json`;
     const racers = [
         fetchJson(cleanUrl, 8000, 'direct'),
         fetchJson(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, 9000, 'codetabs'),
