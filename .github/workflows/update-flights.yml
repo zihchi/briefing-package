@@ -1,0 +1,56 @@
+name: Update Flight List (TDX)
+
+# 自動更新「選擇航班」清單(app.js flightGroups + pa.html ROUTES + service-worker 版本)。
+# 每週檢查一次 TDX 星宇國際線班表，只有在班表真的有變動時才提交、推上 main
+# (推上 main 後 GitHub Pages 會自動重新部署)。也可到 Actions 頁面手動觸發。
+#
+# 需要兩個 repo secrets(一次性設定，見 scripts/README-update-flights.md):
+#   TDX_CLIENT_ID, TDX_CLIENT_SECRET
+
+on:
+  schedule:
+    - cron: '0 20 * * 1'   # 每週一 20:00 UTC(≈ 台灣週二 04:00)
+  workflow_dispatch:        # 允許手動觸發
+
+permissions:
+  contents: write           # 需要能 push 回 main
+
+concurrency:
+  group: update-flights
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run generator
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: |
+          if [ -z "$TDX_CLIENT_ID" ] || [ -z "$TDX_CLIENT_SECRET" ]; then
+            echo "::error::缺少 TDX_CLIENT_ID / TDX_CLIENT_SECRET repo secrets。請見 scripts/README-update-flights.md 設定。"
+            exit 1
+          fi
+          node scripts/update-flights.mjs
+
+      - name: Commit & push if changed
+        run: |
+          if git diff --quiet; then
+            echo "班表無變動，不提交。"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js pa.html service-worker.js
+          git commit -m "chore(flights): 依 TDX 班表自動更新航班清單 [skip ci]"
+          git push

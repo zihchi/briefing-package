@@ -156,12 +156,13 @@
   // ---------- 資料：航點（IATA → 中文 / IANA 時區） ----------
   var AP = {
     TPE:{zh:'臺北/桃園',tz:'Asia/Taipei'},
+    RMQ:{zh:'臺中',tz:'Asia/Taipei'}, TAK:{zh:'高松',tz:'Asia/Tokyo'},
     SFO:{zh:'舊金山',tz:'America/Los_Angeles'}, LAX:{zh:'洛杉磯',tz:'America/Los_Angeles'},
     ONT:{zh:'安大略',tz:'America/Los_Angeles'}, SEA:{zh:'西雅圖',tz:'America/Los_Angeles'},
     PHX:{zh:'鳳凰城',tz:'America/Phoenix'},
     PRG:{zh:'布拉格',tz:'Europe/Prague'}, AUH:{zh:'阿布達比',tz:'Asia/Dubai'},
     KUL:{zh:'吉隆坡',tz:'Asia/Kuala_Lumpur'}, SIN:{zh:'新加坡',tz:'Asia/Singapore'},
-    CGK:{zh:'雅加達',tz:'Asia/Jakarta'},
+    CGK:{zh:'雅加達',tz:'Asia/Jakarta'}, DPS:{zh:'峇里島/丹帕沙',tz:'Asia/Makassar'},
     BKK:{zh:'曼谷',tz:'Asia/Bangkok'}, CNX:{zh:'清邁',tz:'Asia/Bangkok'},
     SGN:{zh:'胡志明市',tz:'Asia/Ho_Chi_Minh'}, HAN:{zh:'河內',tz:'Asia/Ho_Chi_Minh'},
     DAD:{zh:'峴港',tz:'Asia/Ho_Chi_Minh'}, PQC:{zh:'富國島',tz:'Asia/Ho_Chi_Minh'},
@@ -174,9 +175,135 @@
     UKB:{zh:'神戶',tz:'Asia/Tokyo'}, SHI:{zh:'宮古/下地島',tz:'Asia/Tokyo'}
   };
 
-  // ---------- 資料：班號 → 航線（2026/07/27–08/02 定期班表） ----------
-  var OUT = {JX012:'SFO',JX002:'LAX',JX101:'PRG',JX789:'CRK',JX834:'UKB',JX761:'CGK',JX781:'CEB',JX785:'MNL',JX846:'KMJ',JX711:'SGN',JX201:'MFM',JX715:'HAN',JX771:'SIN',JX233:'HKG',JX900:'PUS',JX1834:'UKB',JX820:'KIX',JX741:'BKK',JX840:'FUK',JX850:'CTS',JX822:'KIX',JX802:'NRT',JX800:'NRT',JX890:'SHI',JX1900:'PUS',JX725:'KUL',JX862:'SDJ',JX860:'HKD',JX870:'OKA',JX705:'PQC',JX751:'CNX',JX745:'BKK',JX713:'SGN',JX717:'HAN',JX902:'PUS',JX838:'NGO',JX804:'NRT',JX203:'MFM',JX703:'DAD',JX205:'MFM',JX783:'CEB',JX235:'HKG',JX791:'CRK',JX7301:'AUH',JX010:'ONT',JX026:'PHX',JX032:'SEA'};
-  var IN = {JX031:'SEA',JX009:'ONT',JX011:'SFO',JX025:'PHX',JX001:'LAX',JX102:'PRG',JX7300:'AUH',JX790:'CRK',JX202:'MFM',JX786:'MNL',JX234:'HKG',JX847:'KMJ',JX835:'UKB',JX782:'CEB',JX901:'PUS',JX891:'SHI',JX1835:'UKB',JX716:'HAN',JX821:'KIX',JX841:'FUK',JX712:'SGN',JX871:'OKA',JX1901:'PUS',JX801:'NRT',JX823:'KIX',JX742:'BKK',JX772:'SIN',JX762:'CGK',JX803:'NRT',JX851:'CTS',JX863:'SDJ',JX903:'PUS',JX1847:'KMJ',JX204:'MFM',JX861:'HKD',JX718:'HAN',JX839:'NGO',JX726:'KUL',JX236:'HKG',JX706:'PQC',JX752:'CNX',JX704:'DAD',JX714:'SGN',JX792:'CRK',JX206:'MFM',JX746:'BKK',JX784:'CEB',JX805:'NRT'};
+  // ---------- 資料：班號 → 航線 ----------
+    // >>> ROUTES AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。勿手動編輯此區塊。
+  var ROUTES = {
+    "JX001": { from: "LAX", to: "TPE" },
+    "JX002": { from: "TPE", to: "LAX" },
+    "JX009": { from: "ONT", to: "TPE" },
+    "JX010": { from: "TPE", to: "ONT" },
+    "JX011": { from: "SFO", to: "TPE" },
+    "JX012": { from: "TPE", to: "SFO" },
+    "JX025": { from: "PHX", to: "TPE" },
+    "JX026": { from: "TPE", to: "PHX" },
+    "JX031": { from: "SEA", to: "TPE" },
+    "JX032": { from: "TPE", to: "SEA" },
+    "JX101": { from: "TPE", to: "PRG" },
+    "JX102": { from: "PRG", to: "TPE" },
+    "JX201": { from: "TPE", to: "MFM" },
+    "JX202": { from: "MFM", to: "TPE" },
+    "JX205": { from: "TPE", to: "MFM" },
+    "JX206": { from: "MFM", to: "TPE" },
+    "JX233": { from: "TPE", to: "HKG" },
+    "JX234": { from: "HKG", to: "TPE" },
+    "JX235": { from: "TPE", to: "HKG" },
+    "JX236": { from: "HKG", to: "TPE" },
+    "JX300": { from: "RMQ", to: "TAK" },
+    "JX301": { from: "TAK", to: "RMQ" },
+    "JX302": { from: "RMQ", to: "OKA" },
+    "JX303": { from: "OKA", to: "RMQ" },
+    "JX306": { from: "RMQ", to: "UKB" },
+    "JX307": { from: "UKB", to: "RMQ" },
+    "JX308": { from: "RMQ", to: "SHI" },
+    "JX309": { from: "SHI", to: "RMQ" },
+    "JX310": { from: "RMQ", to: "PUS" },
+    "JX311": { from: "PUS", to: "RMQ" },
+    "JX312": { from: "RMQ", to: "OKA" },
+    "JX313": { from: "OKA", to: "RMQ" },
+    "JX314": { from: "RMQ", to: "NRT" },
+    "JX315": { from: "NRT", to: "RMQ" },
+    "JX316": { from: "RMQ", to: "KMJ" },
+    "JX317": { from: "KMJ", to: "RMQ" },
+    "JX318": { from: "RMQ", to: "CTS" },
+    "JX319": { from: "CTS", to: "RMQ" },
+    "JX329": { from: "RMQ", to: "MFM" },
+    "JX330": { from: "MFM", to: "RMQ" },
+    "JX331": { from: "RMQ", to: "MFM" },
+    "JX332": { from: "MFM", to: "RMQ" },
+    "JX333": { from: "RMQ", to: "PQC" },
+    "JX334": { from: "PQC", to: "RMQ" },
+    "JX703": { from: "TPE", to: "DAD" },
+    "JX704": { from: "DAD", to: "TPE" },
+    "JX705": { from: "TPE", to: "PQC" },
+    "JX706": { from: "PQC", to: "TPE" },
+    "JX711": { from: "TPE", to: "SGN" },
+    "JX712": { from: "SGN", to: "TPE" },
+    "JX713": { from: "TPE", to: "SGN" },
+    "JX714": { from: "SGN", to: "TPE" },
+    "JX715": { from: "TPE", to: "HAN" },
+    "JX716": { from: "HAN", to: "TPE" },
+    "JX717": { from: "TPE", to: "HAN" },
+    "JX718": { from: "HAN", to: "TPE" },
+    "JX725": { from: "TPE", to: "KUL" },
+    "JX726": { from: "KUL", to: "TPE" },
+    "JX741": { from: "TPE", to: "BKK" },
+    "JX742": { from: "BKK", to: "TPE" },
+    "JX745": { from: "TPE", to: "BKK" },
+    "JX746": { from: "BKK", to: "TPE" },
+    "JX751": { from: "TPE", to: "CNX" },
+    "JX752": { from: "CNX", to: "TPE" },
+    "JX761": { from: "TPE", to: "CGK" },
+    "JX762": { from: "CGK", to: "TPE" },
+    "JX765": { from: "TPE", to: "DPS" },
+    "JX766": { from: "DPS", to: "TPE" },
+    "JX771": { from: "TPE", to: "SIN" },
+    "JX772": { from: "SIN", to: "TPE" },
+    "JX781": { from: "TPE", to: "CEB" },
+    "JX782": { from: "CEB", to: "TPE" },
+    "JX783": { from: "TPE", to: "CEB" },
+    "JX784": { from: "CEB", to: "TPE" },
+    "JX785": { from: "TPE", to: "MNL" },
+    "JX786": { from: "MNL", to: "TPE" },
+    "JX789": { from: "TPE", to: "CRK" },
+    "JX790": { from: "CRK", to: "TPE" },
+    "JX791": { from: "TPE", to: "CRK" },
+    "JX792": { from: "CRK", to: "TPE" },
+    "JX800": { from: "TPE", to: "NRT" },
+    "JX801": { from: "NRT", to: "TPE" },
+    "JX802": { from: "TPE", to: "NRT" },
+    "JX803": { from: "NRT", to: "TPE" },
+    "JX804": { from: "TPE", to: "NRT" },
+    "JX805": { from: "NRT", to: "TPE" },
+    "JX820": { from: "TPE", to: "KIX" },
+    "JX821": { from: "KIX", to: "TPE" },
+    "JX822": { from: "TPE", to: "KIX" },
+    "JX823": { from: "KIX", to: "TPE" },
+    "JX834": { from: "TPE", to: "UKB" },
+    "JX835": { from: "UKB", to: "TPE" },
+    "JX838": { from: "TPE", to: "NGO" },
+    "JX839": { from: "NGO", to: "TPE" },
+    "JX840": { from: "TPE", to: "FUK" },
+    "JX841": { from: "FUK", to: "TPE" },
+    "JX846": { from: "TPE", to: "KMJ" },
+    "JX847": { from: "KMJ", to: "TPE" },
+    "JX850": { from: "TPE", to: "CTS" },
+    "JX851": { from: "CTS", to: "TPE" },
+    "JX860": { from: "TPE", to: "HKD" },
+    "JX861": { from: "HKD", to: "TPE" },
+    "JX862": { from: "TPE", to: "SDJ" },
+    "JX863": { from: "SDJ", to: "TPE" },
+    "JX870": { from: "TPE", to: "OKA" },
+    "JX871": { from: "OKA", to: "TPE" },
+    "JX890": { from: "TPE", to: "SHI" },
+    "JX891": { from: "SHI", to: "TPE" },
+    "JX900": { from: "TPE", to: "PUS" },
+    "JX901": { from: "PUS", to: "TPE" },
+    "JX902": { from: "TPE", to: "PUS" },
+    "JX903": { from: "PUS", to: "TPE" },
+    "JX1308": { from: "RMQ", to: "SHI" },
+    "JX1309": { from: "SHI", to: "RMQ" },
+    "JX1310": { from: "RMQ", to: "PUS" },
+    "JX1311": { from: "PUS", to: "RMQ" },
+    "JX1834": { from: "TPE", to: "UKB" },
+    "JX1835": { from: "UKB", to: "TPE" },
+    "JX1870": { from: "TPE", to: "OKA" },
+    "JX1871": { from: "OKA", to: "TPE" },
+    "JX1900": { from: "TPE", to: "PUS" },
+    "JX1901": { from: "PUS", to: "TPE" },
+    "JX1902": { from: "TPE", to: "PUS" },
+    "JX1903": { from: "PUS", to: "TPE" },
+  };
+  // <<< ROUTES AUTO-GENERATED
 
   // ---------- 時間工具（離線） ----------
   function offsetMin(tz, date){
@@ -333,12 +460,12 @@
     if(/^\d/.test(v)) v='JX'+v;              // 只打數字自動補 JX
     state.flt = v;
     var to, from;
-    if(OUT[v]){ from='TPE'; to=OUT[v]; }
-    else if(IN[v]){ from=IN[v]; to='TPE'; }
+    var r = ROUTES[v];
+    if(r){ from=r.from; to=r.to; }
     else {
       hideRoute();
       $('paToCode').textContent='—';
-      alert('查無班號 '+v+'（本表為 2026/07/27–08/02 定期班表；可改用下方「當地時間對照」點選目的地）。');
+      alert('查無班號 '+v+'（可改用下方「當地時間對照」點選目的地）。');
       return;
     }
     state.from = from;

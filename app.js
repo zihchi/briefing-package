@@ -20,7 +20,6 @@ let currentToolUrl = null;    // 目前開啟中的工具；再次點選同一�
 // ✈️ Turbli 航班資料庫
 // >>> FLIGHTGROUPS AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。
 //     可手動編輯，但重跑腳本會覆蓋此區塊(兩個標記之間)。
-//     最後更新：2026-09-19(TDX 國際線定期時刻表，AirlineID=JX)
 const flightGroups = [
   { region: "東北亞航線 (日韓)", flights: [
       { flightNo: "300", route: "RMQ/TAK" }, { flightNo: "301", route: "TAK/RMQ" },
