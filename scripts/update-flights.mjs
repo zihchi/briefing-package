@@ -28,9 +28,10 @@ const AIRLINE = 'JX';                 // 星宇航空
 const DRY_RUN = process.argv.includes('--dry-run');
 
 const TOKEN_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
-// 國際線定期時刻表(欄位：AirlineID/FlightNumber/DepartureAirportID/ArrivalAirportID/
-//   ScheduleStartDate/ScheduleEndDate/Monday..Sunday/DepartureTime/ArrivalTime)
-const SCHED_URL = 'https://tdx.transportdata.tw/api/basic/v2/Air/Schedule/International';
+// 國際線定期時刻表(欄位：AirlineID/FlightNumber(含航空代碼，如 "JX001")/
+//   DepartureAirportID/ArrivalAirportID/ScheduleStartDate/ScheduleEndDate/Monday..Sunday/
+//   DepartureTime/ArrivalTime)。每個航班會有多筆(不同週的有效期)。
+const SCHED_URL = 'https://tdx.transportdata.tw/api/basic/v2/Air/GeneralSchedule/International';
 
 // ── 分區設定：以「非 TPE 那一端的機場(IATA)」歸類。────────────────────────────
 //   想調整分組名稱或把某站改到別區，改這裡即可。未列到的站會落到「其他航線」以便你補分類。
@@ -40,6 +41,7 @@ const REGION_OF_AIRPORT = {
   NRT:'東北亞航線 (日韓)', HND:'東北亞航線 (日韓)', KIX:'東北亞航線 (日韓)', UKB:'東北亞航線 (日韓)',
   NGO:'東北亞航線 (日韓)', FUK:'東北亞航線 (日韓)', KMJ:'東北亞航線 (日韓)', CTS:'東北亞航線 (日韓)',
   HKD:'東北亞航線 (日韓)', SDJ:'東北亞航線 (日韓)', OKA:'東北亞航線 (日韓)', SHI:'東北亞航線 (日韓)',
+  TAK:'東北亞航線 (日韓)',
   // 東北亞(韓國)
   ICN:'東北亞航線 (日韓)', PUS:'東北亞航線 (日韓)', GMP:'東北亞航線 (日韓)',
   // 港澳
@@ -54,6 +56,13 @@ const REGION_OF_AIRPORT = {
   PRG:'歐洲航線', LHR:'歐洲航線', CDG:'歐洲航線', FRA:'歐洲航線', MXP:'歐洲航線',
 };
 const regionOf = (iata) => REGION_OF_AIRPORT[iata] || '其他航線';
+
+// 台灣機場(用來判斷「外站是哪一端」——非台灣的那端才是外站，供分區)
+const TW_AIRPORTS = new Set(['TPE', 'RMQ', 'KHH', 'TSA', 'TTT', 'MZG', 'KNH', 'HUN', 'TNN', 'CYI', 'PIF', 'TXG']);
+
+// 排除清單：外站(非台灣端)為這些機場的航班不納入。
+//   目前排除 AUH(阿布達比，多為共掛/codeshare)。想排除其他航點在這裡加 IATA 即可。
+const EXCLUDE_OUTSTATIONS = new Set(['AUH']);
 
 function fail(msg) { console.error('✗ ' + msg); process.exit(1); }
 
@@ -71,7 +80,7 @@ async function getToken(id, secret) {
 }
 
 async function getSchedule(token) {
-  const url = `${SCHED_URL}?$filter=${encodeURIComponent(`AirlineID eq '${AIRLINE}'`)}&$format=JSON`;
+  const url = `${SCHED_URL}?$filter=${encodeURIComponent(`AirlineID eq '${AIRLINE}'`)}&$top=10000&$format=JSON`;
   const r = await fetch(url, { headers: { authorization: `Bearer ${token}`, accept: 'application/json' } });
   if (!r.ok) fail(`取得 TDX 班表失敗：HTTP ${r.status} ${await r.text().catch(() => '')}`);
   const j = await r.json();
@@ -79,11 +88,11 @@ async function getSchedule(token) {
   return j;
 }
 
-// 只留今天仍在有效期內的班表
-function isCurrent(s, today) {
-  const a = (s.ScheduleStartDate || '').slice(0, 10);
+// 只排除「已過期」的班表(結束日 < 今天)：保留目前與未來仍在營運的航班，較穩定，
+//   不會因為某航班這一週剛好沒飛就從清單消失。
+function notExpired(s, today) {
   const b = (s.ScheduleEndDate || '').slice(0, 10);
-  return (!a || a <= today) && (!b || b >= today);
+  return !b || b >= today;
 }
 
 // 班號正規化：純數字補到 3 位(對齊現有 "001"/"012" 風格)；4 位以上維持原樣
@@ -98,13 +107,14 @@ function buildGroups(schedules) {
   const seen = new Map(); // flightNo → {flightNo, route, outstation}
   for (const s of schedules) {
     if (s.AirlineID !== AIRLINE) continue;
-    if (!isCurrent(s, today)) continue;
+    if (!notExpired(s, today)) continue;
     const dep = String(s.DepartureAirportID || '').trim().toUpperCase();
     const arr = String(s.ArrivalAirportID || '').trim().toUpperCase();
     const no = normFlightNo(s.FlightNumber);
     if (!dep || !arr || !no) continue;
     if (seen.has(no)) continue;                 // 一個班號一筆
-    const outstation = dep === 'TPE' ? arr : dep; // 非 TPE 的那一端(供分區)
+    const outstation = !TW_AIRPORTS.has(dep) ? dep : arr; // 非台灣的那一端(供分區)
+    if (EXCLUDE_OUTSTATIONS.has(outstation)) continue;    // 排除清單(如 AUH 共掛)
     seen.set(no, { flightNo: no, route: `${dep}/${arr}`, outstation });
   }
 
