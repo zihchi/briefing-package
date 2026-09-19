@@ -18,6 +18,8 @@ let curfewClockInterval = null;
 let currentToolUrl = null;    // 目前開啟中的工具；再次點選同一鍵即關閉
 
 // ✈️ Turbli 航班資料庫
+// >>> FLIGHTGROUPS AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。
+//     可手動編輯，但重跑腳本會覆蓋此區塊(兩個標記之間)。
 const flightGroups = [
   { region: "東北亞航線 (日本)", flights: [
       { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
@@ -68,6 +70,7 @@ const flightGroups = [
       { flightNo: "031", route: "SEA/TPE" }, { flightNo: "032", route: "TPE/SEA" }
   ]}
 ];
+// <<< FLIGHTGROUPS AUTO-GENERATED
 window.flights = flightGroups.flatMap(group => group.flights);
 
 // ❄️ 高度修正基礎數據
