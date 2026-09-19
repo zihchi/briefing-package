@@ -11,9 +11,11 @@
  *   # 只想預覽、先不改檔：加 --dry-run
  *   TDX_CLIENT_ID=xxx TDX_CLIENT_SECRET=yyy node scripts/update-flights.mjs --dry-run
  *
- * 產出：改寫 app.js 中兩個標記
- *   //  >>> FLIGHTGROUPS AUTO-GENERATED ... <<< FLIGHTGROUPS AUTO-GENERATED
- * 之間的 flightGroups 陣列。改完自行 git commit / push 即可。
+ * 產出(僅在班表有變動時才動檔)：
+ *   - app.js：FLIGHTGROUPS AUTO-GENERATED 標記間的 flightGroups(上方「選擇航班」)
+ *   - pa.html：ROUTES AUTO-GENERATED 標記間的 ROUTES(PA 廣播工具的班號→航線)
+ *   - service-worker.js：版本號自動 +1(讓使用者抓到新版)
+ * 改完自行 git commit / push 即可(GitHub Actions 排程會自動做這些)。
  *
  * 需 Node 18+(內建 fetch)。
  */
@@ -24,6 +26,8 @@ import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_JS = join(__dirname, '..', 'app.js');
+const PA_HTML = join(__dirname, '..', 'pa.html');
+const SW_JS = join(__dirname, '..', 'service-worker.js');
 const AIRLINE = 'JX';                 // 星宇航空
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -137,15 +141,14 @@ function buildGroups(schedules) {
   }));
 }
 
-function renderBlock(groups) {
+// app.js 的 flightGroups 區塊
+function renderFlightGroupsBlock(groups) {
   const lines = [];
   lines.push('// >>> FLIGHTGROUPS AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。');
   lines.push('//     可手動編輯，但重跑腳本會覆蓋此區塊(兩個標記之間)。');
-  lines.push(`//     最後更新：${new Date().toISOString().slice(0, 10)}(TDX 國際線定期時刻表，AirlineID=${AIRLINE})`);
   lines.push('const flightGroups = [');
   groups.forEach((g, gi) => {
     lines.push(`  { region: ${JSON.stringify(g.region)}, flights: [`);
-    // 每行放兩筆，貼近原本排版
     for (let i = 0; i < g.flights.length; i += 2) {
       const pair = g.flights.slice(i, i + 2)
         .map((f) => `{ flightNo: ${JSON.stringify(f.flightNo)}, route: ${JSON.stringify(f.route)} }`)
@@ -160,17 +163,47 @@ function renderBlock(groups) {
   return lines.join('\n');
 }
 
-function writeBack(block) {
-  const src = readFileSync(APP_JS, 'utf8');
-  const startRe = /\/\/ >>> FLIGHTGROUPS AUTO-GENERATED[\s\S]*?\/\/ <<< FLIGHTGROUPS AUTO-GENERATED/;
-  if (!startRe.test(src)) fail('在 app.js 找不到 FLIGHTGROUPS 標記，請確認標記存在。');
-  const out = src.replace(startRe, block);
-  if (DRY_RUN) {
-    console.log('—— DRY RUN，不寫檔。以下為將寫入的區塊 ——\n');
-    console.log(block);
-    return;
-  }
-  writeFileSync(APP_JS, out, 'utf8');
+// pa.html 的 ROUTES 區塊(班號 → {from,to})。flights 為扁平清單，依班號排序求穩定 diff。
+function renderRoutesBlock(flights) {
+  const sorted = [...flights].sort((a, b) => a.flightNo.localeCompare(b.flightNo, 'en', { numeric: true }));
+  const lines = [];
+  lines.push('  // >>> ROUTES AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。勿手動編輯此區塊。');
+  lines.push('  var ROUTES = {');
+  sorted.forEach((f) => {
+    const [from, to] = f.route.split('/');
+    lines.push(`    ${JSON.stringify('JX' + f.flightNo)}: { from: ${JSON.stringify(from)}, to: ${JSON.stringify(to)} },`);
+  });
+  lines.push('  };');
+  lines.push('  // <<< ROUTES AUTO-GENERATED');
+  return lines.join('\n');
+}
+
+// 以標記區塊替換檔案內容；回傳 {changed, out}。找不到標記則報錯。
+function replaceMarked(file, re, block, label) {
+  const src = readFileSync(file, 'utf8');
+  if (!re.test(src)) fail(`在 ${file} 找不到 ${label} 標記。`);
+  const out = src.replace(re, block);
+  return { src, out, changed: out !== src };
+}
+
+// service-worker.js 版本號 +1 (briefing-vNNN)
+function bumpSW() {
+  const src = readFileSync(SW_JS, 'utf8');
+  const m = src.match(/(briefing-v)(\d+)/);
+  if (!m) { console.warn('  ⚠ 找不到 service-worker 版本號，未 bump。'); return null; }
+  const next = `${m[1]}${+m[2] + 1}`;
+  writeFileSync(SW_JS, src.replace(m[0], next), 'utf8');
+  return next;
+}
+
+// 讀 pa.html AP 已收錄的機場代碼(供缺漏檢查)
+function paAirportSet() {
+  const src = readFileSync(PA_HTML, 'utf8');
+  const set = new Set();
+  const apBlock = src.match(/var AP = \{[\s\S]*?\};/);
+  const scope = apBlock ? apBlock[0] : src;
+  for (const m of scope.matchAll(/([A-Z]{3}):\s*\{\s*zh:/g)) set.add(m[1]);
+  return set;
 }
 
 (async () => {
@@ -184,12 +217,37 @@ function writeBack(block) {
   console.log(`  取得 ${schedules.length} 筆原始班表`);
 
   const groups = buildGroups(schedules);
-  const total = groups.reduce((n, g) => n + g.flights.length, 0);
-  console.log(`→ 整理後 ${groups.length} 區、共 ${total} 個班號：`);
+  const flights = groups.flatMap((g) => g.flights);
+  console.log(`→ 整理後 ${groups.length} 區、共 ${flights.length} 個班號：`);
   groups.forEach((g) => console.log(`   • ${g.region}：${g.flights.length} 班`));
   const other = groups.find((g) => g.region === '其他航線');
-  if (other) console.log(`   ⚠ 有 ${other.flights.length} 班落在「其他航線」，可在腳本的 REGION_OF_AIRPORT 補上分類。`);
+  if (other) console.log(`   ⚠ 有 ${other.flights.length} 班落在「其他航線」，可在 REGION_OF_AIRPORT 補分類。`);
 
-  writeBack(renderBlock(groups));
-  console.log(DRY_RUN ? '✓ DRY RUN 完成(未寫檔)' : '✓ 已更新 app.js。請檢查後 git commit / push。');
+  // pa.html AP 缺漏檢查(缺了 PA 工具算不出當地時間)
+  const apSet = paAirportSet();
+  const missing = [...new Set(flights.flatMap((f) => f.route.split('/')))].filter((a) => !apSet.has(a));
+  if (missing.length) console.log(`   ⚠ pa.html 的 AP 缺這些機場(PA 工具會算不出當地時間，請補到 pa.html 的 var AP)：${missing.join(', ')}`);
+
+  const fgBlock = renderFlightGroupsBlock(groups);
+  const routesBlock = renderRoutesBlock(flights);
+  const app = replaceMarked(APP_JS, /\/\/ >>> FLIGHTGROUPS AUTO-GENERATED[\s\S]*?\/\/ <<< FLIGHTGROUPS AUTO-GENERATED/, fgBlock, 'FLIGHTGROUPS');
+  const pa = replaceMarked(PA_HTML, /\/\/ >>> ROUTES AUTO-GENERATED[\s\S]*?\/\/ <<< ROUTES AUTO-GENERATED/, routesBlock, 'ROUTES');
+
+  if (DRY_RUN) {
+    console.log('\n—— DRY RUN，不寫檔 ——');
+    console.log(`app.js flightGroups：${app.changed ? '會更新' : '無變動'}`);
+    console.log(`pa.html ROUTES：${pa.changed ? '會更新' : '無變動'}`);
+    console.log('\n' + fgBlock);
+    return;
+  }
+
+  if (!app.changed && !pa.changed) {
+    console.log('✓ 班表與現況相同，無需更新(未改任何檔案)。');
+    return;
+  }
+  if (app.changed) writeFileSync(APP_JS, app.out, 'utf8');
+  if (pa.changed) writeFileSync(PA_HTML, pa.out, 'utf8');
+  const ver = bumpSW();
+  console.log(`✓ 已更新：${[app.changed && 'app.js', pa.changed && 'pa.html', ver && `service-worker(${ver})`].filter(Boolean).join('、')}`);
+  console.log('  請檢查後 git commit / push(GitHub Pages 會自動上線)。');
 })();
