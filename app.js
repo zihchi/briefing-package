@@ -20,8 +20,18 @@ let currentToolUrl = null;    // 目前開啟中的工具；再次點選同一�
 // ✈️ Turbli 航班資料庫
 // >>> FLIGHTGROUPS AUTO-GENERATED — 由 scripts/update-flights.mjs 依 TDX 班表產生。
 //     可手動編輯，但重跑腳本會覆蓋此區塊(兩個標記之間)。
+//     最後更新：2026-09-19(TDX 國際線定期時刻表，AirlineID=JX)
 const flightGroups = [
-  { region: "東北亞航線 (日本)", flights: [
+  { region: "東北亞航線 (日韓)", flights: [
+      { flightNo: "300", route: "RMQ/TAK" }, { flightNo: "301", route: "TAK/RMQ" },
+      { flightNo: "302", route: "RMQ/OKA" }, { flightNo: "303", route: "OKA/RMQ" },
+      { flightNo: "306", route: "RMQ/UKB" }, { flightNo: "307", route: "UKB/RMQ" },
+      { flightNo: "308", route: "RMQ/SHI" }, { flightNo: "309", route: "SHI/RMQ" },
+      { flightNo: "310", route: "RMQ/PUS" }, { flightNo: "311", route: "PUS/RMQ" },
+      { flightNo: "312", route: "RMQ/OKA" }, { flightNo: "313", route: "OKA/RMQ" },
+      { flightNo: "314", route: "RMQ/NRT" }, { flightNo: "315", route: "NRT/RMQ" },
+      { flightNo: "316", route: "RMQ/KMJ" }, { flightNo: "317", route: "KMJ/RMQ" },
+      { flightNo: "318", route: "RMQ/CTS" }, { flightNo: "319", route: "CTS/RMQ" },
       { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
       { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
       { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" },
@@ -35,15 +45,26 @@ const flightGroups = [
       { flightNo: "860", route: "TPE/HKD" }, { flightNo: "861", route: "HKD/TPE" },
       { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
       { flightNo: "870", route: "TPE/OKA" }, { flightNo: "871", route: "OKA/TPE" },
-      { flightNo: "886", route: "TPE/SHI" }, { flightNo: "887", route: "SHI/TPE" }
+      { flightNo: "890", route: "TPE/SHI" }, { flightNo: "891", route: "SHI/TPE" },
+      { flightNo: "900", route: "TPE/PUS" }, { flightNo: "901", route: "PUS/TPE" },
+      { flightNo: "902", route: "TPE/PUS" }, { flightNo: "903", route: "PUS/TPE" },
+      { flightNo: "1308", route: "RMQ/SHI" }, { flightNo: "1309", route: "SHI/RMQ" },
+      { flightNo: "1310", route: "RMQ/PUS" }, { flightNo: "1311", route: "PUS/RMQ" },
+      { flightNo: "1834", route: "TPE/UKB" }, { flightNo: "1835", route: "UKB/TPE" },
+      { flightNo: "1870", route: "TPE/OKA" }, { flightNo: "1871", route: "OKA/TPE" },
+      { flightNo: "1900", route: "TPE/PUS" }, { flightNo: "1901", route: "PUS/TPE" },
+      { flightNo: "1902", route: "TPE/PUS" }, { flightNo: "1903", route: "PUS/TPE" }
   ]},
   { region: "港澳航線", flights: [
       { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
       { flightNo: "205", route: "TPE/MFM" }, { flightNo: "206", route: "MFM/TPE" },
       { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
-      { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" }
+      { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" },
+      { flightNo: "329", route: "RMQ/MFM" }, { flightNo: "330", route: "MFM/RMQ" },
+      { flightNo: "331", route: "RMQ/MFM" }, { flightNo: "332", route: "MFM/RMQ" }
   ]},
   { region: "東南亞航線", flights: [
+      { flightNo: "333", route: "RMQ/PQC" }, { flightNo: "334", route: "PQC/RMQ" },
       { flightNo: "703", route: "TPE/DAD" }, { flightNo: "704", route: "DAD/TPE" },
       { flightNo: "705", route: "TPE/PQC" }, { flightNo: "706", route: "PQC/TPE" },
       { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
@@ -55,6 +76,7 @@ const flightGroups = [
       { flightNo: "745", route: "TPE/BKK" }, { flightNo: "746", route: "BKK/TPE" },
       { flightNo: "751", route: "TPE/CNX" }, { flightNo: "752", route: "CNX/TPE" },
       { flightNo: "761", route: "TPE/CGK" }, { flightNo: "762", route: "CGK/TPE" },
+      { flightNo: "765", route: "TPE/DPS" }, { flightNo: "766", route: "DPS/TPE" },
       { flightNo: "771", route: "TPE/SIN" }, { flightNo: "772", route: "SIN/TPE" },
       { flightNo: "781", route: "TPE/CEB" }, { flightNo: "782", route: "CEB/TPE" },
       { flightNo: "783", route: "TPE/CEB" }, { flightNo: "784", route: "CEB/TPE" },
@@ -68,6 +90,9 @@ const flightGroups = [
       { flightNo: "011", route: "SFO/TPE" }, { flightNo: "012", route: "TPE/SFO" },
       { flightNo: "025", route: "PHX/TPE" }, { flightNo: "026", route: "TPE/PHX" },
       { flightNo: "031", route: "SEA/TPE" }, { flightNo: "032", route: "TPE/SEA" }
+  ]},
+  { region: "歐洲航線", flights: [
+      { flightNo: "101", route: "TPE/PRG" }, { flightNo: "102", route: "PRG/TPE" }
   ]}
 ];
 // <<< FLIGHTGROUPS AUTO-GENERATED
