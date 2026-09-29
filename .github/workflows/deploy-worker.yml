@@ -1,0 +1,64 @@
+name: Deploy Worker
+
+# 自動部署 briefing-package worker(FIDS/天氣/LIDO 代理),並把 TDX 金鑰設成 Worker secret。
+# 全程在 GitHub 完成,不需終端機。worker/ 有變動時自動跑,也可到 Actions 頁面手動觸發。
+#
+# 需要 4 個 repo secrets(Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   Cloudflare API token(權限:Edit Cloudflare Workers)
+#   CLOUDFLARE_ACCOUNT_ID  Cloudflare 帳號 ID
+#   TDX_CLIENT_ID          TDX client_id
+#   TDX_CLIENT_SECRET      TDX client_secret
+# 尚未設定時此流程會「略過、綠燈」,不算失敗。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check secrets present
+        id: check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TDX_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_SEC: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: |
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCT" ] && [ -n "$TDX_ID" ] && [ -n "$TDX_SEC" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::尚未設定 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / TDX_CLIENT_ID / TDX_CLIENT_SECRET,略過部署(不算失敗)。"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy worker + set TDX secrets
+        if: steps.check.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          # 部署同時把 TDX_* 設成 Worker secret(值取自下方 env);既有的 LIDO_* 不受影響。
+          secrets: |
+            TDX_CLIENT_ID
+            TDX_CLIENT_SECRET
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
