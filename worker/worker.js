@@ -825,6 +825,86 @@ async function handleWx(url, origin) {
 }
 
 // ══════════════════════════════════════════
+// 🛫 桃機 FIDS — /api/fids GET(直打 TDX，取代舊 GAS)
+// ──────────────────────────────────────────
+// 回 { ok, departures:[...], arrivals:[...], ts }，欄位同 TDX FIDS(Gate/Terminal/
+//   CheckCounter/BaggageClaim/各時間/Remark)。僅取星宇(JX)以縮小 payload。
+//   30 秒內重複請求走 Cloudflare 快取;TDX 失敗時回「最後一次成功」的結果(標記 stale)。
+//   需 Worker secrets：TDX_CLIENT_ID / TDX_CLIENT_SECRET(wrangler secret put)。
+const TDX_TOKEN_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
+let _tdxTok = null, _tdxExp = 0;   // 模組層快取(同一 isolate 盡量沿用,省 token 請求)
+async function getTdxToken(env) {
+  const now = Date.now();
+  if (_tdxTok && now < _tdxExp - 60000) return _tdxTok;
+  const id = env && env.TDX_CLIENT_ID, sec = env && env.TDX_CLIENT_SECRET;
+  if (!id || !sec) throw new Error('未設定 TDX_CLIENT_ID / TDX_CLIENT_SECRET(wrangler secret put)');
+  const r = await fetch(TDX_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=client_credentials&client_id=${encodeURIComponent(id)}&client_secret=${encodeURIComponent(sec)}`,
+  });
+  if (!r.ok) throw new Error('TDX token HTTP ' + r.status);
+  const j = await r.json();
+  if (!j.access_token) throw new Error('TDX token 回應缺 access_token');
+  _tdxTok = j.access_token;
+  _tdxExp = now + ((j.expires_in || 86400) * 1000);
+  return _tdxTok;
+}
+async function tdxFids(token, kind) { // kind: 'Departure' | 'Arrival'
+  const url = `https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/${kind}/TPE`
+    + `?$filter=${encodeURIComponent("AirlineID eq 'JX'")}&$format=JSON`;
+  const r = await fetch(url, { headers: { authorization: 'Bearer ' + token, accept: 'application/json' } });
+  if (!r.ok) throw new Error(`FIDS ${kind} HTTP ${r.status}`);
+  const arr = await r.json();
+  return Array.isArray(arr) ? arr : [];
+}
+async function handleFids(request, origin, env, ctx) {
+  // 只允許本站來源，保護 TDX 額度
+  const okOrigin = ALLOWED_ORIGINS.includes(origin) || (origin && origin.startsWith('http://192.168.'));
+  if (!okOrigin) return jsonResp({ ok: false, error: '來源不被允許' }, 403, origin);
+
+  const cache = caches.default;
+  const key = new Request('https://fids.internal/tpe-jx-v1');
+  const FRESH_MS = 30000;
+  const hit = await cache.match(key);
+
+  // 1) 夠新的快取直接回(省 TDX 請求)
+  if (hit) {
+    try {
+      const j = await hit.clone().json();
+      if (j && j.ts && (Date.now() - Date.parse(j.ts) < FRESH_MS)) {
+        return new Response(JSON.stringify(j), {
+          headers: { ...cors(origin), 'Content-Type': 'application/json; charset=utf-8', 'X-Proxy-By': 'worker-fids-cache' },
+        });
+      }
+    } catch (e) { /* 快取壞掉就重抓 */ }
+  }
+
+  // 2) 抓 TDX 最新
+  try {
+    const token = await getTdxToken(env);
+    const [departures, arrivals] = await Promise.all([tdxFids(token, 'Departure'), tdxFids(token, 'Arrival')]);
+    const payload = { ok: true, departures, arrivals, ts: new Date().toISOString() };
+    const body = JSON.stringify(payload);
+    // 存 last-good(長 TTL,供 TDX 掛掉時退路)
+    const store = new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
+    if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(key, store.clone())); else await cache.put(key, store.clone());
+    return new Response(body, {
+      headers: { ...cors(origin), 'Content-Type': 'application/json; charset=utf-8', 'X-Proxy-By': 'worker-fids-tdx' },
+    });
+  } catch (e) {
+    // 3) TDX 失敗 → 回最後一次成功(即使較舊),避免整個查不到
+    if (hit) {
+      const body = await hit.clone().text();
+      return new Response(body, {
+        headers: { ...cors(origin), 'Content-Type': 'application/json; charset=utf-8', 'X-Proxy-By': 'worker-fids-stale', 'X-Fids-Stale': '1' },
+      });
+    }
+    return jsonResp({ ok: false, error: 'FIDS 取得失敗: ' + String(e), departures: [], arrivals: [] }, 502, origin);
+  }
+}
+
+// ══════════════════════════════════════════
 // ✈️  LIDO 航班擷取 — /api/lido POST
 // ──────────────────────────────────────────
 // 取代舊的 Google Apps Script 端點（GAS 冷啟動 + UrlFetchApp 慢，
@@ -1125,6 +1205,11 @@ export default {
     // 🌦️ METAR/TAF（公開、免登入）
     if (url.pathname === '/api/wx' && request.method === 'GET') {
       return await handleWx(url, origin);
+    }
+
+    // 🛫 桃機 FIDS（直打 TDX，取代舊 GAS）
+    if (url.pathname === '/api/fids' && request.method === 'GET') {
+      return await handleFids(request, origin, env, ctx);
     }
 
     try {

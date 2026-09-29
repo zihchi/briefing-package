@@ -1129,24 +1129,28 @@
     var _fids=null;
     function getFids(){
       if(_fids) return Promise.resolve(_fids);
-      // 桃機 FIDS 這支 GAS 偶爾冷啟動/逾時/暫時錯誤 → 加逾時並自動重試一次;只有成功才快取。
-      // 失敗時 reject(不快取空值),讓呼叫端能把「連線逾時」與「查無此航班」分開顯示。
-      function once(ms){
+      // 桃機 FIDS：優先走自有 Worker(直打 TDX + 邊緣快取 + TDX 掛掉回最後成功結果),
+      //   失敗才退回舊 GAS。兩者皆加逾時;GAS 偶爾冷啟動故多試一次。成功才快取,失敗 reject。
+      var FIDS_WORKER = ELB_WORKER_URL + '/api/fids';
+      function once(url, ms){
         return new Promise(function(resolve, reject){
           var ctrl = new AbortController();
           var id = setTimeout(function(){ ctrl.abort(); }, ms);
-          fetch(FIDS_GAS, {cache:'no-store', signal:ctrl.signal})
+          fetch(url, {cache:'no-store', signal:ctrl.signal})
             .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
             .then(function(t){
               clearTimeout(id);
-              var j; try{ j = JSON.parse(t); }catch(e){ throw new Error('bad json'); } // GAS 偶爾回 HTML 錯誤頁
+              var j; try{ j = JSON.parse(t); }catch(e){ throw new Error('bad json'); } // 偶爾回 HTML 錯誤頁
               if(!j || (!Array.isArray(j.departures) && !Array.isArray(j.arrivals))) throw new Error('empty');
               resolve(j);
             })
             .catch(function(e){ clearTimeout(id); reject(e); });
         });
       }
-      return once(12000).catch(function(){ return once(16000); }).then(function(j){ _fids = j; return j; });
+      return once(FIDS_WORKER, 12000)
+        .catch(function(){ return once(FIDS_GAS, 12000); })   // worker 失敗 → 退回 GAS
+        .catch(function(){ return once(FIDS_GAS, 16000); })   // GAS 冷啟動 → 再試一次
+        .then(function(j){ _fids = j; return j; });
     }
 
     // ---- 外站時間退路：TDX 定期時刻表（表定 HH:MM，當地時間）----
