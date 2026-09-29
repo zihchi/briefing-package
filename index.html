@@ -1127,7 +1127,27 @@
           || (flights.length===1 ? flights[0] : null);
     }
     var _fids=null;
-    function getFids(){ if(_fids) return Promise.resolve(_fids); return fetch(FIDS_GAS,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){_fids=j;return j;}).catch(function(){return {departures:[],arrivals:[]};}); }
+    function getFids(){
+      if(_fids) return Promise.resolve(_fids);
+      // 桃機 FIDS 這支 GAS 偶爾冷啟動/逾時/暫時錯誤 → 加逾時並自動重試一次;只有成功才快取。
+      // 失敗時 reject(不快取空值),讓呼叫端能把「連線逾時」與「查無此航班」分開顯示。
+      function once(ms){
+        return new Promise(function(resolve, reject){
+          var ctrl = new AbortController();
+          var id = setTimeout(function(){ ctrl.abort(); }, ms);
+          fetch(FIDS_GAS, {cache:'no-store', signal:ctrl.signal})
+            .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+            .then(function(t){
+              clearTimeout(id);
+              var j; try{ j = JSON.parse(t); }catch(e){ throw new Error('bad json'); } // GAS 偶爾回 HTML 錯誤頁
+              if(!j || (!Array.isArray(j.departures) && !Array.isArray(j.arrivals))) throw new Error('empty');
+              resolve(j);
+            })
+            .catch(function(e){ clearTimeout(id); reject(e); });
+        });
+      }
+      return once(12000).catch(function(){ return once(16000); }).then(function(j){ _fids = j; return j; });
+    }
 
     // ---- 外站時間退路：TDX 定期時刻表（表定 HH:MM，當地時間）----
     var _sched={};
@@ -1304,6 +1324,9 @@
           renderFidsTimes(rec, tpeIsOrigin);
         }
         catch(e){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">FIDS 載入失敗</span>'; }
+      }).catch(function(){
+        // 連線逾時/GAS 暫時無回應(有別於「查無此航班」),提示可重試
+        document.getElementById('fd-fids').innerHTML='<span class="fd-note">桃機 FIDS 連線逾時或暫時無回應,請按「🔄 重新整理」再試一次</span>';
       });
     }
     sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else { panel.classList.remove('open'); clearSel(); } });

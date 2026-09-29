@@ -37,9 +37,11 @@ jobs:
           TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
           TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
         run: |
+          # 尚未設定 TDX secrets → 略過(視為成功、綠燈),不寄失敗通知。
+          # 設定 TDX_CLIENT_ID / TDX_CLIENT_SECRET 後(見 scripts/README-update-flights.md)即會自動更新。
           if [ -z "$TDX_CLIENT_ID" ] || [ -z "$TDX_CLIENT_SECRET" ]; then
-            echo "::error::缺少 TDX_CLIENT_ID / TDX_CLIENT_SECRET repo secrets。請見 scripts/README-update-flights.md 設定。"
-            exit 1
+            echo "::notice::尚未設定 TDX_CLIENT_ID / TDX_CLIENT_SECRET repo secrets,略過自動更新(不視為失敗)。"
+            exit 0
           fi
           node scripts/update-flights.mjs
 
