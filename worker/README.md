@@ -54,10 +54,33 @@ Published https://elb.<你的帳號>.workers.dev
 | GET    | `/api/aircraft/<tail>`        | 探測多個單機 endpoint，回報哪個能用 |
 | GET    | `/api/proxy?path=/elb/...`    | 萬用轉發器，給除錯用 |
 | GET    | `/api/aerodatabox?flight=JX123&date=2026-06-08` | 查非桃園機場 gate/terminal（AeroDataBox） |
+| GET    | `/api/wx?type=metar\|taf&ids=RCTP` | METAR/TAF（NOAA tgftp+AWC 逐站取較新） |
+| GET    | `/api/fids`                   | 桃機 FIDS 出/入境（星宇）→ `{departures,arrivals}`，直打 TDX + 邊緣快取 + last-good |
 | POST   | `/api/lido`                   | `{username, password, targetFlight, legId?, date?}` → LIDO 航班簡報（取代舊 GAS） |
 | GET    | `/api/lido-probe`             | 探針:測 Cloudflare 出口能不能連到 LIDO（只需 `LIDO_BASE_URL`） |
 
 所有需要登入的請求要帶 `X-Session-Token: <session>` header（`/api/lido` 例外，帳密放在 body）。
+
+---
+
+## 桃機 FIDS（`/api/fids`，取代舊 GAS）
+
+前端「航班資訊卡」的 gate/航廈/報到櫃檯/行李轉盤/起降時間原本走一支 Google Apps Script，
+偶爾冷啟動/逾時就查不到。現在 worker 直接打 **TDX 桃機 FIDS**（欄位與舊 GAS 完全相同），
+並：30 秒內重複請求走邊緣快取；**TDX 當掉時回「最後一次成功」的結果**。
+前端**先試 worker、打不通自動退回舊 GAS**，所以設 secret／部署前也不會壞。
+
+需要 TDX 免費金鑰（到 <https://tdx.transportdata.tw> 會員中心取得），設成 Worker secret：
+
+```bash
+cd ~/briefing-package/worker
+wrangler secret put TDX_CLIENT_ID       # 貼上你的 client_id
+wrangler secret put TDX_CLIENT_SECRET   # 貼上你的 client_secret
+wrangler deploy
+```
+
+部署後可驗證（應回 JSON、header `X-Proxy-By: worker-fids-tdx`）：
+`https://briefing-package.zihchi.workers.dev/api/fids`（需從允許的來源，直接開瀏覽器點也可）。
 
 ---
 
