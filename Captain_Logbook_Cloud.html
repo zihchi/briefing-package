@@ -463,7 +463,7 @@
             <div class="relative max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex gap-2 items-center mt-2">
                 <div class="relative flex-1">
                     <svg class="w-5 h-5 absolute left-3 top-2.5 text-[var(--jx-gray)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="Search Flight, Airport, or Pilot..." oninput="renderRecentFlights()">
+                    <input type="text" id="inp-search-recent" class="w-full bg-white border border-[var(--jx-divider)] rounded-xl py-2.5 pl-10 pr-4 text-[15px] focus:outline-none focus:border-[var(--jx-gold)] transition-colors shadow-sm" placeholder="搜尋航班、機場、機師(含暱稱)、機號…" oninput="renderRecentFlights()">
                 </div>
                 <button onclick="manualRefreshCloud()" class="bg-white border border-[var(--jx-divider)] text-[var(--jx-dark)] p-2.5 rounded-xl shadow-sm active:bg-gray-100 transition-all flex items-center justify-center">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -568,6 +568,9 @@
 
                         <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Hours by Duty</div>
                         <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-duty"></div>
+
+                        <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2 mt-6">Top A/C（飛機註冊編號）</div>
+                        <div class="ios-list rounded-xl overflow-hidden shadow-sm" id="stat-list-reg"></div>
                     </div>
 
                     <!-- Column 2 -->
@@ -1386,7 +1389,7 @@
             let tTot=0, tTo=0, tLdg=0, tMins=0, tNight=0, tPax=0;
             let aptSet = new Set(); 
             let typeMins = {}, dutyMins = {};
-            let pilotCounts = {}, arrCounts = {};
+            let pilotCounts = {}, arrCounts = {}, regCounts = {}, regTypes = {};
 
             filteredLogs.forEach(l => {
                 tTot++;
@@ -1402,6 +1405,11 @@
                 dutyMins[dutyType] = (dutyMins[dutyType] || 0) + (l.totalMins || 0);
 
                 if(l.arr) arrCounts[l.arr] = (arrCounts[l.arr] || 0) + 1;
+                const reg = String(l.reg || '').trim();
+                if (reg && reg !== 'N/A') {
+                    regCounts[reg] = (regCounts[reg] || 0) + 1;
+                    if (l.acft && l.acft !== 'N/A') regTypes[reg] = l.acft;
+                }
                 [l.pilot1, l.pilot2, l.pilot3].forEach(p => {
                     if (p && String(p).trim() !== '' && String(p).toLowerCase() !== 'self') {
                         pilotCounts[p] = (pilotCounts[p] || 0) + 1;
@@ -1490,8 +1498,11 @@
             let sortedPilots = Object.entries(pilotCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
             let sortedArr = Object.entries(arrCounts).map(([name, count]) => ({name, count})).sort((a, b) => b.count - a.count);
             
+            let sortedRegs = Object.entries(regCounts).map(([name, count]) => ({name, count, sub: regTypes[name] || ''})).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+            
             window.currentSortedPilots = sortedPilots;
             window.currentSortedAirports = sortedArr;
+            window.currentSortedRegs = sortedRegs;
 
             const renderTopList = (dataArr, containerId, title, emptyMsg, type) => {
                 const el = document.getElementById(containerId);
@@ -1502,9 +1513,11 @@
                 } else {
                     top5.forEach((item, idx) => {
                         let rankBadge = idx < 3 ? `<span class="bg-[var(--jx-gold)] text-white text-[9px] px-1.5 py-0.5 rounded ml-2 shadow-sm">Top ${idx+1}</span>` : '';
+                        const subTxt = item.sub ? `<span class="text-[10px] text-gray-400 ml-2">${escapeHtml(item.sub)}</span>` : '';
+                        const clickAttr = (type === 'pilots' || type === 'aircraft') ? `onclick="searchFlightsFor(this.dataset.q)" data-q="${escapeHtml(item.name)}"` : '';
                         html += `
-                            <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
-                                <span class="text-sm font-medium text-[var(--jx-gray)] flex items-center">${item.name} ${rankBadge}</span>
+                            <div class="flex justify-between items-center p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0 ${clickAttr ? 'cursor-pointer active:bg-gray-50 hover:bg-gray-50' : ''}" ${clickAttr}>
+                                <span class="text-sm font-medium text-[var(--jx-gray)] flex items-center">${escapeHtml(item.name)}${subTxt} ${rankBadge}</span>
                                 <span class="text-sm font-bold text-[var(--jx-dark)]">${item.count} <span class="text-[10px] font-normal text-gray-400">flights</span></span>
                             </div>
                         `;
@@ -1524,6 +1537,7 @@
 
             renderTopList(sortedPilots, 'stat-list-pilots', 'All Pilots Flown With', 'No pilots recorded.', 'pilots');
             renderTopList(sortedArr, 'stat-list-airports', 'All Destinations (Arrivals)', 'No arrivals recorded.', 'airports');
+            renderTopList(sortedRegs, 'stat-list-reg', 'All A/C（飛機註冊編號）', 'No aircraft recorded.', 'aircraft');
 
             renderChart(sortedLogs);
         }
@@ -1531,16 +1545,19 @@
         function showListModal(title, type) {
             document.getElementById('list-modal-title').textContent = title;
             const content = document.getElementById('list-modal-content');
-            let dataArr = type === 'pilots' ? window.currentSortedPilots : window.currentSortedAirports;
+            let dataArr = type === 'pilots' ? window.currentSortedPilots
+                        : type === 'aircraft' ? window.currentSortedRegs
+                        : window.currentSortedAirports;
+            const clickable = (type === 'pilots' || type === 'aircraft');
             
             let html = '<div class="ios-list shadow-sm my-2 md:rounded-xl md:border-x-0">';
             dataArr.forEach((item, index) => {
                 let rankBadge = index < 3 ? `<span class="bg-[var(--jx-gold)] text-white text-[9px] px-1.5 py-0.5 rounded ml-2 shadow-sm">Top ${index+1}</span>` : '';
                 html += `
-                    <div class="ios-list-item bg-white flex justify-between items-center">
+                    <div class="ios-list-item bg-white flex justify-between items-center ${clickable ? 'cursor-pointer active:bg-gray-50 hover:bg-gray-50' : ''}" ${clickable ? `onclick="searchFlightsFor(this.dataset.q)" data-q="${escapeHtml(item.name)}"` : ''}>
                         <span class="text-[15px] font-medium text-[var(--jx-gray)] flex items-center">
                             <span class="w-6 text-[var(--jx-gold-dark)] font-bold text-xs">${index + 1}.</span> 
-                            ${item.name} ${rankBadge}
+                            ${escapeHtml(item.name)}${item.sub ? `<span class="text-[10px] text-gray-400 ml-2">${escapeHtml(item.sub)}</span>` : ''} ${rankBadge}
                         </span>
                         <span class="text-[15px] font-bold text-[var(--jx-dark)]">${item.count}</span>
                     </div>
@@ -1691,6 +1708,15 @@
             return String(rawName).trim();
         }
         
+        // 從統計頁點機師/飛機 → 跳到「最近航班」並列出所有相關航班
+        function searchFlightsFor(q) {
+            document.getElementById('list-modal').classList.add('hidden');
+            const input = document.getElementById('inp-search-recent');
+            if (input) input.value = q || '';
+            switchTab('recent');
+            window.scrollTo(0, 0);
+        }
+
         function renderRecentFlights() {
             const container = document.getElementById('recent-list-container');
             const searchInput = document.getElementById('inp-search-recent');
@@ -1699,19 +1725,32 @@
             let validLogs = flightLogs.filter(l => l.date && l.dep && l.arr);
             
             if(query) {
+                // 機號比對忽略「-」與空白：輸入 58201、B58201、b-58201 都找得到 B-58201
+                const normReg = v => String(v || '').toLowerCase().replace(/[\s-]/g, '');
+                const regQuery = normReg(query);
+                // 機師：從資料庫找出「姓名或暱稱」含關鍵字的人，航班上記的是這些人就算符合
+                const pilotHits = (Array.isArray(dbPilots) ? dbPilots : []).filter(p =>
+                    String(p.name || '').toLowerCase().includes(query) ||
+                    String(p.nickname || '').toLowerCase().includes(query)
+                ).flatMap(p => [p.formattedName, p.name].filter(Boolean).map(n => String(n).toLowerCase()));
+                const pilotMatch = v => {
+                    const s = String(v || '').toLowerCase();
+                    if (!s) return false;
+                    return s.includes(query) || pilotHits.includes(s);
+                };
                 validLogs = validLogs.filter(l => {
                     const fltMatch = String(l.flt).toLowerCase().includes(query);
-                    const p1Match = String(l.pilot1).toLowerCase().includes(query);
-                    const p2Match = String(l.pilot2).toLowerCase().includes(query);
-                    const p3Match = String(l.pilot3).toLowerCase().includes(query);
+                    const crewMatch = pilotMatch(l.pilot1) || pilotMatch(l.pilot2) || pilotMatch(l.pilot3);
                     const depMatch = String(l.dep).toLowerCase().includes(query);
                     const arrMatch = String(l.arr).toLowerCase().includes(query);
-                    return fltMatch || p1Match || p2Match || p3Match || depMatch || arrMatch;
+                    const regMatch = regQuery !== '' && normReg(l.reg).includes(regQuery);
+                    const acftMatch = String(l.acft || '').toLowerCase().includes(query);
+                    return fltMatch || crewMatch || depMatch || arrMatch || regMatch || acftMatch;
                 });
             }
 
             if(validLogs.length === 0) { 
-                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)] font-medium">No flights found matching your search.</p>'; 
+                container.innerHTML = '<p class="text-center mt-12 text-[var(--jx-gray)] font-medium">找不到符合的航班</p>'; 
                 return; 
             }
 
@@ -1723,6 +1762,11 @@
             });
 
             let finalHtml = '';
+            if (query) {
+                let qMins = 0;
+                validLogs.forEach(l => { qMins += l.totalMins || 0; });
+                finalHtml += `<div class="px-4 py-2 text-[13px] text-[var(--jx-gray)] font-medium flex justify-between items-center"><span>搜尋「${escapeHtml(searchInput.value.trim())}」：共 <span class="font-bold text-[var(--jx-dark)]">${validLogs.length}</span> 班</span><span class="font-bold text-[var(--jx-gold-dark)]">${minsToStr(qMins)}</span></div>`;
+            }
             for(const [monthYear, logs] of Object.entries(groups)) {
                 let monthTotalMins = 0; let monthTakeoffs = 0; let monthLandings = 0; let monthPax = 0;
                 logs.forEach(l => {
