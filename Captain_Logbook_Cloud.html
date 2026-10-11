@@ -557,6 +557,10 @@
             </div>
             
             <div class="mt-8 px-4 mb-8 md:max-w-3xl lg:max-w-5xl mx-auto">
+                <!-- 累計飛時限制（滾動區間，以今天 UTC 為止；不受上方時間篩選影響） -->
+                <div class="text-xs font-semibold text-[var(--jx-gray)] uppercase mb-2 ml-2">Block Time Limits（累計飛時限制）</div>
+                <div class="ios-list rounded-xl overflow-hidden shadow-sm mb-6" id="stat-block-limits"></div>
+
                 <div class="md:grid md:grid-cols-2 lg:grid-cols-2 md:gap-x-8 md:gap-y-0">
                     <!-- Column 1 -->
                     <div>
@@ -1540,6 +1544,61 @@
             renderTopList(sortedRegs, 'stat-list-reg', 'All A/C（飛機註冊編號）', 'No aircraft recorded.', 'aircraft');
 
             renderChart(sortedLogs);
+            renderBlockLimits();
+        }
+
+        // 累計飛時限制：連續 7 天 / 30 天 / 90 天 / 12 個月（皆含今天，日期以 UTC 計）
+        const BLOCK_LIMITS = [
+            { label: '7 天',   days: 7,   limitH: 32 },
+            { label: '30 天',  days: 30,  limitH: 120 },
+            { label: '90 天',  days: 90,  limitH: 300 },
+            { label: '12 個月', months: 12, limitH: 1000 }
+        ];
+
+        function renderBlockLimits() {
+            const el = document.getElementById('stat-block-limits');
+            if (!el) return;
+            const now = new Date();
+            const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            const ymd = d => d.toISOString().slice(0, 10);
+            const todayStr = ymd(today);
+
+            el.innerHTML = BLOCK_LIMITS.map(item => {
+                const start = new Date(today);
+                if (item.months) {
+                    start.setUTCMonth(start.getUTCMonth() - item.months);
+                    start.setUTCDate(start.getUTCDate() + 1);
+                } else {
+                    start.setUTCDate(start.getUTCDate() - (item.days - 1));
+                }
+                const startStr = ymd(start);
+                let mins = 0;
+                flightLogs.forEach(l => {
+                    if (l.date && l.date >= startStr && l.date <= todayStr) mins += l.totalMins || 0;
+                });
+                const limitMins = item.limitH * 60;
+                const pct = limitMins > 0 ? mins / limitMins * 100 : 0;
+                const remain = limitMins - mins;
+                // 綠：< 80%；橘：80–100%；紅：超過限制
+                const color = pct > 100 ? '#D93025' : pct >= 80 ? '#E8A33D' : '#34A853';
+                const remainTxt = remain >= 0
+                    ? `剩 ${minsToStr(remain)}`
+                    : `<span style="color:#D93025">超出 ${minsToStr(-remain)}</span>`;
+                const fmt = d => `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+                return `
+                    <div class="p-3 border-b border-[var(--jx-divider)] bg-white last:border-b-0">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-[var(--jx-dark)]">${item.label} <span class="text-[10px] text-gray-400 ml-2">${fmt(start)}–${fmt(today)}</span></span>
+                            <span class="text-sm font-bold text-[var(--jx-dark)]"><span style="color:${color}">${minsToStr(mins)}</span> <span class="text-[10px] font-normal text-gray-400">/ ${item.limitH}:00</span></span>
+                        </div>
+                        <div style="height:6px;background:#EEEAE4;border-radius:3px;overflow:hidden;margin-top:6px">
+                            <div style="height:100%;width:${Math.min(pct, 100).toFixed(1)}%;background:${color};border-radius:3px"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-[var(--jx-gray)] font-medium" style="margin-top:4px">
+                            <span>${pct.toFixed(1)}%</span><span>${remainTxt}</span>
+                        </div>
+                    </div>`;
+            }).join('');
         }
 
         function showListModal(title, type) {
