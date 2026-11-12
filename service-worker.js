@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v130';
+const CACHE_NAME = 'briefing-v131';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -75,6 +75,7 @@ const BYPASS_HOSTNAMES = [
   'docs.google.com',
   'pilotstarspace.starlux-airlines.com',
   'elb.starlux-airlines.com',
+  'sjx.ultramain.systems',
   'sjx.lido.aero',
   'flight-plan-editor.weathernews.com',
   'skyinfo.jp',
