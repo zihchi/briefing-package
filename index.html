@@ -259,10 +259,13 @@
     .wx-scrub-track:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
     .wx-tl-bar { position: relative; display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: #eee; }
     .wx-tl-seg { flex: 1; height: 100%; position: relative; }
-    .wx-tl-seg.tempo::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, var(--t) 0 4px, transparent 4px 8px); }
+    .wx-tempo-lanes { position: relative; margin-bottom: 4px; }
+    .wx-tempo-blk { position: absolute; height: 20px; border-radius: 6px; overflow: hidden; background: repeating-linear-gradient(135deg, var(--c) 0 5px, color-mix(in srgb, var(--c) 45%, #fff) 5px 10px); box-shadow: inset 0 0 0 1px var(--c); display: flex; align-items: center; }
+    .wx-tempo-blk span { padding: 0 4px; font-size: 10px; font-weight: 800; color: #fff; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 3px rgba(0,0,0,.55); }
+    .wx-tl-key i.hatch { background: repeating-linear-gradient(135deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 45%, #fff) 3px 6px); }
     .wx-tl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.9); }
     .wx-scrub-cursor { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--text); border-radius: 2px; box-shadow: 0 0 0 2px #fff; pointer-events: none; }
-    .wx-scrub-cursor::before { content: ""; position: absolute; left: 50%; top: -5px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px #fff; }
+    .wx-scrub-cursor::before { content: ""; position: absolute; left: 50%; bottom: -5px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px #fff; }
     .wx-tl-mins { position: relative; height: 5px; }
     .wx-tl-mins i { position: absolute; top: 0; height: 4px; background: #b42d20; border-radius: 2px; }
     .wx-tl-ruler { position: relative; height: 16px; font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
