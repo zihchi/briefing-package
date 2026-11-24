@@ -86,6 +86,8 @@
 
     /* unibrief 即時圖（雷達／衛星／地面分析）*/
     .ub-chart { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); background: #0b1020; margin-top: 4px; }
+    .ub-fail { display: block; width: 100%; margin: 4px 0 0; padding: 28px 12px; border: 1px dashed var(--border); border-radius: 8px; background: #faf6f1; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .ub-fail[hidden] { display: none; }
 
     /* Windy 四宮格：緊湊 2×2（iPad 直向以上即並列），iframe 較矮以減少留白 */
     .windy-4grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -1055,13 +1057,44 @@
   </div>
 
   <script>
-    // 即時圖：固定網址加時間戳抓最新
+    // 即時圖：固定網址加時間戳抓最新。
+    // 來源偶爾慢或暫時失敗 → 自動重試 2 次（3 秒、10 秒後），仍失敗就顯示「點此重試」，不留破圖。
+    // 每 10 分鐘自動更新一次（頁面在背景時不抓，回到前景再補抓）。
+    var UB_IDS=['ubRadar','ubSat','ubSurface'], UB_RETRY=[3000,10000], UB_REFRESH=10*60*1000;
+    function ubNote(el, show){
+      var n=el.nextElementSibling;
+      if(!n || !n.classList || !n.classList.contains('ub-fail')){
+        n=document.createElement('button'); n.type='button'; n.className='ub-fail';
+        n.textContent='⚠️ 圖片暫時載入失敗，點此重試';
+        n.addEventListener('click', function(){ reloadImg(el.id); });
+        el.parentNode.insertBefore(n, el.nextSibling);
+      }
+      n.hidden=!show; el.style.display=show?'none':'';
+    }
     function reloadImg(id){
       var el=document.getElementById(id); if(!el) return;
       var base=el.getAttribute('data-base')||el.src.split('?')[0];
+      el._ubTry=0; el._ubLoaded=Date.now();
+      if(!el._ubBound){
+        el._ubBound=true;
+        el.addEventListener('load', function(){ ubNote(el,false); });
+        el.addEventListener('error', function(){
+          var t=el._ubTry||0;
+          if(t<UB_RETRY.length){ el._ubTry=t+1; setTimeout(function(){ el.src=base+'?'+Date.now(); }, UB_RETRY[t]); }
+          else ubNote(el,true);
+        });
+      }
+      ubNote(el,false);
       el.src=base+'?'+Date.now();
     }
-    (function(){ ['ubRadar','ubSat','ubSurface'].forEach(function(id){ reloadImg(id); }); })();
+    (function(){
+      UB_IDS.forEach(function(id){ reloadImg(id); });
+      setInterval(function(){ if(!document.hidden) UB_IDS.forEach(reloadImg); }, UB_REFRESH);
+      document.addEventListener('visibilitychange', function(){
+        if(document.hidden) return;
+        UB_IDS.forEach(function(id){ var el=document.getElementById(id); if(el && Date.now()-(el._ubLoaded||0)>UB_REFRESH) reloadImg(id); });
+      });
+    })();
   </script>
 
   <div class="section">

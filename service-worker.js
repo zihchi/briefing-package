@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v136';
+const CACHE_NAME = 'briefing-v137';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -72,6 +72,10 @@ const BYPASS_HOSTNAMES = [
   'tenki.lbw.jp',
   'data.jma.go.jp',
   'app.cwa.gov.tw',
+  // 即時天氣圖（雷達／紅外線衛星由 unibrief 即時產生，常超過 2 秒；地面分析圖來自氣象署）。
+  // 不可走下方 2 秒逾時：逾時會回 408 → 圖片顯示「沒抓到」。直接交給瀏覽器載入。
+  'unibrief.de.r.appspot.com',
+  'www.cwa.gov.tw',
   'docs.google.com',
   'pilotstarspace.starlux-airlines.com',
   'elb.starlux-airlines.com',
