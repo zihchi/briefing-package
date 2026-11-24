@@ -212,49 +212,6 @@ function calculateReportAge(rawText) {
   return Math.max(0, Math.floor(diffMs / 60000));
 }
 
-function formatColorTAF(rawTaf) {
-  if (!rawTaf) return `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left; ${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50;">目前無有效或無法載入 TAF 報文</div>`;
-  
-  const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
-  const flatTaf = rawTaf.replace(/\s+/g, ' ').trim();
-  const markedTaf = flatTaf.replace(/\b(TEMPO|BECMG|FM[0-9]{6}|PROB[0-9]{2})\b/g, '|||$1');
-  const lines = markedTaf.split('|||');
-
-  let prevailingVis = 999; let prevailingCeil = 99999;
-  let htmlOutput = `<div style="background-color: #ebedef; padding: 12px; border-radius: 6px; text-align: left;">`;
-
-  lines.forEach((line, index) => {
-      const cleanLine = line.trim();
-      if (!cleanLine) return;
-
-      let current = parseWeatherElements(cleanLine, prevailingVis, prevailingCeil);
-      const cat = getFlightCategory(current.vis, current.ceil);
-      const color = catColors[cat] || catColors['unk'];
-      const catLabel = cat.toUpperCase();
-      
-      const emojis = getWeatherEmojis(cleanLine);
-      const emojiHtml = emojis ? `<span style="font-size: 13px; margin-right: 6px; vertical-align: middle;">${emojis}</span>` : '';
-
-      let isMainBody = false;
-      if (index === 0 || cleanLine.startsWith('FM') || cleanLine.startsWith('BECMG')) {
-          prevailingVis = current.vis; prevailingCeil = current.ceil;
-          isMainBody = true;
-      }
-
-      const highlightStyle = isMainBody ? 'background-color: #cbd5e1; padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);' : '';
-
-      htmlOutput += `
-          <div style="border-left: 4px solid ${color}; padding-left: 10px; margin-bottom: 8px; line-height: 1.6;">
-              <span style="display: inline-block; background-color: ${color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: ${emojis ? '4px' : '8px'}; vertical-align: middle;">${catLabel}</span>
-              ${emojiHtml}
-              <span style="${MONOSPACE_FONT} font-size: 13.5px; color: #2c3e50; vertical-align: middle; word-break: break-word; ${highlightStyle}">${highlightWxKeywords(cleanLine)}</span>
-          </div>
-      `;
-  });
-  htmlOutput += `</div>`;
-  return htmlOutput;
-}
-
 // ------------------------------------------
 // 🚀 面板切換與生命週期管理
 // ------------------------------------------
@@ -512,14 +469,11 @@ function calculatePopupAtisAge(rawText) {
     let atisTotalMins = atisHr * 60 + atisMin;
     let currTotalMins = currHr * 60 + currMin;
     
-    if (currTotalMins < atisTotalMins && (atisHr >= 22 && currHr <= 2)) {
-        currTotalMins += 24 * 60;
-    }
+    // 跨 UTC 午夜：以 24 小時取餘數計算（例：ATIS 2130Z、現在 0010Z → 160 分鐘）
+    let diffMins = ((currTotalMins - atisTotalMins) % 1440 + 1440) % 1440;
+    if (diffMins > 1435) diffMins = 0; // ATIS 時間比本機時鐘快幾分鐘：視為剛發布
     
-    let diffMins = currTotalMins - atisTotalMins;
-    if (diffMins < 0 && diffMins > -5) diffMins = 0; 
-    
-    if (diffMins < 0 || diffMins > 1440) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">時效異常</span>`;
+    if (diffMins > 720) return `<span style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: bold;">時效異常</span>`;
     
     return ageBadgeHtml(diffMins);
 }
@@ -723,7 +677,9 @@ function openWxSheet(airport, rawMetarText, rawTafText) {
     const body = document.getElementById('wx-sheet-body');
     if (!sheet || !body) return;
     window._wxSheetAirport = airport; // 記住目前開啟的機場，供「重新取得」用
+    window._wxSheetMetar = rawMetarText || ''; window._wxSheetTaf = rawTafText || '';
     body.innerHTML = buildAirportPopupHtml(airport, rawMetarText, rawTafText);
+    wxBindPanel(body, rawTafText);
     body.scrollTop = 0;
     sheet.classList.add('open');
     updateWxLocalClock(); // 立即填當地時鐘，不等下一個 setInterval tick
@@ -774,78 +730,325 @@ window.refetchAirportWx = async function(icao) {
 };
 
 // ------------------------------------------
-// ✈️ 氣象內容組件產生器（原 popup HTML，現在填入大面板）
+// 🧭 TAF/METAR 解析 + 警戒線（地圖卡片、機場面板、機隊總覽共用）
+// ------------------------------------------
+const WX_RANK = { VFR: 0, MVFR: 1, IFR: 2, LIFR: 3 };
+const WX_CAT_COLOR = { VFR: '#27ae60', MVFR: '#2f80c7', IFR: '#d9473a', LIFR: '#8e44ad', UNK: '#95a5a6' };
+const WX_MINS_DEFAULT = { ceil: 1000, vis: 3000, wind: 30, ts: true };
+let WX_MINS = { ...WX_MINS_DEFAULT };
+try { const s = JSON.parse(localStorage.getItem('wx-alert-lines') || 'null'); if (s) WX_MINS = { ...WX_MINS, ...s }; } catch (e) { /* 無痕模式等：用預設值 */ }
+
+const wxPad = n => String(n).padStart(2, '0');
+const wxEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// DD + HH(+MM) → Date（以現在的年月推算，跨月時往前/往後一個月）
+function wxDayDate(dd, hh, mm = 0) {
+    const now = new Date();
+    let y = now.getUTCFullYear(), mo = now.getUTCMonth();
+    const today = now.getUTCDate();
+    if (dd - today > 15) mo -= 1; else if (today - dd > 15) mo += 1;
+    return new Date(Date.UTC(y, mo, dd, hh, mm)); // HH=24 會自動進位到隔天 00Z
+}
+function wxTokens(raw) {
+    // 美式能見度「1 1/2SM」併成一個 token
+    return String(raw || '').replace(/\s+/g, ' ').trim().replace(/\b(\d) (\d\/\dSM)\b/g, '$1+$2').split(' ').filter(Boolean);
+}
+const WX_WX_RE = /^(\+|-|VC)?(MI|BC|PR|DR|BL|SH|TS|FZ)?(DZ|RA|SN|SG|IC|PL|GR|GS|BR|FG|FU|VA|DU|SA|HZ|SQ|FC|SS|DS|UP){0,3}$/;
+const WX_PHEN_RE = /(TS|DZ|RA|SN|SG|IC|PL|GR|GS|BR|FG|FU|VA|DU|SA|HZ|SQ|FC|SS|DS|UP)/;
+
+// 解析一組天氣要素（METAR 本體或 TAF 的一個分組）。沒出現的欄位保持 null，方便 BECMG/TEMPO 疊加
+function wxParseGroup(tokens) {
+    const s = { wind: null, vis: null, clouds: null, wx: null };
+    for (const tk of tokens) {
+        let m;
+        if ((m = tk.match(/^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?(KT|MPS)$/))) {
+            const f = m[4] === 'MPS' ? 1.944 : 1;
+            s.wind = { dir: m[1] === 'VRB' ? null : +m[1], spd: Math.round(+m[2] * f), gust: m[3] ? Math.round(+m[3] * f) : null };
+            continue;
+        }
+        if (tk === 'CAVOK') { s.vis = 9999; s.clouds = []; s.wx = []; continue; }
+        if ((m = tk.match(/^(\d{4})(NDV)?$/))) { if (s.vis == null) s.vis = +m[1]; continue; }
+        if ((m = tk.match(/^(P|M)?(\d+)?\+?(?:(\d)\/(\d))?SM$/)) && (m[2] || m[3])) {
+            const mi = (m[2] ? +m[2] : 0) + (m[3] ? +m[3] / +m[4] : 0);
+            const meters = Math.round(mi * 1609);
+            if (s.vis == null) s.vis = (m[1] === 'P' || meters >= 9999) ? 9999 : meters;
+            continue;
+        }
+        if ((m = tk.match(/^(FEW|SCT|BKN|OVC|VV)(\d{3})(CB|TCU|\/\/\/)?$/))) { (s.clouds = s.clouds || []).push({ cov: m[1], h: +m[2] * 100, type: (m[3] === 'CB' || m[3] === 'TCU') ? m[3] : '' }); continue; }
+        if (/^(NSC|SKC|CLR|NCD)$/.test(tk)) { s.clouds = []; continue; }
+        if (tk === 'NSW') { s.wx = []; continue; }
+        if (WX_WX_RE.test(tk) && WX_PHEN_RE.test(tk)) { (s.wx = s.wx || []).push(tk); }
+    }
+    return s;
+}
+const wxMerge = (base, g) => ({
+    wind: g.wind || (base && base.wind) || null,
+    vis: g.vis != null ? g.vis : (base ? base.vis : null),
+    clouds: g.clouds != null ? g.clouds : (base ? base.clouds : null),
+    wx: g.wx != null ? g.wx : ((base && base.wx) || [])
+});
+const wxCeil = st => { const c = ((st && st.clouds) || []).filter(c => /BKN|OVC|VV/.test(c.cov)); return c.length ? Math.min(...c.map(c => c.h)) : 99999; };
+const wxHasTS = st => ((st && st.wx) || []).some(w => w.includes('TS'));
+function wxCat(st) {
+    if (!st) return 'UNK';
+    const c = wxCeil(st), v = st.vis == null ? 9999 : st.vis;
+    if (c < 500 || v < 1600) return 'LIFR';
+    if (c < 1000 || v < 4800) return 'IFR';
+    if (c <= 3000 || v <= 8000) return 'MVFR';
+    return 'VFR';
+}
+// 回傳「低於警戒線」的原因陣列（空陣列＝在警戒線內）
+function wxAlerts(st) {
+    if (!st) return [];
+    const r = [], c = wxCeil(st), v = st.vis == null ? 9999 : st.vis, w = st.wind ? (st.wind.gust || st.wind.spd) : 0;
+    if (c < WX_MINS.ceil) r.push(`雲幕 ${c}'`);
+    if (v < WX_MINS.vis) r.push(`能見度 ${v} m`);
+    if (w > WX_MINS.wind) r.push(`${st.wind.gust ? '陣風' : '風速'} ${w} kt`);
+    if (WX_MINS.ts && wxHasTS(st)) r.push('雷雨');
+    return r;
+}
+
+function wxParseMetar(raw) {
+    const tk = wxTokens(raw);
+    let i = tk.findIndex(t => /^\d{6}Z$/.test(t));
+    i = i < 0 ? 0 : i + 1;
+    const body = [];
+    for (; i < tk.length; i++) { if (/^(RMK|TEMPO|BECMG|NOSIG)$/.test(tk[i])) break; body.push(tk[i]); }
+    const st = wxParseGroup(body); st.wx = st.wx || [];
+    return st;
+}
+
+function wxParseTaf(raw) {
+    if (!raw) return null;
+    try {
+        const tk = wxTokens(raw);
+        const vi = tk.findIndex(t => /^\d{4}\/\d{4}$/.test(t));
+        if (vi < 0) return null;
+        const dh = s => wxDayDate(+s.slice(0, 2), +s.slice(2, 4));
+        const issuedTok = tk.slice(0, vi).find(t => /^\d{6}Z$/.test(t));
+        const issued = issuedTok ? wxDayDate(+issuedTok.slice(0, 2), +issuedTok.slice(2, 4), +issuedTok.slice(4, 6)) : null;
+        const [vs, ve] = tk[vi].split('/').map(dh);
+        if (!(ve > vs)) return null;
+        const head = tk.slice(0, vi + 1).join(' ');
+        const groups = [];
+        let cur = { type: 'BASE', start: vs, end: ve, words: [] };
+        for (let i = vi + 1; i < tk.length; i++) {
+            const t = tk[i]; let m;
+            if (t === 'RMK') break;
+            if ((m = t.match(/^FM(\d{2})(\d{2})(\d{2})$/))) { groups.push(cur); cur = { type: 'FM', start: wxDayDate(+m[1], +m[2], +m[3]), end: ve, words: [t] }; continue; }
+            if (/^PROB\d{2}$/.test(t)) {
+                groups.push(cur); cur = { type: t, words: [t] };
+                if (tk[i + 1] === 'TEMPO') { cur.type += ' TEMPO'; cur.words.push(tk[++i]); }
+                if (/^\d{4}\/\d{4}$/.test(tk[i + 1] || '')) { const p = tk[++i]; cur.words.push(p); [cur.start, cur.end] = p.split('/').map(dh); }
+                continue;
+            }
+            if (t === 'BECMG' || t === 'TEMPO' || t === 'INTER') {
+                groups.push(cur); cur = { type: t === 'INTER' ? 'TEMPO' : t, words: [t] };
+                if (/^\d{4}\/\d{4}$/.test(tk[i + 1] || '')) { const p = tk[++i]; cur.words.push(p); [cur.start, cur.end] = p.split('/').map(dh); }
+                continue;
+            }
+            cur.words.push(t);
+        }
+        groups.push(cur);
+        const valid = groups.filter(g => g.start && g.end);
+        valid.forEach((g, k) => {
+            g.st = wxParseGroup(g.words);
+            if (g.type === 'FM') { const nx = valid.slice(k + 1).find(x => x.type === 'FM'); if (nx) g.end = nx.start; }
+        });
+        // 每組「有效狀態」：FM/BASE 為完整狀態，BECMG/TEMPO 疊在當時的主要情況上
+        let prevailing = null;
+        valid.forEach(g => {
+            g.eff = (g.type === 'BASE' || g.type === 'FM') ? { ...g.st, wx: g.st.wx || [] } : wxMerge(prevailing, g.st);
+            if (!/TEMPO|PROB/.test(g.type)) prevailing = g.eff;
+        });
+        // 逐小時：主要情況（BASE/FM/BECMG）與暫時情況（TEMPO/PROB，取最差）
+        const hours = [];
+        for (let t = vs.getTime(); t < ve.getTime(); t += 3600e3) {
+            let st = null;
+            for (const g of valid) {
+                if (g.type === 'BASE') st = g.eff;
+                else if ((g.type === 'FM' || g.type === 'BECMG') && t >= g.start.getTime()) st = g.type === 'FM' ? g.eff : wxMerge(st, g.st);
+            }
+            let tempo = null, tempoType = null;
+            for (const g of valid) {
+                if (/TEMPO|PROB/.test(g.type) && t >= g.start.getTime() && t < g.end.getTime()) {
+                    const ts = wxMerge(st, g.st);
+                    if (!tempo || WX_RANK[wxCat(ts)] > WX_RANK[wxCat(tempo)] || wxAlerts(ts).length > wxAlerts(tempo).length) { tempo = ts; tempoType = g.type; }
+                }
+            }
+            hours.push({ t: new Date(t), st, tempo, tempoType });
+        }
+        return { head, issued, vs, ve, groups: valid, hours };
+    } catch (e) {
+        console.warn('TAF 解析失敗:', e, raw);
+        return null;
+    }
+}
+
+// 一個機場的完整分析（地圖卡片、面板、總覽表共用）
+function wxAnalyze(rawMetar, rawTaf) {
+    const nowT = Date.now();
+    const m = rawMetar ? wxParseMetar(rawMetar) : null;
+    const t = wxParseTaf(rawTaf);
+    const a = { m, t, cat: m ? wxCat(m) : 'UNK', mAlerts: m ? wxAlerts(m) : [], ts: m ? wxHasTS(m) : false,
+                ageMin: rawMetar ? calculateReportAge(rawMetar) : null, worst: { cat: 'VFR', at: null, tempo: false }, fails: [] };
+    if (t) {
+        t.hours.filter(h => h.t.getTime() + 3600e3 > nowT && h.t.getTime() < nowT + 12 * 3600e3).forEach(h => {
+            [[h.st, false], [h.tempo, true]].forEach(([st, isT]) => {
+                if (st && WX_RANK[wxCat(st)] > WX_RANK[a.worst.cat]) a.worst = { cat: wxCat(st), at: h.t, tempo: isT };
+            });
+        });
+        // 未來低於警戒線的時段（連續同原因的小時合併）
+        t.hours.forEach(h => {
+            if (h.t.getTime() + 3600e3 <= nowT) return;
+            const r1 = wxAlerts(h.st), r2 = h.tempo ? wxAlerts(h.tempo) : [];
+            const r = r1.length ? r1 : r2, isT = !r1.length && r2.length > 0;
+            if (!r.length) return;
+            const key = r.join('、') + (isT ? '|T' : ''), last = a.fails[a.fails.length - 1];
+            const end = new Date(h.t.getTime() + 3600e3);
+            if (last && last.key === key && last.end.getTime() === h.t.getTime()) last.end = end;
+            else a.fails.push({ key, why: r.join('、'), tempo: isT, start: h.t, end });
+        });
+    }
+    a.score = (WX_RANK[a.cat] ?? -1) * 10 + (a.mAlerts.length ? 25 : 0) + WX_RANK[a.worst.cat] * 3 + (a.fails.length ? 5 : 0) + (a.ts ? 4 : 0);
+    return a;
+}
+
+// ---------- 顯示用格式 ----------
+const wxZ = d => wxPad(d.getUTCHours()) + 'Z';
+const wxZRange = (a, b) => `${wxPad(a.getUTCHours())}–${wxPad(b.getUTCHours())}Z`;
+const wxFmtVis = v => v == null ? '—' : v >= 9999 ? '10 km+' : `${v} m`;
+function wxFmtCeil(st) {
+    const c = ((st && st.clouds) || []).filter(c => /BKN|OVC|VV/.test(c.cov));
+    if (!c.length) return '無雲幕';
+    const lo = c.reduce((x, y) => (x.h <= y.h ? x : y));
+    return `${lo.cov} ${lo.h}'${lo.type ? ' ' + lo.type : ''}`;
+}
+const wxFmtWind = w => !w ? '—' : `${w.dir == null ? 'VRB' : String(w.dir).padStart(3, '0') + '°'} ${w.spd}${w.gust ? 'G' + w.gust : ''} kt`;
+function wxSummary(st) {
+    if (!st) return '—';
+    const cb = (st.clouds || []).find(c => c.type);
+    const ceil = wxFmtCeil(st);
+    return [wxFmtVis(st.vis), ceil + (cb && !ceil.includes(cb.type) ? ` · ${cb.cov} ${cb.h}' ${cb.type}` : ''), wxFmtWind(st.wind), (st.wx || []).join(' ')].filter(Boolean).join(' · ');
+}
+const wxBadge = (cat, extra = '') => `<span class="wx-badge" style="background:${WX_CAT_COLOR[cat] || WX_CAT_COLOR.UNK}">${cat}${extra}</span>`;
+function wxArrow(w) {
+    if (!w || w.dir == null) return '<svg class="wx-arrow" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+    return `<svg class="wx-arrow" viewBox="0 0 12 12" aria-hidden="true" style="transform:rotate(${w.dir + 180}deg)"><path d="M6 1 L10 10 L6 7.6 L2 10 Z" fill="currentColor"/></svg>`;
+}
+function wxAgeChip(mins) {
+    if (mins == null) return '';
+    const cls = mins <= 30 ? 'fresh' : mins <= 60 ? 'mid' : 'old';
+    const txt = mins < 60 ? `${mins} 分鐘前` : `${Math.floor(mins / 60)} 小時 ${mins % 60} 分前`;
+    return `<span class="wx-age ${cls}">${txt}</span>`;
+}
+function wxVerdictHtml(a) {
+    if (!a.m && !a.t) return '';
+    if (!a.fails.length && !a.mAlerts.length) {
+        const until = a.t ? `TAF 至 ${wxPad(a.t.ve.getUTCDate())}日 ${wxZ(a.t.ve)} 都在警戒線內` : '（無 TAF，只判斷 METAR）';
+        return `<div class="wx-verdict ok"><span>✓</span><div><b>在警戒線內</b>${until}</div></div>`;
+    }
+    const cur = a.mAlerts.length ? `現在 METAR：${a.mAlerts.join('、')}` : '';
+    const list = a.fails.slice(0, 3).map(f => `${f.tempo ? 'TEMPO ' : ''}${wxZRange(f.start, f.end)}：${f.why}`).join('<br>');
+    return `<div class="wx-verdict bad"><span>⚠️</span><div><b>低於警戒線</b>${[cur, list].filter(Boolean).join('<br>')}</div></div>`;
+}
+// 時間軸色段：主要情況上色；TEMPO 若更差則畫斜線
+function wxTimelineSegs(hours) {
+    return hours.map(h => {
+        const c = wxCat(h.st), tc = h.tempo ? wxCat(h.tempo) : null;
+        const worse = tc && (WX_RANK[tc] > WX_RANK[c] || wxAlerts(h.tempo).length > wxAlerts(h.st).length);
+        return `<div class="wx-tl-seg${worse ? ' tempo' : ''}" style="background:${WX_CAT_COLOR[c]};--t:${WX_CAT_COLOR[tc] || 'transparent'}"></div>`;
+    }).join('');
+}
+
+// ------------------------------------------
+// ✈️ 機場面板內容：摘要 + 可拖動的 TAF 時間軸 + 預報分組 + 原始 TAF + D-ATIS
 // ------------------------------------------
 function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
-    const metarState = parseWeatherElements(rawMetarText, 999, 99999);
-    const metarCat = getFlightCategory(metarState.vis, metarState.ceil);
-    const displayCat = rawMetarText ? metarCat.toUpperCase() : "UNK";
-
-    const metarAgeStr = ageBadgeHtml(calculateReportAge(rawMetarText));
-    const tafAgeStr = ageBadgeHtml(calculateReportAge(rawTafText));
-    const coloredTafHtml = formatColorTAF(rawTafText);
-
-    const metarEmojis = getWeatherEmojis(rawMetarText);
-    const metarEmojiHtml = metarEmojis ? `<span style="font-size: 15px; margin-left: 6px; vertical-align: middle;">${metarEmojis}</span>` : '';
-
-    const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
-    const badgeColor = catColors[metarCat] || catColors['unk'];
-
+    const a = wxAnalyze(rawMetarText, rawTafText);
+    const m = a.m;
     const timeHtml = airport.lng ? getAirportTimeHTML(airport.lng) : '';
     const fleetBadgeHtml = airport.type ? getCategoryBadge(airport.type) : '';
+    const low = (cond) => cond ? ' low' : '';
+    const statsHtml = m ? `
+        <div class="wx-stats">
+            <div><div class="lb">風 ${wxArrow(m.wind)}</div><div class="v${low(m.wind && (m.wind.gust || m.wind.spd) > WX_MINS.wind)}">${wxFmtWind(m.wind)}</div></div>
+            <div><div class="lb">雲幕</div><div class="v${low(wxCeil(m) < WX_MINS.ceil)}">${wxFmtCeil(m)}</div></div>
+            <div><div class="lb">能見度</div><div class="v${low((m.vis ?? 9999) < WX_MINS.vis)}">${wxFmtVis(m.vis)}</div></div>
+        </div>` : '';
+
+    let tafHtml;
+    if (a.t) {
+        const t = a.t, N = t.hours.length, t0 = t.vs.getTime();
+        const tp = x => Math.max(0, Math.min(100, (x - t0) / (N * 3600e3) * 100));
+        const nowPct = tp(Date.now());
+        let ruler = '';
+        t.hours.forEach((h, k) => { const p = k / N * 100; if (h.t.getUTCHours() % 6 === 0 && k > 0 && Math.abs(p - nowPct) > 7) ruler += `<span style="left:${p}%">${wxZ(h.t)}</span>`; });
+        if (nowPct > 0 && nowPct < 100) ruler += `<span class="now" style="left:${nowPct}%">現在</span>`;
+        const minBars = a.fails.map(f => `<i style="left:${tp(f.start.getTime())}%;width:${tp(f.end.getTime()) - tp(f.start.getTime())}%"></i>`).join('');
+        const label = { BASE: '起始', FM: 'FM', BECMG: 'BECMG', TEMPO: 'TEMPO' };
+        const groupsHtml = t.groups.map((g, i) => {
+            const c = wxCat(g.eff), al = wxAlerts(g.eff);
+            const range = g.type === 'FM' ? `${wxZ(g.start)} 起` : wxZRange(g.start, g.end);
+            return `<div class="wx-grp" data-i="${i}"><div class="k">${label[g.type] || g.type}<small>${range}</small></div>
+                <div><div class="sum">${wxBadge(c)}${wxSummary(g.eff)}</div>
+                ${al.length ? `<div class="why">⚠️ 低於警戒線：${al.join('、')}</div>` : ''}
+                <div class="rw">${highlightWxKeywords(wxEsc(g.words.join(' ')))}</div></div></div>`;
+        }).join('');
+        const tafLines = wxEsc(rawTafText).replace(/\s+/g, ' ').replace(/\s(BECMG|TEMPO|INTER|FM\d{6}|PROB\d{2})/g, '\n$1').split('\n')
+            .map(l => `<div>${highlightWxKeywords(l)}</div>`).join('');
+        const issued = t.issued ? `發布 ${wxPad(t.issued.getUTCDate())}日 ${wxPad(t.issued.getUTCHours())}${wxPad(t.issued.getUTCMinutes())}Z · ` : '';
+        tafHtml = `
+        <div class="wx-scrub">
+            <div class="wx-sub-h"><span>TAF 趨勢</span><span class="hint">← 左右滑動選時間 →</span></div>
+            <div class="wx-scrub-read" aria-live="polite"></div>
+            <div class="wx-scrub-track" tabindex="0" role="slider" aria-label="選擇 TAF 時間" aria-valuemin="0" aria-valuemax="${N - 1}">
+                <div class="wx-tl-bar">${wxTimelineSegs(t.hours)}${nowPct > 0 && nowPct < 100 ? `<div class="wx-tl-now" style="left:${nowPct}%"></div>` : ''}</div>
+                <div class="wx-scrub-cursor"></div>
+            </div>
+            <div class="wx-tl-mins">${minBars}</div>
+            <div class="wx-tl-ruler">${ruler}</div>
+            <div class="wx-tl-key"><span><i style="background:repeating-linear-gradient(135deg,${WX_CAT_COLOR.IFR} 0 3px,${WX_CAT_COLOR.VFR} 3px 6px)"></i>斜線＝TEMPO／PROB</span><span><i class="red"></i>紅線＝低於警戒線</span></div>
+        </div>
+        <div class="wx-sub-h"><span>預報分組</span><span class="hint">${issued}有底色＝選取時間生效中 ${wxAgeChip(calculateReportAge(rawTafText))}</span></div>
+        <div class="wx-groups">${groupsHtml}</div>
+        <div class="wx-sub-h"><span>原始 TAF</span></div>
+        <div class="wx-taf-lines">${tafLines}</div>`;
+    } else {
+        tafHtml = `<div class="wx-sub-h"><span>TAF</span></div>
+        <div class="wx-taf-lines">${rawTafText ? highlightWxKeywords(wxEsc(rawTafText)) : '目前無有效或無法載入 TAF 報文'}</div>`;
+    }
 
     return `
-    <div class="weather-popup">
-        <div class="airport-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <span>${airport.name} (${airport.icao})</span>
-            <span style="display:inline-flex; align-items:center; gap:8px;">
-                ${fleetBadgeHtml}
-                <button id="wx-refetch-btn-${airport.icao}" onclick="refetchAirportWx('${airport.icao}')" title="只重新取得此機場的 METAR/TAF（不會重抓全部機隊）" style="margin:0; padding:4px 10px; font-size:12px; font-weight:bold; background:#fff; border:1px solid #8b5a2b; color:#8b5a2b; border-radius:6px; cursor:pointer; white-space:nowrap;">🔄 重新取得</button>
-            </span>
+    <div class="weather-popup wx-panel">
+        <div class="wx-top">
+            <span class="icao">${airport.icao}</span>${wxBadge(a.cat)}${a.ts ? `<span class="wx-badge" style="background:${WX_CAT_COLOR.IFR}">⚡ TS</span>` : ''}
+            <span class="name">${wxEsc(airport.name)}</span>
+            <span class="sp"></span>${wxAgeChip(a.ageMin)}
+            <button id="wx-refetch-btn-${airport.icao}" class="wx-refetch" onclick="refetchAirportWx('${airport.icao}')" title="只重新取得此機場的 METAR/TAF（不會重抓全機隊）">🔄 重新取得</button>
         </div>
-        
+        ${fleetBadgeHtml ? `<div>${fleetBadgeHtml}</div>` : ''}
         ${timeHtml}
-
-        <!-- metar-taf.com 天氣小工具（landscape 版；設定走網址參數 layout=landscape&qnh=hPa&rh=rh，
-             見 openWxSheet 的 script src；target=AbBgCGMQ 當作 DOM 綁定 id，ICAO 走路徑套各機場）。
-             ⚠️ 刻意不放 href：metar-taf 只檢查「元素是 <a> 且開頭為 'METAR '」才渲染，不檢查 href。
-             若帶 href，整塊 widget 會變成全區連結，點到附近會導航/頁面跳動。拿掉後照常渲染但不再是連結。
-             想開完整報告改用下方小字連結（新分頁）。 -->
-        <div class="mt-embed" style="margin: 2px 0 10px;">
-            <a id="metartaf-AbBgCGMQ"
-               style="display:block; width:100%; max-width:320px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.name}</a>
-            <div style="text-align:center; margin-top:4px;">
-                <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com ↗</a>
-            </div>
-        </div>
-
-        <div class="data-block">
-            <div class="section-title">
-                <span style="display:inline-flex; align-items:center;">
-                    METAR (即時天氣)
-                    ${rawMetarText ? `<span class="badge" style="background-color: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px; font-weight: bold;">${displayCat}</span>${metarEmojiHtml}` : ''}
-                </span>
-                <span style="margin-left:10px; display:inline-flex; align-items:center;">${metarAgeStr}</span>
-            </div>
-            <div class="raw-text" style="border-left: 4px solid ${badgeColor}; white-space: pre-wrap; word-break: break-word; background-color: #f8fafc; padding: 10px; border-radius: 4px; ${MONOSPACE_FONT} font-size: 13px;">${rawMetarText ? highlightWxKeywords(rawMetarText) : "目前無有效 METAR 報文"}</div>
-        </div>
-        
-        <div class="data-block" style="margin-top: 15px;">
-            <div class="section-title">
-                <span style="display:inline-flex; align-items:center;">TAF (機場預報)</span>
-                <span style="margin-left:10px; display:inline-flex; align-items:center;">${tafAgeStr}</span>
-            </div>
-            ${coloredTafHtml}
-        </div>
-
-        <div class="data-block" id="popup-atis-container-${airport.icao}" style="border-bottom: none; margin-top: 15px;">
-            <button class="btn-outline" style="width: 100%; margin: 0; padding: 8px; border: 1px solid #3c79ff; color: #3c79ff; border-radius: 6px; background: #ebf5ff; cursor: pointer; font-weight: bold; transition: 0.2s;" onclick="fetchPopupAtis('${airport.icao}')">
+        ${statsHtml}
+        <div class="wx-raw">${rawMetarText ? highlightWxKeywords(wxEsc(rawMetarText)) : '目前無有效或無法載入 METAR 報文'}</div>
+        ${wxVerdictHtml(a)}
+        ${tafHtml}
+        <div class="data-block" id="popup-atis-container-${airport.icao}" style="border-bottom: none; margin: 4px 0 0;">
+            <button class="btn-outline" style="width: 100%; margin: 0; padding: 8px; border: 1px solid #3c79ff; color: #3c79ff; border-radius: 8px; background: #ebf5ff; cursor: pointer; font-weight: bold;" onclick="fetchPopupAtis('${airport.icao}')">
                 📻 獲取 ${airport.icao} 即時 D-ATIS
             </button>
             <div id="popup-atis-content-${airport.icao}" style="display: none; margin-top: 10px;"></div>
         </div>
 
-   <div id="os-weather-${airport.icao}" style="margin-bottom: 15px;">
+        <div class="mt-embed" style="margin: 4px 0 0;">
+            <a id="metartaf-AbBgCGMQ"
+               style="display:block; width:100%; max-width:320px; margin:0 auto; font-size:14px; font-weight:500; color:#4a3627; text-decoration:none; cursor:default;">METAR ${airport.icao}</a>
+            <div style="text-align:center; margin-top:4px;">
+                <a href="https://metar-taf.com/metar/${airport.icao}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#a9a093; text-decoration:none;">metar-taf.com 完整報告 ↗</a>
+            </div>
+        </div>
+
+        <div id="os-weather-${airport.icao}" style="margin: 12px 0 15px;">
             <div style="font-size:12px; color:#64748b; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">⏳ 正在擷取開源氣象資料...</div>
         </div>
 
@@ -862,6 +1065,57 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
         </div>
     </div>
     `;
+}
+
+// 面板放進 DOM 後：綁定 TAF 時間軸的拖動／點選／方向鍵
+function wxBindPanel(root, rawTafText) {
+    const track = root.querySelector('.wx-scrub-track');
+    if (!track) return;
+    const t = wxParseTaf(rawTafText);
+    if (!t) return;
+    const hrs = t.hours, N = hrs.length;
+    const cursor = root.querySelector('.wx-scrub-cursor'), read = root.querySelector('.wx-scrub-read');
+    const grpEls = [...root.querySelectorAll('.wx-grp')];
+    const nowT = Date.now();
+    let idx = hrs.findIndex(h => nowT < h.t.getTime() + 3600e3);
+    if (idx < 0) idx = N - 1;
+    const line = (label, st) => {
+        const c = wxCat(st), al = wxAlerts(st);
+        return `<div class="sl"><span class="lbl">${label}</span>${wxBadge(c)}<span class="txt">${wxSummary(st)}</span>${al.length ? `<span class="why">⚠️ ${al.join('、')}</span>` : ''}</div>`;
+    };
+    const activeSet = (tm) => {
+        let main = 0; const s = new Set();
+        t.groups.forEach((g, i) => {
+            if ((g.type === 'FM' || g.type === 'BECMG') && tm >= g.start.getTime()) main = i;
+            if (/TEMPO|PROB/.test(g.type) && tm >= g.start.getTime() && tm < g.end.getTime()) s.add(i);
+        });
+        s.add(main);
+        return s;
+    };
+    const set = (i) => {
+        idx = Math.max(0, Math.min(N - 1, i));
+        const h = hrs[idx];
+        const dh = Math.round((h.t.getTime() - (nowT - nowT % 3600e3)) / 3600e3);
+        const rel = dh === 0 ? '現在' : dh > 0 ? `+${dh}h` : `${dh}h`;
+        read.innerHTML = `<div class="when">${wxPad(h.t.getUTCDate())}日 ${wxZ(h.t)}–${wxZ(new Date(h.t.getTime() + 3600e3))}<span>${rel}</span></div>`
+            + line('主要', h.st) + (h.tempo ? line((h.tempoType || 'TEMPO').replace(' TEMPO', ''), h.tempo) : '');
+        cursor.style.left = `${(idx + 0.5) / N * 100}%`;
+        track.setAttribute('aria-valuenow', idx);
+        track.setAttribute('aria-valuetext', `${wxZ(h.t)} ${wxCat(h.st)}`);
+        const act = activeSet(h.t.getTime());
+        grpEls.forEach(g => g.classList.toggle('on', act.has(+g.dataset.i)));
+    };
+    const fromX = (x) => { const b = track.getBoundingClientRect(); if (b.width) set(Math.floor((x - b.left) / b.width * N)); };
+    let drag = false;
+    track.addEventListener('pointerdown', e => { drag = true; try { track.setPointerCapture(e.pointerId); } catch (_) {} fromX(e.clientX); });
+    track.addEventListener('pointermove', e => { if (drag) fromX(e.clientX); });
+    track.addEventListener('pointerup', () => { drag = false; });
+    track.addEventListener('pointercancel', () => { drag = false; });
+    track.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') { set(idx + 1); e.preventDefault(); }
+        if (e.key === 'ArrowLeft') { set(idx - 1); e.preventDefault(); }
+    });
+    set(idx);
 }
 
 // ------------------------------------------
@@ -1405,53 +1659,159 @@ const syncFleetWeather = async (fleetName, forceRefresh = false, _retried = fals
     }
 };
 
-function renderFleetMarkers(fleetName) {
-    if (fleetMarkersLayer) {
-        fleetMarkersLayer.clearLayers();
+// 地圖標籤：精簡（色塊＋ICAO）／詳細（卡片：風、能見度、雲幕＋未來 12h TAF 小色條）
+let wxLabelMode = window.innerWidth < 640 ? 'compact' : 'full';
+try { const s = localStorage.getItem('wx-label-mode'); if (s === 'compact' || s === 'full') wxLabelMode = s; } catch (e) {}
+
+function wxMarkerHtml(airport, a) {
+    const color = WX_CAT_COLOR[a.cat];
+    const ring = WX_RANK[a.worst.cat] > (WX_RANK[a.cat] ?? 0) ? WX_CAT_COLOR[a.worst.cat] : 'transparent';
+    const flags = (a.ts ? '⚡' : '') + (a.mAlerts.length || a.fails.length ? '⚠️' : '');
+    const dot = `<span class="wxm-dot" style="background:${color};--ring:${ring}"></span><i class="wxm-leader"></i>`;
+    if (wxLabelMode !== 'full' || !a.m) {
+        return `${dot}<div class="wxm-card compact" style="--c:${color}"><div class="hd"><span>${airport.icao}</span>${flags ? `<span>${flags}</span>` : ''}</div></div>`;
     }
+    const m = a.m, low = c => c ? ' class="low"' : '';
+    const nowT = Date.now();
+    const mini = a.t ? a.t.hours.filter(h => h.t.getTime() + 3600e3 > nowT).slice(0, 12).map(h => {
+        const c = h.tempo && WX_RANK[wxCat(h.tempo)] > WX_RANK[wxCat(h.st)] ? wxCat(h.tempo) : wxCat(h.st);
+        return `<i style="background:${WX_CAT_COLOR[c]}"></i>`;
+    }).join('') : '';
+    return `${dot}<div class="wxm-card" style="--c:${color}"><div class="hd"><span>${airport.icao}</span>${flags ? `<span>${flags}</span>` : ''}</div>
+        <div class="bd"><div${low(m.wind && (m.wind.gust || m.wind.spd) > WX_MINS.wind)}>${wxArrow(m.wind)}${m.wind ? m.wind.spd + (m.wind.gust ? 'G' + m.wind.gust : '') + ' kt' : '—'}</div>
+        <div${low((m.vis ?? 9999) < WX_MINS.vis)}>${wxFmtVis(m.vis)}</div><div${low(wxCeil(m) < WX_MINS.ceil)}>${wxFmtCeil(m)}</div></div>
+        ${mini ? `<div class="mini" title="未來 12 小時 TAF">${mini}</div>` : ''}</div>`;
+}
 
-    const airports = fleets[fleetName];
-    let validBounds = [];
+// 依目前縮放位置替每張卡片找不重疊的位置（優先處理天氣最差的機場），並畫引導線
+function wxLayoutLabels() {
+    const map = window.aviationMapInstance;
+    if (!map || !fleetMarkersLayer) return;
+    const size = map.getSize();
+    const items = [];
+    fleetMarkersLayer.eachLayer(mk => {
+        const el = mk.getElement && mk.getElement();
+        if (!el) return;
+        const card = el.querySelector('.wxm-card'); if (!card) return;
+        const p = map.latLngToContainerPoint(mk.getLatLng());
+        items.push({ el, card, leader: el.querySelector('.wxm-leader'), x: p.x, y: p.y, score: mk._wxScore || 0 });
+    });
+    const placed = items.map(it => ({ x: it.x - 8, y: it.y - 8, w: 16, h: 16 }));
+    const hit = r => placed.some(q => r.x < q.x + q.w + 3 && r.x + r.w + 3 > q.x && r.y < q.y + q.h + 3 && r.y + r.h + 3 > q.y);
+    items.sort((a, b) => b.score - a.score).forEach(it => {
+        const w = it.card.offsetWidth, h = it.card.offsetHeight, g = 10;
+        const cands = [[g, -h - g], [-w - g, -h - g], [g, g], [-w - g, g], [g, -h / 2], [-w - g, -h / 2], [-w / 2, -h - g - 6], [-w / 2, g + 6],
+            [g + 28, -h - g - 28], [-w - g - 28, -h - g - 28], [g + 28, g + 28], [-w - g - 28, g + 28]];
+        let best = null;
+        for (const [dx, dy] of cands) {
+            const r = { x: it.x + dx, y: it.y + dy, w, h };
+            const inView = r.x >= 2 && r.y >= 2 && r.x + w <= size.x - 2 && r.y + h <= size.y - 2;
+            if (!inView && best) continue;
+            if (!hit(r)) { best = { dx, dy, r }; if (inView) break; }
+            else if (!best) best = { dx, dy, r, clash: true };
+        }
+        placed.push(best.r);
+        it.card.style.left = best.dx + 'px';
+        it.card.style.top = best.dy + 'px';
+        // 引導線：點 → 卡片最近的邊
+        const ex = Math.max(best.dx, Math.min(0, best.dx + w)), ey = Math.max(best.dy, Math.min(0, best.dy + h));
+        const len = Math.hypot(ex, ey);
+        if (it.leader) {
+            it.leader.style.width = (len > 6 ? len : 0) + 'px';
+            it.leader.style.transform = `rotate(${Math.atan2(ey, ex)}rad)`;
+        }
+    });
+}
 
+function renderFleetMarkers(fleetName, keepView = false) {
+    if (fleetMarkersLayer) fleetMarkersLayer.clearLayers();
+    const airports = fleets[fleetName] || [];
     airports.forEach(airport => {
         if (airport.lat === 0 && airport.lng === 0) return; // 略過無座標的機場
-        
-        // 跨太平洋航線由西向東：西半球機場(經度為負)畫在 +360 的世界複本，
-        // 太平洋與美國顯示在台灣右邊，不會拆成兩個太平洋、兩個美洲
+        // 跨太平洋航線由西向東：西半球機場(經度為負)畫在 +360 的世界複本，太平洋與美國顯示在台灣右邊
         const plotLng = airport.lng < 0 ? airport.lng + 360 : airport.lng;
-        validBounds.push([airport.lat, plotLng]);
-
-        // 依 METAR 判飛行條件決定圓點顏色（無報文 = 灰），掃一眼就知道哪個場站天氣差
         const cache = weatherCache[airport.icao] || { metar: "", taf: "" };
-        let cat = 'unk';
-        if (cache.metar) {
-            const st = parseWeatherElements(cache.metar, 999, 99999);
-            cat = getFlightCategory(st.vis, st.ceil);
-        }
-        const catColors = { vfr: '#2ecc71', mvfr: '#3498db', ifr: '#e74c3c', lifr: '#9b59b6', unk: '#95a5a6' };
-        const icon = L.divIcon({
-            className: 'wx-cat-marker',
-            html: `<span class="wx-dot" style="background:${catColors[cat]}"></span><span class="wx-tag">${airport.icao}</span>`,
-            iconSize: [52, 34],
-            iconAnchor: [26, 9]
-        });
-        const marker = L.marker([airport.lat, plotLng], { icon: icon }).addTo(fleetMarkersLayer);
-
-        marker.on('click', function() {
-            const c = weatherCache[airport.icao] || { metar: "", taf: "" };
-            openWxSheet(airport, c.metar, c.taf); // 先用快取即時開，避免空白
-            // 背景抓最新（tgftp 優先）覆蓋：解決總覽批次走 AWC 時面板顯示舊報文
-            if (typeof window.refetchAirportWx === 'function') {
-                window.refetchAirportWx(airport.icao);
-            }
-        });
+        const a = wxAnalyze(cache.metar, cache.taf);
+        const icon = L.divIcon({ className: 'wxm-icon', html: wxMarkerHtml(airport, a), iconSize: [0, 0], iconAnchor: [0, 0] });
+        const marker = L.marker([airport.lat, plotLng], { icon, zIndexOffset: a.score * 10 }).addTo(fleetMarkersLayer);
+        marker._wxScore = a.score;
+        marker.on('click', function() { wxOpenAirport(airport); });
     });
+    // 預設視角：以台灣為中心，zoom 6（切換機隊時）；改警戒線／標籤模式時保留目前視角
+    if (!keepView && window.aviationMapInstance) window.aviationMapInstance.setView(wxDefaultCenter(), 6);
+    wxLayoutLabels();
+    renderWxOverview(fleetName);
+}
 
-    // 預設視角：以台灣為中心，zoom 6。
-    // 不再依機隊 fitBounds 縮到很遠、手機上看不清；外站機場可自行平移／縮放。
-    if (window.aviationMapInstance) {
-        window.aviationMapInstance.setView(wxDefaultCenter(), 6);
+function wxOpenAirport(airport) {
+    const c = weatherCache[airport.icao] || { metar: "", taf: "" };
+    openWxSheet(airport, c.metar, c.taf); // 先用快取即時開，避免空白
+    // 背景抓最新（tgftp 優先）覆蓋：解決總覽批次走 AWC 時面板顯示舊報文
+    if (typeof window.refetchAirportWx === 'function') window.refetchAirportWx(airport.icao);
+}
+
+// 機隊總覽表：最差的排最前面
+function renderWxOverview(fleetName) {
+    const tbody = document.getElementById('wx-overview-body');
+    if (!tbody) return;
+    const rows = (fleets[fleetName] || []).map(ap => {
+        const c = weatherCache[ap.icao] || { metar: "", taf: "" };
+        return { ap, a: wxAnalyze(c.metar, c.taf) };
+    }).sort((x, y) => y.a.score - x.a.score);
+    tbody.innerHTML = rows.map(({ ap, a }) => {
+        const w = a.worst, worse = a.m && WX_RANK[w.cat] > WX_RANK[a.cat];
+        const f0 = a.fails[0];
+        const alert = a.mAlerts.length ? `<span class="why">現在：${a.mAlerts.join('、')}</span>`
+            : f0 ? `<span class="why">${f0.tempo ? 'TEMPO ' : ''}${wxZRange(f0.start, f0.end)} ${f0.why}</span>`
+            : (a.m || a.t) ? '<span class="ok">✓ 在警戒線內</span>' : '<span class="muted">—</span>';
+        return `<tr data-icao="${ap.icao}"><td><b>${ap.icao}</b> <span class="muted">${wxEsc(ap.name)}</span></td>
+            <td>${a.m ? wxBadge(a.cat) : '<span class="muted">無資料</span>'} ${a.ts ? '⚡' : ''}</td>
+            <td>${!a.t ? '<span class="muted">—</span>' : worse ? `${wxBadge(w.cat)} <span class="muted">${w.tempo ? 'TEMPO ' : ''}${wxZ(w.at)} 起</span>` : '<span class="muted">無變差</span>'}</td>
+            <td>${alert}</td><td>${wxAgeChip(a.ageMin)}</td></tr>`;
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => {
+        const ap = (fleets[fleetName] || []).find(x => x.icao === tr.dataset.icao);
+        if (!ap) return;
+        wxOpenAirport(ap);
+        const shell = document.getElementById('map-shell');
+        if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+}
+
+// 警戒線設定面板 + 標籤模式切換
+function initWxControls() {
+    const $ = id => document.getElementById(id);
+    const summary = () => {
+        const s = $('wx-mins-summary');
+        if (s) s.textContent = `雲幕 ${WX_MINS.ceil} ft · 能見度 ${WX_MINS.vis} m · 風 ${WX_MINS.wind} kt${WX_MINS.ts ? ' · 雷雨' : ''}`;
+    };
+    if ($('wx-min-ceil')) {
+        $('wx-min-ceil').value = WX_MINS.ceil; $('wx-min-vis').value = WX_MINS.vis; $('wx-min-wind').value = WX_MINS.wind; $('wx-min-ts').checked = WX_MINS.ts;
+        const apply = () => {
+            const num = (id, d) => { const v = parseInt($(id).value, 10); return isNaN(v) ? d : v; };
+            WX_MINS = { ceil: num('wx-min-ceil', 0), vis: num('wx-min-vis', 0), wind: num('wx-min-wind', 999), ts: $('wx-min-ts').checked };
+            try { localStorage.setItem('wx-alert-lines', JSON.stringify(WX_MINS)); } catch (e) {}
+            summary();
+            renderFleetMarkers(currentFleet, true);
+            const ap = window._wxSheetAirport;
+            if (ap) { const c = weatherCache[ap.icao] || {}; openWxSheet(ap, c.metar || window._wxSheetMetar || '', c.taf || window._wxSheetTaf || ''); }
+        };
+        ['wx-min-ceil', 'wx-min-vis', 'wx-min-wind'].forEach(id => $(id).addEventListener('change', apply));
+        $('wx-min-ts').addEventListener('change', apply);
+        $('wx-min-reset').addEventListener('click', () => {
+            $('wx-min-ceil').value = WX_MINS_DEFAULT.ceil; $('wx-min-vis').value = WX_MINS_DEFAULT.vis; $('wx-min-wind').value = WX_MINS_DEFAULT.wind; $('wx-min-ts').checked = WX_MINS_DEFAULT.ts;
+            apply();
+        });
+        summary();
     }
+    const syncModeBtns = () => document.querySelectorAll('.wx-label-btn').forEach(b => b.classList.toggle('on', b.dataset.mode === wxLabelMode));
+    document.querySelectorAll('.wx-label-btn').forEach(b => b.addEventListener('click', () => {
+        wxLabelMode = b.dataset.mode;
+        try { localStorage.setItem('wx-label-mode', wxLabelMode); } catch (e) {}
+        syncModeBtns();
+        renderFleetMarkers(currentFleet, true);
+    }));
+    syncModeBtns();
 }
 
 function initAviationMap() {
@@ -1472,6 +1832,9 @@ function initAviationMap() {
     }).addTo(window.aviationMapInstance);
 
     fleetMarkersLayer = L.layerGroup().addTo(window.aviationMapInstance);
+    // 縮放／平移後重新排卡片位置，避免互相重疊
+    window.aviationMapInstance.on('zoomend moveend', wxLayoutLabels);
+    initWxControls();
 
     // 點地圖空白處 → 關閉氣象大面板（marker 點擊不會觸發 map click，兩者不衝突）
     window.aviationMapInstance.on('click', function() { window.closeWxSheet(); });
@@ -1504,6 +1867,13 @@ function initAviationMap() {
 
     // 自訂 ICAO 搜尋功能
     const btnSearchIcao = document.getElementById('btn-search-icao');
+    // 輸入框按 Enter 直接搜尋
+    const icaoInput = document.getElementById('custom-icao-input');
+    if (icaoInput && btnSearchIcao) {
+        icaoInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (!btnSearchIcao.disabled) btnSearchIcao.click(); }
+        });
+    }
     if (btnSearchIcao) {
         btnSearchIcao.addEventListener('click', async function() {
             const inputEl = document.getElementById('custom-icao-input');
@@ -1511,10 +1881,9 @@ function initAviationMap() {
             const btn = this;
 
             if(icao.length !== 4) {
-                const origText = btn.innerText;
                 btn.innerText = "⚠️ 四碼";
                 btn.style.background = "#e74c3c";
-                setTimeout(() => { btn.innerText = origText; btn.style.background = "#8e44ad"; }, 2000);
+                setTimeout(() => { btn.innerText = "🔍 ICAO搜尋"; btn.style.background = "#8e44ad"; }, 2000);
                 return;
             }
 
@@ -1563,7 +1932,10 @@ function initAviationMap() {
 
                 const searchedAirport = { icao: icao, name: siteName, lat: lat, lng: lon };
                 const plotLon = lon < 0 ? lon + 360 : lon; // 西半球畫在台灣右邊的世界複本（同機隊 marker 邏輯）
+                // 只保留最近一次搜尋的 🌟，舊的移除
+                if (window._wxCustomMarker) window.aviationMapInstance.removeLayer(window._wxCustomMarker);
                 const customMarker = L.marker([lat, plotLon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
+                window._wxCustomMarker = customMarker;
                 customMarker.on('click', function() { openWxSheet(searchedAirport, rawMetarText, rawTafText); });
 
                 window.aviationMapInstance.flyTo([lat, plotLon], 6, { duration: 1.5 });
@@ -1571,7 +1943,7 @@ function initAviationMap() {
                 setTimeout(() => openWxSheet(searchedAirport, rawMetarText, rawTafText), 1600);
 
                 btn.disabled = false;
-                btn.innerText = "🔍 搜尋";
+                btn.innerText = "🔍 ICAO搜尋";
                 btn.style.opacity = "1";
                 inputEl.value = ""; 
 
@@ -1581,7 +1953,7 @@ function initAviationMap() {
                 btn.style.background = "#e74c3c";
                 setTimeout(() => {
                     btn.disabled = false;
-                    btn.innerText = "🔍 搜尋";
+                    btn.innerText = "🔍 ICAO搜尋";
                     btn.style.background = "#8e44ad";
                     btn.style.opacity = "1";
                 }, 2500);
