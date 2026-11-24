@@ -1815,6 +1815,17 @@ function initWxControls() {
     }
 }
 
+// IATA 三碼 → ICAO 四碼：對照表 data/iata-icao.json（OpenFlights，約 6000 個機場），第一次用到才下載
+let _wxIataMap = null;
+async function wxIataToIcao(iata) {
+    if (!_wxIataMap) {
+        const res = await fetch('data/iata-icao.json');
+        if (!res.ok) throw new Error('IATA 對照表載入失敗');
+        _wxIataMap = (await res.json()).map || {};
+    }
+    return _wxIataMap[String(iata).toUpperCase()] || '';
+}
+
 function initAviationMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer) return;
@@ -1881,8 +1892,9 @@ function initAviationMap() {
             let icao = inputEl.value.trim().toUpperCase();
             const btn = this;
 
-            if(icao.length !== 4) {
-                btn.innerText = "⚠️ 四碼";
+            // 接受 ICAO 四碼（例 KJFK）或 IATA 三碼（例 JFK）
+            if(!/^[A-Z0-9]{4}$/.test(icao) && !/^[A-Z]{3}$/.test(icao)) {
+                btn.innerText = "⚠️ 3或4碼";
                 btn.style.background = "#e74c3c";
                 setTimeout(() => { btn.innerText = "🔍 ICAO搜尋"; btn.style.background = "#8e44ad"; }, 2000);
                 return;
@@ -1893,6 +1905,13 @@ function initAviationMap() {
             btn.style.opacity = "0.7";
 
             try {
+                // IATA 三碼 → 先轉成 ICAO
+                let iata = '';
+                if (icao.length === 3) {
+                    iata = icao;
+                    icao = await wxIataToIcao(iata);
+                    if (!icao) throw new Error(`查無 IATA 代碼 ${iata}`);
+                }
                 // 不在任何機隊清單內的機場也要能查：三個請求各自成敗，只要有報文或座標就顯示
                 const settled = await Promise.allSettled([
                     fetchBulkWeatherFast(icao, 'airport'),
@@ -1911,7 +1930,8 @@ function initAviationMap() {
                     if (o && o.lat != null && o.lon != null) { lat = +o.lat; lon = +o.lon; break; }
                 }
                 if ((lat == null || lon == null) && typeof coordsDB !== 'undefined' && coordsDB[icao]) { [lat, lon] = coordsDB[icao]; }
-                const siteName = (apInfo && apInfo.name) || (metarObj && metarObj.name) || (tafObj && tafObj.name) || icao;
+                let siteName = (apInfo && apInfo.name) || (metarObj && metarObj.name) || (tafObj && tafObj.name) || icao;
+                if (iata) siteName += ` (${iata})`;
 
                 if (!rawMetarText && !rawTafText && (lat == null || lon == null)) {
                     throw new Error("查無此機場的 METAR／TAF");
