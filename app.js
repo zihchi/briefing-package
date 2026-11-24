@@ -730,7 +730,7 @@ window.refetchAirportWx = async function(icao) {
 };
 
 // ------------------------------------------
-// 🧭 TAF/METAR 解析 + 警戒線（地圖卡片、機場面板、機隊總覽共用）
+// 🧭 TAF/METAR 解析 + 警戒條件（地圖卡片、機場面板、機隊總覽共用）
 // ------------------------------------------
 const WX_RANK = { VFR: 0, MVFR: 1, IFR: 2, LIFR: 3 };
 const WX_CAT_COLOR = { VFR: '#27ae60', MVFR: '#2f80c7', IFR: '#d9473a', LIFR: '#8e44ad', UNK: '#95a5a6' };
@@ -797,7 +797,7 @@ function wxCat(st) {
     if (c <= 3000 || v <= 8000) return 'MVFR';
     return 'VFR';
 }
-// 回傳「低於警戒線」的原因陣列（空陣列＝在警戒線內）
+// 回傳「觸發警戒」的原因陣列（空陣列＝未觸發）
 function wxAlerts(st) {
     if (!st) return [];
     const r = [], c = wxCeil(st), v = st.vis == null ? 9999 : st.vis, w = st.wind ? (st.wind.gust || st.wind.spd) : 0;
@@ -898,7 +898,7 @@ function wxAnalyze(rawMetar, rawTaf) {
                 if (st && WX_RANK[wxCat(st)] > WX_RANK[a.worst.cat]) a.worst = { cat: wxCat(st), at: h.t, tempo: isT };
             });
         });
-        // 未來低於警戒線的時段（連續同原因的小時合併）
+        // 未來觸發警戒的時段（連續同原因的小時合併）
         t.hours.forEach(h => {
             if (h.t.getTime() + 3600e3 <= nowT) return;
             const r1 = wxAlerts(h.st), r2 = h.tempo ? wxAlerts(h.tempo) : [];
@@ -945,12 +945,12 @@ function wxAgeChip(mins) {
 function wxVerdictHtml(a) {
     if (!a.m && !a.t) return '';
     if (!a.fails.length && !a.mAlerts.length) {
-        const until = a.t ? `TAF 至 ${wxPad(a.t.ve.getUTCDate())}日 ${wxZ(a.t.ve)} 都在警戒線內` : '（無 TAF，只判斷 METAR）';
-        return `<div class="wx-verdict ok"><span>✓</span><div><b>在警戒線內</b>${until}</div></div>`;
+        const until = a.t ? `TAF 至 ${wxPad(a.t.ve.getUTCDate())}日 ${wxZ(a.t.ve)} 都未觸發警戒` : '（無 TAF，只判斷 METAR）';
+        return `<div class="wx-verdict ok"><span>✓</span><div><b>未觸發警戒</b>${until}</div></div>`;
     }
     const cur = a.mAlerts.length ? `現在 METAR：${a.mAlerts.join('、')}` : '';
     const list = a.fails.slice(0, 3).map(f => `${f.tempo ? 'TEMPO ' : ''}${wxZRange(f.start, f.end)}：${f.why}`).join('<br>');
-    return `<div class="wx-verdict bad"><span>⚠️</span><div><b>低於警戒線</b>${[cur, list].filter(Boolean).join('<br>')}</div></div>`;
+    return `<div class="wx-verdict bad"><span>⚠️</span><div><b>觸發警戒</b>${[cur, list].filter(Boolean).join('<br>')}</div></div>`;
 }
 // 時間軸色段：主要情況上色；TEMPO 若更差則畫斜線
 function wxTimelineSegs(hours) {
@@ -992,7 +992,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
             const range = g.type === 'FM' ? `${wxZ(g.start)} 起` : wxZRange(g.start, g.end);
             return `<div class="wx-grp" data-i="${i}"><div class="k">${label[g.type] || g.type}<small>${range}</small></div>
                 <div><div class="sum">${wxBadge(c)}${wxSummary(g.eff)}</div>
-                ${al.length ? `<div class="why">⚠️ 低於警戒線：${al.join('、')}</div>` : ''}
+                ${al.length ? `<div class="why">⚠️ 觸發警戒：${al.join('、')}</div>` : ''}
                 <div class="rw">${highlightWxKeywords(wxEsc(g.words.join(' ')))}</div></div></div>`;
         }).join('');
         const tafLines = wxEsc(rawTafText).replace(/\s+/g, ' ').replace(/\s(BECMG|TEMPO|INTER|FM\d{6}|PROB\d{2})/g, '\n$1').split('\n')
@@ -1008,7 +1008,7 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
             </div>
             <div class="wx-tl-mins">${minBars}</div>
             <div class="wx-tl-ruler">${ruler}</div>
-            <div class="wx-tl-key"><span><i style="background:repeating-linear-gradient(135deg,${WX_CAT_COLOR.IFR} 0 3px,${WX_CAT_COLOR.VFR} 3px 6px)"></i>斜線＝TEMPO／PROB</span><span><i class="red"></i>紅線＝低於警戒線</span></div>
+            <div class="wx-tl-key"><span><i style="background:repeating-linear-gradient(135deg,${WX_CAT_COLOR.IFR} 0 3px,${WX_CAT_COLOR.VFR} 3px 6px)"></i>斜線＝TEMPO／PROB</span><span><i class="red"></i>紅線＝觸發警戒</span></div>
         </div>
         <div class="wx-sub-h"><span>預報分組</span><span class="hint">${issued}有底色＝選取時間生效中 ${wxAgeChip(calculateReportAge(rawTafText))}</span></div>
         <div class="wx-groups">${groupsHtml}</div>
@@ -1659,16 +1659,14 @@ const syncFleetWeather = async (fleetName, forceRefresh = false, _retried = fals
     }
 };
 
-// 地圖標籤：精簡（色塊＋ICAO）／詳細（卡片：風、能見度、雲幕＋未來 12h TAF 小色條）
-let wxLabelMode = window.innerWidth < 640 ? 'compact' : 'full';
-try { const s = localStorage.getItem('wx-label-mode'); if (s === 'compact' || s === 'full') wxLabelMode = s; } catch (e) {}
+// 地圖標籤：卡片（風、能見度、雲幕＋未來 12h TAF 小色條）；沒有 METAR 的機場只顯示 ICAO 小標
 
 function wxMarkerHtml(airport, a) {
     const color = WX_CAT_COLOR[a.cat];
     const ring = WX_RANK[a.worst.cat] > (WX_RANK[a.cat] ?? 0) ? WX_CAT_COLOR[a.worst.cat] : 'transparent';
     const flags = (a.ts ? '⚡' : '') + (a.mAlerts.length || a.fails.length ? '⚠️' : '');
     const dot = `<span class="wxm-dot" style="background:${color};--ring:${ring}"></span><i class="wxm-leader"></i>`;
-    if (wxLabelMode !== 'full' || !a.m) {
+    if (!a.m) {
         return `${dot}<div class="wxm-card compact" style="--c:${color}"><div class="hd"><span>${airport.icao}</span>${flags ? `<span>${flags}</span>` : ''}</div></div>`;
     }
     const m = a.m, low = c => c ? ' class="low"' : '';
@@ -1737,7 +1735,7 @@ function renderFleetMarkers(fleetName, keepView = false) {
         marker._wxScore = a.score;
         marker.on('click', function() { wxOpenAirport(airport); });
     });
-    // 預設視角：以台灣為中心，zoom 6（切換機隊時）；改警戒線／標籤模式時保留目前視角
+    // 預設視角：以台灣為中心，zoom 6（切換機隊時）；改警戒條件時保留目前視角
     if (!keepView && window.aviationMapInstance) window.aviationMapInstance.setView(wxDefaultCenter(), 6);
     wxLayoutLabels();
     renderWxOverview(fleetName);
@@ -1750,20 +1748,29 @@ function wxOpenAirport(airport) {
     if (typeof window.refetchAirportWx === 'function') window.refetchAirportWx(airport.icao);
 }
 
-// 機隊總覽表：最差的排最前面
+// 機隊總覽表：最差的排最前面；預設只列最差 5 個，可展開全部
+const WX_OVERVIEW_TOP = 5;
+let wxOverviewAll = false;
 function renderWxOverview(fleetName) {
     const tbody = document.getElementById('wx-overview-body');
     if (!tbody) return;
-    const rows = (fleets[fleetName] || []).map(ap => {
+    const all = (fleets[fleetName] || []).map(ap => {
         const c = weatherCache[ap.icao] || { metar: "", taf: "" };
         return { ap, a: wxAnalyze(c.metar, c.taf) };
     }).sort((x, y) => y.a.score - x.a.score);
+    const rows = wxOverviewAll ? all : all.slice(0, WX_OVERVIEW_TOP);
+    const more = document.getElementById('wx-overview-more');
+    if (more) {
+        more.hidden = all.length <= WX_OVERVIEW_TOP;
+        more.textContent = wxOverviewAll ? '收起，只看最差 5 個 ▴' : `顯示全部 ${all.length} 個機場 ▾`;
+        more.onclick = () => { wxOverviewAll = !wxOverviewAll; renderWxOverview(fleetName); };
+    }
     tbody.innerHTML = rows.map(({ ap, a }) => {
         const w = a.worst, worse = a.m && WX_RANK[w.cat] > WX_RANK[a.cat];
         const f0 = a.fails[0];
         const alert = a.mAlerts.length ? `<span class="why">現在：${a.mAlerts.join('、')}</span>`
             : f0 ? `<span class="why">${f0.tempo ? 'TEMPO ' : ''}${wxZRange(f0.start, f0.end)} ${f0.why}</span>`
-            : (a.m || a.t) ? '<span class="ok">✓ 在警戒線內</span>' : '<span class="muted">—</span>';
+            : (a.m || a.t) ? '<span class="ok">✓ 未觸發</span>' : '<span class="muted">—</span>';
         return `<tr data-icao="${ap.icao}"><td><b>${ap.icao}</b> <span class="muted">${wxEsc(ap.name)}</span></td>
             <td>${a.m ? wxBadge(a.cat) : '<span class="muted">無資料</span>'} ${a.ts ? '⚡' : ''}</td>
             <td>${!a.t ? '<span class="muted">—</span>' : worse ? `${wxBadge(w.cat)} <span class="muted">${w.tempo ? 'TEMPO ' : ''}${wxZ(w.at)} 起</span>` : '<span class="muted">無變差</span>'}</td>
@@ -1778,7 +1785,7 @@ function renderWxOverview(fleetName) {
     }));
 }
 
-// 警戒線設定面板 + 標籤模式切換
+// 警戒條件設定面板
 function initWxControls() {
     const $ = id => document.getElementById(id);
     const summary = () => {
@@ -1804,14 +1811,6 @@ function initWxControls() {
         });
         summary();
     }
-    const syncModeBtns = () => document.querySelectorAll('.wx-label-btn').forEach(b => b.classList.toggle('on', b.dataset.mode === wxLabelMode));
-    document.querySelectorAll('.wx-label-btn').forEach(b => b.addEventListener('click', () => {
-        wxLabelMode = b.dataset.mode;
-        try { localStorage.setItem('wx-label-mode', wxLabelMode); } catch (e) {}
-        syncModeBtns();
-        renderFleetMarkers(currentFleet, true);
-    }));
-    syncModeBtns();
 }
 
 function initAviationMap() {
@@ -1892,55 +1891,52 @@ function initAviationMap() {
             btn.style.opacity = "0.7";
 
             try {
-                const [airportData, metarData, tafData] = await Promise.all([
+                // 不在任何機隊清單內的機場也要能查：三個請求各自成敗，只要有報文或座標就顯示
+                const settled = await Promise.allSettled([
                     fetchBulkWeatherFast(icao, 'airport'),
                     fetchBulkWeatherFast(icao, 'metar'),
                     fetchBulkWeatherFast(icao, 'taf')
                 ]);
+                const pick = (r) => (r.status === 'fulfilled' && Array.isArray(r.value)) ? (r.value.find(x => (x.icaoId || x.id || x.icao) === icao) || r.value[0]) : null;
+                const apInfo = pick(settled[0]), metarObj = pick(settled[1]), tafObj = pick(settled[2]);
 
-                let lat, lon, siteName;
+                const rawMetarText = metarObj ? (metarObj.rawOb || metarObj.raw || "") : "";
+                const rawTafText = tafObj ? (tafObj.rawTAF || tafObj.raw || "") : "";
 
-                if (airportData.length > 0) {
-                    lat = airportData[0].lat;
-                    lon = airportData[0].lon;
-                    siteName = airportData[0].id || icao; 
-                } else if (metarData.length > 0 && metarData[0].lat !== undefined) {
-                    lat = metarData[0].lat;
-                    lon = metarData[0].lon;
-                    siteName = metarData[0].name || icao;
-                } else if (tafData.length > 0 && tafData[0].lat !== undefined) {
-                    lat = tafData[0].lat;
-                    lon = tafData[0].lon;
-                    siteName = tafData[0].name || icao;
+                // 座標：AWC 機場資料 → METAR/TAF JSON 內的座標 → 內建座標表
+                let lat, lon;
+                for (const o of [apInfo, metarObj, tafObj]) {
+                    if (o && o.lat != null && o.lon != null) { lat = +o.lat; lon = +o.lon; break; }
+                }
+                if ((lat == null || lon == null) && typeof coordsDB !== 'undefined' && coordsDB[icao]) { [lat, lon] = coordsDB[icao]; }
+                const siteName = (apInfo && apInfo.name) || (metarObj && metarObj.name) || (tafObj && tafObj.name) || icao;
+
+                if (!rawMetarText && !rawTafText && (lat == null || lon == null)) {
+                    throw new Error("查無此機場的 METAR／TAF");
                 }
 
-                if (lat === undefined || lon === undefined) {
-                    throw new Error("查無此機場或氣象座標資訊");
-                }
-
-                let rawMetarText = "";
-                let rawTafText = "";
-                if (metarData.length > 0) rawMetarText = metarData[0].rawOb || metarData[0].raw;
-                if (tafData.length > 0) rawTafText = tafData[0].rawTAF || tafData[0].raw;
-
-                const customIcon = L.divIcon({
-                    html: '<div style="font-size:26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); line-height: 1; transform: translate(-5px, -15px);">🌟</div>',
-                    className: 'custom-icao-icon',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30]
-                });
-
-                const searchedAirport = { icao: icao, name: siteName, lat: lat, lng: lon };
-                const plotLon = lon < 0 ? lon + 360 : lon; // 西半球畫在台灣右邊的世界複本（同機隊 marker 邏輯）
                 // 只保留最近一次搜尋的 🌟，舊的移除
-                if (window._wxCustomMarker) window.aviationMapInstance.removeLayer(window._wxCustomMarker);
-                const customMarker = L.marker([lat, plotLon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
-                window._wxCustomMarker = customMarker;
-                customMarker.on('click', function() { openWxSheet(searchedAirport, rawMetarText, rawTafText); });
+                if (window._wxCustomMarker) { window.aviationMapInstance.removeLayer(window._wxCustomMarker); window._wxCustomMarker = null; }
+                const searchedAirport = { icao: icao, name: siteName, lat: lat, lng: lon };
 
-                window.aviationMapInstance.flyTo([lat, plotLon], 6, { duration: 1.5 });
-                // 等飛行動畫結束再開大面板，不然地圖還在飛就被蓋住
-                setTimeout(() => openWxSheet(searchedAirport, rawMetarText, rawTafText), 1600);
+                if (lat != null && lon != null) {
+                    const customIcon = L.divIcon({
+                        html: '<div style="font-size:26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); line-height: 1; transform: translate(-5px, -15px);">🌟</div>',
+                        className: 'custom-icao-icon',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+                    const plotLon = lon < 0 ? lon + 360 : lon; // 西半球畫在台灣右邊的世界複本（同機隊 marker 邏輯）
+                    const customMarker = L.marker([lat, plotLon], {icon: customIcon, zIndexOffset: 1000}).addTo(window.aviationMapInstance);
+                    window._wxCustomMarker = customMarker;
+                    customMarker.on('click', function() { openWxSheet(searchedAirport, rawMetarText, rawTafText); });
+                    window.aviationMapInstance.flyTo([lat, plotLon], 6, { duration: 1.5 });
+                    // 等飛行動畫結束再開大面板，不然地圖還在飛就被蓋住
+                    setTimeout(() => openWxSheet(searchedAirport, rawMetarText, rawTafText), 1600);
+                } else {
+                    // 查不到座標：不畫 🌟，直接開面板顯示報文
+                    openWxSheet(searchedAirport, rawMetarText, rawTafText);
+                }
 
                 btn.disabled = false;
                 btn.innerText = "🔍 ICAO搜尋";

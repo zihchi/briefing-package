@@ -759,8 +759,25 @@ async function handleWx(url, origin) {
   const ids = (url.searchParams.get('ids') || '').trim();
   const hours = url.searchParams.get('hours') || '';
   const format = url.searchParams.get('format') || 'json';
-  if (type !== 'metar' && type !== 'taf') return jsonResp({ error: 'type 必須是 metar 或 taf' }, 400, origin);
+  if (type !== 'metar' && type !== 'taf' && type !== 'airport') return jsonResp({ error: 'type 必須是 metar、taf 或 airport' }, 400, origin);
   if (!ids) return jsonResp({ error: '缺少 ids（機場 ICAO，可逗號分隔）' }, 400, origin);
+
+  // 機場基本資料（名稱、座標）：給前端「ICAO 搜尋」查不在機隊清單內的機場用。資料幾乎不變，快取 1 天。
+  if (type === 'airport') {
+    try {
+      const up = await fetch(`https://aviationweather.gov/api/data/airport?ids=${encodeURIComponent(ids)}&format=json`, {
+        cf: { cacheTtl: 86400, cacheEverything: true },
+        headers: { 'Accept': 'application/json', 'User-Agent': UA },
+      });
+      const body = await up.text();
+      return new Response(body, {
+        status: up.status,
+        headers: { ...cors(origin), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400', 'X-Proxy-By': 'elb-worker-wx-airport' },
+      });
+    } catch (e) {
+      return jsonResp({ error: 'aviationweather.gov 機場資料取得失敗: ' + String(e) }, 502, origin);
+    }
+  }
 
   // 需要歷史序列（hours>0）時只有 AWC 提供，直接走 AWC 原樣轉發。
   // 否則：同時取 NOAA tgftp（逐站）與 AWC（批次），逐站挑「發布/觀測時間較新」的一份。
