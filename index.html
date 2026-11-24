@@ -1189,8 +1189,11 @@
       SGN:[10.8188,106.6520], HAN:[21.2212,105.8072], KUL:[2.7456,101.7099], BKK:[13.6811,100.7473],
       CNX:[18.7668,98.9626], CGK:[-6.1256,106.6558], SIN:[1.3592,103.9893], CEB:[10.3075,123.9794],
       MNL:[14.5090,121.0194], CRK:[15.1858,120.5599], LAX:[33.9416,-118.4085], ONT:[34.0560,-117.6012],
-      SFO:[37.6189,-122.3750], PHX:[33.4342,-112.0080], SEA:[47.4489,-122.3094]
+      SFO:[37.6189,-122.3750], PHX:[33.4342,-112.0080], SEA:[47.4489,-122.3094],
+      RMQ:[24.2647,120.6208], KHH:[22.5771,120.3500]
     };
+    // 有 FIDS（TDX 即時航班看板）的台灣機場：台灣端的時間、登機門、櫃檯、行李轉盤都走這裡
+    var TW_FIDS = { TPE:'桃機', RMQ:'台中', KHH:'高雄' };
     var MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'], WK=['日','一','二','三','四','五','六'];
     function p2(n){ return String(n).padStart(2,'0'); }
     function wxOf(c){
@@ -1262,12 +1265,13 @@
           || flights.find(function(f){ return arr(f,dest); })
           || (flights.length===1 ? flights[0] : null);
     }
-    var _fids=null;
-    function getFids(){
-      if(_fids) return Promise.resolve(_fids);
-      // 桃機 FIDS：優先走自有 Worker(直打 TDX + 邊緣快取 + TDX 掛掉回最後成功結果),
-      //   失敗才退回舊 GAS。兩者皆加逾時;GAS 偶爾冷啟動故多試一次。成功才快取,失敗 reject。
-      var FIDS_WORKER = ELB_WORKER_URL + '/api/fids';
+    var _fids={};
+    function getFids(ap){
+      ap = ap || 'TPE';
+      if(_fids[ap]) return Promise.resolve(_fids[ap]);
+      // 機場 FIDS：優先走自有 Worker(直打 TDX + 邊緣快取 + TDX 掛掉回最後成功結果)。
+      //   桃園失敗才退回舊 GAS（GAS 只有桃園）。皆加逾時;GAS 偶爾冷啟動故多試一次。成功才快取,失敗 reject。
+      var FIDS_WORKER = ELB_WORKER_URL + '/api/fids?airport=' + ap;
       function once(url, ms){
         return new Promise(function(resolve, reject){
           var ctrl = new AbortController();
@@ -1283,10 +1287,12 @@
             .catch(function(e){ clearTimeout(id); reject(e); });
         });
       }
-      return once(FIDS_WORKER, 12000)
-        .catch(function(){ return once(FIDS_GAS, 12000); })   // worker 失敗 → 退回 GAS
-        .catch(function(){ return once(FIDS_GAS, 16000); })   // GAS 冷啟動 → 再試一次
-        .then(function(j){ _fids = j; return j; });
+      var p = once(FIDS_WORKER, 12000);
+      if(ap==='TPE'){
+        p = p.catch(function(){ return once(FIDS_GAS, 12000); })   // worker 失敗 → 退回 GAS
+             .catch(function(){ return once(FIDS_GAS, 16000); });  // GAS 冷啟動 → 再試一次
+      }
+      return p.then(function(j){ _fids[ap] = j; return j; });
     }
 
     // ---- 外站時間退路：TDX 定期時刻表（表定 HH:MM，當地時間）----
@@ -1386,12 +1392,13 @@
       var F = fmtTPE(iso);
       if(F) setTimes(tpeIsOrigin?'dep':'arr', F.loc, F.utc);
     }
-    function renderFids(f, tpeIsOrigin){
+    function renderFids(f, tpeIsOrigin, apName){
       var box=document.getElementById('fd-fids');
-      if(!f){ box.innerHTML='<span class="fd-note">桃機 FIDS 查無今日此航班</span>'; return; }
+      if(!f){ box.innerHTML='<span class="fd-note">'+(apName||'桃機')+' FIDS 查無今日此航班</span>'; return; }
+      var term=String(f.Terminal||'').trim();
       var cells=[
         ['GATE', (f.Gate||'').trim()||'—'],
-        ['TERM', f.Terminal?('T'+f.Terminal):'—'],
+        ['TERM', term ? (/^\d+$/.test(term) ? 'T'+term : term) : '—'],
         tpeIsOrigin ? ['DESK', (f.CheckCounter||'').trim()||'—']
                     : ['BELT', (f.BaggageClaim||'').trim()||'—']
       ];
@@ -1430,8 +1437,11 @@
       var info=(window.flights||[]).find(function(f){return f.flightNo===flightNo;});
       if(!info){ panel.classList.remove('open'); clearSel(); return; }
       saveSel(flightNo);
-      var parts=info.route.split('/'), orig=parts[0], dest=parts[1], tpeIsOrigin=(orig==='TPE');
-      var depIsTPE=(orig==='TPE'), arrIsTPE=(dest==='TPE');
+      var parts=info.route.split('/'), orig=parts[0], dest=parts[1];
+      // 台灣端（桃園／台中／高雄）走 FIDS；另一端走 AeroDataBox
+      var depIsTPE=!!TW_FIDS[orig], arrIsTPE=!!TW_FIDS[dest];
+      var tpeIsOrigin=depIsTPE;
+      var twAp = depIsTPE ? orig : (arrIsTPE ? dest : null), twName = twAp ? TW_FIDS[twAp] : '';
       document.getElementById('fd-no').textContent='JX'+flightNo;
       document.getElementById('fd-route').textContent=orig+' → '+dest;
       document.getElementById('fd-dep-ap').textContent=orig;
@@ -1456,17 +1466,18 @@
           fillSchedFallback(flightNo, outSide, offSec);
         });
       }
-      // 桃機 FIDS：填 GATE/TERM/BELT，並用同一筆記錄補 TPE 端時間（免費、不受額度限制）
-      getFids().then(function(fids){
+      // 台灣端機場 FIDS：填 GATE/TERM/DESK 或 BELT，並用同一筆記錄補台灣端時間（免費、不受額度限制）
+      if(!twAp){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">此航班無台灣端 FIDS</span>'; return; }
+      getFids(twAp).then(function(fids){
         try{
           var rec=findFids(fids, flightNo, tpeIsOrigin);
-          renderFids(rec, tpeIsOrigin);
+          renderFids(rec, tpeIsOrigin, twName);
           renderFidsTimes(rec, tpeIsOrigin);
         }
         catch(e){ document.getElementById('fd-fids').innerHTML='<span class="fd-note">FIDS 載入失敗</span>'; }
       }).catch(function(){
-        // 連線逾時/GAS 暫時無回應(有別於「查無此航班」),提示可重試
-        document.getElementById('fd-fids').innerHTML='<span class="fd-note">桃機 FIDS 連線逾時或暫時無回應,請按「🔄 重新整理」再試一次</span>';
+        // 連線逾時/暫時無回應(有別於「查無此航班」),提示可重試
+        document.getElementById('fd-fids').innerHTML='<span class="fd-note">'+twName+' FIDS 連線逾時或暫時無回應,請按「🔄 重新整理」再試一次</span>';
       });
     }
     sel.addEventListener('change', function(){ if(sel.value) select(sel.value); else { panel.classList.remove('open'); clearSel(); } });
