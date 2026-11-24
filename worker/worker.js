@@ -842,7 +842,7 @@ async function handleWx(url, origin) {
 }
 
 // ══════════════════════════════════════════
-// 🛫 桃機 FIDS — /api/fids GET(直打 TDX，取代舊 GAS)
+// 🛫 機場 FIDS — /api/fids?airport=TPE|RMQ|KHH GET(直打 TDX，取代舊 GAS；未帶 airport＝TPE)
 // ──────────────────────────────────────────
 // 回 { ok, departures:[...], arrivals:[...], ts }，欄位同 TDX FIDS(Gate/Terminal/
 //   CheckCounter/BaggageClaim/各時間/Remark)。僅取星宇(JX)以縮小 payload。
@@ -867,8 +867,9 @@ async function getTdxToken(env) {
   _tdxExp = now + ((j.expires_in || 86400) * 1000);
   return _tdxTok;
 }
-async function tdxFids(token, kind) { // kind: 'Departure' | 'Arrival'
-  const url = `https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/${kind}/TPE`
+const FIDS_AIRPORTS = ['TPE', 'RMQ', 'KHH']; // 桃園、台中、高雄
+async function tdxFids(token, kind, airport) { // kind: 'Departure' | 'Arrival'
+  const url = `https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/${kind}/${airport}`
     + `?$filter=${encodeURIComponent("AirlineID eq 'JX'")}&$format=JSON`;
   const r = await fetch(url, { headers: { authorization: 'Bearer ' + token, accept: 'application/json' } });
   if (!r.ok) throw new Error(`FIDS ${kind} HTTP ${r.status}`);
@@ -880,8 +881,11 @@ async function handleFids(request, origin, env, ctx) {
   const okOrigin = ALLOWED_ORIGINS.includes(origin) || (origin && origin.startsWith('http://192.168.'));
   if (!okOrigin) return jsonResp({ ok: false, error: '來源不被允許' }, 403, origin);
 
+  const airport = (new URL(request.url).searchParams.get('airport') || 'TPE').toUpperCase();
+  if (!FIDS_AIRPORTS.includes(airport)) return jsonResp({ ok: false, error: 'airport 只支援 ' + FIDS_AIRPORTS.join('/') }, 400, origin);
+
   const cache = caches.default;
-  const key = new Request('https://fids.internal/tpe-jx-v1');
+  const key = new Request(`https://fids.internal/${airport.toLowerCase()}-jx-v1`);
   const FRESH_MS = 30000;
   const hit = await cache.match(key);
 
@@ -900,8 +904,8 @@ async function handleFids(request, origin, env, ctx) {
   // 2) 抓 TDX 最新
   try {
     const token = await getTdxToken(env);
-    const [departures, arrivals] = await Promise.all([tdxFids(token, 'Departure'), tdxFids(token, 'Arrival')]);
-    const payload = { ok: true, departures, arrivals, ts: new Date().toISOString() };
+    const [departures, arrivals] = await Promise.all([tdxFids(token, 'Departure', airport), tdxFids(token, 'Arrival', airport)]);
+    const payload = { ok: true, airport, departures, arrivals, ts: new Date().toISOString() };
     const body = JSON.stringify(payload);
     // 存 last-good(長 TTL,供 TDX 掛掉時退路)
     const store = new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
@@ -1224,7 +1228,7 @@ export default {
       return await handleWx(url, origin);
     }
 
-    // 🛫 桃機 FIDS（直打 TDX，取代舊 GAS）
+    // 🛫 機場 FIDS：桃園／台中／高雄（直打 TDX，取代舊 GAS）
     if (url.pathname === '/api/fids' && request.method === 'GET') {
       return await handleFids(request, origin, env, ctx);
     }
