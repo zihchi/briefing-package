@@ -1896,7 +1896,7 @@ function initAviationMap() {
             if(!/^[A-Z0-9]{4}$/.test(icao) && !/^[A-Z]{3}$/.test(icao)) {
                 btn.innerText = "⚠️ 3或4碼";
                 btn.style.background = "#e74c3c";
-                setTimeout(() => { btn.innerText = "🔍 ICAO搜尋"; btn.style.background = "#8e44ad"; }, 2000);
+                setTimeout(() => { btn.innerText = "🔍 搜尋"; btn.style.background = "#8e44ad"; }, 2000);
                 return;
             }
 
@@ -1961,7 +1961,7 @@ function initAviationMap() {
                 }
 
                 btn.disabled = false;
-                btn.innerText = "🔍 ICAO搜尋";
+                btn.innerText = "🔍 搜尋";
                 btn.style.opacity = "1";
                 inputEl.value = ""; 
 
@@ -1971,7 +1971,7 @@ function initAviationMap() {
                 btn.style.background = "#e74c3c";
                 setTimeout(() => {
                     btn.disabled = false;
-                    btn.innerText = "🔍 ICAO搜尋";
+                    btn.innerText = "🔍 搜尋";
                     btn.style.background = "#8e44ad";
                     btn.style.opacity = "1";
                 }, 2500);
@@ -2582,9 +2582,11 @@ function initNotamRadar() {
     if (btnClear) btnClear.onclick = clearNotamAll;
 
     const btnRoute = document.getElementById('btn-draw-route');
-    if (btnRoute) btnRoute.onclick = drawAtcRoute;
-
-    loadAtcWaypointDB();  // 預先載入航點資料庫
+    // 航路具現化已封存（notam.html 內以 <template> 隱藏）；按鈕不存在時不預載航點資料庫
+    if (btnRoute) {
+        btnRoute.onclick = drawAtcRoute;
+        loadAtcWaypointDB();  // 預先載入航點資料庫
+    }
 }
 
 // ──────────────────────────────────────────
