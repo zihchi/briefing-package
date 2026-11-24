@@ -186,11 +186,8 @@
     .wx-cat-marker .wx-tag { font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; line-height: 1.5; color: var(--text); white-space: nowrap; }
 
     /* =========================================
-       🧭 機隊氣象：地圖卡片、警戒線、TAF 時間軸、總覽表
+       🧭 機隊氣象：地圖卡片、警戒條件、TAF 時間軸、總覽表
        ========================================= */
-    .wx-label-toggle { display: inline-flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .wx-label-btn { margin: 0; padding: 4px 10px; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
-    .wx-label-btn.on { background: var(--brand); color: #fff; }
     .wx-mins { background: #faf6f1; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; font-size: 13px; }
     .wx-mins summary { cursor: pointer; padding: 7px 12px; font-weight: 700; color: var(--text); list-style: none; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
     .wx-mins summary::-webkit-details-marker { display: none; }
@@ -294,6 +291,8 @@
     .wx-overview .muted { color: var(--text-muted); }
     .wx-overview .why { color: #b42d20; font-weight: 700; font-size: 12px; }
     .wx-overview .ok { color: #17733d; font-weight: 700; }
+    .wx-overview-more { margin: 8px 0 0; padding: 6px 14px; font-size: 12.5px; font-weight: 700; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--brand); cursor: pointer; }
+    .wx-overview-more[hidden] { display: none; }
     @media (max-width: 520px) { .wx-stats .v { font-size: 14.5px; } .wx-grp { grid-template-columns: 66px minmax(0, 1fr); } }
 
     /* ⚠️ METAR/TAF 原始電文重點字（雷雨/CB/陣風/低能見度）標紅 */
@@ -716,7 +715,7 @@
   <h2>🧮 外部開啟工具</h2>
   <div class="tool-grid">
     <a class="btn" href="https://zihchi.github.io/briefing-package/FDP" target="_blank">💻 飛時限制</a>
-    <a class="btn" href="https://zihchi.github.io/Holdovertime/" target="_blank">🥶 除防冰 Holdovertime</a>
+    <a class="btn" href="https://zihchi.github.io/Holdovertime/" target="_blank">🥶 Holdovertime 26-27</a>
     <a class="btn" href="https://zihchi.github.io/briefing-package/swap" target="_blank">↔️ 換班單</a>    
     <a class="btn" href="https://zihchi.github.io/briefing-package/fpl_decoder" target="_blank">🔍 FPN Decode</a>
     <a class="btn" href="https://zihchi.github.io/briefing-package/pilot-rest" target="_blank">🛏️ 機上輪休</a>
@@ -750,7 +749,6 @@
       <div class="checklist-body">
         <h3>🧳 個人裝備檢查表</h3>
         <ul class="checklist" id="personalChecklist">
-          <li><label><input type="checkbox"> Sign On</label></li>
           <li><label><input type="checkbox"> 更新：Flysmart (確認版本) / FD PRO</label></li>
           <li><label><input type="checkbox"> Passport / ID / Flashlight / MED / CAA / РТРС</label></li>
           <li><label><input type="checkbox"> 入境登記</label></li>
@@ -765,6 +763,7 @@
           <li><label><input type="checkbox"> Performance : 油量、起重、落地重、MEL</label></li>
           <li><label><input type="checkbox"> Special Procedure : Crew(LIM)、Aircraft(ELB)、Airport(Airport Briefing)、Weather、NOTAM、Fuel</label></li>
           <li><label><input type="checkbox"> Fleet Notice Reviewed and ✅ </label></li>
+          <li><label><input type="checkbox"> Verify Terminal Charts</label></li>
           <li><label><input type="checkbox"> OFP Signed </label></li>
         </ul>
       </div>
@@ -837,11 +836,6 @@
           <button class="fleet-btn inactive" data-fleet="Domestic">Domestic</button>
       </div>
 
-      <div class="wx-label-toggle" role="group" aria-label="地圖標籤">
-          <button type="button" class="wx-label-btn" data-mode="compact">精簡標籤</button>
-          <button type="button" class="wx-label-btn" data-mode="full">詳細標籤</button>
-      </div>
-
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 4px;">
               <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 65px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
@@ -851,19 +845,19 @@
 
     </div>
     <details class="wx-mins">
-      <summary>⚠️ 警戒線：<span id="wx-mins-summary"></span><span class="wx-mins-edit">調整</span></summary>
+      <summary>⚠️ 警戒條件：<span id="wx-mins-summary"></span><span class="wx-mins-edit">調整</span></summary>
       <div class="wx-mins-body">
         <label>雲幕 <input type="number" id="wx-min-ceil" step="100" min="0" inputmode="numeric"> ft</label>
         <label>能見度 <input type="number" id="wx-min-vis" step="100" min="0" inputmode="numeric"> m</label>
         <label>風速／陣風上限 <input type="number" id="wx-min-wind" step="1" min="0" inputmode="numeric"> kt</label>
-        <label><input type="checkbox" id="wx-min-ts"> 雷雨視為低於警戒線</label>
+        <label><input type="checkbox" id="wx-min-ts"> 雷雨即觸發警戒</label>
         <button type="button" id="wx-min-reset">恢復預設</button>
-        <p>低於警戒線的機場會在地圖上標 ⚠️，面板和總覽表會列出原因與時段。設定只存在這台裝置。</p>
+        <p>觸發警戒的機場會在地圖上標 ⚠️，面板和總覽表會列出原因與時段。設定只存在這台裝置。</p>
       </div>
     </details>
     <div class="wx-legend">
       <span><i style="background:#27ae60"></i>VFR</span><span><i style="background:#2f80c7"></i>MVFR</span><span><i style="background:#d9473a"></i>IFR</span><span><i style="background:#8e44ad"></i>LIFR</span>
-      <span><i class="ring"></i>外圈：12h 內 TAF 變差</span><span>⚡ 雷雨／⚠️ 低於警戒線</span>
+      <span><i class="ring"></i>外圈：12h 內 TAF 變差</span><span>⚡ 雷雨／⚠️ 觸發警戒</span>
     </div>
     <div id="map-shell">
       <div id="map"></div>
@@ -879,10 +873,11 @@
       <h3>機隊總覽 · 最差的排最前面</h3>
       <div class="wx-overview-scroll">
         <table>
-          <thead><tr><th>機場</th><th>現在</th><th>未來 12h TAF 最差</th><th>警戒線</th><th>METAR</th></tr></thead>
+          <thead><tr><th>機場</th><th>現在</th><th>未來 12h TAF 最差</th><th>警戒</th><th>METAR</th></tr></thead>
           <tbody id="wx-overview-body"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
         </table>
       </div>
+      <button type="button" id="wx-overview-more" class="wx-overview-more" hidden></button>
     </div>
   </div>
 
