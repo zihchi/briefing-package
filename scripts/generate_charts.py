@@ -108,13 +108,16 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
     )
     page = await context.new_page()
     try:
-        # 最多 retry 兩次（共 3 次嘗試），Cloudflare 偶爾會 403
+        # 最多 4 次嘗試：Cloudflare 偶爾 403；turbli 太頻繁時回 429（需等久一點）
         last_err = None
-        for attempt in range(3):
+        retry_after_ms = 0
+        TRIES = 4
+        for attempt in range(TRIES):
             if attempt > 0:
-                # 指數退避：第 2 次 8-13s, 第 3 次 16-26s
+                # 一般錯誤指數退避：8-13s、16-21s、32-37s；429 至少等 30 秒或伺服器指定的 Retry-After
                 base_wait = 8000 * (2 ** (attempt - 1))
-                await page.wait_for_timeout(base_wait + random.randint(0, 5000))
+                await page.wait_for_timeout(max(base_wait, retry_after_ms) + random.randint(0, 5000))
+            retry_after_ms = 0
             response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
             status = response.status if response else 0
             # turbli 主動回的 HTTP code，快速跳過不浪費 timeout
@@ -123,10 +126,15 @@ async def fetch_one(browser, flight: str, route: str, date: str) -> tuple[str, b
             if status == 404:
                 return cache_key, False, "skip:404 turbli 無此航班"
             if status == 403:
-                last_err = f"403 Cloudflare (try {attempt+1}/3)"
+                last_err = f"403 Cloudflare (try {attempt+1}/{TRIES})"
+                continue
+            if status == 429:
+                ra = (response.headers.get("retry-after") or "").strip() if response else ""
+                retry_after_ms = min(int(ra), 120) * 1000 if ra.isdigit() else 30000
+                last_err = f"HTTP 429 太頻繁 (try {attempt+1}/{TRIES})"
                 continue
             if status != 200:
-                last_err = f"HTTP {status} (try {attempt+1}/3)"
+                last_err = f"HTTP {status} (try {attempt+1}/{TRIES})"
                 continue
             break
         else:

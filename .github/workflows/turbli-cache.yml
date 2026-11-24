@@ -1,14 +1,11 @@
 name: Turbli 湍流圖預先抓取
 
 on:
-  # ⚠️ 自動排程已暫停：turbli 的 Cloudflare 目前 100% 硬擋 GitHub Actions 的資料中心 IP
-  #    （「Just a moment」managed challenge 完全不放行，headed/stealth 皆無效），
-  #    每 3 小時跑只會空轉、抓 0 張、浪費 Actions 額度。前端已改為 cache miss 時
-  #    讓使用者用自己的瀏覽器即時開 turbli（app.js 的即時退路）。
-  #    若日後想恢復伺服器端預抓：改走住宅代理／付費 scraping API，再取消下面註解。
-  # schedule:
-  #   - cron: '0 */3 * * *'
-  # 保留手動觸發，方便日後測試是否已可再抓
+  # 2026-08-17 曾因 turbli 的 Cloudflare 擋 GitHub Actions IP 而暫停；
+  # 2026-11-24 手動測試已可抓到圖（55 張成功，失敗多為 HTTP 429 太頻繁），恢復每 3 小時排程。
+  # 若日後又全數被擋，把下面 schedule 註解掉即可；前端 cache miss 時仍有「即時開 turbli」退路。
+  schedule:
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 # 允許 workflow 把產生的 PNG 推回 repo
@@ -19,7 +16,7 @@ jobs:
   generate:
     # 固定 24.04：ubuntu-latest 已升到 26.04，Playwright 1.60 不支援、裝不了 Chromium
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     steps:
       - name: Checkout repo
@@ -37,7 +34,8 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Generate charts
-        run: python scripts/generate_charts.py --concurrency 4
+        # 並行 2、每次請求後等 6~12 秒：並行 4 時約 1/3 請求被 turbli 回 429（太頻繁）
+        run: python scripts/generate_charts.py --concurrency 2 --delay 6
 
       - name: Commit & push if charts changed
         run: |
