@@ -31,6 +31,7 @@ const flightGroups = [
       { flightNo: "314", route: "RMQ/NRT" }, { flightNo: "315", route: "NRT/RMQ" },
       { flightNo: "316", route: "RMQ/KMJ" }, { flightNo: "317", route: "KMJ/RMQ" },
       { flightNo: "318", route: "RMQ/CTS" }, { flightNo: "319", route: "CTS/RMQ" },
+      { flightNo: "320", route: "RMQ/NGO" }, { flightNo: "321", route: "NGO/RMQ" },
       { flightNo: "800", route: "TPE/NRT" }, { flightNo: "801", route: "NRT/TPE" },
       { flightNo: "802", route: "TPE/NRT" }, { flightNo: "803", route: "NRT/TPE" },
       { flightNo: "804", route: "TPE/NRT" }, { flightNo: "805", route: "NRT/TPE" },
@@ -39,20 +40,18 @@ const flightGroups = [
       { flightNo: "834", route: "TPE/UKB" }, { flightNo: "835", route: "UKB/TPE" },
       { flightNo: "838", route: "TPE/NGO" }, { flightNo: "839", route: "NGO/TPE" },
       { flightNo: "840", route: "TPE/FUK" }, { flightNo: "841", route: "FUK/TPE" },
+      { flightNo: "842", route: "TPE/FUK" }, { flightNo: "843", route: "FUK/TPE" },
       { flightNo: "846", route: "TPE/KMJ" }, { flightNo: "847", route: "KMJ/TPE" },
       { flightNo: "850", route: "TPE/CTS" }, { flightNo: "851", route: "CTS/TPE" },
       { flightNo: "860", route: "TPE/HKD" }, { flightNo: "861", route: "HKD/TPE" },
       { flightNo: "862", route: "TPE/SDJ" }, { flightNo: "863", route: "SDJ/TPE" },
       { flightNo: "870", route: "TPE/OKA" }, { flightNo: "871", route: "OKA/TPE" },
-      { flightNo: "890", route: "TPE/SHI" }, { flightNo: "891", route: "SHI/TPE" },
+      { flightNo: "886", route: "TPE/SHI" }, { flightNo: "887", route: "SHI/TPE" },
       { flightNo: "900", route: "TPE/PUS" }, { flightNo: "901", route: "PUS/TPE" },
       { flightNo: "902", route: "TPE/PUS" }, { flightNo: "903", route: "PUS/TPE" },
-      { flightNo: "1308", route: "RMQ/SHI" }, { flightNo: "1309", route: "SHI/RMQ" },
-      { flightNo: "1310", route: "RMQ/PUS" }, { flightNo: "1311", route: "PUS/RMQ" },
+      { flightNo: "1320", route: "RMQ/NGO" }, { flightNo: "1321", route: "NGO/RMQ" },
       { flightNo: "1834", route: "TPE/UKB" }, { flightNo: "1835", route: "UKB/TPE" },
-      { flightNo: "1870", route: "TPE/OKA" }, { flightNo: "1871", route: "OKA/TPE" },
-      { flightNo: "1900", route: "TPE/PUS" }, { flightNo: "1901", route: "PUS/TPE" },
-      { flightNo: "1902", route: "TPE/PUS" }, { flightNo: "1903", route: "PUS/TPE" }
+      { flightNo: "1838", route: "TPE/NGO" }, { flightNo: "1839", route: "NGO/TPE" }
   ]},
   { region: "港澳航線", flights: [
       { flightNo: "201", route: "TPE/MFM" }, { flightNo: "202", route: "MFM/TPE" },
@@ -60,16 +59,16 @@ const flightGroups = [
       { flightNo: "233", route: "TPE/HKG" }, { flightNo: "234", route: "HKG/TPE" },
       { flightNo: "235", route: "TPE/HKG" }, { flightNo: "236", route: "HKG/TPE" },
       { flightNo: "329", route: "RMQ/MFM" }, { flightNo: "330", route: "MFM/RMQ" },
-      { flightNo: "331", route: "RMQ/MFM" }, { flightNo: "332", route: "MFM/RMQ" }
+      { flightNo: "331", route: "RMQ/MFM" }, { flightNo: "332", route: "MFM/RMQ" },
+      { flightNo: "1233", route: "TPE/HKG" }, { flightNo: "1234", route: "HKG/TPE" },
+      { flightNo: "3201", route: "TPE/MFM" }
   ]},
   { region: "東南亞航線", flights: [
-      { flightNo: "333", route: "RMQ/PQC" }, { flightNo: "334", route: "PQC/RMQ" },
       { flightNo: "703", route: "TPE/DAD" }, { flightNo: "704", route: "DAD/TPE" },
       { flightNo: "705", route: "TPE/PQC" }, { flightNo: "706", route: "PQC/TPE" },
       { flightNo: "711", route: "TPE/SGN" }, { flightNo: "712", route: "SGN/TPE" },
       { flightNo: "713", route: "TPE/SGN" }, { flightNo: "714", route: "SGN/TPE" },
       { flightNo: "715", route: "TPE/HAN" }, { flightNo: "716", route: "HAN/TPE" },
-      { flightNo: "717", route: "TPE/HAN" }, { flightNo: "718", route: "HAN/TPE" },
       { flightNo: "725", route: "TPE/KUL" }, { flightNo: "726", route: "KUL/TPE" },
       { flightNo: "741", route: "TPE/BKK" }, { flightNo: "742", route: "BKK/TPE" },
       { flightNo: "745", route: "TPE/BKK" }, { flightNo: "746", route: "BKK/TPE" },
@@ -81,7 +80,10 @@ const flightGroups = [
       { flightNo: "783", route: "TPE/CEB" }, { flightNo: "784", route: "CEB/TPE" },
       { flightNo: "785", route: "TPE/MNL" }, { flightNo: "786", route: "MNL/TPE" },
       { flightNo: "789", route: "TPE/CRK" }, { flightNo: "790", route: "CRK/TPE" },
-      { flightNo: "791", route: "TPE/CRK" }, { flightNo: "792", route: "CRK/TPE" }
+      { flightNo: "791", route: "TPE/CRK" }, { flightNo: "792", route: "CRK/TPE" },
+      { flightNo: "1703", route: "TPE/DAD" }, { flightNo: "1704", route: "DAD/TPE" },
+      { flightNo: "1751", route: "TPE/CNX" }, { flightNo: "1752", route: "CNX/TPE" },
+      { flightNo: "1761", route: "TPE/CGK" }, { flightNo: "1762", route: "CGK/TPE" }
   ]},
   { region: "北美航線", flights: [
       { flightNo: "001", route: "LAX/TPE" }, { flightNo: "002", route: "TPE/LAX" },
