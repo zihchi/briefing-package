@@ -712,7 +712,9 @@ window.refetchAirportWx = async function(icao) {
     const airport = window._wxSheetAirport;
     if (!airport || airport.icao !== icao) return;
     const btn = document.getElementById('wx-refetch-btn-' + icao);
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ 取得中…'; btn.style.opacity = '0.7'; btn.style.cursor = 'progress'; }
+    // 面板先用快取報文秒開；這裡在背景向伺服器確認有沒有更新的報文
+    if (btn) { btn.disabled = true; btn.textContent = '🔄 檢查最新報文…'; btn.style.opacity = '0.7'; btn.style.cursor = 'progress'; }
+    const before = weatherCache[icao] ? weatherCache[icao].metar + '|' + weatherCache[icao].taf : '';
     try {
         const [metars, tafs] = await Promise.all([
             fetchBulkWeatherFast(icao, 'metar'),
@@ -723,8 +725,26 @@ window.refetchAirportWx = async function(icao) {
         const t = (tafs || []).find(x => x.icaoId === icao) || (tafs || [])[0];
         if (m) weatherCache[icao].metar = m.rawOb || m.raw || weatherCache[icao].metar;
         if (t) weatherCache[icao].taf = t.rawTAF || t.raw || weatherCache[icao].taf;
-        // 重新渲染此機場面板（更新報文與時效徽章）
-        openWxSheet(airport, weatherCache[icao].metar, weatherCache[icao].taf);
+        const changed = (weatherCache[icao].metar + '|' + weatherCache[icao].taf) !== before;
+        if (changed) renderFleetMarkers(currentFleet, true); // 地圖卡片、總覽表同步更新
+        // 使用者已關閉面板或改看別的機場 → 不要把面板拉回來
+        const sheet = document.getElementById('wx-sheet');
+        const stillOpen = sheet && sheet.classList.contains('open') && window._wxSheetAirport && window._wxSheetAirport.icao === icao;
+        if (!stillOpen) return;
+        const curBtn = document.getElementById('wx-refetch-btn-' + icao);
+        if (changed) {
+            // 有新報文才重畫面板，並保留捲動位置
+            const body = document.getElementById('wx-sheet-body');
+            const top = body ? body.scrollTop : 0;
+            openWxSheet(airport, weatherCache[icao].metar, weatherCache[icao].taf);
+            if (body) body.scrollTop = top;
+            const nb = document.getElementById('wx-refetch-btn-' + icao);
+            if (nb) { nb.textContent = '✓ 已更新為最新報文'; setTimeout(() => { if (nb.isConnected) nb.textContent = '🔄 重新取得'; }, 4000); }
+        } else if (curBtn) {
+            curBtn.disabled = false; curBtn.style.opacity = '1'; curBtn.style.cursor = 'pointer';
+            curBtn.textContent = '✓ 已是最新';
+            setTimeout(() => { if (curBtn.isConnected) curBtn.textContent = '🔄 重新取得'; }, 4000);
+        }
     } catch (e) {
         console.warn('refetchAirportWx 失敗:', e);
         if (btn) { btn.disabled = false; btn.textContent = '⚠️ 重試'; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
@@ -954,13 +974,26 @@ function wxVerdictHtml(a) {
     const list = a.fails.slice(0, 3).map(f => `${f.tempo ? 'TEMPO ' : ''}${wxZRange(f.start, f.end)}：${f.why}`).join('<br>');
     return `<div class="wx-verdict bad"><span>⚠️</span><div><b>觸發警戒</b>${[cur, list].filter(Boolean).join('<br>')}</div></div>`;
 }
-// 時間軸色段：主要情況上色；TEMPO 若更差則畫斜線
+// 時間軸主色條：只畫主要情況（起始／FM／BECMG）
 function wxTimelineSegs(hours) {
-    return hours.map(h => {
-        const c = wxCat(h.st), tc = h.tempo ? wxCat(h.tempo) : null;
-        const worse = tc && (WX_RANK[tc] > WX_RANK[c] || wxAlerts(h.tempo).length > wxAlerts(h.st).length);
-        return `<div class="wx-tl-seg${worse ? ' tempo' : ''}" style="background:${WX_CAT_COLOR[c]};--t:${WX_CAT_COLOR[tc] || 'transparent'}"></div>`;
-    }).join('');
+    return hours.map(h => `<div class="wx-tl-seg" style="background:${WX_CAT_COLOR[wxCat(h.st)]}"></div>`).join('');
+}
+// 時間軸上排：TEMPO／PROB 各自一塊斜線色塊（顏色＝該時段可能的等級），重疊時往上疊一排
+function wxTempoLanes(t) {
+    const t0 = t.vs.getTime(), span = t.ve.getTime() - t0;
+    const pct = x => Math.max(0, Math.min(100, (x - t0) / span * 100));
+    const lanes = []; // 每排記錄最後結束時間
+    const blocks = t.groups.filter(g => /TEMPO|PROB/.test(g.type)).map(g => {
+        const s = g.start.getTime(), e = g.end.getTime();
+        let lane = lanes.findIndex(end => end <= s);
+        if (lane < 0) { lane = lanes.length; lanes.push(e); } else lanes[lane] = e;
+        const cat = wxCat(g.eff), al = wxAlerts(g.eff);
+        const label = g.type.replace(' TEMPO', '');
+        const left = pct(s), width = Math.max(pct(e) - left, 0.5);
+        return `<div class="wx-tempo-blk" style="left:${left}%;width:${width}%;top:${lane * 24}px;--c:${WX_CAT_COLOR[cat]}" title="${g.type} ${wxZRange(g.start, g.end)}：${cat}${al.length ? '，觸發警戒：' + al.join('、') : ''}"><span>${label}</span></div>`;
+    });
+    if (!blocks.length) return '';
+    return `<div class="wx-tempo-lanes" style="height:${lanes.length * 24}px">${blocks.join('')}</div>`;
 }
 
 // ------------------------------------------
@@ -1005,12 +1038,13 @@ function buildAirportPopupHtml(airport, rawMetarText, rawTafText) {
             <div class="wx-sub-h"><span>TAF 趨勢</span><span class="hint">← 左右滑動選時間 →</span></div>
             <div class="wx-scrub-read" aria-live="polite"></div>
             <div class="wx-scrub-track" tabindex="0" role="slider" aria-label="選擇 TAF 時間" aria-valuemin="0" aria-valuemax="${N - 1}">
+                ${wxTempoLanes(t)}
                 <div class="wx-tl-bar">${wxTimelineSegs(t.hours)}${nowPct > 0 && nowPct < 100 ? `<div class="wx-tl-now" style="left:${nowPct}%"></div>` : ''}</div>
                 <div class="wx-scrub-cursor"></div>
             </div>
             <div class="wx-tl-mins">${minBars}</div>
             <div class="wx-tl-ruler">${ruler}</div>
-            <div class="wx-tl-key"><span><i style="background:repeating-linear-gradient(135deg,${WX_CAT_COLOR.IFR} 0 3px,${WX_CAT_COLOR.VFR} 3px 6px)"></i>斜線＝TEMPO／PROB</span><span><i class="red"></i>紅線＝觸發警戒</span></div>
+            <div class="wx-tl-key"><span><i class="hatch" style="--c:${WX_CAT_COLOR.IFR}"></i>上排斜線＝TEMPO／PROB（顏色＝可能的等級）</span><span><i class="red"></i>紅線＝觸發警戒</span></div>
         </div>
         <div class="wx-sub-h"><span>預報分組</span><span class="hint">${issued}有底色＝選取時間生效中 ${wxAgeChip(calculateReportAge(rawTafText))}</span></div>
         <div class="wx-groups">${groupsHtml}</div>
