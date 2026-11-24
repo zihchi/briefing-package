@@ -655,19 +655,31 @@ window.fetchOpenMeteoForecast = async function(icao, lat, lng) {
 // ------------------------------------------
 // ⚠️ 原始電文重點字標紅（雷雨/CB/凍雨/陣風/低能見度）
 // ------------------------------------------
+// 天氣現象代碼（例 SHSN、-RA、+TSRA、VCSH、FZFG、BR、RERA）：整個代碼加醒目色塊
+const WX_PH_RE = /^(RE)?(\+|-|VC)?(MI|BC|PR|DR|BL|SH|TS|FZ)?((?:DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|PO|SQ|FC|SS|DS)+)?$/;
+// 對飛航威脅較大的：雷暴、凍結類、冰雹／冰珠、強度 +、颮、漏斗雲、火山灰、沙／塵暴
+const WX_PH_DANGER_RE = /TS|FZ|GR|GS|PL|SQ|FC|VA|SS|DS|^\+|^RE\+/;
+function wxIsPhenomenon(tok) {
+    if (tok.length < 2) return false;
+    const m = tok.match(WX_PH_RE);
+    if (!m) return false;
+    // 必須有天氣現象本體；或是單獨的 TS／VCTS／VCSH（描述詞本身就是現象）
+    return !!m[4] || m[3] === 'TS' || (m[2] === 'VC' && m[3] === 'SH');
+}
+function highlightWxToken(t) {
+    let m;
+    if (wxIsPhenomenon(t)) return `<span class="wx-ph${WX_PH_DANGER_RE.test(t) ? ' danger' : ''}" title="天氣現象">${t}</span>`;
+    if ((m = t.match(/^(\d{3}|VRB)(\d{2,3})(G\d{2,3})(KT|MPS)$/))) return `${m[1]}${m[2]}<span class="wx-hl">${m[3]}</span>${m[4]}`;  // 陣風
+    if ((m = t.match(/^(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)$/))) return `${m[1]}${m[2]}<span class="wx-hl">${m[3]}</span>`;           // CB／TCU
+    if (/^VV\d{3}$/.test(t)) return `<span class="wx-hl">${t}</span>`;                                                         // 垂直能見度
+    if (/^WS(\d{3}\/\d{5,6}KT)?$/.test(t)) return `<span class="wx-hl">${t}</span>`;                                          // 風切
+    if (/^[0-2]\d{3}$/.test(t)) return `<span class="wx-hl">${t}</span>`;                                                      // 能見度 <3000 m
+    return t;
+}
+// 原始電文重點標示：天氣現象代碼用色塊（危險類紅、其他琥珀），陣風／CB／低能見度／VV／WS 標紅字
 function highlightWxKeywords(raw) {
     if (!raw) return raw;
-    return String(raw)
-        // 顯著天氣現象：雷雨、CB、凍雨/凍毛雨/凍霧、冰雹、颮、漏斗雲、火山灰、垂直能見度
-        .replace(/(^|\s)([+-]?TS[A-Z]*|FZRA|FZDZ|FZFG|GR|GS|SQ|FC|VA|VV\d{3})(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
-        // 🌧️ 雨 RA（含強度 +/-、陣性/雷雨等前綴，及 RASN 等組合）
-        .replace(/(^|\s)([+\-]?(?:VC|MI|BC|DR|BL|SH|TS|RE)?RA(?:SN|DZ|GR|GS|PL)?)(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
-        // 🌬️ 風切變 WS（單獨 WS、WS ALL RWY 的 WS，或 TAF 的 WSnnn/dddffKT）
-        .replace(/(^|\s)(WS(?:\d{3}\/\d{5,6}KT)?)(?=\s|$)/g, '$1<span class="wx-hl">$2</span>')
-        .replace(/\b(\d{3}|VRB)(\d{2,3})(G\d{2,3})(KT|MPS)\b/g, '$1$2<span class="wx-hl">$3</span>$4')
-        .replace(/\b(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)\b/g, '$1$2<span class="wx-hl">$3</span>')
-        // 低能見度：獨立 4 碼且小於 3000m 才標（前後需空白，避免誤標 Q1005 / 時間組）
-        .replace(/(^|\s)([0-2]\d{3})(?=\s|$)/g, '$1<span class="wx-hl">$2</span>');
+    return String(raw).split(/(\s+)/).map(t => /^\s*$/.test(t) ? t : highlightWxToken(t)).join('');
 }
 
 // ------------------------------------------
@@ -1239,7 +1251,7 @@ window.fetchHistoryMetarPopup = async function(icao) {
                         <span style="${MONOSPACE_FONT}">${timeStr}</span>
                     </div>
                     <div style="${MONOSPACE_FONT} font-size: 13px; color: #2c3e50; word-break: break-word;">
-                        ${rawText}
+                        ${highlightWxKeywords(wxEsc(rawText))}
                     </div>
                 </div>
             `;

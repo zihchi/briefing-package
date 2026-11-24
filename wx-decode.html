@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>氣象電碼速查表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* 氣象電碼速查表：簡報箱「📖 電碼速查」按鈕以 iframe 開啟。深藍墨色＋紙白；代碼一律等寬字 */
+:root {
+  --paper: #f6f7f9; --card: #ffffff; --ink: #14213d; --ink-2: #4a5568; --rule: #dde2ea; --code-bg: #eef2f7;
+  --sym: #14213d; --sym-soft: #94a3b8;
+  --f-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --f-code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 14.5px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+h1 { margin: 0; font-size: 26px; font-weight: 900; letter-spacing: .02em; text-wrap: balance; }
+.sub { color: var(--ink-2); font-size: 13.5px; max-width: 70ch; }
+h2 { margin: 0; font-size: 17px; font-weight: 900; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h2 small { font-size: 11.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .08em; text-transform: uppercase; font-family: var(--f-code); }
+section { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+code, .c { font-family: var(--f-code); font-weight: 700; }
+.muted { color: var(--ink-2); }
+
+
+/* 天氣現象代碼表 */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.wxcodes { min-width: 760px; }
+.wxcodes th { text-align: left; font-size: 12px; padding: 8px 10px; border-bottom: 2px solid var(--ink); vertical-align: bottom; }
+.wxcodes th span { display: block; font-family: var(--f-code); font-size: 10.5px; color: var(--ink-2); letter-spacing: .06em; }
+.wxcodes td { vertical-align: top; padding: 8px 10px; border-left: 1px solid var(--rule); }
+.wxcodes td:first-child { border-left: 0; }
+.wxcodes ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.wxcodes li { display: grid; grid-template-columns: 34px 1fr; gap: 6px; line-height: 1.35; }
+.wxcodes li .c { font-size: 13px; }
+.wxcodes li em { font-style: normal; display: block; font-size: 11.5px; color: var(--ink-2); }
+
+/* 名詞定義 */
+.defs td, .defs th { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; text-align: left; }
+.defs th { font-size: 12px; border-bottom: 2px solid var(--ink); }
+.defs td:first-child { width: 120px; white-space: nowrap; }
+.defs td:first-child .c { font-size: 14px; }
+.defs .note { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+@media (max-width: 560px) {
+  .defs, .defs tbody, .defs tr, .defs td { display: block; width: 100%; }
+  .defs thead { display: none; }
+  .defs tr { border-bottom: 1px solid var(--rule); padding-block: 4px; }
+  .defs td { border: 0; padding: 4px 8px; }
+  .defs td:first-child { width: auto; padding-top: 8px; }
+}
+
+/* 符號格 */
+.symgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.sym { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0; }
+.sym svg { width: 64px; height: 40px; color: var(--sym); overflow: visible; }
+.sym b { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.sym span { display: block; font-size: 11.5px; color: var(--ink-2); line-height: 1.35; }
+.sym.wide { grid-column: 1 / -1; grid-template-columns: 220px 1fr; }
+.sym.wide svg { width: 220px; height: 52px; }
+@media (max-width: 560px) { .sym.wide { grid-template-columns: 1fr; } .sym.wide svg { width: 100%; max-width: 260px; } }
+
+.abbr { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 18px; font-size: 13.5px; }
+.abbr div { display: grid; grid-template-columns: 62px 1fr; gap: 8px; }
+.notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; max-width: 80ch; }
+footer { font-size: 12px; color: var(--ink-2); }
+svg .f { fill: currentColor; } svg .n { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg .t { fill: currentColor; font-family: var(--f-code); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>氣象電碼速查表</h1>
+    <div class="sub">METAR／TAF 天氣現象代碼、常用名詞定義、顯著天氣圖（SIGWX）符號。依 ICAO Annex 3 核對，美國 NWS 不同之處另外註明。顯著天氣圖符號為示意圖，正式圖例以 ICAO Annex 3 Appendix 1 為準。</div>
+  </header>
+
+  <section aria-labelledby="codes">
+    <h2 id="codes">天氣現象代碼 <small>Qualifier · Weather Phenomena</small></h2>
+    <div class="scroll">
+      <table class="wxcodes">
+        <thead><tr>
+          <th>強度或鄰近<span>1 · INTENSITY / PROXIMITY</span></th>
+          <th>描述詞<span>2 · DESCRIPTOR</span></th>
+          <th>降水<span>3 · PRECIPITATION</span></th>
+          <th>視障<span>4 · OBSCURATION</span></th>
+          <th>其他<span>5 · OTHER</span></th>
+        </tr></thead>
+        <tbody><tr>
+          <td><ul>
+            <li><span class="c">−</span><span>輕度（小）<em>Light</em></span></li>
+            <li><span class="c">無</span><span>中度（不加符號）<em>Moderate</em></span></li>
+            <li><span class="c">+</span><span>強烈（大）<em>Heavy；塵／沙捲風、漏斗雲則表示發展完整</em></span></li>
+            <li><span class="c">VC</span><span>在附近<em>In the vicinity</em></span></li>
+            <li><span class="c">FBL</span><span>輕微<em>Feeble；明語報告中表示輕微</em></span></li>
+          </ul></td>
+          <td><ul>
+            <li><span class="c">MI</span><span>淺<em>Shallow</em></span></li>
+            <li><span class="c">BC</span><span>散、碎<em>Patches</em></span></li>
+            <li><span class="c">PR</span><span>部分<em>Partial；覆蓋機場一部分</em></span></li>
+            <li><span class="c">DR</span><span>低吹<em>Drifting</em></span></li>
+            <li><span class="c">BL</span><span>高吹<em>Blowing</em></span></li>
+            <li><span class="c">SH</span><span>陣性<em>Shower(s)</em></span></li>
+            <li><span class="c">TS</span><span>雷暴<em>Thunderstorm</em></span></li>
+            <li><span class="c">FZ</span><span>凍（過冷）<em>Freezing／Supercooled</em></span></li>
+          </ul></td>
+          <td><ul>
+            <li><span class="c">DZ</span><span>毛毛雨<em>Drizzle</em></span></li>
+            <li><span class="c">RA</span><span>雨<em>Rain</em></span></li>
+            <li><span class="c">SN</span><span>雪<em>Snow</em></span></li>
+            <li><span class="c">SG</span><span>雪粒<em>Snow grains</em></span></li>
+            <li><span class="c">IC</span><span>冰晶（鑽石塵）<em>Ice crystals／Diamond dust</em></span></li>
+            <li><span class="c">PL</span><span>冰珠<em>Ice pellets（舊碼 PE 已停用）</em></span></li>
+            <li><span class="c">GR</span><span>冰雹<em>Hail</em></span></li>
+            <li><span class="c">GS</span><span>小冰雹及／或霰<em>Small hail and/or snow pellets</em></span></li>
+            <li><span class="c">UP</span><span>未知形式的降水<em>Unknown precipitation（自動觀測）</em></span></li>
+          </ul></td>
+          <td><ul>
+            <li><span class="c">BR</span><span>靄<em>Mist</em></span></li>
+            <li><span class="c">FG</span><span>霧<em>Fog</em></span></li>
+            <li><span class="c">FU</span><span>煙<em>Smoke</em></span></li>
+            <li><span class="c">VA</span><span>火山灰<em>Volcanic ash</em></span></li>
+            <li><span class="c">DU</span><span>大範圍塵<em>Widespread dust</em></span></li>
+            <li><span class="c">SA</span><span>沙<em>Sand</em></span></li>
+            <li><span class="c">HZ</span><span>霾<em>Haze</em></span></li>
+          </ul></td>
+          <td><ul>
+            <li><span class="c">PO</span><span>塵／沙捲風<em>Well-developed dust/sand whirls</em></span></li>
+            <li><span class="c">SQ</span><span>颮<em>Squalls</em></span></li>
+            <li><span class="c">FC</span><span>漏斗雲<em>Funnel cloud（龍捲風或水龍捲）</em></span></li>
+            <li><span class="c">SS</span><span>沙暴<em>Sandstorm</em></span></li>
+            <li><span class="c">DS</span><span>塵暴<em>Duststorm</em></span></li>
+          </ul></td>
+        </tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="defs">
+    <h2 id="defs">METAR／TAF 名詞定義 <small>Definitions</small></h2>
+    <table class="defs">
+      <thead><tr><th>代碼</th><th>定義</th></tr></thead>
+      <tbody>
+        <tr><td><span class="c">VRB</span></td><td>平均風速 <b>&lt;3 kt</b>，且風向變化 <b>≥60°</b>。<span class="note">美國 NWS：風速 ≤6 kt 即可報 VRB。</span></td></tr>
+        <tr><td><span class="c">VRB＋數字</span></td><td>風向變化 <b>≥180°</b>，或無法決定單一風向（例：雷雨過境），任何風速皆用 VRB。</td></tr>
+        <tr><td><span class="c">dddVddd</span></td><td>風速 ≥3 kt 且風向變化 60°～180° 時，在風之後加變化範圍。<span class="note">例：<code>31015KT 280V350</code></span></td></tr>
+        <tr><td><span class="c">RVR</span></td><td>能見度或 RVR <b>&lt;1500 m</b> 時，須報 RVR。</td></tr>
+        <tr><td><span class="c">RVR 符號</span></td><td><code>P</code> 大於（超過量測上限）、<code>M</code> 小於（低於量測下限）、<code>U</code> 上升（upward）、<code>D</code> 下降（downward）、<code>N</code> 無明顯變化（no trend）。</td></tr>
+        <tr><td><span class="c">TS</span></td><td>觀測時間前 <b>10 分鐘內</b>，機場聽到雷聲或偵測到閃電。</td></tr>
+        <tr><td><span class="c">NSC</span></td><td>無具運作意義的雲：<b>5000 ft 或最高 MSA（取較高者）</b>以下無雲，且<b>任何高度都沒有 CB／TCU</b>；並且不符合 CAVOK 時才用。</td></tr>
+        <tr><td><span class="c">NCD</span></td><td>No Cloud Detected：<b>自動觀測系統</b>未偵測到雲。系統無法判斷有沒有 CB／TCU，所以不能寫成 NSC 或 CAVOK。<span class="note">看到 NCD 代表是自動報（常伴隨 AUTO），高雲或 CB 可能沒被偵測到。</span></td></tr>
+        <tr><td><span class="c">CAVOK</span></td><td>同時符合：能見度 <b>≥10 km</b>；<b>5000 ft 或最高 MSA（取較高者）</b>以下無雲，且<b>無 CB／TCU</b>；無顯著天氣。</td></tr>
+        <tr><td><span class="c">RE</span></td><td>對飛航有顯著影響的近期天氣：發生在<b>上一份例行報告後或過去 1 小時內（取較短者）</b>，且<b>觀測當下已不存在</b>。<span class="note">例：<code>RETSRA</code></span></td></tr>
+        <tr><td><span class="c">VC</span></td><td>距機場參考點約 <b>8～16 km</b>（約 4.3～8.6 nm），不含機場本身。<span class="note">美國 NWS：5～10 SM（約 4.3～8.7 nm）。</span></td></tr>
+        <tr><td><span class="c">WS</span></td><td>跑道面至 <b>1600 ft（500 m）之間</b>有風切。<span class="note">例：<code>WS R05L</code>、<code>WS ALL RWY</code></span></td></tr>
+        <tr><td><span class="c">FM</span></td><td>自指定時間起<b>整組完全取代</b>先前預報（快速、明確的變化）。<span class="note">「1 小時內完成」是美國 NWS 的說法，ICAO 未規定時間。</span></td></tr>
+        <tr><td><span class="c">BECMG</span></td><td>在時段內逐漸變化（ICAO 一般 ≤2 hr，最長 4 hr），時段結束後生效。<b>只取代組內有列出的要素</b>（例：只列風就只換風），<b>沒列出的能見度、雲、天氣沿用原本預報</b>。<span class="note">美國 NWS 的 TAF 不使用 BECMG。</span></td></tr>
+        <tr><td><span class="c">TEMPO</span></td><td>暫時性波動：<b>每次持續 &lt;1 hr，且累計 &lt; 該時段的一半</b>（兩個條件都要成立）。<b>不取代</b>主要預報，波動結束後回到原本情況。</td></tr>
+        <tr><td><span class="c">INTER</span></td><td>Intermittent，間歇性的頻繁變化：<b>每次持續 &lt;30 分鐘</b>，累計 &lt; 該時段的一半。比 TEMPO 更短暫，同樣<b>不取代</b>主要預報。<span class="note">ICAO 標準 TAF 沒有 INTER，主要是<b>澳洲</b>（BoM）使用；澳洲的 TEMPO 則指每次 30 分鐘～1 小時。</span></td></tr>
+        <tr><td><span class="c">BR</span></td><td>能見度 <b>1000～5000 m</b>。</td></tr>
+        <tr><td><span class="c">FG</span></td><td>能見度 <b>&lt;1000 m</b>（剛好 1000 m 屬於 BR）。<span class="note">MIFG、BCFG、PRFG 例外：機場內局部能見度可 ≥1000 m。</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="sym1">
+    <h2 id="sym1">顯著天氣符號 <small>Symbols for Significant Weather Charts</small></h2>
+    <div class="symgrid">
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M22 6V34M22 6H40L31 19H41L32 32"/><path class="n" d="M32 32l-1-6M32 32l5-3"/></svg><div><b>雷暴</b><span>Thunderstorms</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><circle class="n" cx="32" cy="20" r="5"/><path class="n" d="M32 15C22 8 18 20 23 26M32 25C42 32 46 20 41 14"/></svg><div><b>熱帶氣旋</b><span>Tropical cyclone</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 26L18 18L24 28L36 18L42 28L56 16"/><path class="n" d="M18 18L20 10M36 18L38 10M56 16l-4 0M56 16l-2 4"/></svg><div><b>強烈颮線 *</b><span>Severe line squall</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 28H24L32 14L40 28H58"/></svg><div><b>中度亂流</b><span>Moderate turbulence</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 28H22L32 10L42 28H58M26 28L32 18L38 28"/></svg><div><b>強烈亂流</b><span>Severe turbulence</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><ellipse class="n" cx="32" cy="20" rx="22" ry="8"/><path class="n" d="M20 13V27M26 12V28M32 12V28M38 12V28M44 13V27"/></svg><div><b>山岳波</b><span>Mountain waves</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M18 8C18 30 46 30 46 8M32 10V36"/></svg><div><b>輕度積冰</b><span>Slight aircraft icing</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M18 8C18 30 46 30 46 8M28 10V36M36 10V36"/></svg><div><b>中度積冰</b><span>Moderate aircraft icing</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M18 8C18 30 46 30 46 8M26 10V36M32 10V36M38 10V36"/></svg><div><b>強烈積冰</b><span>Heavy aircraft icing</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M14 14H50M14 20H50M14 26H50"/></svg><div><b>大範圍霧</b><span>Widespread fog</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M14 16H50M14 24H50"/></svg><div><b>大範圍靄</b><span>Widespread mist</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M32 20C26 12 14 12 14 20C14 28 26 28 32 20C38 12 50 12 50 20C50 28 38 28 32 20Z"/></svg><div><b>大範圍霾</b><span>Widespread haze</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M24 34V8C28 4 32 12 36 8C40 4 42 8 42 8"/></svg><div><b>大範圍煙</b><span>Widespread smoke</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M38 8C30 4 24 10 30 18C36 26 32 34 24 32"/></svg><div><b>強烈沙或塵霾</b><span>Severe sand or dust haze</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M38 8C30 4 24 10 30 18C36 26 32 34 24 32M14 20H50M50 20l-5-4M50 20l-5 4"/></svg><div><b>大範圍沙暴或塵暴</b><span>Widespread sandstorm or duststorm</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M12 20H52M52 20l-6-5M52 20l-6 5M30 6V34"/></svg><div><b>大範圍高吹雪</b><span>Widespread blowing snow</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><circle class="f" cx="32" cy="14" r="5"/><path class="n" d="M35 17C34 24 30 28 26 30"/></svg><div><b>毛毛雨</b><span>Drizzle</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M16 18L20 8M22 18L26 8M30 18L34 8M36 18L40 8M16 32L20 22M22 32L26 22M30 32L34 22M36 32L40 22"/></svg><div><b>雨</b><span>Rain</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M32 6V34M20 12L44 28M44 12L20 28"/></svg><div><b>雪</b><span>Snow</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M18 8H46L32 34Z"/></svg><div><b>陣性降水</b><span>Shower</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M32 6L46 32H18Z"/></svg><div><b>冰雹</b><span>Hail</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><circle class="f" cx="24" cy="20" r="3"/><path class="n" d="M24 10C14 10 14 30 24 30M28 26C34 16 38 16 42 22C46 28 50 26 54 18"/></svg><div><b>凍降水 **</b><span>Freezing precipitation</span></div></div>
+    </div>
+    <ol class="notes" style="list-style:none;padding-left:0">
+      <li>* 供 FL100 以下航班使用的飛航文件中，此符號代表「颮線」（line squall）。</li>
+      <li>** 此符號不代表降水在極低溫下接觸航空器所造成的積冰。</li>
+      <li>高度標示：現象出現的高度範圍，上方為頂、下方為底，依圖例。</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="sym2">
+    <h2 id="sym2">鋒面、噴流與其他圖例 <small>SIGWX Chart Symbols</small></h2>
+    <div class="symgrid">
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60"/><path class="f" d="M10 28L17 16L24 28ZM34 28L41 16L48 28Z"/></svg><div><b>地面冷鋒</b><span>Cold front at the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60M10 28L17 16L24 28M34 28L41 16L48 28"/></svg><div><b>高空冷鋒</b><span>Cold front above the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60"/><path class="f" d="M10 28A7 7 0 0 1 24 28ZM34 28A7 7 0 0 1 48 28Z"/></svg><div><b>地面暖鋒</b><span>Warm front at the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60M10 28A7 7 0 0 1 24 28M34 28A7 7 0 0 1 48 28"/></svg><div><b>高空暖鋒</b><span>Warm front above the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60"/><path class="f" d="M6 28L12 17L18 28ZM20 28A6 6 0 0 1 32 28ZM34 28L40 17L46 28ZM48 28A6 6 0 0 1 60 28Z"/></svg><div><b>地面囚錮鋒</b><span>Occluded front at the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 28H60M6 28L12 17L18 28M20 28A6 6 0 0 1 32 28M34 28L40 17L46 28M48 28A6 6 0 0 1 60 28"/></svg><div><b>高空囚錮鋒</b><span>Occluded front above the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 20H60"/><path class="f" d="M8 20A7 7 0 0 1 22 20ZM28 20L35 32L42 20ZM46 20A7 7 0 0 1 60 20Z"/></svg><div><b>地面滯留鋒</b><span>Quasi-stationary front at the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 20H60M8 20A7 7 0 0 1 22 20M28 20L35 32L42 20M46 20A7 7 0 0 1 60 20"/></svg><div><b>高空滯留鋒</b><span>Quasi-stationary front above the surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M4 26H60M12 26L20 14M24 26L32 14M36 26L44 14M48 26L56 14"/></svg><div><b>輻合線</b><span>Convergence line</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M8 14H56M8 28H56M8 10V32M56 10V32M14 10V32"/></svg><div><b>間熱帶輻合區</b><span>Intertropical convergence zone (ITCZ)</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><rect class="n" x="14" y="9" width="36" height="22" rx="2"/><text class="t" x="32" y="25" text-anchor="middle" font-size="13">300</text></svg><div><b>對流層頂高度</b><span>Tropopause level（FL）</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M14 36V14L32 4L50 14V36Z"/><text class="t" x="32" y="21" text-anchor="middle" font-size="10">H</text><text class="t" x="32" y="33" text-anchor="middle" font-size="11">460</text></svg><div><b>對流層頂高點</b><span>Tropopause high</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M14 4V26L32 36L50 26V4Z"/><text class="t" x="32" y="17" text-anchor="middle" font-size="11">270</text><text class="t" x="32" y="29" text-anchor="middle" font-size="10">L</text></svg><div><b>對流層頂低點</b><span>Tropopause low</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><rect class="n" x="4" y="9" width="56" height="22" rx="2"/><text class="t" x="32" y="25" text-anchor="middle" font-size="12">0°=090</text></svg><div><b>凍結高度</b><span>Freezing level（FL）</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M2 20H18M46 20H62" stroke-dasharray="4 4"/><circle class="n" cx="32" cy="20" r="11"/><text class="t" x="32" y="24.5" text-anchor="middle" font-size="12">20</text></svg><div><b>等溫線（°C）</b><span>Isotherm</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><circle class="n" cx="32" cy="20" r="12"/><text class="t" x="32" y="24.5" text-anchor="middle" font-size="12">12</text></svg><div><b>選定點溫度（°C）</b><span>Temperature at selected points</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 30C6 22 14 22 14 30C14 18 26 18 26 26C26 14 40 14 40 24C40 16 52 16 52 26"/></svg><div><b>雲界</b><span>Cloud border（扇形線）</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><text class="t" x="32" y="17" text-anchor="middle" font-size="13">030</text><path class="n" d="M18 21H46"/><text class="t" x="32" y="35" text-anchor="middle" font-size="13">005</text></svg><div><b>雲頂／雲底（FL）</b><span>Cloud tops / base</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><text class="t" x="32" y="30" text-anchor="middle" font-size="26">H</text></svg><div><b>等壓面高壓中心</b><span>Centre of high altitude of the isobaric surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><text class="t" x="32" y="30" text-anchor="middle" font-size="26">L</text></svg><div><b>等壓面低壓中心</b><span>Centre of low altitude of the isobaric surface</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 30H56M56 30l-7-5M56 30l-7 5"/><path class="f" d="M10 30L16 12L22 30Z"/><path class="n" d="M26 30L30 14M32 30L34 22"/></svg><div><b>選定點風</b><span>Wind at selected points：半槓 5 kt、全槓 10 kt、三角旗 50 kt（所有風速都會畫）</span></div></div>
+      <div class="sym"><svg viewBox="0 0 64 40" aria-hidden="true"><path class="n" d="M6 20H56M56 20l-8-6M56 20l-8 6"/></svg><div><b>最大風區</b><span>Zone of maximum wind</span></div></div>
+      <div class="sym wide"><svg viewBox="0 0 220 52" aria-hidden="true"><path class="n" d="M4 40C40 30 70 24 104 24C140 24 170 32 214 22" style="stroke-width:3.5"/><path class="f" d="M50 28L58 10L64 27ZM64 27L72 9L78 26Z"/><path class="n" d="M82 26L88 12M88 25L94 11M94 25L98 15"/><path class="n" d="M150 18V36M156 18V36"/><path class="f" d="M176 28L184 12L188 27Z"/><text class="t" x="108" y="18" font-size="11">FL310</text><text class="t" x="190" y="44" font-size="11">FL340</text></svg><div><b>噴流</b><span>粗線為噴流軸，從預報風速 <b>80 kt（150 km/h）</b>處開始、結束；<b>低於 80 kt 的部分不畫</b>。旗與槓表示最大風速、FL 為其高度。雙槓表示高度變化 3000 ft 及／或風速變化 20 kt（37 km/h）之處。</span></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="abbr">
+    <h2 id="abbr">縮寫與低層圖註解 <small>Abbreviations · Low Charts (below FL180)</small></h2>
+    <div class="abbr">
+      <div><span class="c">ISOL CB</span><span>個別（孤立）積雨雲</span></div>
+      <div><span class="c">OCNL CB</span><span>間隔明顯的積雨雲</span></div>
+      <div><span class="c">FRQ CB</span><span>幾乎沒有間隔的積雨雲</span></div>
+      <div><span class="c">EMBD</span><span>嵌在其他雲層中或被霾遮蔽</span></div>
+      <div><span class="c">LYR</span><span>層狀雲</span></div>
+      <div><span class="c">NSC</span><span>無顯著雲</span></div>
+      <div><span class="c">NSW</span><span>無顯著天氣</span></div>
+    </div>
+    <ul class="notes">
+      <li><b>扇形線（Scalloped lines）</b>：圍出顯著雲區的範圍。</li>
+      <li><b>X</b>：氣壓中心位置，數值單位為 hPa。</li>
+      <li><b>XXX／XXX</b>：雲頂或雲底超出該張顯著天氣圖的高度範圍。</li>
+    </ul>
+  </section>
+
+  <footer>依 ICAO Annex 3（Meteorological Service for International Air Navigation）核對；美國 NWS 差異另註。顯著天氣圖符號為示意，正式圖例以 ICAO Annex 3 Appendix 1 為準。</footer>
+</div>
+</body>
+</html>
