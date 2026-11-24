@@ -156,7 +156,8 @@
     #map { height: 650px; width: 100%; border-radius: var(--radius-btn); box-shadow: var(--shadow-card); border: 1px solid var(--border); z-index: 1; touch-action: manipulation; }
 
     /* 🗂️ 氣象內容大面板：蓋住大部分地圖，只留上方一條地圖（點該處空白可關閉再選其他機場） */
-    #map-shell { position: relative; }
+    /* overflow:hidden：面板收起時（translateY 到下方）不可蓋住地圖下方的總覽表 */
+    #map-shell { position: relative; overflow: hidden; border-radius: var(--radius-btn); }
     #wx-sheet {
       position: absolute; left: 0; right: 0; bottom: 0;
       height: calc(100% - 64px);
@@ -183,6 +184,117 @@
     .wx-cat-marker { display: flex; flex-direction: column; align-items: center; gap: 2px; }
     .wx-cat-marker .wx-dot { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.35); flex: none; }
     .wx-cat-marker .wx-tag { font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; line-height: 1.5; color: var(--text); white-space: nowrap; }
+
+    /* =========================================
+       🧭 機隊氣象：地圖卡片、警戒線、TAF 時間軸、總覽表
+       ========================================= */
+    .wx-label-toggle { display: inline-flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .wx-label-btn { margin: 0; padding: 4px 10px; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+    .wx-label-btn.on { background: var(--brand); color: #fff; }
+    .wx-mins { background: #faf6f1; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; font-size: 13px; }
+    .wx-mins summary { cursor: pointer; padding: 7px 12px; font-weight: 700; color: var(--text); list-style: none; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+    .wx-mins summary::-webkit-details-marker { display: none; }
+    .wx-mins summary span#wx-mins-summary { font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .wx-mins-edit { margin-left: auto; font-size: 12px; color: var(--brand); }
+    .wx-mins[open] .wx-mins-edit { display: none; }
+    .wx-mins-body { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 4px 12px 10px; }
+    .wx-mins-body label { display: inline-flex; align-items: center; gap: 6px; }
+    .wx-mins-body input[type=number] { width: 76px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border); font-variant-numeric: tabular-nums; font-size: 13px; }
+    .wx-mins-body button { margin: 0; padding: 3px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; }
+    .wx-mins-body p { flex-basis: 100%; margin: 0; font-size: 11.5px; color: var(--text-faint); }
+    .wx-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--text-muted); margin: 0 2px 8px; }
+    .wx-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .wx-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .wx-legend i.ring { background: transparent; border: 2px solid #d9473a; }
+
+    .wxm-icon { overflow: visible; background: none; border: 0; }
+    .wxm-dot { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 0 0 3px var(--ring, transparent), 0 1px 4px rgba(0,0,0,0.35); }
+    .wxm-leader { position: absolute; left: 0; top: 0; height: 1.5px; width: 0; background: #8f8378; transform-origin: 0 50%; opacity: .75; pointer-events: none; }
+    .wxm-card { position: absolute; left: 10px; top: -30px; width: 100px; border-radius: 9px; overflow: hidden; background: #fff; border: 1.5px solid var(--c); box-shadow: 0 6px 18px rgba(74,54,39,0.22); cursor: pointer; font-family: inherit; }
+    .wxm-card:hover { outline: 2px solid var(--text); outline-offset: 1px; z-index: 5; }
+    .wxm-card .hd { background: var(--c); color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .04em; padding: 1px 7px; display: flex; justify-content: space-between; align-items: center; gap: 4px; white-space: nowrap; }
+    .wxm-card .bd { padding: 3px 7px 4px; font-size: 11px; line-height: 1.35; font-variant-numeric: tabular-nums; color: var(--text); }
+    .wxm-card .bd > div { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .wxm-card .bd .low { color: #b42d20; font-weight: 700; }
+    .wxm-card .mini { display: flex; height: 4px; }
+    .wxm-card .mini i { flex: 1; }
+    .wxm-card.compact { width: auto; border-radius: 999px; }
+    .wxm-card.compact .hd { padding: 1px 8px; }
+    .wx-arrow { width: 11px; height: 11px; flex: none; }
+
+    .wx-panel { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+    .wx-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+    .wx-top .icao { font-size: 22px; font-weight: 800; letter-spacing: .02em; }
+    .wx-top .name { color: var(--text-muted); font-size: 13px; }
+    .wx-top .sp { flex: 1; }
+    .wx-refetch { margin: 0; padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; }
+    .wx-badge { display: inline-block; color: #fff; font-weight: 800; font-size: 11.5px; padding: 2px 8px; border-radius: 6px; letter-spacing: .03em; line-height: 1.4; }
+    .wx-age { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .wx-age.fresh { background: #dcfce7; color: #15803d; }
+    .wx-age.mid { background: #ffedd5; color: #c2410c; }
+    .wx-age.old { background: #fee2e2; color: #b91c1c; }
+    .wx-panel #wx-localclock { margin-bottom: 0 !important; }
+    .wx-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .wx-stats > div { padding: 0 10px; border-left: 1px solid var(--border); min-width: 0; }
+    .wx-stats > div:first-child { padding-left: 0; border-left: 0; }
+    .wx-stats .lb { font-size: 11px; color: var(--text-muted); letter-spacing: .04em; }
+    .wx-stats .v { font-size: 16px; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; font-variant-numeric: tabular-nums; }
+    .wx-stats .v.low { color: #b42d20; }
+    .wx-raw, .wx-taf-lines { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.55; color: #2c3e50; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; word-break: break-word; overflow-wrap: anywhere; }
+    .wx-taf-lines div { padding-left: 2ch; text-indent: -2ch; }
+    .wx-verdict { display: flex; align-items: flex-start; gap: 8px; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+    .wx-verdict b { display: block; font-size: 14px; }
+    .wx-verdict.ok { background: #e7f6ec; color: #17733d; }
+    .wx-verdict.bad { background: #fdebe8; color: #b42d20; }
+    .wx-sub-h { display: flex; justify-content: space-between; align-items: center; gap: 6px 8px; flex-wrap: wrap; font-size: 12px; font-weight: 700; letter-spacing: .05em; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; }
+    .wx-sub-h .hint { font-weight: 500; letter-spacing: 0; color: var(--text-faint); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .wx-scrub { display: flex; flex-direction: column; gap: 6px; }
+    .wx-scrub-read { background: #faf6f1; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; min-height: 72px; }
+    .wx-scrub-read .when { font-weight: 800; font-variant-numeric: tabular-nums; display: flex; gap: 8px; align-items: baseline; }
+    .wx-scrub-read .when span { font-size: 12px; color: var(--brand); }
+    .wx-scrub-read .sl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; }
+    .wx-scrub-read .lbl { font-size: 11px; font-weight: 800; color: var(--text-muted); min-width: 44px; letter-spacing: .04em; }
+    .wx-scrub-read .txt { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .wx-scrub-read .why, .wx-grp .why { color: #b42d20; font-weight: 700; font-size: 12px; }
+    .wx-scrub-track { position: relative; padding: 8px 0; cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; outline: none; }
+    .wx-scrub-track:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+    .wx-tl-bar { position: relative; display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: #eee; }
+    .wx-tl-seg { flex: 1; height: 100%; position: relative; }
+    .wx-tl-seg.tempo::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, var(--t) 0 4px, transparent 4px 8px); }
+    .wx-tl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.9); }
+    .wx-scrub-cursor { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--text); border-radius: 2px; box-shadow: 0 0 0 2px #fff; pointer-events: none; }
+    .wx-scrub-cursor::before { content: ""; position: absolute; left: 50%; top: -5px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px #fff; }
+    .wx-tl-mins { position: relative; height: 5px; }
+    .wx-tl-mins i { position: absolute; top: 0; height: 4px; background: #b42d20; border-radius: 2px; }
+    .wx-tl-ruler { position: relative; height: 16px; font-size: 10.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .wx-tl-ruler span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+    .wx-tl-ruler span.now { color: var(--text); font-weight: 700; }
+    .wx-tl-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--text-muted); }
+    .wx-tl-key span { display: inline-flex; align-items: center; gap: 5px; }
+    .wx-tl-key i { width: 14px; height: 8px; border-radius: 2px; display: inline-block; }
+    .wx-tl-key i.red { height: 4px; background: #b42d20; }
+    .wx-groups { display: flex; flex-direction: column; }
+    .wx-grp { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+    .wx-grp:first-child { border-top: 0; }
+    .wx-grp.on { background: var(--brand-soft); border-radius: 10px; padding-inline: 8px; margin-inline: -8px; border-top-color: transparent; }
+    .wx-grp.on + .wx-grp { border-top-color: transparent; }
+    .wx-grp .k { font-size: 12px; font-weight: 800; letter-spacing: .04em; }
+    .wx-grp .k small { display: block; font-weight: 500; color: var(--text-muted); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .wx-grp .sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; }
+    .wx-grp .rw { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; color: var(--text-muted); margin-top: 3px; word-break: break-word; }
+
+    .wx-overview { margin-top: 14px; }
+    .wx-overview h3 { margin: 0 0 6px; font-size: 14px; color: var(--text); }
+    .wx-overview-scroll { overflow-x: auto; }
+    .wx-overview table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+    .wx-overview th { text-align: left; font-size: 11px; color: var(--text-muted); letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .wx-overview td { padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .wx-overview tbody tr { cursor: pointer; }
+    .wx-overview tbody tr:hover { background: var(--brand-soft); }
+    .wx-overview .muted { color: var(--text-muted); }
+    .wx-overview .why { color: #b42d20; font-weight: 700; font-size: 12px; }
+    .wx-overview .ok { color: #17733d; font-weight: 700; }
+    @media (max-width: 520px) { .wx-stats .v { font-size: 14.5px; } .wx-grp { grid-template-columns: 66px minmax(0, 1fr); } }
 
     /* ⚠️ METAR/TAF 原始電文重點字（雷雨/CB/陣風/低能見度）標紅 */
     .wx-hl { color: var(--danger); font-weight: 800; }
@@ -725,6 +837,11 @@
           <button class="fleet-btn inactive" data-fleet="Domestic">Domestic</button>
       </div>
 
+      <div class="wx-label-toggle" role="group" aria-label="地圖標籤">
+          <button type="button" class="wx-label-btn" data-mode="compact">精簡標籤</button>
+          <button type="button" class="wx-label-btn" data-mode="full">詳細標籤</button>
+      </div>
+
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <div id="custom-icao-search-container" style="display: inline-flex; align-items: center; gap: 4px;">
               <input type="text" id="custom-icao-input" placeholder="ICAO" maxlength="4" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 65px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
@@ -732,6 +849,21 @@
           </div>
       </div>
 
+    </div>
+    <details class="wx-mins">
+      <summary>⚠️ 警戒線：<span id="wx-mins-summary"></span><span class="wx-mins-edit">調整</span></summary>
+      <div class="wx-mins-body">
+        <label>雲幕 <input type="number" id="wx-min-ceil" step="100" min="0" inputmode="numeric"> ft</label>
+        <label>能見度 <input type="number" id="wx-min-vis" step="100" min="0" inputmode="numeric"> m</label>
+        <label>風速／陣風上限 <input type="number" id="wx-min-wind" step="1" min="0" inputmode="numeric"> kt</label>
+        <label><input type="checkbox" id="wx-min-ts"> 雷雨視為低於警戒線</label>
+        <button type="button" id="wx-min-reset">恢復預設</button>
+        <p>低於警戒線的機場會在地圖上標 ⚠️，面板和總覽表會列出原因與時段。設定只存在這台裝置。</p>
+      </div>
+    </details>
+    <div class="wx-legend">
+      <span><i style="background:#27ae60"></i>VFR</span><span><i style="background:#2f80c7"></i>MVFR</span><span><i style="background:#d9473a"></i>IFR</span><span><i style="background:#8e44ad"></i>LIFR</span>
+      <span><i class="ring"></i>外圈：12h 內 TAF 變差</span><span>⚡ 雷雨／⚠️ 低於警戒線</span>
     </div>
     <div id="map-shell">
       <div id="map"></div>
@@ -741,6 +873,15 @@
           <button id="wx-sheet-close" type="button" onclick="closeWxSheet()">✕ 關閉</button>
         </div>
         <div id="wx-sheet-body"></div>
+      </div>
+    </div>
+    <div class="wx-overview">
+      <h3>機隊總覽 · 最差的排最前面</h3>
+      <div class="wx-overview-scroll">
+        <table>
+          <thead><tr><th>機場</th><th>現在</th><th>未來 12h TAF 最差</th><th>警戒線</th><th>METAR</th></tr></thead>
+          <tbody id="wx-overview-body"><tr><td colspan="5" class="muted">載入中…</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
