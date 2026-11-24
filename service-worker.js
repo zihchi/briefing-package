@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v139';
+const CACHE_NAME = 'briefing-v140';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -16,6 +16,7 @@ const LOCAL_FILES = [
   './logbook-ofp-ocr.js',
   './FDP.html',
   './FIDS.html',
+  './wx-decode.html',
   './LIDOPRO4.html',
   './PCR.html',
   './TR.html',

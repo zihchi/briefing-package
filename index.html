@@ -302,6 +302,17 @@
 
     /* ⚠️ METAR/TAF 原始電文重點字（雷雨/CB/陣風/低能見度）標紅 */
     .wx-hl { color: var(--danger); font-weight: 800; }
+    /* 天氣現象代碼色塊（SHSN、-RA、BR…）；危險類（TS、FZ、GR、+、SQ…）紅色 */
+    .wx-ph { background: #fde68a; color: #7c2d12; font-weight: 800; border-radius: 4px; padding: 0 3px; box-shadow: inset 0 -2px 0 #f59e0b; }
+    .wx-ph.danger { background: #fecaca; color: #991b1b; box-shadow: inset 0 -2px 0 #dc2626; }
+    .wx-decode-btn { margin: 0; padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 4px; border: 1px solid var(--border); background: #fff; color: var(--brand); cursor: pointer; }
+    .wx-decode-overlay { position: fixed; inset: 0; z-index: 5000; background: rgba(20,24,33,.55); display: flex; align-items: stretch; justify-content: center;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+    .wx-decode-overlay[hidden] { display: none; }
+    .wx-decode-box { width: 100%; max-width: 1100px; background: var(--surface); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-pop); }
+    .wx-decode-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .wx-decode-head button { margin: 0; padding: 4px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 2px solid var(--danger); color: var(--danger); background: none; cursor: pointer; }
+    #wx-decode-frame { flex: 1; width: 100%; border: 0; background: #f6f7f9; }
 
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
     #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: var(--radius-pill); background-color: var(--text); color: white; transition: background-color 0.5s ease; box-shadow: var(--shadow-btn); }
@@ -846,6 +857,7 @@
               <input type="text" id="custom-icao-input" placeholder="ICAO/IATA" maxlength="4" title="輸入 ICAO 四碼（KJFK）或 IATA 三碼（JFK）" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; width: 84px; text-transform: uppercase; font-weight: bold; outline: none; font-size: 12px;">
               <button id="btn-search-icao" style="margin: 0; padding: 4px 8px; background: #8e44ad; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 12px;">🔍 搜尋</button>
           </div>
+          <button type="button" class="wx-decode-btn" onclick="openWxDecode()" title="METAR／TAF 天氣現象代碼、名詞定義、顯著天氣圖符號">📖 電碼速查</button>
       </div>
 
     </div>
@@ -874,6 +886,22 @@
         <div id="wx-sheet-body"></div>
       </div>
     </div>
+    <!-- 📖 電碼速查（wx-decode.html），點「電碼速查」才載入 -->
+    <div id="wx-decode-overlay" class="wx-decode-overlay" hidden onclick="if(event.target===this)closeWxDecode()">
+      <div class="wx-decode-box" role="dialog" aria-label="氣象電碼速查表">
+        <div class="wx-decode-head"><b>📖 氣象電碼速查表</b><button type="button" onclick="closeWxDecode()">✕ 關閉</button></div>
+        <iframe id="wx-decode-frame" title="氣象電碼速查表"></iframe>
+      </div>
+    </div>
+    <script>
+      function openWxDecode(){
+        var o=document.getElementById('wx-decode-overlay'), f=document.getElementById('wx-decode-frame');
+        if(!f.getAttribute('src')) f.setAttribute('src','wx-decode.html');
+        o.hidden=false; document.body.style.overflow='hidden';
+      }
+      function closeWxDecode(){ document.getElementById('wx-decode-overlay').hidden=true; document.body.style.overflow=''; }
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !document.getElementById('wx-decode-overlay').hidden) closeWxDecode(); });
+    </script>
     <div class="wx-overview">
       <h3>機隊總覽 · 最差的排最前面</h3>
       <div class="wx-overview-scroll">
