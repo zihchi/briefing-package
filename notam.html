@@ -269,7 +269,9 @@
                 </div>
             </div>
 
-            <!-- ✈️ ATC 航路具現化 -->
+            <!-- ✈️ ATC 航路具現化：已封存（不顯示）。航點資料庫不足，待日後補齊 OFP 資料再恢復；
+                 恢復方式：把下方 <template> 內容移出來即可，app.js 的程式碼都還在。 -->
+            <template id="archived-atc-route">
             <div class="notam-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 transition-all hover:shadow-md flex flex-col">
                 <label class="notam-label block text-sm font-bold mb-3 text-slate-700 flex items-center">
                     <svg class="w-4 h-4 mr-2 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
@@ -285,6 +287,7 @@
                 </button>
                 <div id="route-status" class="text-xs mt-3 leading-relaxed"></div>
             </div>
+            </template>
         </div>
 
         <div class="lg:col-span-8 relative flex flex-col">
