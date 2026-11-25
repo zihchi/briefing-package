@@ -605,6 +605,28 @@
     .fd-turb img:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(74,54,39,0.18); }
     .fd-turb-fallback { margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 800; color: var(--brand); background: var(--brand-soft); border: 1px solid var(--border); border-radius: var(--radius-pill); cursor: pointer; }
     .fd-note { font-size: 0.78rem; color: var(--text-faint); padding: 13px 16px; white-space: nowrap; }
+    /* 📢 公告全螢幕閱讀（樣式與 notices.html 內相同） */
+    .nd-lb { position: fixed; inset: 0; z-index: 2100; background: rgba(40,28,18,0.9); display: flex; align-items: flex-start; justify-content: center; overflow: auto;
+      padding: calc(16px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+    .nd-lb[hidden] { display: none; }
+    .nd-wrap { width: 100%; max-width: 760px; margin: auto 0; }
+    .nd-cap{color:#f4ece4;font-weight:700;font-size:.85rem;text-align:center;margin:0 0 10px}
+    .nd-card{width:100%;max-width:760px;background:#fff;color:#4a3627;border-radius:14px;padding:20px 20px 18px;box-shadow:0 10px 34px rgba(0,0,0,.3);margin:auto 0}
+    .nd-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .nd-meta .sp{margin-left:auto}
+    .nd-src{display:inline-flex;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px}
+    .nd-code{color:#8b5a2b;font-size:12.5px;font-weight:700;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+    .nd-date{color:#a8a29e;font-size:13px;font-weight:600;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+    .nd-title{margin:14px 0 0;font-size:19px;font-weight:700;line-height:1.5}
+    .nd-points{margin:16px 0 0;padding:16px 0 0;border-top:1px solid #e7ddd0;list-style:none;display:flex;flex-direction:column;gap:11px}
+    .nd-points li{position:relative;padding-left:20px;font-size:16px;line-height:1.75;color:#57463a}
+    .nd-points li::before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:50%;background:#8b5a2b}
+    .nd-empty{margin:16px 0 0;padding-top:16px;border-top:1px solid #e7ddd0;color:#a8a29e;font-size:15px}
+    .nd-action{display:flex;gap:8px;margin:16px 0 0;padding:12px 14px;border:1px solid #f0c48a;background:#fdf3e6;border-radius:10px;color:#c2410c;font-size:15px;font-weight:700;line-height:1.55}
+    .nd-foot{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:16px;font-size:12.5px;color:#a8a29e}
+    .nd-foot b{color:#78716c;font-weight:600}
+    .nd-close{display:block;margin:14px auto 0;padding:8px 22px;font-size:14px;font-weight:700;border-radius:999px;border:1px solid rgba(255,255,255,.5);background:none;color:#f4ece4;cursor:pointer}
+    .nd-card mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
     .fd-lb { position: fixed; inset: 0; z-index: 2000; background: rgba(40,28,18,0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 20px; overflow: auto; }
     .fd-lb.open { display: flex; }
     .fd-lb img { max-width: 96vw; max-height: 42vh; border-radius: 8px; background: #fff; }
@@ -793,6 +815,24 @@
       style="width:100%; height:320px; border:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.08);"
     ></iframe>
   </div>
+  <!-- 📢 公告全螢幕閱讀：公告欄（iframe）點卡片時由這裡顯示，蓋住整個畫面、不影響排版 -->
+  <div class="nd-lb" id="nd-lb" hidden></div>
+  <script>
+    (function(){
+      var lb=document.getElementById('nd-lb');
+      function close(){ lb.hidden=true; lb.innerHTML=''; document.body.style.overflow=''; }
+      window.addEventListener('message', function(e){
+        if(e.origin!==location.origin || !e.data) return;
+        if(e.data.type==='notice-close'){ if(!lb.hidden) close(); return; }
+        if(e.data.type!=='notice-open') return;
+        lb.innerHTML='<div class="nd-wrap"><div class="nd-cap">點背景或按 Esc 關閉</div>'+e.data.html+'<button class="nd-close" type="button">✕ 關閉</button></div>';
+        lb.hidden=false; lb.scrollTop=0; document.body.style.overflow='hidden';
+        lb.querySelector('.nd-close').onclick=close;
+      });
+      lb.addEventListener('click', function(e){ if(e.target===lb || e.target.classList.contains('nd-wrap')) close(); });
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !lb.hidden) close(); });
+    })();
+  </script>
 
   <div class="section flex flex-col gap-5" style="display:none">
     <div class="flex flex-wrap justify-between items-center gap-3">
