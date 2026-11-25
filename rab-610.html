@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAB 6.10 低溫高度修正</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* RAB 6.10 中英對照：簡報箱「❄️ ICAO 低溫修正 → 📖 RAB 6.10」以 iframe 開啟。英文原文在上、中文翻譯在下；表格可全螢幕放大 */
+:root {
+  --paper: #f6f7f9; --card: #ffffff; --ink: #14213d; --ink-2: #4a5568; --rule: #dde2ea;
+  --head: #8a7353; --head-2: #a89274; --head-ink: #ffffff; --row-h: #7c7c7c;
+  --zh: #7a4e23; --zh-bg: #fbf6ef; --yes: #b91c1c; --no: #475569; --hl: #fff4e0;
+  --f-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --f-code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.65;
+  padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); padding-block: 14px 48px; }
+.wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; flex-direction: column; gap: 8px; }
+h1 { margin: 0; font-size: 22px; font-weight: 900; text-wrap: balance; }
+.src { font-size: 12px; color: var(--ink-2); }
+.lang { display: inline-flex; gap: 4px; background: #e9ecf1; padding: 3px; border-radius: 10px; align-self: flex-start; }
+.lang button { margin: 0; border: 0; background: none; padding: 5px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
+.lang button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.toc a { font-size: 12.5px; font-weight: 700; color: var(--zh); background: var(--zh-bg); border: 1px solid #ecdcc6; border-radius: 999px; padding: 3px 10px; text-decoration: none; }
+
+section { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; scroll-margin-top: 10px; }
+h2 { margin: 0; font-size: 17px; font-weight: 900; }
+h2 .n, h3 .n { font-family: var(--f-code); color: var(--head); margin-right: 6px; }
+h3 { margin: 4px 0 0; font-size: 15px; font-weight: 800; }
+h4 { margin: 2px 0 0; font-size: 14px; font-weight: 800; color: var(--ink-2); }
+.en { margin: 0; }
+.zh { margin: 0; color: var(--zh); background: var(--zh-bg); border-left: 3px solid #e2c9a6; padding: 6px 10px; border-radius: 0 8px 8px 0; font-size: 14.5px; }
+.pair { display: flex; flex-direction: column; gap: 6px; }
+body.only-en .zh { display: none; }
+body.only-zh .en { display: none; }
+body.only-zh .zh { background: none; border-left: 0; padding: 0; color: var(--ink); }
+.item { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px 6px; }
+.item > b { font-family: var(--f-code); color: var(--head); }
+.note { font-style: italic; }
+.note-t { display: inline-block; font-weight: 900; font-style: normal; font-size: 12px; letter-spacing: .08em; background: #e9ecf1; padding: 1px 7px; border-radius: 4px; }
+code, .c { font-family: var(--f-code); font-weight: 700; }
+a { color: #0b63b6; word-break: break-all; }
+
+/* 表格：外框可橫向捲動；右上「⤢ 放大」開全螢幕 */
+.tbl { display: flex; flex-direction: column; gap: 6px; }
+.tbl-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tbl-cap { font-size: 13.5px; font-weight: 800; }
+.zoom-btn { margin: 0; padding: 5px 11px; border-radius: 8px; border: 1px solid var(--rule); background: #fff; color: var(--zh); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { border: 1px solid #c9b79c; padding: 6px 8px; text-align: center; vertical-align: middle; }
+thead th, .th { background: var(--head); color: var(--head-ink); font-weight: 700; }
+.sub th { background: var(--head-2); }
+tbody th { background: var(--head-2); color: #fff; }
+.err td:nth-child(n+2) { min-width: 46px; }
+.err tbody th { min-width: 58px; }
+.guide { min-width: 720px; font-size: 12.5px; }
+.guide th.rh { background: var(--row-h); color: #fff; min-width: 78px; }
+.guide th.rh2 { background: #9b9b9b; color: #fff; min-width: 72px; }
+.guide td { background: #fff; }
+.guide .y { color: var(--yes); font-weight: 800; }
+.guide .no { color: var(--no); font-weight: 800; }
+.guide small { display: block; font-size: 11px; color: var(--ink-2); font-weight: 500; line-height: 1.35; }
+.zhl { display: block; font-size: 11px; color: #f3e7d6; font-weight: 500; }
+body.only-en .zhl { display: none !important; }
+.cta { font-size: 13px; }
+.cta td.x { font-weight: 900; color: var(--yes); }
+
+/* 全螢幕放大檢視 */
+.zoom { position: fixed; inset: 0; z-index: 50; background: #fff; display: flex; flex-direction: column; }
+.zoom[hidden] { display: none; }
+.zoom-head { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid var(--rule); background: #fafbfc; }
+.zoom-head b { flex: 1; font-size: 14px; min-width: 0; }
+.zoom-head button { margin: 0; min-width: 40px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--rule); background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.zoom-head .close { border-color: #e74c3c; color: #e74c3c; }
+.zoom-body { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 14px max(12px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.zoom-body table { transform-origin: 0 0; }
+footer { font-size: 12px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>RAB 6.10 Altitude Corrections in Low Temperature</h1>
+    <div class="src">低溫高度修正｜STARLUX Route and Airport Briefing（STARLUX-FOD-002）Chapter 6 Cold Weather Operation，頁 6-4～6-12。中文為對照翻譯，以英文原文為準。</div>
+    <div class="lang" role="group" aria-label="顯示語言">
+      <button type="button" data-l="both" class="on">中英對照</button>
+      <button type="button" data-l="en">English</button>
+      <button type="button" data-l="zh">中文</button>
+    </div>
+    <nav class="toc">
+      <a href="#s1">6.10.1 Temperature Correction</a>
+      <a href="#t610">Table 6.10</a>
+      <a href="#s2">6.10.2 Guidelines</a>
+      <a href="#s3">6.10.3 CTA (U.S.)</a>
+      <a href="#ex">Example PANC</a>
+    </nav>
+  </header>
+
+  <!-- ===== 6.10.1 ===== -->
+  <section id="s1">
+    <h2><span class="n">6.10.1</span>Temperature Correction <span class="zhl" style="display:inline;color:var(--zh);font-size:14px">溫度修正</span></h2>
+
+    <h3><span class="n">A.</span>Requirement for Temperature Correction</h3>
+    <div class="pair">
+      <p class="en">The calculated minimum safe altitudes/heights must be adjusted when the ambient temperature on the surface is much lower than that predicted by the standard atmosphere. In such conditions, an approximate correction is 4 percent height increase for every 10°C below standard temperature as measured at the altimeter setting source (Specifically, which corresponds approximately to 4 × ΔISA × Height (ft)/1000). This is safe for all altimeter setting source altitudes for temperatures above −15°C.</p>
+      <p class="zh">【溫度修正的要求】當地面實際氣溫遠低於標準大氣的預期值時，計算出的最低安全高度／高必須加以調整。此時可用約略修正：以高度表撥定來源處量測的溫度為準，每低於標準溫度 10°C，高度增加 4%（約等於 4 × ΔISA × 高度(ft) ÷ 1000）。溫度高於 −15°C 時，此方法對所有高度表撥定來源標高皆屬安全。</p>
+    </div>
+
+    <h3><span class="n">B.</span>Tabulated Corrections</h3>
+    <div class="pair">
+      <p class="en">For colder temperatures, a more accurate correction should be obtained from Tables shown below. These tables are calculated for a sea level aerodrome. They are therefore conservative when applied at higher aerodromes.</p>
+      <p class="zh">【查表修正】溫度更低時，應以下表取得較精確的修正量。此表以海平面機場計算，因此用於標高較高的機場時偏保守。</p>
+    </div>
+    <div class="pair">
+      <p class="en note"><span class="note-t">NOTE</span> i. The corrections have been rounded up to the next 5 m or 10 ft increment.</p>
+      <p class="zh">註 i：表中修正量已無條件進位至下一個 5 m 或 10 ft。</p>
+      <p class="en note">ii. Temperature values from the reporting station (normally the aerodrome) nearest to the position of the aircraft should be used.</p>
+      <p class="zh">註 ii：應使用最接近航空器位置之報告站（通常為機場）的溫度。</p>
+    </div>
+
+    <div class="tbl" id="t610">
+      <div class="tbl-bar"><span class="tbl-cap">Table 6.10 ICAO Cold Temperature Error Table｜ICAO 低溫誤差表</span><button type="button" class="zoom-btn" data-zoom="tbl610">⤢ 放大</button></div>
+      <div class="scroll">
+        <table class="err" id="tbl610">
+          <thead>
+            <tr><th rowspan="2">Airport<br>Temp. (°C)<span class="zhl">機場溫度</span></th><th colspan="14">Height Above Elevation of Altimeter Source (feet)<span class="zhl">高於高度表撥定來源標高之高度（ft）</span></th></tr>
+            <tr class="sub"><th>200</th><th>300</th><th>400</th><th>500</th><th>600</th><th>700</th><th>800</th><th>900</th><th>1,000</th><th>1,500</th><th>2,000</th><th>3,000</th><th>4,000</th><th>5,000</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>0</th><td>20</td><td>20</td><td>30</td><td>30</td><td>40</td><td>40</td><td>50</td><td>50</td><td>60</td><td>90</td><td>120</td><td>170</td><td>230</td><td>290</td></tr>
+            <tr><th>−10</th><td>20</td><td>30</td><td>40</td><td>50</td><td>60</td><td>70</td><td>80</td><td>90</td><td>100</td><td>150</td><td>200</td><td>290</td><td>390</td><td>490</td></tr>
+            <tr><th>−20</th><td>30</td><td>50</td><td>60</td><td>70</td><td>90</td><td>100</td><td>120</td><td>130</td><td>140</td><td>210</td><td>280</td><td>430</td><td>570</td><td>710</td></tr>
+            <tr><th>−30</th><td>40</td><td>60</td><td>80</td><td>100</td><td>120</td><td>130</td><td>150</td><td>170</td><td>190</td><td>280</td><td>380</td><td>570</td><td>760</td><td>950</td></tr>
+            <tr><th>−40</th><td>50</td><td>80</td><td>100</td><td>120</td><td>150</td><td>170</td><td>190</td><td>220</td><td>240</td><td>360</td><td>480</td><td>720</td><td>970</td><td>1,210</td></tr>
+            <tr><th>−50</th><td>60</td><td>90</td><td>120</td><td>150</td><td>180</td><td>210</td><td>240</td><td>270</td><td>300</td><td>450</td><td>600</td><td>890</td><td>1,190</td><td>1,500</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pair">
+        <p class="en note"><span class="note-t">NOTE</span> Values should be added to the published altitudes.</p>
+        <p class="zh">註：表中數值應加到公布的高度上。</p>
+      </div>
+    </div>
+
+    <h4>EXAMPLE｜範例</h4>
+    <div class="pair">
+      <p class="en">Assume that a. the reported temperature is −20°C; b. airport elevation is 439 ft; c. altitude at FAF is 3,400 ft. The difference will be 3,400 ft − 439 ft = 2,961 ft. Through the “Altitude Correction for Low Temperature Chart” for a height above airport of 2,961 ft with airport temperature −20°C, the approximate calculation is 420 ft. Furthermore, the FAF after correction is 3,400 ft + 420 ft = 3,820 ft.</p>
+      <p class="zh">假設 a. 報告溫度 −20°C；b. 機場標高 439 ft；c. FAF 高度 3,400 ft。高度差為 3,400 − 439 = 2,961 ft。查低溫修正表，高於機場 2,961 ft、機場溫度 −20°C，約為 420 ft；修正後 FAF 為 3,400 + 420 = 3,820 ft。（簡報箱計算機內插後無條件進位到 10 ft，此例會得到 430 ft，較保守。）</p>
+    </div>
+  </section>
+
+  <!-- ===== 6.10.2 ===== -->
+  <section id="s2">
+    <h2><span class="n">6.10.2</span>Guidelines for Cold Temperature Altitude Corrections <span class="zhl" style="display:inline;color:var(--zh);font-size:14px">低溫高度修正指引</span></h2>
+    <div class="tbl">
+      <div class="tbl-bar"><span class="tbl-cap">修正指引表（可左右滑動；手機橫放更好讀）</span><button type="button" class="zoom-btn" data-zoom="tblGuide">⤢ 放大</button></div>
+      <div class="scroll">
+        <table class="guide" id="tblGuide">
+          <thead>
+            <tr><th colspan="2">Approach Classification<span class="zhl">進場分類</span></th><th colspan="2">Non-Precision Approach<span class="zhl">非精確進場</span></th><th colspan="2">Approach with Vertical Guidance (APV)<span class="zhl">具垂直導引進場</span></th><th colspan="2">Precision Approach<span class="zhl">精確進場</span></th></tr>
+          </thead>
+          <tbody>
+            <tr><th class="rh" colspan="2" rowspan="2">Approach Type<span class="zhl">進場類型</span></th><td rowspan="2">VOR<br>NDB<br>LOC<br>LDA<br>…</td><td rowspan="2">RNP Approach<br>NPA GPS<small>(LNAV Only)</small></td><td colspan="2">RNP Approach<small>(LNAV/VNAV)</small></td><td rowspan="2">ILS<br>MLS<br>PAR</td><td rowspan="2">GLS</td></tr>
+            <tr><td>APV BARO</td><td>APV SBAS</td></tr>
+            <tr><th class="rh" colspan="2">Approved Ops Specs<span class="zhl">運行規範核准</span></th><td colspan="2" class="y">YES</td><td class="y">YES</td><td class="no">NO</td><td>ILS: <b class="y">YES</b><br>MLS: <b class="no">NO</b><br>PAR: <b class="no">NO</b></td><td class="no">NO</td></tr>
+            <tr><th class="rh" colspan="2">Navigation Sources<span class="zhl">導航來源</span></th><td>VOR<br>NDB<br>LOC<br>…</td><td>GPS</td><td>GPS</td><td>GPS<br>SBAS</td><td>ILS<br>MLS<br>PAR</td><td>GPS<br>GBAS</td></tr>
+            <tr><th class="rh" colspan="2">Approach Minimum<span class="zhl">進場最低標準</span></th><td colspan="2">MDA</td><td>LNAV/VNAV<br>(DA)<small>(See NOTE iii)</small></td><td>LPV<br>(DA)</td><td colspan="2">DA</td></tr>
+            <tr><th class="rh" rowspan="5">Cold Temperature Altitude Correction (below 0°C)<span class="zhl">低溫高度修正（低於 0°C）</span></th><th class="rh2">Intercept Altitude<span class="zhl">切入高度</span></th><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td></tr>
+            <tr><th class="rh2">IF/IAF</th><td colspan="2"><span class="y">YES</span><small>(if applicable)</small></td><td><small>(See NOTE ii)</small></td><td><span class="no">NO</span><small>(See NOTE i)</small></td><td colspan="2" rowspan="2"><span class="y">Yes</span><small>(if overflying IF/IAF/FAF/FAP, and not being Radar Vectored, unless already descending on G/S.)<br>（若飛越 IF/IAF/FAF/FAP 且未接受雷達引導，除非已沿 G/S 下降中）</small></td></tr>
+            <tr><th class="rh2">FAF/FAP</th><td colspan="2" class="y">YES</td><td colspan="2" class="no">NO</td></tr>
+            <tr><th class="rh2">DA/MDA</th><td colspan="2" class="y">YES</td><td colspan="2" class="no">NO</td><td colspan="2" class="y">YES</td></tr>
+            <tr><th class="rh2">Missed Approach Altitude<span class="zhl">重飛高度</span></th><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td><td colspan="2"><span class="no">NO</span><small>(See NOTE i)</small></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pair">
+      <p class="en note"><span class="note-t">NOTE</span> i. Altitude correction is required when ATC radar service is not available.</p>
+      <p class="zh">註 i：無 ATC 雷達服務時，須進行高度修正。</p>
+      <p class="en note">ii. Altitude correction is not recommended for IF and IAF provided the altitudes for these waypoints in the FMC coded with “above” to generate a stable CDFA path to FAP.</p>
+      <p class="zh">註 ii：若 FMC 中 IF、IAF 的高度編碼為「above」，可產生穩定的 CDFA 路徑至 FAP，則不建議對 IF、IAF 進行修正。</p>
+      <p class="en note">iii. The flight crew may comply with chart minimum altitudes when actual outside temperature is within the charted temperature range while conducting an approach with FLS or FINAL APP mode.</p>
+      <p class="zh">註 iii：以 FLS 或 FINAL APP 模式進場時，若實際外界溫度在航圖標示的溫度範圍內，飛航組員可依航圖最低高度執行。</p>
+    </div>
+  </section>
+
+  <!-- ===== 6.10.3 ===== -->
+  <section id="s3">
+    <h2><span class="n">6.10.3</span>Cold Temperature Airports (CTA) in the U.S. <span class="zhl" style="display:inline;color:var(--zh);font-size:14px">美國低溫機場</span></h2>
+    <div class="pair">
+      <p class="en">FAA has determined that operating in cold temperatures has placed some instrument approach procedures in the U.S. at risk for loss of required obstacle clearance (ROC). CTA are identified by textual Note published on commercial charting publications. EX: PAFA/FAI chart 10-1W.</p>
+      <p class="zh">FAA 已判定，在低溫下運作會使美國部分儀器進場程序有喪失所需超障高度（ROC）的風險。CTA 以文字註記標示於商用航圖上，例：PAFA/FAI 航圖 10-1W。</p>
+      <p class="en">Although Cold Temperature Altitude Correction may not be required when flying to non-CTA airports in the U.S. or when flying to CTA airports when aerodrome temperature is above specified temperature on the approach charts, it is strongly recommended that flight crewmembers follow the guidelines in 6.10.3.</p>
+      <p class="zh">雖然飛往美國非 CTA 機場，或飛往 CTA 機場但機場溫度高於進場圖指定溫度時，可能不需要低溫高度修正，仍強烈建議飛航組員遵循 6.10.3 的指引。</p>
+    </div>
+
+    <h3><span class="n">A.</span>All Segments Method｜全航段法</h3>
+    <div class="pair">
+      <p class="en">Pilots may correct all segment altitudes from the Initial approach fix (IAF) altitude to the missed approach (MA) final holding altitude.</p>
+      <p class="zh">駕駛員可修正從起始進場定位點（IAF）高度到重飛（MA）最終等待高度的所有航段高度。</p>
+    </div>
+    <div class="item"><b>a.</b><div class="pair">
+      <p class="en"><b>Correct all altitudes from the final approach fix (FAF)/PFAF up to and including the IAF altitude:</b> Calculate correction by taking FAF/PFAF altitude and subtracting the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp.” row. Round this number as applicable and then add to all altitudes from the FAF altitude through the IAF altitude.</p>
+      <p class="zh"><b>修正 FAF/PFAF 至 IAF（含）的所有高度：</b>以 FAF/PFAF 高度減去機場標高，用此值查表 6.10「高於高度表撥定來源標高之高度」欄，對應報告的機場溫度列；依需要取整後，加到 FAF 至 IAF 的所有高度。</p>
+    </div></div>
+    <div class="item"><b>b.</b><div class="pair">
+      <p class="en"><b>Correct all altitudes in the final segment:</b> Calculate the correction by taking the MDA or DA for the approach being flown and subtract the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Use this number or round up to next nearest 100. Add this number to MDA or DA, as applicable, and any applicable step-down fixes in the final segment.</p>
+      <p class="zh"><b>修正最後進場段的所有高度：</b>以所飛進場的 MDA 或 DA 減去機場標高，查表 6.10 對應機場溫度；可用此值或進位至最接近的 100 ft，加到 MDA 或 DA，以及最後進場段中適用的梯降定位點。</p>
+    </div></div>
+    <div class="item"><b>c.</b><div class="pair">
+      <p class="en"><b>Correct final holding altitude in the MA Segment:</b> Calculate the correction by taking the final missed approach (MA) holding altitude and subtract the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Round this number as applicable and then add to the final MA altitude only.</p>
+      <p class="zh"><b>修正重飛段的最終等待高度：</b>以重飛最終等待高度減去機場標高，查表 6.10 對應機場溫度；依需要取整後，<b>只加到最終重飛高度</b>。</p>
+    </div></div>
+
+    <h3><span class="n">B.</span>Individual Segments Method｜個別航段法</h3>
+    <div class="pair">
+      <p class="en">Pilots are allowed to correct only the marked segment(s) with “X” indicated in the CTA list, among those airports, there are three (3) authorized airports in STARLUX Ops Specs listed as below:</p>
+      <p class="zh">駕駛員僅可修正 CTA 清單中標示「X」的航段；其中星宇運行規範核准的機場有以下三座：</p>
+    </div>
+    <div class="scroll">
+      <table class="cta">
+        <thead>
+          <tr><th rowspan="2">Identifier<span class="zhl">機場</span></th><th rowspan="2">Temp.<span class="zhl">溫度</span></th><th colspan="4">Affected Segment<span class="zhl">須修正航段</span></th></tr>
+          <tr class="sub"><th>Initial<span class="zhl">起始</span></th><th>Intermediate<span class="zhl">中間</span></th><th>Final<span class="zhl">最後</span></th><th>Missed<span class="zhl">重飛</span></th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>PAFA</b></td><td>−29°C</td><td></td><td class="x">X</td><td></td><td></td></tr>
+          <tr><td><b>PAKN</b></td><td>−25°C</td><td class="x">X</td><td></td><td></td><td></td></tr>
+          <tr><td><b>PANC</b></td><td>−21°C</td><td class="x">X</td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pair">
+      <p class="en">Cold Temperature Airport list: <a href="https://www.faa.gov/air_traffic/flight_info/aeronav/digital_products/dtpp/search/" target="_blank" rel="noopener">https://www.faa.gov/air_traffic/flight_info/aeronav/digital_products/dtpp/search/</a></p>
+      <p class="zh">CTA 清單請見上方 FAA 網址。</p>
+    </div>
+    <div class="item"><b>a.</b><div class="pair">
+      <p class="en"><b>Initial Segment:</b> All altitudes from the intermediate fix (IF) up to and including the initial approach fix (IAF) altitude. The correction may be accomplished by using the IF altitude or by using the All Segments Method. To correct the initial segment by using the IF altitude and subtracting the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Round this number as applicable and then add to IAF, IF altitude and all step-down altitudes within the Initial segment (inside of the waypoint labeled “(IAF)”).</p>
+      <p class="zh"><b>起始航段：</b>IF 至 IAF（含）的所有高度。可用 IF 高度或全航段法修正。以 IF 高度減去機場標高，查表 6.10 對應機場溫度；依需要取整後，加到 IAF、IF 高度及起始航段內（標示「(IAF)」的定位點以內）的所有梯降高度。</p>
+    </div></div>
+    <div class="item"><b>b.</b><div class="pair">
+      <p class="en"><b>Intermediate Segment:</b> All altitudes from the FAF/PFAF up to but not including the intermediate fix (IF) altitude. Calculate the correction by taking FAF/PFAF altitude and subtracting the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Round this number as applicable and then add to FAF altitude and all step-down altitudes within the intermediate segment (inside of the waypoint labeled “(IF)”).</p>
+      <p class="zh"><b>中間航段：</b>FAF/PFAF 至 IF（不含）的所有高度。以 FAF/PFAF 高度減去機場標高，查表 6.10 對應機場溫度；依需要取整後，加到 FAF 高度及中間航段內（標示「(IF)」的定位點以內）的所有梯降高度。</p>
+    </div></div>
+    <div class="item"><b>c.</b><div class="pair">
+      <p class="en"><b>Final Segment:</b> Calculate correction by taking the MDA or DA for the approach flown and subtract the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Use this number or round up to next nearest 100. Add this number to MDA or DA, as applicable, and any applicable step-down fixes in the final segment.</p>
+      <p class="zh"><b>最後航段：</b>以所飛進場的 MDA 或 DA 減去機場標高，查表 6.10 對應機場溫度；可用此值或進位至最接近的 100 ft，加到 MDA 或 DA，以及最後航段中適用的梯降定位點。</p>
+    </div></div>
+    <div class="item"><b>d.</b><div class="pair">
+      <p class="en"><b>Missed Approach Segment:</b> Calculate the correction by taking the final MA holding altitude and subtract the airport elevation. Use this number to enter the “Height Above Elevation of Altimeter Source” column in Table 6.10 until reaching the reported aerodrome temp from the “Airport Temp” row. Round this number as applicable and then add to the final MA altitude only.</p>
+      <p class="zh"><b>重飛航段：</b>以重飛最終等待高度減去機場標高，查表 6.10 對應機場溫度；依需要取整後，只加到最終重飛高度。</p>
+    </div></div>
+
+    <h3><span class="n">C.</span>Correctable altitudes (applicable worldwide)｜可修正的高度（全球適用）</h3>
+    <div class="pair">
+      <p class="en">ATC does not apply cold temperature correction to Minimum Vectoring Altitudes (MVA) or Minimum IFR Altitude (MIA) charts. Pilots must request approval from ATC to apply a cold temperature correction to any ATC assigned altitude. Pilots must not correct altitudes published on Standard Instrument Departures (SIDs), Obstacle Departure Procedures (ODPs) and Standard Terminal Arrivals (STARs).</p>
+      <p class="zh">ATC 不會對最低引導高度（MVA）或最低 IFR 高度（MIA）圖進行低溫修正。駕駛員要對任何 ATC 指定高度進行低溫修正前，必須先取得 ATC 同意。駕駛員<b>不得</b>修正標準儀器離場（SID）、超障離場程序（ODP）及標準終端到場（STAR）上公布的高度。</p>
+    </div>
+
+    <h3><span class="n">D.</span>Communication｜通訊</h3>
+    <div class="pair">
+      <p class="en">Pilots must request approval from ATC whenever applying a cold temperature altitude correction. Pilots do not need to inform ATC of the final approach segment correction (i.e., new MDA or DA/DH). This request should be made on initial radio contact with the ATC facility issuing the approach clearance. ATC requires this information in order to ensure appropriate vertical separation between known traffic. Pilots should query ATC when vectored altitudes to a segment are lower than the requested corrected altitude.</p>
+      <p class="zh">進行低溫高度修正時，駕駛員必須向 ATC 請求同意；最後進場段的修正（即新的 MDA 或 DA/DH）不需告知 ATC。此請求應於與發布進場許可的 ATC 單位初次無線電聯絡時提出，ATC 需要此資訊以確保與已知航機間的垂直隔離。若某航段的雷達引導高度低於所請求的修正後高度，駕駛員應向 ATC 詢問。</p>
+    </div>
+  </section>
+
+  <!-- ===== Example PANC ===== -->
+  <section id="ex">
+    <h2>EXAMPLE: PANC RNAV (GPS) RWY 15 <span class="zhl" style="display:inline;color:var(--zh);font-size:14px">範例</span></h2>
+    <div class="pair">
+      <p class="en">Airport elevation 151 ft. Chart note: cold temperature altitude correction required at or below −21°C. (Approach chart: RAB page 6-10.)</p>
+      <p class="zh">機場標高 151 ft；航圖註記：−21°C 以下須進行低溫高度修正。（進場圖見 RAB 頁 6-10。）</p>
+    </div>
+
+    <h3><span class="n">E.</span>All Segments method｜全航段法（假設機場溫度 −25°C）</h3>
+    <div class="item"><b>a.</b><div class="pair">
+      <p class="en">Determine CTA temperature limit on the approach chart: Cold temperature altitude correction required at or below −21°C.</p>
+      <p class="zh">確認進場圖上的 CTA 溫度限制：−21°C 以下須修正。</p>
+    </div></div>
+    <div class="item"><b>b.</b><div class="pair">
+      <p class="en">The FAF will be used to calculate the correction to be applied to all altitudes from the FAF up to and including the IAF altitude. Taking FAF altitude (KANSY: 1,600 ft) and subtracting the airport elevation (151 ft), which is height above airport (1,449 ft). Use Table 6.10, a HAA of 1,449 ft and −25°C, the visual interpolation is approximately 245 ft. KANSY (FAF): 1,600 + 245 = 1,845 ft. CARDD (IF): 3,000 + 245 = 3,245 ft. IVANN, TAGER, BGQ (IAF): 3,000 + 245 = 3,245 ft.</p>
+      <p class="zh">以 FAF 計算 FAF 至 IAF（含）所有高度的修正量：KANSY 1,600 − 151 = 1,449 ft（高於機場），查表 −25°C 約 245 ft。KANSY（FAF）1,845 ft；CARDD（IF）3,245 ft；IVANN、TAGER、BGQ（IAF）3,245 ft。</p>
+    </div></div>
+    <div class="item"><b>c.</b><div class="pair">
+      <p class="en">The published MDA will be used to calculate the correction to be applied to all altitudes in the final approach segment as applicable. Taking LNAV MDA (600 ft) and subtracting the airport elevation (151 ft), which is height above airport (449 ft). Use Table 6.10, a HAA of 441 ft and −25°C, the visual interpolation is approximately 78 ft. Add correction to LNAV MDA: 600 + 78 = 678 ft.</p>
+      <p class="zh">以公布的 MDA 計算最後進場段修正量：LNAV MDA 600 − 151 = 449 ft，查表 −25°C 約 78 ft（原文寫「HAA of 441 ft」，應為 449 ft）。修正後 LNAV MDA 為 678 ft。</p>
+    </div></div>
+    <div class="item"><b>d.</b><div class="pair">
+      <p class="en">The final missed approach (MA) holding altitude will be used to calculate the correction to be applied to the final MA altitude only. Taking final MA holding altitude (3,000 ft) and subtracting the airport elevation (151 ft), which is height above airport (2,849 ft). Use Table 6.10, a HAA of 2,849 ft and −25°C, the visual interpolation is approximately 462 ft. Add correction to final MA holding altitude: 3,000 + 462 = 3,462 ft.</p>
+      <p class="zh">以重飛最終等待高度計算，只修正最終重飛高度：3,000 − 151 = 2,849 ft，查表 −25°C 約 462 ft，修正後為 3,462 ft。</p>
+    </div></div>
+
+    <h3><span class="n">F.</span>Individual Segments Method｜個別航段法（假設機場溫度 −25°C）</h3>
+    <div class="pair">
+      <p class="en">According to the CTA list, the initial segment is the only segment required to be corrected for PANC airport.</p>
+      <p class="zh">依 CTA 清單，PANC 只有起始航段須修正。</p>
+    </div>
+    <div class="item"><b>a.</b><div class="pair">
+      <p class="en">Determine CTA temperature limit on the approach chart: Cold temperature altitude correction required at or below −21°C.</p>
+      <p class="zh">確認進場圖上的 CTA 溫度限制：−21°C 以下須修正。</p>
+    </div></div>
+    <div class="item"><b>b.</b><div class="pair">
+      <p class="en">The IF or All Segment Method will be used to calculate the correction to be applied to all altitudes from the IF up to and including the IAF altitude. Taking IF altitude (CARDD: 3,000 ft) and subtracting the airport elevation (151 ft), which is height above airport (2,849 ft). Use Table 6.10, a HAA of 2,849 ft and −25°C, the visual interpolation is approximately 470 ft. CARDD (IF): 3,000 + 470 = 3,470 ft. IVANN, TAGER, BGQ (IAF): 3,000 + 470 = 3,470 ft.</p>
+      <p class="zh">以 IF 或全航段法計算 IF 至 IAF（含）所有高度的修正量：CARDD 3,000 − 151 = 2,849 ft，查表 −25°C 約 470 ft。CARDD（IF）3,470 ft；IVANN、TAGER、BGQ（IAF）3,470 ft。（同一 HAA 在 E-d 寫約 462 ft，原文目視內插略有差異。）</p>
+    </div></div>
+  </section>
+
+  <footer>Check against Jeppesen Airway Manual, NOTAMs and related company documents prior to use. 使用前請與 Jeppesen 航路手冊、NOTAM 及公司相關文件核對。</footer>
+</div>
+
+<!-- 全螢幕放大檢視 -->
+<div class="zoom" id="zoom" hidden role="dialog" aria-label="表格放大">
+  <div class="zoom-head">
+    <b id="zoom-title">表格</b>
+    <button type="button" id="zoom-out" aria-label="縮小">A−</button>
+    <button type="button" id="zoom-in" aria-label="放大">A＋</button>
+    <button type="button" class="close" id="zoom-close">✕</button>
+  </div>
+  <div class="zoom-body" id="zoom-body"></div>
+</div>
+
+<script>
+(function(){
+  // 語言切換（記在本機）
+  var KEY='rab610-lang';
+  function setLang(l){
+    document.body.classList.toggle('only-en', l==='en');
+    document.body.classList.toggle('only-zh', l==='zh');
+    document.querySelectorAll('.lang button').forEach(function(b){ b.classList.toggle('on', b.dataset.l===l); });
+    try{ localStorage.setItem(KEY, l); }catch(e){}
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){ b.addEventListener('click', function(){ setLang(b.dataset.l); }); });
+  try{ var saved=localStorage.getItem(KEY); if(saved) setLang(saved); }catch(e){}
+
+  // 表格全螢幕放大：A−／A＋ 調整字級（0.8～2.4 倍）
+  var zoom=document.getElementById('zoom'), body=document.getElementById('zoom-body'), scale=1, tbl=null;
+  function apply(){ if(tbl) tbl.style.fontSize=(13*scale)+'px'; }
+  document.querySelectorAll('.zoom-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var src=document.getElementById(btn.dataset.zoom);
+      body.innerHTML=''; tbl=src.cloneNode(true); tbl.removeAttribute('id'); body.appendChild(tbl);
+      document.getElementById('zoom-title').textContent=btn.parentNode.querySelector('.tbl-cap').textContent;
+      scale=1; apply(); zoom.hidden=false; body.scrollTop=0; body.scrollLeft=0;
+    });
+  });
+  document.getElementById('zoom-in').onclick=function(){ scale=Math.min(2.4, scale+0.2); apply(); };
+  document.getElementById('zoom-out').onclick=function(){ scale=Math.max(0.8, scale-0.2); apply(); };
+  document.getElementById('zoom-close').onclick=function(){ zoom.hidden=true; };
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Escape') return;
+    if(!zoom.hidden){ zoom.hidden=true; return; }
+    // 嵌在簡報箱時，Esc 也能關閉外層視窗
+    try{ if(window.parent!==window && window.parent.closeRab610) window.parent.closeRab610(); }catch(err){}
+  });
+})();
+</script>
+</body>
+</html>
