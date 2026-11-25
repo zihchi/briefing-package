@@ -141,10 +141,24 @@
    ====================================================================== */
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDkyChPvTfBCp7C2sJqznWaZR9l_1TnPFl4b2RqV3N1t8Y08dh1ssngXo7RbDOARxSsI/pub?output=csv";
 
+// 帶「文字顏色／粗體」的資料來源：試算表綁定的 Google Apps Script（見 scripts/notices-rich-text.gs）。
+// 留空 = 只讀上面的 CSV（沒有顏色）；填入部署後的網址即啟用，GAS 失敗會自動退回 CSV。
+const RICH_URL = "";
+
 // 離線退路：每次成功讀取就存一份在本機；連不上時顯示上次成功的資料（不再顯示範例公告，避免誤認）
-const CACHE_KEY = "notices-cache-v1";
-function saveCache(text){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({t:Date.now(), csv:text})); }catch(e){} }
-function readCache(){ try{ const j=JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); return (j&&j.csv)?j:null; }catch(e){ return null; } }
+const CACHE_KEY = "notices-cache-v2";
+function saveCache(kind, body){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({t:Date.now(), kind, body})); }catch(e){} }
+function readCache(){ try{ const j=JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); return (j&&j.body)?j:null; }catch(e){ return null; } }
+function cacheToData(c){ return c.kind==="rich" ? richToData(c.body) : csvToData(c.body); }
+
+// GAS 回傳 {ok, rows:[{日期,來源,摘要,機隊,緊急度,runs:[{t,c,b,i,u}]}]}
+function richToData(text){
+  const j=JSON.parse(text);
+  if(!j || !Array.isArray(j.rows)) return [];
+  return j.rows.map(r=>({日期:String(r.日期||"").trim(), 來源:String(r.來源||"").trim(), 摘要:String(r.摘要||"").trim(),
+    機隊:String(r.機隊||"").trim(), 緊急度:String(r.緊急度||"").trim(), runs:Array.isArray(r.runs)?r.runs:null}))
+    .filter(x=>x.日期||x.來源||x.摘要);
+}
 
 function parseCSV(text){
   const rows=[]; let row=[], field="", inQ=false;
@@ -194,8 +208,31 @@ function parseDate(d){
   const m=String(d||"").match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
   return m?new Date(+m[1],+m[2]-1,+m[3]):null;
 }
+// 把摘要切成「行」，每行是一串文字片段 {t, c(顏色), b(粗體)}；CSV 沒有樣式時每行就一個片段
+const BULLET_RE=/^[\s•·・‧∙●○◦▪▫■□\-–—*]+/;
+function toLines(row){
+  const runs=row.runs && row.runs.length ? row.runs : [{t:row.摘要||""}];
+  const lines=[[]];
+  runs.forEach(r=>{
+    String(r.t||"").split("\n").forEach((part,k)=>{
+      if(k>0) lines.push([]);
+      if(part) lines[lines.length-1].push({t:part, c:r.c, b:r.b, i:r.i, u:r.u});
+    });
+  });
+  // 去掉每行開頭自帶的 •、·、- 等符號（可能跨越多個片段）
+  return lines.map(segs=>{
+    while(segs.length){
+      const s0=segs[0], t=s0.t.replace(BULLET_RE,"");
+      if(t){ segs[0]={...s0, t}; break; }
+      segs.shift();
+    }
+    return segs;
+  }).filter(segs=>segs.some(s=>s.t.trim()));
+}
+const lineText=segs=>segs.map(s=>s.t).join("").trim();
 function normalize(row){
   const sum=(row.摘要||"").trim(), lines=sum.split("\n"), src=classifySource(row.來源);
+  const segLines=toLines(row);
   // 機隊：優先用「機隊」欄，沒填才從摘要文字偵測
   let fleet;
   if(row.機隊){
@@ -208,6 +245,7 @@ function normalize(row){
   return {date:row.日期||"",_d:parseDate(row.日期),src,fleet,
     important:(urg==="urgent"||urg==="important"|| /需要動作[：:]/.test(sum)),urgency:urg,
     title:(lines[0]||"（無標題）").trim(),
+    titleSegs:segLines[0]||[{t:"（無標題）"}], restLines:segLines.slice(1),
     rest:lines.slice(1).join("\n").trim(),full:sum,source:row.來源||""};
 }
 
@@ -221,16 +259,28 @@ async function loadData(){
   st.style.display="none"; st.className="status";
   let data, ok=true;
   try{
-    const res=await fetch(CSV_URL,{cache:"no-store"});
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    data=csvToData(text);
-    if(!data.length) throw new Error("empty");
-    saveCache(text);
+    data=null;
+    if(RICH_URL){
+      try{
+        const r=await fetch(RICH_URL,{cache:"no-store"});
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        const text=await r.text();
+        const d=richToData(text);
+        if(d.length){ data=d; saveCache("rich", text); }
+      }catch(e){ console.warn("公告顏色來源失敗，改讀 CSV：", e); }
+    }
+    if(!data){
+      const res=await fetch(CSV_URL,{cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const text=await res.text();
+      data=csvToData(text);
+      if(!data.length) throw new Error("empty");
+      saveCache("csv", text);
+    }
   }catch(e){
     ok=false;
     const c=readCache();
-    data=c?csvToData(c.csv):[];
+    data=c?cacheToData(c):[];
     if(c){
       const d=new Date(c.t), p=n=>String(n).padStart(2,"0");
       st.textContent=`⚠ 目前無法連線，顯示 ${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} 的資料`;
@@ -289,6 +339,19 @@ function hl(s){
   const k=esc(keyword).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
   return e.replace(new RegExp(k,"gi"),m=>`<mark>${m}</mark>`);
 }
+// 片段 → HTML：保留試算表的文字顏色與粗體（黑色視為預設，不另外上色）
+function segsHTML(segs){
+  return segs.map(s=>{
+    let h=hl(s.t);
+    const st=[];
+    const c=String(s.c||"").toLowerCase();
+    if(/^#[0-9a-f]{6}$/.test(c) && c!=="#000000") st.push(`color:${c}`);
+    if(s.b) st.push("font-weight:700");
+    if(s.i) st.push("font-style:italic");
+    if(s.u) st.push("text-decoration:underline");
+    return st.length?`<span style="${st.join(";")}">${h}</span>`:h;
+  }).join("");
+}
 // 日期統一為 MM/DD；不是今年才加年份
 function fmtDate(it){
   if(!it._d) return esc(it.date||"");
@@ -313,20 +376,19 @@ function metaHTML(it){
 }
 // 全螢幕閱讀內容：內文每行一個重點；「需要動作：…」抽出來做成醒目框
 function detailHTML(it){
-  // 摘要每行開頭常自帶「•」「·」「-」等符號，去掉以免和條列圓點重複
-  const lines=(it.rest||"").split("\n").map(s=>s.trim().replace(/^[•·・‧∙●○◦▪▫■□\-–—*]+\s*/,"").trim()).filter(Boolean);
+  // 每行一個重點（開頭的 •、· 已在 toLines 去掉）；「需要動作：…」抽出來做成醒目框
   let action=""; const points=[];
-  lines.forEach(l=>{
-    const m=l.match(/^[⚡\s]*需要動作[：:]\s*(.*)$/);
-    if(m) action=m[1].trim(); else points.push(l);
+  (it.restLines||[]).forEach(segs=>{
+    const m=lineText(segs).match(/^[⚡\s]*需要動作[：:]\s*(.*)$/);
+    if(m) action=m[1].trim(); else points.push(segs);
   });
   const srcStyle=getComputedStyle(document.querySelector(`.src.${it.src.cls}`)||document.body);
   let h=`<div class="nd-card" role="dialog" aria-label="公告內容">
     <div class="nd-meta"><span class="nd-src" style="color:${srcStyle.color};background:${srcStyle.backgroundColor}">${esc(it.src.label)}</span>`;
   if(it.src.code) h+=`<span class="nd-code">${hl(it.src.code)}</span>`;
   h+=`<span class="sp"></span><span class="nd-date">${fmtDate(it)}</span>${agoHTML(it,"nd-ago")}</div>
-    <div class="nd-title">${hl(it.title)}</div>`;
-  if(points.length) h+=`<ul class="nd-points">${points.map(p=>`<li>${hl(p)}</li>`).join("")}</ul>`;
+    <div class="nd-title">${segsHTML(it.titleSegs)}</div>`;
+  if(points.length) h+=`<ul class="nd-points">${points.map(p=>`<li>${segsHTML(p)}</li>`).join("")}</ul>`;
   else if(!action)  h+=`<div class="nd-empty">（無更多內容）</div>`;
   if(action) h+=`<div class="nd-action"><span>⚡</span><span>需要動作：${hl(action)}</span></div>`;
   h+=`<div class="nd-foot"><span>來源 <b>${esc(it.source)||"—"}</b></span><span>日期 <b>${esc(it.date)||"—"}</b></span></div></div>`;
@@ -356,7 +418,7 @@ function render(){
   list.innerHTML=rows.map((it,i)=>`
     <div class="card${it.important?" important":""}${it.isRecent?" recent":""}" data-i="${i}" role="button" tabindex="0">
       <div class="meta">${metaHTML(it)}</div>
-      <div class="title">${hl(it.title)}</div>
+      <div class="title">${segsHTML(it.titleSegs)}</div>
       <span class="chev">⤢</span>
     </div>`).join("");
   list.querySelectorAll(".card").forEach(c=>{
