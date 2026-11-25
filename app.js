@@ -104,6 +104,7 @@ let altimetryRows = [
   { id: 'msa', label: 'MSA', altitude: '', isCustom: false },
   { id: 'iaf', label: 'IAF', altitude: '', isCustom: false },
   { id: 'if', label: 'IF', altitude: '', isCustom: false },
+  { id: 'int', label: 'Intercept', altitude: '', isCustom: false },
   { id: 'faf', label: 'FAF/FAP', altitude: '', isCustom: false },
   { id: 'da', label: 'DA/MDA', altitude: '', isCustom: false },
   { id: 'maa', label: 'MAA', altitude: '', isCustom: false },
@@ -2347,74 +2348,45 @@ function initCurfewCalculator() {
 // ==========================================
 // ❄️ ICAO 寒冷溫度修正 (Altimetry)
 // ==========================================
+// RAB 6.10.1 Table 6.10 ICAO Cold Temperature Error Table（逐格對照 RAB，2026-11 校正 4 格）
+const ALT_TEMPS = [0, -10, -20, -30, -40, -50];
+const ALT_HEIGHTS = [0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 3000, 4000, 5000];
+const ALT_TABLE = [
+  [0, 20, 20, 30, 30, 40, 40, 50, 50, 60, 90, 120, 170, 230, 290],
+  [0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 290, 390, 490],
+  [0, 30, 50, 60, 70, 90, 100, 120, 130, 140, 210, 280, 430, 570, 710],
+  [0, 40, 60, 80, 100, 120, 130, 150, 170, 190, 280, 380, 570, 760, 950],
+  [0, 50, 80, 100, 120, 150, 170, 190, 220, 240, 360, 480, 720, 970, 1210],
+  [0, 60, 90, 120, 150, 180, 210, 240, 270, 300, 450, 600, 890, 1190, 1500]
+];
+// 查表＋雙線性內插，結果無條件進位到 10 ft（RAB Note i：表值皆進位至下一個 10 ft）。
+// RAB 6.10.2：低於 0°C 才修正；0°C 以上回傳 0。
+// 低於 −50°C 以 −50°C 計（偏少，畫面會警告）；高於 5000 ft 以 4000→5000 ft 的斜率外插（畫面會警告）。
 function calculateCorrection(temp, elevation, altitude) {
   if (temp === '' || elevation === '' || altitude === '') return '';
-  
-  const t = parseFloat(temp);
-  const elev = parseFloat(elevation);
-  const alt = parseFloat(altitude);
-  
+  const t = parseFloat(temp), elev = parseFloat(elevation), alt = parseFloat(altitude);
   if (isNaN(t) || isNaN(elev) || isNaN(alt)) return '';
   const height = alt - elev;
-  if (t >= 15 || height <= 0) return 0;
+  if (t >= 0 || height <= 0) return 0;
 
-  const clampedT = Math.max(-50, Math.min(10, t));
-  const clampedH = Math.max(0, height);
+  const T = Math.max(-50, t);
+  let ti = 0;
+  while (ti < ALT_TEMPS.length - 2 && T < ALT_TEMPS[ti + 1]) ti++;
+  const tr = (ALT_TEMPS[ti] - T) / (ALT_TEMPS[ti] - ALT_TEMPS[ti + 1]);   // 0 = 較暖列, 1 = 較冷列
 
-  const temps = [10, 0, -10, -20, -30, -40, -50];
-  const heights = [0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 3000, 4000, 5000];
-
-  const table = [
-    [0, 10, 10, 10, 10, 20, 20, 20, 20, 20, 30, 40, 60, 80, 90],
-    [0, 20, 20, 30, 30, 40, 40, 50, 50, 60, 90, 120, 170, 230, 280],
-    [0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 290, 390, 490],
-    [0, 30, 50, 60, 70, 90, 100, 120, 130, 140, 210, 280, 420, 570, 710],
-    [0, 40, 60, 80, 100, 120, 140, 150, 170, 190, 280, 380, 570, 760, 950],
-    [0, 50, 80, 100, 120, 150, 170, 190, 220, 240, 360, 480, 720, 970, 1210],
-    [0, 60, 90, 120, 150, 180, 210, 240, 270, 300, 450, 590, 890, 1190, 1500]
-  ];
-
-  let t0 = 0, t1 = 0;
-  for (let i = 0; i < temps.length - 1; i++) {
-    if (clampedT <= temps[i] && clampedT >= temps[i + 1]) {
-      t0 = i; t1 = i + 1; break;
+  const valueAt = (row) => {
+    const H = ALT_HEIGHTS;
+    if (height >= H[H.length - 1]) {
+      const n = H.length - 1;
+      return row[n] + (row[n] - row[n - 1]) / (H[n] - H[n - 1]) * (height - H[n]);
     }
-  }
-  if (clampedT === temps[temps.length - 1]) { t0 = temps.length - 1; t1 = temps.length - 1; }
-
-  let h0 = 0, h1 = 0;
-  if (clampedH >= heights[heights.length - 1]) {
-    h0 = heights.length - 1; h1 = heights.length - 1;
-  } else {
-    for (let i = 0; i < heights.length - 1; i++) {
-      if (clampedH >= heights[i] && clampedH <= heights[i + 1]) {
-        h0 = i; h1 = i + 1; break;
-      }
-    }
-  }
-
-  const tempRatio = t0 === t1 ? 0 : (clampedT - temps[t0]) / (temps[t1] - temps[t0]);
-  const heightRatio = h0 === h1 ? 0 : (clampedH - heights[h0]) / (heights[h1] - heights[h0]);
-
-  const c00 = table[t0][h0];
-  const c01 = table[t0][h1];
-  const c10 = table[t1][h0];
-  const c11 = table[t1][h1];
-
-  const c0 = c00 + heightRatio * (c01 - c00);
-  const c1 = c10 + heightRatio * (c11 - c10);
-
-  let correction = c0 + tempRatio * (c1 - c0);
-
-  if (height > 5000) {
-    const slopeT0 = (table[t0][14] - table[t0][13]) / 1000;
-    const slopeT1 = (table[t1][14] - table[t1][13]) / 1000;
-    const extraH = height - 5000;
-    const extraCorrection = (slopeT0 * extraH) + tempRatio * ((slopeT1 * extraH) - (slopeT0 * extraH));
-    correction += extraCorrection;
-  }
-
-  return Math.round(correction);
+    let hi = 0;
+    while (hi < H.length - 2 && height > H[hi + 1]) hi++;
+    const hr = (height - H[hi]) / (H[hi + 1] - H[hi]);
+    return row[hi] + hr * (row[hi + 1] - row[hi]);
+  };
+  const c = valueAt(ALT_TABLE[ti]) + tr * (valueAt(ALT_TABLE[ti + 1]) - valueAt(ALT_TABLE[ti]));
+  return Math.ceil(c / 10 - 1e-9) * 10;
 }
 
 function calculateCorrectedFPA(temp, elevation, nominalFPA) {
@@ -2434,21 +2406,50 @@ function calculateCorrectedFPA(temp, elevation, nominalFPA) {
   return (correctedFpaRad * (180 / Math.PI)).toFixed(2);
 }
 
-function getRabText(type, rowId) {
-  switch(type) {
+// RAB 6.10.2 Guidelines for Cold Temperature Altitude Corrections（低於 0°C）
+// cls：req 需修正｜cond 有條件需修正｜norec 不建議｜no 不需（無雷達時需修）｜ref 參考（RAB 未規定）
+const ALT_NOTES = {
+  i:   'Note i：無 ATC 雷達服務時，須進行高度修正。（Altitude correction is required when ATC radar service is not available.）',
+  ii:  'Note ii：若 FMC 中 IF、IAF 高度編碼為「above」可產生穩定 CDFA 路徑至 FAP，不建議修正 IF、IAF。',
+  iii: 'Note iii：以 FLS 或 FINAL APP 模式進場、實際外界溫度在航圖標示溫度範圍內時，可依航圖最低高度執行。',
+  pa:  'ILS：若飛越 IF／IAF／FAF／FAP 且未接受雷達引導，須修正；已沿 G/S 下降中則不需。',
+  ifap:'NPA：IF／IAF 有適用時須修正（if applicable）。',
+  ref: 'RAB 6.10.2 未規定此項，修正量僅供參考。'
+};
+function getRabRule(type, rowId) {
+  const R = (cls, label, notes) => ({ cls, label, notes });
+  if (rowId === 'int' || rowId === 'maa') return R('no', '不需（無雷達須修）', ['i']);
+  if (!['iaf', 'if', 'faf', 'da'].includes(rowId)) return R('ref', '參考', ['ref']);
+  switch (type) {
     case 'NPA(2D)':
-      if (['iaf', 'if', 'faf', 'da'].includes(rowId)) return 'Required';
-      break;
+      return (rowId === 'iaf' || rowId === 'if') ? R('req', '需修正', ['ifap']) : R('req', '需修正', []);
     case 'APV-Baro(3D)':
-      if (['iaf', 'if'].includes(rowId)) return 'Not Recommended \n(see note)';
-      if (['faf', 'da'].includes(rowId)) return 'Not Required';
-      break;
+      if (rowId === 'iaf' || rowId === 'if') return R('norec', '不建議', ['ii']);
+      if (rowId === 'da') return R('no', '不需', ['iii']);
+      return R('no', '不需', []);
     case 'PA (ILS)':
-      if (['iaf', 'if', 'faf'].includes(rowId)) return 'Required \n(see note)';
-      if (rowId === 'da') return 'Required';
-      break;
+      return rowId === 'da' ? R('req', '需修正', []) : R('cond', '需修正（條件）', ['pa']);
   }
-  return '';
+  return R('ref', '參考', ['ref']);
+}
+function toggleAltNote(id) {
+  const el = document.getElementById(`alt-note-${id}`);
+  if (el) el.hidden = !el.hidden;
+}
+// 溫度 ± 切換（iPhone 數字鍵盤沒有負號）
+function toggleAltTempSign() {
+  const el = document.getElementById('altTemp');
+  if (!el) return;
+  const v = parseFloat(el.value);
+  if (isNaN(v)) {
+    // 還沒輸入：先記住「負號」，接著輸入的數字自動變負值
+    if (el.dataset.neg) { delete el.dataset.neg; el.placeholder = 'e.g. -10'; }
+    else { el.dataset.neg = '1'; el.placeholder = '−'; }
+  } else {
+    el.value = String(-v); delete el.dataset.neg; el.placeholder = 'e.g. -10';
+  }
+  el.focus();
+  recalculateAltimetryValues();
 }
 
 function setAltApproach(type, index) {
@@ -2461,16 +2462,10 @@ function setAltApproach(type, index) {
   if(pill) pill.style.transform = `translateX(${index * 100}%)`;
 
   const notesBox = document.getElementById('altNotesBox');
-  if(notesBox) {
-      if (type === 'APV-Baro(3D)') {
-        notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#d97706; font-weight:bold;">Not Recommended:</span> Not recommended for IF and IAF when FMC coded with "above" to generate a stable CDFA to FAP.`;
-        notesBox.classList.add('active');
-      } else if (type === 'PA (ILS)') {
-        notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes:</strong><br><span style="color:#e74c3c; font-weight:bold;">Required:</span> If overflying IF/IAF/FAF/FAP, and not being Radar Vectored, unless already descending on G/S.`;
-        notesBox.classList.add('active');
-      } else {
-        notesBox.classList.remove('active');
-      }
+  if (notesBox) {
+    const keys = { 'NPA(2D)': ['ifap', 'i'], 'APV-Baro(3D)': ['ii', 'iii', 'i'], 'PA (ILS)': ['pa', 'i'] }[type] || ['i'];
+    notesBox.innerHTML = `<strong>ℹ️ RAB 6.10.2 Notes · ${type}</strong>` + keys.map(k => `<div>${ALT_NOTES[k]}</div>`).join('');
+    notesBox.classList.add('active');
   }
   recalculateAltimetryValues();
 }
@@ -2497,75 +2492,74 @@ function recalculateAltimetryValues() {
   const fpaEl = document.getElementById('altFpa');
   if (!tempEl || !elevEl || !appTypeEl || !fpaEl) return;
 
-  const temp = tempEl.value;
-  const elev = elevEl.value;
-  const appType = appTypeEl.value;
-  const fpa = fpaEl.value;
+  // 溫度欄若用 ± 切成負號但還沒輸入數字，視為空
+  let temp = tempEl.value;
+  if (tempEl.dataset.neg && temp !== '' && parseFloat(temp) > 0) { temp = String(-parseFloat(temp)); tempEl.value = temp; delete tempEl.dataset.neg; tempEl.placeholder = 'e.g. -10'; }
+  const elev = elevEl.value, appType = appTypeEl.value, fpa = fpaEl.value;
+  const t = parseFloat(temp);
 
   const fpaRes = calculateCorrectedFPA(temp, elev, fpa);
   const altFpaResEl = document.getElementById('altFpaResult');
-  if(altFpaResEl) altFpaResEl.textContent = fpaRes ? `${fpaRes}°` : '--°';
+  if (altFpaResEl) altFpaResEl.textContent = fpaRes ? `${fpaRes}°` : '--°';
+
+  // 溫度狀態提示
+  const st = document.getElementById('altTempStatus');
+  if (st) {
+    if (temp === '' || isNaN(t)) { st.className = 'alt-status'; st.textContent = ''; }
+    else if (t >= 0) { st.className = 'alt-status ok'; st.textContent = '0°C 以上：依 RAB 6.10.2 不需低溫修正'; }
+    else if (t < -50) { st.className = 'alt-status warn'; st.textContent = '⚠️ 低於 −50°C 超出 Table 6.10 範圍，以 −50°C 計算（修正量偏少）'; }
+    else { st.className = 'alt-status cold'; st.textContent = `低於 0°C：依 Table 6.10 修正（內插後進位至 10 ft）`; }
+  }
 
   altimetryRows.forEach(row => {
     const correction = calculateCorrection(temp, elev, row.altitude);
     const hasCorrection = correction !== '' && correction !== 0;
     const correctedAlt = !hasCorrection ? (row.altitude || '') : (parseFloat(row.altitude) + correction);
-    
-    const rabText = getRabText(appType, row.id);
-    let rabColor = '#9ca3af';
-    if (rabText.includes('Required') && !rabText.includes('Not Required')) rabColor = '#ef4444';
-    if (rabText.includes('Not Recommended')) rabColor = '#f59e0b';
+    const height = parseFloat(row.altitude) - parseFloat(elev);
+    const beyond = hasCorrection && height > 5000;
 
-    const rabEl = document.getElementById(`alt-rab-${row.id}`);
-    if (rabEl) {
-      rabEl.textContent = rabText;
-      rabEl.style.color = rabColor;
+    const rule = getRabRule(appType, row.id);
+    const chip = document.getElementById(`alt-chip-${row.id}`);
+    if (chip) { chip.textContent = rule.label + (rule.notes.length ? ' ⓘ' : ''); chip.className = `alt-chip ${rule.cls}`; }
+    const note = document.getElementById(`alt-note-${row.id}`);
+    if (note) {
+      const lines = rule.notes.map(k => ALT_NOTES[k]);
+      if (beyond) lines.push('⚠️ 高於機場超過 5000 ft，超出 Table 6.10 範圍，修正量為外插估計。');
+      note.innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+      if (!lines.length) note.hidden = true;
     }
 
     const badgeEl = document.getElementById(`alt-badge-${row.id}`);
     if (badgeEl) {
-      badgeEl.textContent = hasCorrection ? '+' + correction : '-';
-      badgeEl.className = `alt-badge ${hasCorrection ? 'active' : 'inactive'}`;
+      badgeEl.textContent = hasCorrection ? `+${correction}${beyond ? ' ⚠️' : ''}` : '–';
+      badgeEl.className = `alt-badge ${hasCorrection ? 'active' : 'inactive'}${beyond ? ' beyond' : ''}`;
     }
-
     const correctedEl = document.getElementById(`alt-corrected-${row.id}`);
-    if (correctedEl) {
-      correctedEl.value = correctedAlt;
-    }
+    if (correctedEl) correctedEl.textContent = correctedAlt === '' ? '—' : correctedAlt;
   });
 }
 
 function renderAltimetryRows() {
   const container = document.getElementById('altRowsContainer');
-  if(!container) return;
+  if (!container) return;
   container.innerHTML = '';
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   altimetryRows.forEach(row => {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'alt-row';
-
-    let labelHtml = '';
-    if (row.isCustom) {
-      labelHtml = `<input type="text" value="${row.label}" oninput="handleAltLabelChange('${row.id}', this.value)" style="width:100%; text-align:right; border:none; border-bottom:1px dashed #ccc; background:transparent; font-weight:bold; color:#444; outline:none;">`;
-    } else {
-      labelHtml = row.label;
-    }
-
-    const removeBtnHtml = row.isCustom ? `<span style="position:absolute; right:-25px; color:#ccc; cursor:pointer; font-size:1.2em; top:5px;" onclick="removeAltRow('${row.id}')">×</span>` : '';
+    const labelHtml = row.isCustom
+      ? `<input type="text" class="alt-fix-edit" value="${esc(row.label)}" oninput="handleAltLabelChange('${row.id}', this.value)" aria-label="自訂名稱">`
+      : `<span class="alt-fix-name">${esc(row.label)}</span>`;
+    const removeBtnHtml = row.isCustom ? `<button type="button" class="alt-remove" onclick="removeAltRow('${row.id}')" aria-label="刪除此列">×</button>` : '';
 
     rowDiv.innerHTML = `
-      <div id="alt-rab-${row.id}" class="alt-rab-text" style="padding-left:10px;"></div>
-      <div class="alt-fix-col">${labelHtml}</div>
-      <div><input type="number" class="app-text-input" style="text-align:center; padding:6px; background:#fff; border:1px solid #e2e8f0;" value="${row.altitude}" oninput="handleAltRowChange('${row.id}', this.value)" placeholder="Value"></div>
-      <div style="text-align:center;">
-        <div id="alt-badge-${row.id}" class="alt-badge inactive">-</div>
-      </div>
-      <div style="position:relative;">
-        <input id="alt-corrected-${row.id}" type="text" class="alt-readonly-input" readonly value="">
-        ${removeBtnHtml}
-      </div>
+      <div class="alt-fix">${labelHtml}<button type="button" id="alt-chip-${row.id}" class="alt-chip" onclick="toggleAltNote('${row.id}')"></button>${removeBtnHtml}</div>
+      <div class="alt-in"><input type="number" inputmode="numeric" class="app-text-input" value="${esc(row.altitude)}" oninput="handleAltRowChange('${row.id}', this.value)" placeholder="Altitude" aria-label="${esc(row.label)} 高度 (ft)"></div>
+      <div class="alt-corr"><span id="alt-badge-${row.id}" class="alt-badge inactive">–</span></div>
+      <div class="alt-out"><span id="alt-corrected-${row.id}" class="alt-readonly-input">—</span></div>
+      <div id="alt-note-${row.id}" class="alt-note" hidden></div>
     `;
-
     container.appendChild(rowDiv);
   });
   recalculateAltimetryValues();
@@ -2577,13 +2571,14 @@ function resetAltimetryCalculator() {
   const altFpa = document.getElementById('altFpa');
   
   if(altElev) altElev.value = '';
-  if(altTemp) altTemp.value = '';
+  if(altTemp) { altTemp.value = ''; delete altTemp.dataset.neg; altTemp.placeholder = 'e.g. -10'; }
   if(altFpa) altFpa.value = '3.0';
   
   altimetryRows = [
     { id: 'msa', label: 'MSA', altitude: '', isCustom: false },
     { id: 'iaf', label: 'IAF', altitude: '', isCustom: false },
     { id: 'if', label: 'IF', altitude: '', isCustom: false },
+    { id: 'int', label: 'Intercept', altitude: '', isCustom: false },
     { id: 'faf', label: 'FAF/FAP', altitude: '', isCustom: false },
     { id: 'da', label: 'DA/MDA', altitude: '', isCustom: false },
     { id: 'maa', label: 'MAA', altitude: '', isCustom: false },

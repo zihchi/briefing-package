@@ -312,7 +312,7 @@
     .wx-decode-box { width: 100%; max-width: 1100px; background: var(--surface); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-pop); }
     .wx-decode-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
     .wx-decode-head button { margin: 0; padding: 4px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 2px solid var(--danger); color: var(--danger); background: none; cursor: pointer; }
-    #wx-decode-frame { flex: 1; width: 100%; border: 0; background: #f6f7f9; }
+    #wx-decode-frame, #rab610-frame { flex: 1; width: 100%; border: 0; background: #f6f7f9; }
 
     .map-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
     #sync-status { font-size: 13px; font-weight: bold; padding: 6px 12px; border-radius: var(--radius-pill); background-color: var(--text); color: white; transition: background-color 0.5s ease; box-shadow: var(--shadow-btn); }
@@ -466,17 +466,58 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
     /* ❄️ Altimetry 專屬表格與 Grid 佈局 */
-    .alt-table-wrapper { overflow-x: auto; padding-bottom: 10px; }
-    .alt-table { min-width: 650px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
-    .alt-header { display: grid; grid-template-columns: 2.5fr 2fr 2.5fr 2fr 2fr; gap: 10px; padding: 0 8px 8px 8px; border-bottom: 1px solid #eee; font-size: 0.9em; font-weight: bold; color: #888; text-transform: uppercase;}
-    .alt-row { display: grid; grid-template-columns: 2.5fr 2fr 2.5fr 2fr 2fr; gap: 10px; align-items: center; padding: 8px; background: rgba(249,250,251,0.6); border-radius: 12px; transition: background 0.2s;}
-    .alt-row:hover { background: rgba(243,244,246,0.9); }
-    .alt-rab-text { font-size: 0.85em; font-weight: 600; line-height: 1.3; white-space: pre-wrap; transition: color 0.3s; }
-    .alt-fix-col { text-align: right; font-weight: bold; color: #444; border-left: 2px solid #eee; padding-left: 10px;}
-    .alt-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; transition: all 0.3s; }
+    /* ❄️ 低溫修正：桌機為 4 欄表格列；手機直式（≤640px）改卡片：名稱＋RAB 判定在上，高度 → 修正量 → 修正後在下 */
+    .alt-params .alt-param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .alt-params .app-text-input { padding: 8px 10px; }
+    .alt-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .alt-field .app-label { margin: 0; }
+    .alt-temp-wrap { display: flex; gap: 6px; min-width: 0; }
+    .alt-temp-wrap .app-text-input { min-width: 0; }
+    .alt-sign { flex: none; margin: 0; width: 34px; padding: 0; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--brand); font-size: 1.15em; font-weight: 800; cursor: pointer; }
+    .alt-status { font-size: 12.5px; font-weight: 700; margin-top: 8px; min-height: 0; }
+    .alt-status:empty { display: none; }
+    .alt-status.ok { color: #15803d; } .alt-status.cold { color: #0369a1; } .alt-status.warn { color: #b45309; }
+    .alt-type-row { border-top: 1px dashed #e7ddd0; margin-top: 14px; padding-top: 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between; }
+    .alt-type { flex: 1 1 260px; min-width: 0; }
+    .alt-fpa .app-label { text-align: right; }
+    .alt-rab-btn { margin: 0; padding: 5px 10px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--brand); cursor: pointer; white-space: nowrap; }
+    .alt-list-card { padding: 1.2em 1em; }
+    .alt-header, .alt-row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; align-items: center; }
+    .alt-header { padding: 0 8px 8px; border-bottom: 1px solid #eee; font-size: 0.8em; font-weight: bold; color: #888; text-transform: uppercase; }
+    .alt-header > div:nth-child(n+3) { text-align: center; }
+    #altRowsContainer { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .alt-row { padding: 8px; background: rgba(249,250,251,0.8); border: 1px solid #f1ece5; border-radius: 12px; }
+    .alt-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+    .alt-fix-name { font-weight: 800; color: var(--text); font-size: 1.02em; }
+    .alt-fix-edit { width: 7.5em; border: none; border-bottom: 1px dashed #ccc; background: transparent; font-weight: 800; color: var(--text); outline: none; font-size: 1em; padding: 2px 0; }
+    .alt-chip { margin: 0; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800; border: 0; cursor: pointer; white-space: nowrap; line-height: 1.5; }
+    .alt-chip.req { background: #fee2e2; color: #b91c1c; }
+    .alt-chip.cond { background: #ffedd5; color: #c2410c; }
+    .alt-chip.norec { background: #fef3c7; color: #a16207; }
+    .alt-chip.no { background: #f1f5f9; color: #64748b; }
+    .alt-chip.ref { background: #f5f5f4; color: #a8a29e; }
+    .alt-remove { margin: 0 0 0 auto; border: 0; background: none; color: #bbb; font-size: 1.3em; cursor: pointer; padding: 0 4px; }
+    .alt-in .app-text-input { text-align: center; padding: 8px 6px; background: #fff; border: 1px solid #e2e8f0; }
+    .alt-corr { text-align: center; }
+    .alt-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.92em; font-weight: bold; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .alt-badge.active { background: #e0f2fe; color: #0284c7; }
+    .alt-badge.active.beyond { background: #fef3c7; color: #a16207; }
     .alt-badge.inactive { color: #ccc; }
-    .alt-readonly-input { background: #1e293b; color: #fff; font-weight: bold; border-radius: 8px; text-align: center; padding: 8px; width: 100%; border: none; outline: none; box-sizing: border-box; transition: value 0.3s;}
+    .alt-readonly-input { display: block; background: #1e293b; color: #fff; font-weight: bold; border-radius: 8px; text-align: center; padding: 8px 6px; font-variant-numeric: tabular-nums; font-size: 1.02em; }
+    .alt-note { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.55; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .alt-note[hidden] { display: none; }
+    .alt-atc { margin-top: 12px; border: 1px solid #e7ddd0; border-radius: 12px; background: #faf6f1; font-size: 13px; }
+    .alt-atc summary { cursor: pointer; padding: 10px 12px; font-weight: 800; color: var(--text); }
+    .alt-atc ul { margin: 0; padding: 0 14px 12px 30px; display: flex; flex-direction: column; gap: 6px; line-height: 1.55; color: #57463a; }
+    @media (max-width: 640px) {
+      .alt-header { display: none; }
+      .alt-row { grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1.25fr); grid-template-areas: "fix fix fix" "in corr out" "note note note"; row-gap: 8px; column-gap: 8px; padding: 10px; }
+      .alt-fix { grid-area: fix; } .alt-in { grid-area: in; } .alt-corr { grid-area: corr; } .alt-out { grid-area: out; } .alt-note { grid-area: note; }
+      .alt-corr::before { content: "→"; color: #c4b5a5; margin-right: 4px; }
+      .alt-out::before { content: none; }
+      .alt-in .app-text-input, .alt-readonly-input { font-size: 1.1em; padding: 9px 4px; }
+      .alt-fpa .app-label { text-align: left; }
+    }
     
     .btn-outline { background: var(--surface); border: 2px solid var(--border); color: var(--text-muted); padding: 8px 16px; border-radius: var(--radius-pill); font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 10px auto; display: block;}
     .btn-outline:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
@@ -927,6 +968,22 @@
         <div id="wx-sheet-body"></div>
       </div>
     </div>
+    <!-- 📖 RAB 6.10 低溫修正規定（rab-610.html），低溫修正工具的「RAB 6.10」按鈕開啟 -->
+    <div id="rab610-overlay" class="wx-decode-overlay" hidden onclick="if(event.target===this)closeRab610()">
+      <div class="wx-decode-box" role="dialog" aria-label="RAB 6.10 低溫高度修正">
+        <div class="wx-decode-head"><b>📖 RAB 6.10 低溫高度修正</b><button type="button" onclick="closeRab610()">✕ 關閉</button></div>
+        <iframe id="rab610-frame" title="RAB 6.10 低溫高度修正"></iframe>
+      </div>
+    </div>
+    <script>
+      function openRab610(){
+        var o=document.getElementById('rab610-overlay'), f=document.getElementById('rab610-frame');
+        if(!f.getAttribute('src')) f.setAttribute('src','rab-610.html');
+        o.hidden=false; document.body.style.overflow='hidden';
+      }
+      function closeRab610(){ document.getElementById('rab610-overlay').hidden=true; document.body.style.overflow=''; }
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !document.getElementById('rab610-overlay').hidden) closeRab610(); });
+    </script>
     <!-- 📖 電碼速查（wx-decode.html），點「電碼速查」才載入 -->
     <div id="wx-decode-overlay" class="wx-decode-overlay" hidden onclick="if(event.target===this)closeWxDecode()">
       <div class="wx-decode-box" role="dialog" aria-label="氣象電碼速查表">
