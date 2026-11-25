@@ -66,6 +66,10 @@ table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 .sym.wide svg { width: 220px; height: 52px; }
 @media (max-width: 560px) { .sym.wide { grid-template-columns: 1fr; } .sym.wide svg { width: 100%; max-width: 260px; } }
 
+.cat td, .cat th { padding: 9px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-variant-numeric: tabular-nums; }
+.cat th { font-size: 12px; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+.cat .b { display: inline-block; color: #fff; font-family: var(--f-code); font-weight: 700; font-size: 12.5px; padding: 2px 9px; border-radius: 6px; }
+.cat .u { display: block; font-size: 12px; color: var(--ink-2); }
 .abbr { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 18px; font-size: 13.5px; }
 .abbr div { display: grid; grid-template-columns: 62px 1fr; gap: 8px; }
 .notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; max-width: 80ch; }
@@ -168,6 +172,26 @@ svg .t { fill: currentColor; font-family: var(--f-code); font-weight: 700; }
         <tr><td><span class="c">FG</span></td><td>能見度 <b>&lt;1000 m</b>（剛好 1000 m 屬於 BR）。<span class="note">MIFG、BCFG、PRFG 例外：機場內局部能見度可 ≥1000 m。</span></td></tr>
       </tbody>
     </table>
+  </section>
+
+  <section aria-labelledby="cat">
+    <h2 id="cat">飛行等級 <small>Flight Category · VFR / MVFR / IFR / LIFR</small></h2>
+    <div class="scroll">
+      <table class="cat">
+        <thead><tr><th>等級</th><th>雲幕 Ceiling</th><th>能見度 Visibility</th></tr></thead>
+        <tbody>
+          <tr><td><span class="b" style="background:#27ae60">VFR</span></td><td><b>&gt;3000 ft</b><span class="u">&gt;900 m</span></td><td><b>&gt;5 SM</b><span class="u">&gt;8000 m（9999 即為 VFR）</span></td></tr>
+          <tr><td><span class="b" style="background:#2f80c7">MVFR</span></td><td><b>1000～3000 ft</b><span class="u">300～900 m</span></td><td><b>3～5 SM</b><span class="u">4800～8000 m</span></td></tr>
+          <tr><td><span class="b" style="background:#d9473a">IFR</span></td><td><b>500 至 &lt;1000 ft</b><span class="u">150 至 &lt;300 m</span></td><td><b>1 至 &lt;3 SM</b><span class="u">1600 至 &lt;4800 m</span></td></tr>
+          <tr><td><span class="b" style="background:#8e44ad">LIFR</span></td><td><b>&lt;500 ft</b><span class="u">&lt;150 m</span></td><td><b>&lt;1 SM</b><span class="u">&lt;1600 m</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="notes">
+      <li><b>雲幕</b>：最低的 BKN、OVC 雲層，或垂直能見度 VV。FEW、SCT 不算雲幕。</li>
+      <li>VFR 需<b>兩者都符合</b>；其他等級只要雲幕<b>或</b>能見度任一符合即可，兩者<b>取較差者</b>決定等級。例：雲幕 4000 ft 但能見度 2 SM → IFR。</li>
+      <li>這是美國 FAA／NWS 的分級（AWC 與本網站地圖顏色採用），ICAO 沒有這套分級。公制為換算值：1 SM ≈ 1609 m、1 ft ≈ 0.3048 m。</li>
+    </ul>
   </section>
 
   <section aria-labelledby="sym1">
