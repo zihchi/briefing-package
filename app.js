@@ -1959,6 +1959,22 @@ function initAviationMap() {
                     icao = await wxIataToIcao(iata);
                     if (!icao) throw new Error(`查無 IATA 代碼 ${iata}`);
                 }
+                // 內建機場（任一機隊清單裡有）：直接打開它的面板，不另外打 🌟、不重複抓三次資料
+                const builtin = (fleets[currentFleet] || []).find(a => a.icao === icao)
+                    || Object.values(fleets).flat().find(a => a.icao === icao);
+                if (builtin) {
+                    if (window._wxCustomMarker) { window.aviationMapInstance.removeLayer(window._wxCustomMarker); window._wxCustomMarker = null; }
+                    if (builtin.lat || builtin.lng) {
+                        const plotLng = builtin.lng < 0 ? builtin.lng + 360 : builtin.lng;
+                        window.aviationMapInstance.setView([builtin.lat, plotLng], Math.max(window.aviationMapInstance.getZoom(), 6));
+                    }
+                    wxOpenAirport(builtin); // 先用已載入的報文秒開，背景再確認最新報文
+                    btn.disabled = false;
+                    btn.innerText = "🔍 搜尋";
+                    btn.style.opacity = "1";
+                    inputEl.value = "";
+                    return;
+                }
                 // 不在任何機隊清單內的機場也要能查：三個請求各自成敗，只要有報文或座標就顯示
                 const settled = await Promise.allSettled([
                     fetchBulkWeatherFast(icao, 'airport'),
