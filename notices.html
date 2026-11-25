@@ -71,6 +71,8 @@
   /* 7 天內的公告高亮 */
   .card.recent{background:#fff8ec;border-color:#f0d3a8;box-shadow:0 0 0 1px #f0d3a8,var(--shadow)}
   .card.recent .date{color:var(--brand)}
+  .ago,.nd-ago{font-size:11.5px;font-weight:700;color:var(--ink-faint);background:#f3ede6;border-radius:6px;padding:1px 6px;white-space:nowrap;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+  .card.recent .ago{color:var(--brand);background:#f6e3c8}
 
   .meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;row-gap:6px;padding-right:20px}
   .src{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px;line-height:1.4;white-space:nowrap}
@@ -294,16 +296,25 @@ function fmtDate(it){
   const md=`${p(d.getMonth()+1)}/${p(d.getDate())}`;
   return d.getFullYear()===new Date().getFullYear()?md:`${d.getFullYear()}/${md}`;
 }
+// 距發佈幾天：today／1 day／5 days；未來生效日顯示 in 3 days
+function agoHTML(it,cls="ago"){
+  if(!it._d) return "";
+  const t=new Date(); t.setHours(0,0,0,0);
+  const n=Math.round((t-it._d)/86400000);
+  const txt = n===0 ? "today" : n>0 ? `${n} day${n>1?"s":""}` : `in ${-n} day${n<-1?"s":""}`;
+  return `<span class="${cls}">${txt}</span>`;
+}
 function metaHTML(it){
   let h=`<span class="src ${it.src.cls}">${esc(it.src.label)}</span>`;
   if(it.src.code) h+=`<span class="code">${hl(it.src.code)}</span>`;
   h+=`<span class="spacer"></span>`;
-  h+=`<span class="date">${fmtDate(it)}</span>`;
+  h+=`<span class="date">${fmtDate(it)}</span>${agoHTML(it)}`;
   return h;
 }
 // 全螢幕閱讀內容：內文每行一個重點；「需要動作：…」抽出來做成醒目框
 function detailHTML(it){
-  const lines=(it.rest||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  // 摘要每行開頭常自帶「•」「·」「-」等符號，去掉以免和條列圓點重複
+  const lines=(it.rest||"").split("\n").map(s=>s.trim().replace(/^[•·・‧∙●○◦▪▫■□\-–—*]+\s*/,"").trim()).filter(Boolean);
   let action=""; const points=[];
   lines.forEach(l=>{
     const m=l.match(/^[⚡\s]*需要動作[：:]\s*(.*)$/);
@@ -313,7 +324,7 @@ function detailHTML(it){
   let h=`<div class="nd-card" role="dialog" aria-label="公告內容">
     <div class="nd-meta"><span class="nd-src" style="color:${srcStyle.color};background:${srcStyle.backgroundColor}">${esc(it.src.label)}</span>`;
   if(it.src.code) h+=`<span class="nd-code">${hl(it.src.code)}</span>`;
-  h+=`<span class="sp"></span><span class="nd-date">${fmtDate(it)}</span></div>
+  h+=`<span class="sp"></span><span class="nd-date">${fmtDate(it)}</span>${agoHTML(it,"nd-ago")}</div>
     <div class="nd-title">${hl(it.title)}</div>`;
   if(points.length) h+=`<ul class="nd-points">${points.map(p=>`<li>${hl(p)}</li>`).join("")}</ul>`;
   else if(!action)  h+=`<div class="nd-empty">（無更多內容）</div>`;
