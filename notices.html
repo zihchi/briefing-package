@@ -143,7 +143,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4iKWN7xdzmDky
 
 // 帶「文字顏色／粗體」的資料來源：試算表綁定的 Google Apps Script（見 scripts/notices-rich-text.gs）。
 // 留空 = 只讀上面的 CSV（沒有顏色）；填入部署後的網址即啟用，GAS 失敗會自動退回 CSV。
-const RICH_URL = "";
+const RICH_URL = "https://script.google.com/macros/s/AKfycbzzr0DQO2og4sDBPXnhIYxYuZgcknVotsKeRyfOsKTG6cun9ICZvufkdc0AazAVtrpe/exec";
 
 // 離線退路：每次成功讀取就存一份在本機；連不上時顯示上次成功的資料（不再顯示範例公告，避免誤認）
 const CACHE_KEY = "notices-cache-v2";
