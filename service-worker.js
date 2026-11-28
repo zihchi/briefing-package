@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v148';
+const CACHE_NAME = 'briefing-v149';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -39,8 +39,58 @@ const LOCAL_FILES = [
   './icon-192.png',
   './icon-512.png',
   './SwapDutyForm.pdf',
+  // HOT 26/27（原 zihchi.github.io/Holdovertime，已併入；表格圖片另存在 HOT_CACHE）
+  './hot/index.html',
+  './hot/data/hot-2026-27.js',
+  './hot/js/metar.js',
   './LIDOPRO.png',
   './TR.jpg',
+];
+
+// 🧊 HOT 26/27 的 FAA 原始表格圖片（約 11 MB）：存在獨立、跨版本保留的快取，
+//    不在每次版本更新時重抓；首頁開啟時由 PRECACHE_CHECK 補齊缺的檔案。換季（新年度表）時改 HOT_CACHE 名稱。
+const HOT_CACHE = 'briefing-hot-2026-27';
+const HOT_IMAGES = [
+  './hot/images/2026-27/table_01.jpg',
+  './hot/images/2026-27/table_02.jpg',
+  './hot/images/2026-27/table_03.jpg',
+  './hot/images/2026-27/table_20.jpg',
+  './hot/images/2026-27/table_21.jpg',
+  './hot/images/2026-27/table_22.jpg',
+  './hot/images/2026-27/table_23.jpg',
+  './hot/images/2026-27/table_24.jpg',
+  './hot/images/2026-27/table_25.jpg',
+  './hot/images/2026-27/table_26.jpg',
+  './hot/images/2026-27/table_27.jpg',
+  './hot/images/2026-27/table_28.jpg',
+  './hot/images/2026-27/table_29.jpg',
+  './hot/images/2026-27/table_30.jpg',
+  './hot/images/2026-27/table_31.jpg',
+  './hot/images/2026-27/table_32.jpg',
+  './hot/images/2026-27/table_33.jpg',
+  './hot/images/2026-27/table_34.jpg',
+  './hot/images/2026-27/table_35.jpg',
+  './hot/images/2026-27/table_36.jpg',
+  './hot/images/2026-27/table_37.jpg',
+  './hot/images/2026-27/table_38.jpg',
+  './hot/images/2026-27/table_39.jpg',
+  './hot/images/2026-27/table_40.jpg',
+  './hot/images/2026-27/table_41.jpg',
+  './hot/images/2026-27/table_42.jpg',
+  './hot/images/2026-27/table_43.jpg',
+  './hot/images/2026-27/table_44.jpg',
+  './hot/images/2026-27/table_45.jpg',
+  './hot/images/2026-27/table_46.jpg',
+  './hot/images/2026-27/table_47.jpg',
+  './hot/images/2026-27/table_48.jpg',
+  './hot/images/2026-27/table_49.jpg',
+  './hot/images/2026-27/table_50.jpg',
+  './hot/images/2026-27/table_51.jpg',
+  './hot/images/2026-27/table_52.jpg',
+  './hot/images/2026-27/table_53.jpg',
+  './hot/images/2026-27/table_55.jpg',
+  './hot/images/2026-27/table_56.jpg',
+  './hot/images/2026-27/table_57.jpg',
 ];
 
 // 🌐 外部 CDN：盡力快取，單一失敗不影響 SW 安裝
@@ -94,6 +144,7 @@ const BYPASS_HOSTNAMES = [
   'skyinfo.jp',
   'tono2.net',
   'metar-taf.com',
+  'metar.vatsim.net',
 ];
 
 // ⏳ 2 秒超時（舊版 5 秒，斷網/弱網體感快很多）
@@ -142,7 +193,7 @@ self.addEventListener('activate', event => {
       clients.claim(),
       caches.keys().then(keys =>
         Promise.all(
-          keys.filter(k => k !== CACHE_NAME).map(k => {
+          keys.filter(k => k !== CACHE_NAME && k !== HOT_CACHE).map(k => {
             console.log('🗑️ 刪除舊快取:', k);
             return caches.delete(k);
           })
@@ -249,7 +300,13 @@ async function ensurePrecache() {
     if (await cache.match(u)) continue;
     try { await cache.add(u); added++; } catch (e) { failed++; }
   }
-  return { added, failed, total: LOCAL_FILES.length + CDN_FILES.length };
+  const hot = await caches.open(HOT_CACHE);
+  for (const f of HOT_IMAGES) {
+    const req = new Request(new URL(f, self.registration.scope).href);
+    if (await hot.match(req)) continue;
+    try { await hot.add(req); added++; } catch (e) { failed++; }
+  }
+  return { added, failed, total: LOCAL_FILES.length + CDN_FILES.length + HOT_IMAGES.length };
 }
 
 // ============================
