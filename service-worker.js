@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v147';
+const CACHE_NAME = 'briefing-v148';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -56,6 +56,13 @@ const CDN_FILES = [
   'https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js',
   // OFP 截圖 OCR：Tesseract.js 主程式（worker/core/語言檔於首次使用時由 track-2 快取，之後離線可用）
   'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  // 外部開啟工具的相依程式庫：沒先開過也能離線使用
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',          // FDP 圖示
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',   // 換班單 PDF
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',                 // 換班單讀 PDF
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
+  'https://unpkg.com/lucide@latest',                                                     // 換班單／FPN／PCR 圖示
+  'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js',                          // PCR 公式
 ];
 
 // 🚫 即時動態資料：永遠直接走網路，不快取
@@ -174,7 +181,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           console.log('📵 網路超時，讀取離線快取:', url.pathname);
-          return caches.match(event.request, { ignoreSearch: true });
+          return matchOfflinePage(url);
         })
     );
     return;
@@ -210,12 +217,51 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// 離線開頁：網址可能不帶 .html（GitHub Pages 的 /FDP 等於 /FDP.html），依序嘗試對應的快取檔
+async function matchOfflinePage(url) {
+  const path = url.pathname;
+  const tries = [url.href.split('#')[0]];
+  if (path.endsWith('/')) tries.push(url.origin + path + 'index.html');
+  else if (!/\.[a-z0-9]+$/i.test(path)) tries.push(url.origin + path + '.html', url.origin + path + '/index.html');
+  for (const t of tries) {
+    const hit = await caches.match(t, { ignoreSearch: true });
+    if (hit) return hit;
+  }
+  return new Response(
+    '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>離線</title><body style="font-family:-apple-system,sans-serif;padding:40px 20px;text-align:center;color:#4a3627;background:#f4ece4">' +
+    '<h2>📵 目前離線，這一頁尚未存到手機</h2><p>連上網路後打開簡報箱首頁一次，就會自動存好。</p></body>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
+}
+
+// 補存：首頁每次開啟／重新整理都會呼叫；缺哪個補哪個（iOS 可能清掉部分快取）
+let precacheRunning = null;
+async function ensurePrecache() {
+  const cache = await caches.open(CACHE_NAME);
+  let added = 0, failed = 0;
+  for (const f of LOCAL_FILES) {
+    const req = new Request(new URL(f, self.registration.scope).href);
+    if (await cache.match(req, { ignoreSearch: true })) continue;
+    try { await cache.add(req); added++; } catch (e) { failed++; }
+  }
+  for (const u of CDN_FILES) {
+    if (await cache.match(u)) continue;
+    try { await cache.add(u); added++; } catch (e) { failed++; }
+  }
+  return { added, failed, total: LOCAL_FILES.length + CDN_FILES.length };
+}
+
 // ============================
 // 4. 跨執行緒通訊
 // ============================
 self.addEventListener('message', event => {
   if (event.data === 'GET_VERSION') {
     event.source.postMessage({ type: 'VERSION_REPORT', version: CACHE_NAME });
+  }
+  if (event.data && event.data.action === 'PRECACHE_CHECK') {
+    if (!precacheRunning) precacheRunning = ensurePrecache().finally(() => { precacheRunning = null; });
+    event.waitUntil(precacheRunning.then(r => { if (event.source) event.source.postMessage({ type: 'PRECACHE_DONE', ...r }); }).catch(() => {}));
   }
   if (event.data && event.data.action === 'SKIP_WAITING') {
     self.skipWaiting();
