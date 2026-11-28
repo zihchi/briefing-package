@@ -1754,8 +1754,11 @@
         navigator.serviceWorker.ready.then(registration => {
           if (registration.active) {
             registration.active.postMessage('GET_VERSION');
-            // 每次開啟／重新整理：檢查離線檔案是否都在手機裡，缺的自動補存（有網路時才做）
-            if (navigator.onLine) registration.active.postMessage({ action: 'PRECACHE_CHECK' });
+            // 每次開啟／重新整理：檢查離線檔案是否都在手機裡，缺的自動補存（有網路時才做）。
+            // 延後 4 秒，等首頁天氣、版本號等先載入完，不和它們搶網路
+            setTimeout(() => {
+              if (navigator.onLine && registration.active) registration.active.postMessage({ action: 'PRECACHE_CHECK' });
+            }, 4000);
           }
         });
 
