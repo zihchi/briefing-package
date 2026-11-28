@@ -103,7 +103,14 @@
 
     <!-- Top Sticky Header -->
     <div class="sticky top-0 bg-gray-100/95 backdrop-blur-xl z-50 pt-4 pb-3 px-6 border-b border-gray-200 shadow-sm">
-        <div class="max-w-5xl mx-auto flex flex-col justify-center items-center mb-3">
+        <div class="max-w-5xl mx-auto flex flex-col justify-center items-center mb-3 relative px-12 text-center">
+            <!-- 返回簡報箱（與其他外部開啟工具相同樣式） -->
+            <a href="../index.html" class="absolute left-0 top-0 w-11 h-11 bg-[#f4f6f8] rounded-[10px] flex items-center justify-center text-[#475569] hover:bg-[#e2e8f0] active:scale-95 transition-all border border-slate-200" title="返回簡報箱" aria-label="返回簡報箱">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
             <h1 class="text-2xl font-black text-gray-800 tracking-tight">Holdover Times</h1>
             <div class="text-[0.8rem] text-blue-600 font-bold tracking-wide mt-1">
                 FAA Guidelines (Winter 2026-2027, Original Issue: AUG 11, 2026)
