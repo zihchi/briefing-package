@@ -1,7 +1,7 @@
 // ==========================================
 // 📦 簡報箱 Service Worker - 離線強化版
 // ==========================================
-const CACHE_NAME = 'briefing-v151';
+const CACHE_NAME = 'briefing-v152';
 
 // ⬛ 本機靜態檔案：安裝時強制全部寫入快取
 const LOCAL_FILES = [
@@ -50,6 +50,11 @@ const LOCAL_FILES = [
 // 🧊 HOT 26/27 的 FAA 原始表格圖片（約 11 MB）：存在獨立、跨版本保留的快取，
 //    不在每次版本更新時重抓；首頁開啟時由 PRECACHE_CHECK 補齊缺的檔案。換季（新年度表）時改 HOT_CACHE 名稱。
 const HOT_CACHE = 'briefing-hot-2026-27';
+// 外部 CDN 程式庫（版本固定、內容不變）：存在跨版本保留的快取，只下載一次，不拖慢每次更新
+const CDN_CACHE = 'briefing-cdn-v1';
+const KEEP_CACHES = [HOT_CACHE, CDN_CACHE];
+// 一律向伺服器確認最新檔案（避開 GitHub Pages／瀏覽器約 10 分鐘的 HTTP 暫存，剛部署後才不會存到舊檔）
+const fresh = (u) => new Request(new URL(u, self.registration.scope).href, { cache: 'reload' });
 const HOT_IMAGES = [
   './hot/images/2026-27/table_01.jpg',
   './hot/images/2026-27/table_02.jpg',
@@ -167,18 +172,16 @@ self.addEventListener('install', event => {
   console.log(`⚙️ Service Worker (${CACHE_NAME}) 安裝中...`);
   event.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
-      // 本機檔案全部寫入，任一失敗會讓安裝重試
-      await cache.addAll(LOCAL_FILES);
+      // 本機檔案全部寫入（強制取最新），任一失敗會讓安裝重試
+      await cache.addAll(LOCAL_FILES.map(fresh));
       console.log('✅ 本機檔案快取完成');
 
-      // CDN 逐一寫入，失敗只印警告，不中斷安裝
-      await Promise.allSettled(
-        CDN_FILES.map(url =>
-          cache.add(url).catch(err =>
-            console.warn(`⚠️ CDN 快取失敗 (可忽略): ${url}`, err)
-          )
-        )
-      );
+      // CDN：只補還沒存過的（跨版本保留），失敗只印警告，不中斷安裝
+      const cdn = await caches.open(CDN_CACHE);
+      await Promise.allSettled(CDN_FILES.map(async url => {
+        if (await cdn.match(url)) return;
+        try { await cdn.add(url); } catch (err) { console.warn(`⚠️ CDN 快取失敗 (可忽略): ${url}`, err); }
+      }));
       console.log('📦 快取安裝完畢');
     })
   );
@@ -194,7 +197,7 @@ self.addEventListener('activate', event => {
       clients.claim(),
       caches.keys().then(keys =>
         Promise.all(
-          keys.filter(k => k !== CACHE_NAME && k !== HOT_CACHE).map(k => {
+          keys.filter(k => k !== CACHE_NAME && !KEEP_CACHES.includes(k)).map(k => {
             console.log('🗑️ 刪除舊快取:', k);
             return caches.delete(k);
           })
@@ -222,8 +225,15 @@ self.addEventListener('fetch', event => {
 
   // 軌道 1：頁面導覽 → 網路優先，2 秒超時退回快取
   if (isHtmlNav) {
+    // 同網站的頁面：要求伺服器確認是否有新版（no-cache 會帶 ETag，沒變只回 304，很快）
+    const sameOrigin = url.origin === self.location.origin;
+    const netReq = sameOrigin
+      ? fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' }).then(res =>
+          // 導覽不能直接回傳「被轉址過」的回應（Safari 會報錯），重新包一份
+          res.redirected ? res.blob().then(b => new Response(b, { status: res.status, statusText: res.statusText, headers: res.headers })) : res)
+      : fetch(event.request);
     event.respondWith(
-      fetchWithTimeout(event.request, NETWORK_TIMEOUT)
+      Promise.race([netReq, new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), NETWORK_TIMEOUT))])
         .then(res => {
           if (res && res.status === 200) {
             const clone = res.clone();
@@ -293,18 +303,19 @@ async function ensurePrecache() {
   const cache = await caches.open(CACHE_NAME);
   let added = 0, failed = 0;
   for (const f of LOCAL_FILES) {
-    const req = new Request(new URL(f, self.registration.scope).href);
-    if (await cache.match(req, { ignoreSearch: true })) continue;
+    const req = fresh(f);
+    if (await cache.match(req.url, { ignoreSearch: true })) continue;
     try { await cache.add(req); added++; } catch (e) { failed++; }
   }
+  const cdn = await caches.open(CDN_CACHE);
   for (const u of CDN_FILES) {
-    if (await cache.match(u)) continue;
-    try { await cache.add(u); added++; } catch (e) { failed++; }
+    if (await caches.match(u)) continue;
+    try { await cdn.add(u); added++; } catch (e) { failed++; }
   }
   const hot = await caches.open(HOT_CACHE);
   for (const f of HOT_IMAGES) {
-    const req = new Request(new URL(f, self.registration.scope).href);
-    if (await hot.match(req)) continue;
+    const req = fresh(f);
+    if (await hot.match(req.url)) continue;
     try { await hot.add(req); added++; } catch (e) { failed++; }
   }
   return { added, failed, total: LOCAL_FILES.length + CDN_FILES.length + HOT_IMAGES.length };
