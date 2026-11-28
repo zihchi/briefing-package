@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FAA Holdover Time Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .ios-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        /* General Segmented Control */
+        .segmented-control {
+            display: flex;
+            background: #e5e7eb;
+            border-radius: 10px;
+            padding: 3px;
+        }
+        .segmented-control label {
+            flex: 1;
+            text-align: center;
+            padding: 10px 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #4b5563;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .segmented-control input[type="radio"] {
+            display: none;
+        }
+        .segmented-control input[type="radio"]:checked + label {
+            background: white;
+            color: #111827;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* High Contrast Segmented Control for Snowfall Intensity */
+        .snow-segmented-control {
+            display: flex;
+            background: #cbd5e1; 
+            border-radius: 10px;
+            padding: 4px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .snow-segmented-control label {
+            flex: 1;
+            text-align: center;
+            padding: 10px 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .snow-segmented-control input[type="radio"] {
+            display: none;
+        }
+        .snow-segmented-control input[type="radio"]:checked + label {
+            background: white;
+            color: #0f172a;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+            transform: scale(1.02);
+        }
+
+        /* Dropdown Styling */
+        select:required:invalid {
+            color: #9ca3af;
+        }
+        option[value=""][disabled] {
+            display: none;
+        }
+        option {
+            color: #111827;
+        }
+    </style>
+</head>
+<body class="pb-12">
+
+    <!-- Top Sticky Header -->
+    <div class="sticky top-0 bg-gray-100/95 backdrop-blur-xl z-50 pt-4 pb-3 px-6 border-b border-gray-200 shadow-sm">
+        <div class="max-w-5xl mx-auto flex flex-col justify-center items-center mb-3">
+            <h1 class="text-2xl font-black text-gray-800 tracking-tight">Holdover Times</h1>
+            <div class="text-[0.8rem] text-blue-600 font-bold tracking-wide mt-1">
+                FAA Guidelines (Winter 2026-2027, Original Issue: AUG 11, 2026)
+            </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex justify-around items-center h-24">
+            <div class="text-center w-1/2 flex flex-col justify-center h-full">
+                <div class="text-gray-500 text-xs mb-1 uppercase tracking-widest font-bold">Lower Time</div>
+                <div id="lowerTime" class="flex items-center justify-center h-10 text-4xl font-light text-gray-300 transition-all duration-300">--:--</div>
+            </div>
+            <div class="w-px h-16 bg-gray-200"></div>
+            <div class="text-center w-1/2 flex flex-col justify-center h-full">
+                <div class="text-gray-500 text-xs mb-1 uppercase tracking-widest font-bold">Upper Time</div>
+                <div id="upperTime" class="flex items-center justify-center h-10 text-4xl font-light text-gray-300 transition-all duration-300">--:--</div>
+            </div>
+        </div>
+
+        <div id="resultInfo" class="max-w-5xl mx-auto mt-2 text-center text-xs md:text-sm font-semibold text-gray-600 leading-snug"></div>
+
+        <!-- Sticky METAR Display Container -->
+        <div class="max-w-5xl mx-auto mt-2">
+            <div id="metarDisplay" class="text-xs md:text-sm leading-relaxed font-mono text-gray-800 bg-blue-50 border border-blue-200 p-3 rounded-xl hidden shadow-inner text-center"></div>
+            <div id="metarError" class="text-sm text-red-500 hidden font-bold text-center"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-5xl mx-auto px-6 mt-6">
+        
+        <!-- Airport / METAR Loader -->
+        <div class="ios-card p-5 transition">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2 text-blue-600 font-bold text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    <span>Airport (ICAO)</span>
+                </div>
+            </div>
+            <div class="flex space-x-4">
+                <input type="text" id="icaoInput" placeholder="e.g. RJSS" maxlength="4" class="w-full bg-white border-2 border-blue-400 rounded-xl px-5 py-3 text-gray-800 uppercase font-mono text-lg tracking-widest focus:outline-none focus:ring-4 focus:ring-blue-100 transition shadow-sm">
+                <button id="fetchMetarBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition whitespace-nowrap active:scale-95 text-lg">Load METAR</button>
+            </div>
+            <div id="metarAutoInfo" class="hidden mt-4 text-sm leading-relaxed bg-sky-50 border border-sky-200 rounded-xl p-4"></div>
+        </div>
+
+        <!-- De/Anti-Icing Fluid Selection -->
+        <div class="ios-card p-6 border border-blue-200 bg-gradient-to-r from-blue-50 to-white shadow-lg relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-600"></div>
+            <div class="flex flex-col md:flex-row justify-between items-center pl-4 gap-4">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">🧪</span>
+                    <span class="text-gray-900 font-black text-xl tracking-wide">De/Anti-Icing Fluid</span>
+                </div>
+                <div class="relative w-full md:w-auto md:min-w-[26rem]">
+                    <select id="fluidSelect" class="w-full bg-blue-600 hover:bg-blue-700 text-white pl-5 pr-10 py-3 rounded-xl text-sm font-bold shadow-md outline-none cursor-pointer appearance-none transition-colors"></select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div id="fluidInfo" class="pl-4 mt-4 text-xs md:text-sm text-gray-600 font-semibold leading-relaxed"></div>
+
+            <!-- Concentration (Type IV only) -->
+            <div id="concWrap" class="mt-5">
+                <div class="segmented-control ml-4" id="concControl">
+                    <input type="radio" name="conc" id="c100" value="100" checked>
+                    <label for="c100" id="l-c100">100 / 0</label>
+                    <input type="radio" name="conc" id="c75" value="75">
+                    <label for="c75" id="l-c75">75 / 25</label>
+                    <input type="radio" name="conc" id="c50" value="50">
+                    <label for="c50" id="l-c50">50 / 50</label>
+                </div>
+            </div>
+            <div id="typeINote" class="hidden mt-4 ml-4 text-sm font-bold text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded-lg leading-relaxed">
+                Type I 防冰液與水的混合比例，必須使混合液的冰點至少比外部氣溫低 10 °C (18 °F)。<br>
+                <span class="font-semibold">Type I fluid / water mixture must be selected so that the freezing point of the mixture is at least 10 °C (18 °F) below OAT.</span>
+            </div>
+            <div id="fluidWarning" class="text-sm text-red-600 mt-4 ml-4 font-bold hidden bg-red-50 p-2 rounded-lg border border-red-100 text-center"></div>
+        </div>
+
+        <!-- Weather Inputs -->
+        <div class="ios-card p-0">
+            <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+                <!-- Temperature -->
+                <div class="flex flex-col p-6 bg-white hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-center space-x-2 text-blue-600 font-bold text-lg mb-4">
+                        <span class="text-2xl">🌡️</span>
+                        <span>Temperature (OAT)</span>
+                    </div>
+                    <div class="w-full">
+                        <select id="tempSelect" required class="w-full text-center text-blue-700 bg-white outline-none appearance-none cursor-pointer font-bold text-lg py-3 px-4 rounded-xl transition-colors duration-300 border border-blue-300 shadow-sm focus:ring-2 focus:ring-blue-400">
+                            <option value="" selected disabled hidden>Select Temperature</option>
+                            <option value="above_0">Above 0 °C</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Precipitation -->
+                <div class="flex flex-col p-6 bg-white hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-center space-x-2 text-gray-600 font-bold text-lg mb-4">
+                        <span class="text-2xl">🌧️</span>
+                        <span>Precipitation</span>
+                    </div>
+                    <div class="w-full">
+                        <select id="precipSelect" required class="w-full text-center text-blue-700 bg-white outline-none appearance-none cursor-pointer font-bold text-base py-3 px-4 rounded-xl transition-colors duration-300 border border-blue-300 shadow-sm focus:ring-2 focus:ring-blue-400">
+                            <option value="" selected disabled hidden>Select Precipitation</option>
+                            <option value="active_frost">Active Frost</option>
+                            <option value="fz_fog">Freezing Fog, Freezing Mist or Ice Crystals</option>
+                            <option value="snow_mix_fz_fog">Snow mixed with Freezing Fog</option>
+                            <option value="snow">Snow, Snow Grains or Snow Pellets</option>
+                            <option value="fz_drizzle">Freezing Drizzle</option>
+                            <option value="light_fz_rain">Light Freezing Rain</option>
+                            <option value="mod_snow_mix_rain">Snow mixed with Rain / Drizzle</option>
+                            <option value="rain_cold_wing">Rain on Cold-Soaked Wing</option>
+                            <option value="allowance_pl" class="font-bold text-purple-700">Ice Pellets / Small Hail (Allowance Times)</option>
+                            <option value="other">Other (Heavy Snow, Mod/Heavy FZRA, Hail)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Precipitation Advisory Note -->
+            <div id="precipNoteContainer" class="hidden px-6 py-4 bg-blue-50 border-t border-blue-100 transition-all duration-300">
+                <div class="flex items-start space-x-3">
+                    <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div id="precipNoteText" class="text-sm text-blue-900 font-semibold leading-relaxed"></div>
+                </div>
+            </div>
+
+            <!-- Ice Pellets (Allowance Time) Settings -->
+            <div id="allowanceSettings" class="pt-6 border-t border-purple-200 transition-all duration-300 bg-purple-50/40 pb-6 hidden">
+                <div class="text-center text-sm font-black text-purple-800 mb-5 uppercase tracking-widest flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <span id="allowanceTitle">Ice Pellets / Small Hail (Allowance Times)</span>
+                </div>
+                <div class="px-6 space-y-4">
+                    <div id="glycolWrap" class="hidden">
+                        <div class="text-center text-xs font-bold text-purple-700 mb-2">Generic Type IV：請選擇實際使用的防冰液基底（須於 Table 53 列為已驗證）</div>
+                        <div class="snow-segmented-control">
+                            <input type="radio" name="glycol" id="gly-pg" value="PG" checked>
+                            <label for="gly-pg">PG (Table 56)</label>
+                            <input type="radio" name="glycol" id="gly-eg" value="EG">
+                            <label for="gly-eg">EG (Table 55)</label>
+                        </div>
+                    </div>
+                    <select id="allowanceSelect" class="w-full text-center text-purple-800 bg-white border-2 border-purple-300 shadow-sm rounded-xl py-3 px-4 font-bold outline-none focus:ring-2 focus:ring-purple-400 transition">
+                        <option value="pl">Light Ice Pellets (-PL)</option>
+                        <option value="pl_sn">Light PL mixed with Light Snow (-PLSN, -SNPL)</option>
+                        <option value="pl_fzdz">Light PL mixed with Light Freezing Drizzle (-PLFZDZ, -FZDZPL)</option>
+                        <option value="pl_dz">Light PL mixed with Light Drizzle (-PLDZ, -DZPL)</option>
+                        <option value="pl_fzra">Light PL mixed with Light Freezing Rain (-PLFZRA, -FZRAPL)</option>
+                        <option value="pl_ra">Light PL mixed with Light Rain (-PLRA, -RAPL)</option>
+                        <option value="pl_fzra_sn">Light PL + Light Freezing Rain + Light Snow (-PLFZRASN …)</option>
+                        <option value="pl_ra_sn">Light PL + Light Rain + Light Snow (-PLRASN …)</option>
+                        <option value="mod_pl">Moderate Ice Pellets (PL)</option>
+                        <option value="mod_pl_sn">Moderate PL mixed with Moderate Snow (PLSN, SNPL)</option>
+                        <option value="mod_pl_fzdz">Moderate PL mixed with Light/Mod Freezing Drizzle (PLFZDZ, FZDZPL)</option>
+                        <option value="mod_pl_dz">Moderate PL mixed with Light/Mod Drizzle (PLDZ, DZPL)</option>
+                        <option value="mod_pl_ra">Moderate PL mixed with Moderate Rain (PLRA, RAPL)</option>
+                    </select>
+                    <div id="allowanceInfo" class="text-xs md:text-sm text-purple-900 font-semibold bg-white border border-purple-200 rounded-xl p-3 leading-relaxed"></div>
+                </div>
+            </div>
+
+            <!-- Snow Settings (TABLE 57 Engine) -->
+            <div id="snowSettings" class="pt-6 border-t border-gray-200 transition-all duration-300 bg-blue-50/40 pb-6 hidden">
+                <div class="text-center text-sm font-black text-blue-800 mb-5 uppercase tracking-widest">Snowfall Intensity (Table 57)</div>
+
+                <div class="px-6">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div class="snow-segmented-control">
+                            <input type="radio" name="timeOfDay" id="tod-day" value="day" checked>
+                            <label for="tod-day">Day</label>
+                            <input type="radio" name="timeOfDay" id="tod-night" value="night">
+                            <label for="tod-night">Night</label>
+                        </div>
+                        <div class="snow-segmented-control">
+                            <input type="radio" name="unit" id="unit-m" value="m" checked>
+                            <label for="unit-m">Meters</label>
+                            <input type="radio" name="unit" id="unit-sm" value="sm">
+                            <label for="unit-sm">Stat. Miles</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-center space-x-2 text-green-700 font-bold text-base mb-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>Prevailing Visibility</span>
+                        </div>
+                        <select id="visSelect" required class="w-full text-center text-blue-700 bg-gray-50 outline-none appearance-none cursor-pointer text-lg font-bold py-2 rounded-lg"></select>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border-2 border-blue-200 shadow-md">
+                        <div class="text-sm font-bold text-gray-500 mb-2 uppercase tracking-widest">Calculated Intensity</div>
+                        <div id="intensityResult" class="text-3xl font-black tracking-tight text-gray-300">--</div>
+                    </div>
+
+                    <div class="mt-6 border border-blue-300 rounded-2xl overflow-hidden bg-white shadow-md">
+                        <div id="toggleSnowDocBtn" class="bg-blue-50 hover:bg-blue-100 p-4 flex justify-between items-center cursor-pointer transition-colors duration-200">
+                            <div class="flex items-center space-x-2 text-blue-700 font-bold text-base">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>View Table 57 (Snowfall Intensities)</span>
+                            </div>
+                            <span id="snowDocArrow" style="transform: rotate(0deg);" class="text-blue-600 font-bold transition-transform duration-300">▼</span>
+                        </div>
+                        <div id="snowDocContainer" class="hidden p-4 border-t border-blue-100 transition-all duration-300 bg-gray-50">
+                            <div class="w-full flex justify-center">
+                                <img id="snowGuidelineImage" src="" alt="Table 57 Snowfall Intensities" loading="lazy" class="max-w-full rounded-lg shadow-sm border border-gray-200">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collapsible Fluid Document Viewer -->
+        <div class="ios-card p-0 overflow-hidden shadow-lg border border-blue-200 mb-8">
+            <div id="toggleFluidDocBtn" class="bg-blue-100/50 hover:bg-blue-100 p-5 flex justify-between items-center cursor-pointer transition-colors duration-200">
+                <div class="flex items-center space-x-2 text-blue-800 font-bold text-base pl-2">
+                    <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span id="fluidDocTitle">View FAA Table</span>
+                </div>
+                <span id="fluidDocArrow" style="transform: rotate(180deg);" class="text-blue-700 font-bold transition-transform duration-300 pr-2">▼</span>
+            </div>
+            <div id="fluidDocContainer" class="p-6 bg-gray-50 border-t border-blue-100 transition-all duration-300">
+                <div class="w-full flex justify-center">
+                    <img id="fluidGuidelineImage" src="" alt="FAA Holdover Time Table" class="max-w-full rounded-xl shadow-md border border-gray-200">
+                </div>
+            </div>
+        </div>
+
+        <!-- COLLAPSIBLE: Cautions Section -->
+        <div id="cautionsSection" class="ios-card p-0 mt-8 border border-red-200 shadow-md">
+            <div id="toggleCautionsBtn" class="bg-red-600 hover:bg-red-700 cursor-pointer p-4 border-b border-red-700 flex items-center justify-between transition-colors duration-200">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-white mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <h2 id="cautionsTitle" class="font-bold text-white text-base tracking-wide">FAA 注意事項 (CAUTIONS)</h2>
+                </div>
+                <span id="cautionsArrow" style="transform: rotate(0deg);" class="text-red-100 font-bold transition-transform duration-300 pr-2">▼</span>
+            </div>
+            <div id="cautionsContainer" class="flex-col text-sm text-gray-900 hidden bg-red-50/30"></div>
+        </div>
+
+        <!-- COLLAPSIBLE: Notes Section -->
+        <div id="notesSection" class="ios-card p-0 mt-8 border border-gray-200 shadow-md">
+            <div id="toggleNotesBtn" class="bg-gray-800 hover:bg-gray-700 cursor-pointer p-4 border-b border-gray-700 flex items-center justify-between transition-colors duration-200">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-white mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h2 id="notesTitle" class="font-bold text-white text-base tracking-wide">FAA 規範與備註 (NOTES)</h2>
+                </div>
+                <span id="notesArrow" style="transform: rotate(0deg);" class="text-gray-300 font-bold transition-transform duration-300 pr-2">▼</span>
+            </div>
+            <div id="notesContainer" class="flex-col text-sm text-gray-700 hidden bg-white"></div>
+        </div>
+
+        <div class="text-center text-xs text-gray-400 mt-8 leading-relaxed">
+            資料來源：FAA Holdover Time Guidelines, Winter 2026-2027 (Original Issue, August 11, 2026)。<br>
+            本工具僅供起飛前規劃參考，實際使用請以 FAA 原始文件及公司程序為準。
+        </div>
+    </div>
+
+    <!-- HOT database (generated from the FAA PDF) -->
+    <script src="data/hot-2026-27.js"></script>
+    <script src="js/metar.js"></script>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const DB = window.HOT_DB;
+            const COLS = DB.columns;
+            const IMG_BASE = "images/2026-27/";
+            const pad2 = n => String(n).padStart(2, '0');
+            const COL_LABELS = { fz_fog: 'Freezing Fog / Mist / Ice Crystals', snow_mix_fz_fog: 'Snow mixed with Freezing Fog', snow_verylight: 'Very Light Snow', snow_light: 'Light Snow', snow_moderate: 'Moderate Snow', fz_drizzle: 'Freezing Drizzle', light_fz_rain: 'Light Freezing Rain', mod_snow_mix_rain: 'Moderate Snow mixed with Rain', rain_cold_wing: 'Rain on Cold-Soaked Wing' };
+            const tableImg = n => `${IMG_BASE}table_${pad2(n)}.jpg`;
+
+            // ---------- Text content (zh-TW, translated from the FAA document) ----------
+            const PRECIP_NOTES = {
+                'fz_fog': `凍霧 (Freezing mist) 最好透過實際觀測確認；METAR 從不會報告凍霧，但當氣溫在 0 °C (32 °F) 或以下且有霧 (Mist) 時就可能發生。冰晶混合凍霧/凍霧時，適用凍霧的防護時間。`,
+                'snow_mix_fz_fog': `必須使用 <strong>Table 57</strong>（降雪強度與盛行能見度關係表）判定降雪強度；若能見度對應為「大雪 (Heavy)」，則無防護時間。`,
+                'snow': `必須使用 <strong>Table 57</strong> 判定降雪強度；若對應為「大雪 (Heavy)」，則無防護時間。極輕、輕、中度雪混合冰晶時，亦適用降雪的防護時間。`,
+                'fz_drizzle': `包含輕度、中度與重度凍毛毛雨。若無法確實辨識為凍毛毛雨，請改用「輕凍雨 (Light freezing rain)」的防護時間。`,
+                'light_fz_rain': `僅適用於輕度凍雨；中度與重度凍雨屬於 Other，無防護時間。`,
+                'mod_snow_mix_rain': `表中防護時間適用於「中度 (Moderate)」降水強度。若為<strong>極輕或輕度雪混合小雨或毛毛雨</strong>，改用「輕凍雨」的防護時間（本工具會依 Table 57 計算結果自動切換）。若對應為「大雪」則無防護時間。0 °C (32 °F) 或以下時，此狀況無防護時間。`,
+                'rain_cold_wing': `0 °C (32 °F) 或以下時，此狀況無防護時間。冷浸機翼時，防冰步驟不得使用 50/50 稀釋的 Type II / IV 防冰液。`,
+                'active_frost': `<strong>Table 1 (Active Frost)</strong>。<br>💡 結霜期間外部氣溫可能顯著變化，應採用從施打防冰液到起飛期間出現過的<strong>最低外部氣溫 (Coldest OAT)</strong> 對應的防護時間。`,
+                'allowance_pl': `<strong>Allowance Times（Table 53 / 55 / 56）</strong>：僅適用於 <strong>100/0</strong> 未稀釋的 Type III / IV 防冰液，且所用防冰液須於 Table 53 列為已驗證。Type I、Type II 無寬限時間。`,
+                'other': `包含大雪、冰珠、中度與重度凍雨、小冰雹與冰雹，<strong>無防護時間</strong>。冰珠/小冰雹可改用 Allowance Times（Type IV EG/PG，須為 Table 53 已驗證防冰液）。`
+            };
+
+            const CAUTIONS = {
+                hot: [
+                    '應用這些數據的責任仍由使用者承擔。<br><span class="text-gray-500">The responsibility for the application of these data remains with the user.</span>',
+                    '在惡劣天氣條件、強降水率或高濕度環境下，防護時間將會縮短。<br><span class="text-gray-500">The time of protection will be shortened in heavy weather conditions, heavy precipitation rates or high moisture content.</span>',
+                    '強風、噴射氣流 (Jet blast) 或吹雪可能使防護時間低於範圍中的最低值。<br><span class="text-gray-500">High wind velocity, jet blast or blowing snow may reduce holdover time below the lowest time stated in the range.</span>',
+                    '當飛機蒙皮溫度低於外部氣溫時，防護時間可能縮短。<br><span class="text-gray-500">The holdover time may be reduced when aircraft skin temperature is lower than outside air temperature.</span>',
+                    '地面除冰/防冰所使用的液體，不提供飛行中的結冰防護。<br><span class="text-gray-500">Fluids used during ground de/anti-icing do not provide in-flight icing protection.</span>',
+                    '本表僅供起飛前規劃使用，並應配合起飛前檢查程序。<br><span class="text-gray-500">This table is for departure planning only and should be used in conjunction with pre-takeoff check procedures.</span>'
+                ],
+                coldSoak: '當機翼下表面油箱區域出現霜或冰（表示冷浸機翼）時，防冰步驟不得使用 50/50 稀釋的 Type II 或 Type IV 防冰液，因為防冰液可能結冰。<br><span class="text-gray-500">Whenever frost or ice occurs on the lower surface of the wing in the area of the fuel tank, indicating a cold-soaked wing, the 50/50 dilution of Type II or IV are not to be used for the anti-icing step because fluid freezing may occur.</span>',
+                frost: [0, 4, 5],
+                allowance: [
+                    '應用這些數據的責任仍由使用者承擔。<br><span class="text-gray-500">The responsibility for the application of these data remains with the user.</span>',
+                    '地面除冰/防冰所使用的液體，不提供飛行中的結冰防護。<br><span class="text-gray-500">Fluids used during ground de/anti-icing do not provide in-flight icing protection.</span>',
+                    '本表僅供起飛前規劃使用，並應配合起飛前檢查程序。<br><span class="text-gray-500">This table is for departure planning only and should be used in conjunction with pre-takeoff check procedures.</span>',
+                    '<strong>寬限時間不可藉由檢查飛機關鍵表面而延長。</strong><br><span class="text-gray-500">Allowance time cannot be extended by an inspection of the aircraft critical surfaces.</span>'
+                ]
+            };
+
+            // FAA notes – zh-TW translation + original English (Winter 2026-2027)
+            const N = {
+                listedT1: { zh: '使用本表防護時間前，須確認所用防冰液及稀釋比例列於 Table 58（Type I 防冰液測試清單），並辨識及適用該防冰液的使用限制。',
+                    en: 'To use the holdover times in this table, ensure that the fluid and dilution being used is listed in the Type I Fluids Tested for Anti-Icing Performance and Aerodynamic Acceptance table (Table 58). Any restrictions on the use of the fluid have to be identified and applied.' },
+                listedT4: { zh: '使用本表防護時間前，須確認所用防冰液及稀釋比例列於 Table 61（Type IV 防冰液測試清單），並辨識及適用該防冰液的使用限制。',
+                    en: 'To use the holdover times in this table, ensure that the fluid and dilution being used is listed in the Type IV Fluids Tested for Anti-Icing Performance and Aerodynamic Acceptance table (Table 61). Any restrictions on the use of the fluid have to be identified and applied.' },
+                fp: { zh: 'Type I 防冰液/水混合比例必須使混合液的冰點至少低於外部氣溫 10 °C (18 °F)。',
+                    en: 'Type I fluid / water mixture must be selected so that the freezing point of the mixture is at least 10 °C (18 °F) below outside air temperature.' },
+                lout: { zh: '確保遵守最低操作使用溫度 (LOUT)。',
+                    en: 'Ensure that the lowest operational use temperature (LOUT) is respected.' },
+                loutT4: { zh: '確保遵守最低操作使用溫度 (LOUT)。無法使用 Type IV 防冰液時，可考慮使用 Type I 防冰液。',
+                    en: 'Ensure that the lowest operational use temperature (LOUT) is respected. Consider use of Type I fluid when Type IV fluid cannot be used.' },
+                mist: { zh: '凍霧 (Freezing mist) 最好透過觀測確認。METAR 從不會報告凍霧，但當氣溫在 0 °C (32 °F) 或以下且有霧 (Mist) 時就可能發生。',
+                    en: 'Freezing mist is best confirmed by observation. It is never reported by METAR; however, it can occur when mist is present at 0 °C (32 °F) and below.' },
+                ic: { zh: '冰晶混合凍霧或凍霧時，適用凍霧的防護時間。',
+                    en: 'Use freezing fog holdover times in conditions of ice crystals mixed with freezing fog or freezing mist.' },
+                t57: { zh: '判定降雪強度必須使用 Table 57（降雪強度與盛行能見度關係表）。若回報能見度對應為「大雪 (Heavy)」強度，則無防護時間。',
+                    en: 'To determine snowfall intensity, the Snowfall Intensities as a Function of Prevailing Visibility table (Table 57) is required. No holdover times exist if the reported visibility correlates to a “heavy” precipitation intensity.' },
+                snowIc: { zh: '極輕、輕或中度雪混合冰晶時，適用降雪的防護時間。',
+                    en: 'Use snow holdover times in conditions of very light, light, or moderate snow mixed with ice crystals.' },
+                fzdz: { zh: '包含輕度、中度與重度凍毛毛雨。若無法確實辨識為凍毛毛雨，請改用輕凍雨的防護時間。',
+                    en: 'Includes light, moderate and heavy freezing drizzle. Use light freezing rain holdover times if positive identification of freezing drizzle is not possible.' },
+                modRain: { zh: '這些防護時間適用於「中度 (Moderate)」降水強度。若為極輕或輕度雪混合小雨或毛毛雨，改用輕凍雨的防護時間。必須使用 Table 57 確認降水強度；若回報能見度對應為「大雪 (Heavy)」強度，則無防護時間。',
+                    en: 'These holdover times apply to conditions of “moderate” precipitation intensity. In cases of very light or light snow mixed with light rain or drizzle, use light freezing rain holdover times. The Snowfall Intensities as a Function of Prevailing Visibility table (Table 57) is required to confirm the precipitation intensity. No holdover times exist if the reported visibility correlates to a “heavy” precipitation intensity.' },
+                zero: { zh: '0 °C (32 °F) 或以下時，此狀況無防護時間。',
+                    en: 'No holdover time guidelines exist for this condition for 0 °C (32 °F) and below.' },
+                otherT1: { zh: 'Other：大雪、冰珠、中度與重度凍雨、小冰雹與冰雹。',
+                    en: 'Heavy snow, ice pellets, moderate and heavy freezing rain, small hail and hail.' },
+                otherGen: { zh: 'Other：大雪、冰珠、中度與重度凍雨、小冰雹與冰雹（Table 55 與 Table 56 提供 Type IV EG 與 Type IV PG 防冰液於冰珠及小冰雹的寬限時間；使用前須確認所用防冰液於 Table 53 列為已驗證）。',
+                    en: 'Heavy snow, ice pellets, moderate and heavy freezing rain, small hail and hail (Table 55 and Table 56 provides allowance times for Type IV EG and Type IV PG fluids in ice pellets and small hail. To use these allowance times, ensure that the fluid being used is listed as validated in Table 53).' },
+                otherEG: { zh: 'Other：大雪、冰珠、中度與重度凍雨、小冰雹與冰雹（Table 55 提供 Type IV EG 防冰液於冰珠及小冰雹的寬限時間）。',
+                    en: 'Heavy snow, ice pellets, moderate and heavy freezing rain, small hail and hail (Table 55 provides allowance times for Type IV EG fluids in ice pellets and small hail).' },
+                otherPG: { zh: 'Other：大雪、冰珠、中度與重度凍雨、小冰雹與冰雹（Table 56 提供 Type IV PG 防冰液於冰珠及小冰雹的寬限時間）。',
+                    en: 'Heavy snow, ice pellets, moderate and heavy freezing rain, small hail and hail (Table 56 provides allowance times for Type IV PG fluids in ice pellets and small hail).' },
+                minus10: { zh: '-10 °C (14 °F) 以下時，此狀況（凍毛毛雨、輕凍雨）無防護時間。',
+                    en: 'No holdover time guidelines exist for this condition below -10 °C (14 °F).' }
+            };
+            const FROST_NOTES = [
+                { zh: '使用本表防護時間前，須確認所用防冰液及稀釋比例列於 Table 58 – Table 61（防冰液測試清單），並辨識及適用該防冰液的使用限制。',
+                  en: 'To use the holdover times in this table, ensure that the fluid and dilution being used is listed in the List of Fluids Tested for Anti-Icing Performance and Aerodynamic Acceptance table (Table 58 - Table 61). Any restrictions on the use of the fluid have to be identified and applied.' },
+                N.fp, N.lout,
+                { zh: '長時間結霜事件中外部氣溫 (OAT) 變化可能很大，應採用從施打防冰液到起飛期間出現過的<strong>最低外部氣溫 (Coldest OAT)</strong> 對應的防護時間。',
+                  en: 'Changes in outside air temperature (OAT) over the course of longer frost events can be significant; the appropriate holdover time to use is the one provided for the coldest OAT that has occurred in the time between the de/anti-icing fluid application and takeoff.' },
+                { zh: '使用 Type III 結霜防護時間須知道所用防冰液品牌；AllClear AeroClear MAX 必須以未加熱方式施打。',
+                  en: 'To use the Type III fluid frost holdover times, the fluid brand being used must be known. AllClear AeroClear MAX must be applied unheated.' }
+            ];
+            const AN = {
+                takeoff90: { zh: '若降水在寬限時間結束前（或當時）停止且未再開始，起飛時間上限為開始施打防冰液後 90 分鐘。在輕冰珠混合：輕凍毛毛雨、輕毛毛雨、輕凍雨、小雨、小雨與小雪、或輕凍雨與小雪，以及中度冰珠混合：輕/中度凍毛毛雨、輕/中度毛毛雨、或中度雨的狀況下，若 90 分鐘內外部氣溫下降，則不得起飛。',
+                    en: 'Takeoff is allowed up to 90 minutes after start of fluid application if the precipitation stops at or before the allowance time expires and does not restart. Takeoff is not permitted if the OAT decreases during the 90 minutes in conditions of light ice pellets mixed with either: light freezing drizzle; light drizzle; light freezing rain; light rain; light rain and light snow; or light freezing rain and light snow, as well as in conditions of moderate ice pellets mixed with either: light or moderate freezing drizzle; light or moderate drizzle; or moderate rain.' },
+                metarCodes: { zh: '適用的 METAR 代碼僅列出冰珠 (PL)。回報小冰雹 (Small Hail) 而非冰珠時亦可使用寬限時間，但表中未列出小冰雹對應的 METAR 代碼。',
+                    en: 'Applicable METAR codes include only Ice Pellet conditions (i.e., PL). While allowance times can be used when Small Hail is reported instead of Ice Pellets, the corresponding METAR codes for Small Hail are not listed in the table.' },
+                country: { zh: '各國 METAR 回報小冰雹的方式不同，相同的 METAR 代碼在不同地區可能對應不同的防護時間或寬限時間。詳見 FAA Ground Deicing Program General Information Document 中的「METAR Codes and Holdover or Allowance Times Used by Country」表。',
+                    en: 'The reporting of Small Hail by METAR varies by country, which can result in different HOTs or allowance times when the same METAR code is used in different regions. For details, refer to the METAR Codes and Holdover or Allowance Times Used by Country table in the FAA Ground Deicing Program General Information Document.' },
+                hailIntensity: { zh: '若 METAR 未回報小冰雹的強度，使用「中度冰珠或小冰雹」的寬限時間。若有回報強度，可使用相同強度的狀況，例如回報輕度小冰雹，可使用「輕冰珠」的寬限時間；混合狀況亦同，例如輕度小冰雹混合小雪，使用「輕冰珠混合小雪」的寬限時間。',
+                    en: 'If the METAR does not report an intensity for small hail, use the “moderate ice pellets or small hail” allowance times. If the METAR reports an intensity with small hail, the condition with the equivalent intensity can be used, e.g., if light small hail is reported, the “light ice pellets” allowance times can be used. This also applies in mixed conditions, e.g., if light small hail mixed with light snow is reported, use the “light ice pellets mixed with light snow” allowance times.' }
+            };
+            const ALLOW_NOTES = {
+                // Table 55 notes 1-7
+                EG: [
+                    { zh: '這些寬限時間僅適用於 100/0 未稀釋的 EG 基底防冰液。使用前須確認所用防冰液列於 Table 53（寬限時間驗證狀態表）。',
+                      en: 'These allowance times are for use with undiluted (100/0) EG-based fluids. To use the allowance times in this table, ensure the fluid being used is listed in the Validation Status of Fluids for Use with Allowance Times (Table 53).' },
+                    AN.takeoff90, N.lout,
+                    { zh: '仰轉速度低於 100 kt 的航空器，EG 基底防冰液無寬限時間（適用所有溫度欄）。',
+                      en: 'No allowance times exist for EG-based fluids when used on aircraft with rotation speeds less than 100 knots.' },
+                    AN.metarCodes, AN.country, AN.hailIntensity
+                ],
+                // Table 56 notes 1-8
+                PG: [
+                    { zh: '這些寬限時間僅適用於 100/0 未稀釋、且施用於仰轉速度 100 kt 以上航空器的 PG 基底防冰液。使用前須確認所用防冰液列於 Table 53（寬限時間驗證狀態表）。',
+                      en: 'These allowance times are for use with undiluted (100/0) PG-based fluids applied on aircraft with rotation speeds of 100 knots or greater. To use the allowance times in this table, ensure the fluid being used is listed in the Validation Status of Fluids for Use with Allowance Times (Table 53).' },
+                    AN.takeoff90, N.lout,
+                    { zh: '仰轉速度低於 100 kt 的航空器，PG 基底防冰液無寬限時間（適用於 Above 0 °C、0 至 -5 °C、below -5 至 -10 °C 欄）。',
+                      en: 'No allowance times exist for PG-based fluids when used on aircraft with rotation speeds less than 100 knots.' },
+                    { zh: '<strong>仰轉速度低於 115 kt 的航空器，PG 基底防冰液無寬限時間（適用於 below -10 至 -16 °C、below -16 至 -22 °C 欄）。</strong>',
+                      en: 'No allowance times exist for PG-based fluids when used on aircraft with rotation speeds less than 115 knots.' },
+                    AN.metarCodes, AN.country, AN.hailIntensity
+                ]
+            };
+
+            // ---------- DOM ----------
+            const $ = id => document.getElementById(id);
+            const fluidSelect = $('fluidSelect'), tempSelect = $('tempSelect'), precipSelect = $('precipSelect');
+            const allowanceSelect = $('allowanceSelect'), visSelect = $('visSelect');
+            const concRadios = document.querySelectorAll('input[name="conc"]');
+            const lowerTimeDisplay = $('lowerTime'), upperTimeDisplay = $('upperTime'), resultInfo = $('resultInfo');
+            const fluidGuidelineImage = $('fluidGuidelineImage');
+
+            $('snowGuidelineImage').src = tableImg(57);
+
+            // ---------- Fluid dropdown ----------
+            const FLUIDS = {};
+            DB.fluids.forEach(f => FLUIDS[f.id] = f);
+            const addGroup = (label, list) => {
+                const g = document.createElement('optgroup');
+                g.label = label;
+                list.forEach(f => {
+                    const o = document.createElement('option');
+                    o.value = f.id;
+                    o.textContent = f.type === 'I' ? `${f.name} (Table ${f.table})`
+                        : f.table === 20 ? `Generic Type IV (Table 20)` : `${f.name} [${f.glycol}] (Table ${f.table})`;
+                    g.appendChild(o);
+                });
+                fluidSelect.appendChild(g);
+            };
+            addGroup('SAE Type I', DB.fluids.filter(f => f.type === 'I'));
+            addGroup('SAE Type IV – Generic', DB.fluids.filter(f => f.table === 20));
+            addGroup('SAE Type IV – Fluid Specific', DB.fluids.filter(f => f.type === 'IV' && f.table !== 20));
+            let savedFluid = null;
+            try { savedFluid = localStorage.getItem('hot_fluid'); } catch (e) {}
+            fluidSelect.value = (savedFluid && FLUIDS[savedFluid]) ? savedFluid : 't4_33';
+
+            // ---------- Collapsibles ----------
+            [
+                { btn: 'toggleSnowDocBtn', container: 'snowDocContainer', arrow: 'snowDocArrow' },
+                { btn: 'toggleFluidDocBtn', container: 'fluidDocContainer', arrow: 'fluidDocArrow' },
+                { btn: 'toggleNotesBtn', container: 'notesContainer', arrow: 'notesArrow', flex: true },
+                { btn: 'toggleCautionsBtn', container: 'cautionsContainer', arrow: 'cautionsArrow', flex: true }
+            ].forEach(t => {
+                const container = $(t.container), arrow = $(t.arrow);
+                $(t.btn).addEventListener('click', () => {
+                    const nowHidden = container.classList.toggle('hidden');
+                    if (t.flex) container.classList.toggle('flex', !nowHidden);
+                    arrow.style.transform = nowHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+            });
+
+            // ---------- Temperature & visibility options ----------
+            for (let i = 0; i >= -40; i--) {
+                const opt = document.createElement('option');
+                opt.value = i.toString();
+                opt.textContent = `${i} °C`;
+                tempSelect.appendChild(opt);
+            }
+            const visOptionsM = ["≤ 400 m (≤ 600)", "800 m (> 600 to ≤ 1000)", "1200 m (> 1000 to ≤ 1400)", "1600 m (> 1400 to ≤ 1800)", "2000 m (> 1800 to ≤ 2200)", "2400 m (> 2200 to ≤ 2600)", "2800 m (> 2600 to ≤ 3000)", "3200 m (> 3000 to ≤ 3600)", "4000 m (> 3600 to ≤ 4400)", "4800 m (> 4400 to ≤ 5200)", "≥ 5600 m (> 5200)"];
+            const visOptionsSM = ["≤ 1/4 SM (≤ 3/8)", "1/2 SM (> 3/8 to ≤ 5/8)", "3/4 SM (> 5/8 to ≤ 7/8)", "1 SM (> 7/8 to ≤ 1 1/8)", "1 1/4 SM (> 1 1/8 to ≤ 1 3/8)", "1 1/2 SM (> 1 3/8 to ≤ 1 5/8)", "1 3/4 SM (> 1 5/8 to ≤ 1 7/8)", "2 SM (> 1 7/8 to ≤ 2 1/4)", "2 1/2 SM (> 2 1/4 to ≤ 2 3/4)", "3 SM (> 2 3/4 to ≤ 3 1/4)", "≥ 3 1/2 SM (> 3 1/4)"];
+            function populateVisibilityOptions(unit, preserveSelection = false) {
+                const currentVal = preserveSelection ? visSelect.value : "";
+                visSelect.innerHTML = '<option value="" selected disabled hidden>Select Visibility</option>';
+                (unit === 'm' ? visOptionsM : visOptionsSM).forEach((text, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = text;
+                    if (currentVal !== "" && index.toString() === currentVal) opt.selected = true;
+                    visSelect.appendChild(opt);
+                });
+            }
+
+            // ---------- Helpers ----------
+            const tempNumber = v => v === 'above_0' ? 1 : parseInt(v, 10);   // "Above 0 °C" treated as +1
+            // Band lookup: bands ordered warm -> cold; band applies when t >= min (min null = no lower limit)
+            const findBand = (bands, t) => bands.find(b => b.min === null || t >= b.min) || null;
+            const lowestLimit = f => f.bands[f.bands.length - 1].min;   // null = no limit in table (LOUT applies)
+            const fmtLimit = v => (v === null ? 'no lower limit in table' : `${v} °C`);
+
+            function allowanceBandIndex(tempVal) {
+                if (tempVal === 'above_0') return 0;
+                const t = parseInt(tempVal, 10);
+                if (t > 0) return 0;
+                if (t >= -5) return 1;
+                if (t >= -10) return 2;
+                if (t >= -16) return 3;
+                if (t >= -22) return 4;
+                return -1;
+            }
+            const ALLOW_BAND_LABELS = ['Above 0 °C', '0 to -5 °C', 'below -5 to -10 °C', 'below -10 to -16 °C', 'below -16 to -22 °C'];
+
+            function calculateSnowIntensity(tempVal) {
+                const out = $('intensityResult');
+                const visVal = visSelect.value;
+                if (!tempVal || visVal === "") {
+                    out.textContent = "--";
+                    out.className = "text-3xl font-black tracking-tight text-gray-300";
+                    return "";
+                }
+                // Table 57: columns split at -1 °C ("-1 °C and below" vs "Above -1 °C")
+                const warm = tempNumber(tempVal) > -1;
+                const day = $('tod-day').checked;
+                const col = (day ? 'day' : 'night') + (warm ? 'Warm' : 'Cold');
+                const intensity = DB.snow[col][parseInt(visVal, 10)];
+                const view = {
+                    heavy: ['Heavy', 'text-red-600'], moderate: ['Moderate', 'text-orange-500'],
+                    light: ['Light', 'text-yellow-500'], verylight: ['Very Light', 'text-green-600']
+                }[intensity];
+                out.textContent = view[0];
+                out.className = `text-3xl font-black tracking-tight ${view[1]}`;
+                return intensity;
+            }
+
+            function setConcAvailability(available, msg) {
+                ['100', '75', '50'].forEach(c => {
+                    const r = $('c' + c), l = $('l-c' + c);
+                    const ok = available.includes(c);
+                    r.disabled = !ok;
+                    l.style.opacity = ok ? '1' : '0.3';
+                    l.style.cursor = ok ? 'pointer' : 'not-allowed';
+                });
+                const checked = [...concRadios].find(r => r.checked);
+                if (!checked || checked.disabled) $('c' + (available[0] || '100')).checked = true;
+                const w = $('fluidWarning');
+                if (msg) { w.innerHTML = msg; w.classList.remove('hidden'); } else w.classList.add('hidden');
+            }
+
+            function renderList(containerId, items, numbered, accent) {
+                $(containerId).innerHTML = items.map((txt, i) =>
+                    `<div class="p-5 border-b border-gray-100 hover:bg-gray-50 transition-colors leading-relaxed">
+                        <span class="font-black ${accent} mr-2 text-base">${numbered ? (numbered === true ? 'Note ' + (i + 1) : numbered[i]) : '•'}</span>${typeof txt === 'string' ? txt : `${txt.zh}<br><span class="text-gray-500">${txt.en}</span>`}</div>`
+                ).join('');
+            }
+
+            function renderNotesAndCautions(fluid, precipVal, glycol) {
+                let title, notes, cautions, cTitle;
+                if (precipVal === 'allowance_pl' && fluid.type === 'IV') {
+                    const g = glycol || 'PG';
+                    title = `FAA 備註 (NOTES) – Allowance Times, Type IV ${g} (Table ${g === 'EG' ? 55 : 56})`;
+                    notes = ALLOW_NOTES[g];
+                    cTitle = 'FAA 注意事項 (CAUTIONS) – Allowance Times';
+                    cautions = CAUTIONS.allowance;
+                } else if (precipVal === 'active_frost') {
+                    title = 'FAA 備註 (NOTES) – Table 1 Active Frost';
+                    notes = FROST_NOTES;
+                    cTitle = 'FAA 注意事項 (CAUTIONS) – Active Frost';
+                    cautions = CAUTIONS.frost.map(i => CAUTIONS.hot[i]);
+                } else if (fluid.type === 'I') {
+                    title = `FAA 備註 (NOTES) – Table ${fluid.table} Type I (${fluid.surface})`;
+                    notes = [N.listedT1, N.fp, N.lout, N.mist, N.ic, N.t57, N.snowIc, N.fzdz, N.modRain, N.zero, N.otherT1];
+                    cTitle = 'FAA 注意事項 (CAUTIONS) – SAE Type I';
+                    cautions = CAUTIONS.hot;
+                } else {
+                    const generic = fluid.table === 20;
+                    const other = generic ? N.otherGen : fluid.allowance === 'EG' ? N.otherEG : fluid.allowance === 'PG' ? N.otherPG : N.otherT1;
+                    notes = [N.loutT4, N.mist, N.ic, N.t57, N.snowIc, N.fzdz, N.modRain, N.zero, other, N.minus10];
+                    if (generic) notes.unshift(N.listedT4);
+                    title = `FAA 備註 (NOTES) – Table ${fluid.table} ${generic ? 'Generic Type IV' : fluid.name}`;
+                    cTitle = 'FAA 注意事項 (CAUTIONS) – SAE Type IV';
+                    cautions = [...CAUTIONS.hot, CAUTIONS.coldSoak];
+                }
+                $('notesTitle').textContent = title;
+                $('cautionsTitle').textContent = cTitle;
+                renderList('notesContainer', notes, true, 'text-blue-700');
+                renderList('cautionsContainer', cautions, false, 'text-red-600');
+            }
+
+            const resetDisplays = (info) => {
+                lowerTimeDisplay.innerHTML = '--:--';
+                upperTimeDisplay.innerHTML = '--:--';
+                lowerTimeDisplay.className = 'flex items-center justify-center h-10 text-4xl font-light text-gray-300 transition-all duration-300';
+                upperTimeDisplay.className = lowerTimeDisplay.className;
+                resultInfo.innerHTML = info || '';
+            };
+            const showCaution = (info, label = 'CAUTION') => {
+                const html = `<span class="text-3xl text-red-600 font-black tracking-widest">${label}</span>`;
+                lowerTimeDisplay.innerHTML = html;
+                upperTimeDisplay.innerHTML = html;
+                resultInfo.innerHTML = `<span class="text-red-600">${info}</span>`;
+            };
+
+            // ---------- Main engine ----------
+            function updateSystem() {
+                const fluid = FLUIDS[fluidSelect.value];
+                const tempVal = tempSelect.value;
+                const precipVal = precipSelect.value;
+                const isTypeI = fluid.type === 'I';
+                try { localStorage.setItem('hot_fluid', fluid.id); } catch (e) {}
+
+                // Fluid info line
+                let allowTxt = '';
+                if (!isTypeI) {
+                    allowTxt = fluid.table === 20 ? 'Allowance: 依實際防冰液 (EG/PG) 及 Table 53 驗證狀態'
+                        : fluid.allowance ? `Allowance: ✅ ATs for Type IV ${fluid.allowance} Fluids`
+                        : 'Allowance: ❌ Fluid has not been validated (Table 53)';
+                }
+                $('fluidInfo').innerHTML = [
+                    `FAA Table ${fluid.table}`,
+                    isTypeI ? `Type I · ${fluid.surface}` : (fluid.glycol ? `Type IV · ${fluid.glycol}` : 'Type IV · Generic'),
+                    `HOT table lowest temp: ${fmtLimit(lowestLimit(fluid))}`,
+                    allowTxt
+                ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+                $('concWrap').classList.toggle('hidden', isTypeI);
+                $('typeINote').classList.toggle('hidden', !isTypeI);
+
+                // Precip note
+                if (precipVal && PRECIP_NOTES[precipVal]) {
+                    $('precipNoteText').innerHTML = PRECIP_NOTES[precipVal];
+                    $('precipNoteContainer').classList.remove('hidden');
+                } else {
+                    $('precipNoteContainer').classList.add('hidden');
+                }
+
+                // Panels
+                const snowMode = ['snow', 'snow_mix_fz_fog', 'mod_snow_mix_rain'].includes(precipVal);
+                $('snowSettings').classList.toggle('hidden', !snowMode);
+                $('allowanceSettings').classList.toggle('hidden', precipVal !== 'allowance_pl');
+                const showGlycolPick = precipVal === 'allowance_pl' && fluid.table === 20;
+                $('glycolWrap').classList.toggle('hidden', !showGlycolPick);
+                const glycol = fluid.table === 20 ? ($('gly-eg').checked ? 'EG' : 'PG') : fluid.allowance;
+
+                // Reference image
+                let imgTable = fluid.table;
+                if (precipVal === 'active_frost') imgTable = 1;
+                else if (precipVal === 'allowance_pl' && !isTypeI && glycol) imgTable = glycol === 'EG' ? 55 : 56;
+                else if (precipVal === 'allowance_pl' && !isTypeI) imgTable = 53;
+                fluidGuidelineImage.src = tableImg(imgTable);
+                $('fluidDocTitle').textContent = `View FAA Table ${imgTable}` + (imgTable === fluid.table ? ` – ${fluid.name}` : imgTable === 1 ? ' – Active Frost' : imgTable === 53 ? ' – Validation Status (Allowance)' : ' – Allowance Times');
+
+                renderNotesAndCautions(fluid, precipVal, glycol);
+
+                if (!tempVal || !precipVal) {
+                    if (!isTypeI) setConcAvailability(['100', '75', '50'], '');
+                    calculateSnowIntensity(tempVal);
+                    resetDisplays('請選擇溫度與降水類型');
+                    return;
+                }
+                const t = tempNumber(tempVal);
+                const tLabel = tempVal === 'above_0' ? 'Above 0 °C' : `${t} °C`;
+
+                // ===== Allowance Times =====
+                if (precipVal === 'allowance_pl') {
+                    if (!isTypeI) setConcAvailability(['100'], 'Allowance Times：僅限 100/0 未稀釋防冰液。');
+                    const info = $('allowanceInfo');
+                    if (isTypeI) {
+                        info.innerHTML = 'Type I 防冰液<strong>沒有</strong>寬限時間（Allowance Times 僅適用於 Type III 及 Type IV）。';
+                        return showCaution('No allowance times for Type I fluids');
+                    }
+                    if (!glycol) {
+                        info.innerHTML = `<strong>${fluid.name}</strong> 在 Table 53 中為 <strong>Fluid has not been validated</strong>，此防冰液目前無寬限時間。`;
+                        return showCaution('Fluid not validated for allowance times (Table 53)');
+                    }
+                    const lim = lowestLimit(fluid);
+                    if (lim !== null && t < lim) {
+                        info.innerHTML = `OAT 低於此防冰液 HOT 表的最低溫度 (${lim} °C)，請確認 LOUT。`;
+                        return showCaution(`Below fluid's lowest table temperature (${lim} °C) – check LOUT`);
+                    }
+                    const bi = allowanceBandIndex(tempVal);
+                    const tableNo = glycol === 'EG' ? 55 : 56;
+                    let speed = glycol === 'EG' ? '仰轉速度須 ≥ 100 kt。' : (bi >= 3 ? '<strong>PG：此溫度範圍仰轉速度須 ≥ 115 kt。</strong>' : 'PG：仰轉速度須 ≥ 100 kt。');
+                    info.innerHTML = `Table ${tableNo} (Type IV ${glycol})` + (bi >= 0 ? ` · ${ALLOW_BAND_LABELS[bi]}` : '') + `<br>${speed}`;
+                    const mins = bi >= 0 ? DB.allowance[glycol][allowanceSelect.value][bi] : null;
+                    if (mins === null || mins === undefined) {
+                        return showCaution(`Table ${tableNo} · ${bi >= 0 ? ALLOW_BAND_LABELS[bi] : 'below -22 °C'}: no allowance times currently exist`);
+                    }
+                    lowerTimeDisplay.innerHTML = `<span class="text-4xl text-purple-700 font-black">${mins} <span class="text-xl">MIN</span></span>`;
+                    upperTimeDisplay.innerHTML = '--:--';
+                    resultInfo.innerHTML = `Allowance Time · Table ${tableNo} (Type IV ${glycol}) · ${ALLOW_BAND_LABELS[bi]} · 100/0`;
+                    return;
+                }
+
+                // ===== Active Frost (Table 1) =====
+                if (precipVal === 'active_frost') {
+                    calculateSnowIntensity(tempVal);
+                    if (isTypeI) {
+                        const v = DB.frost.I[fluid.surface];
+                        lowerTimeDisplay.innerHTML = `<span class="text-4xl text-gray-900 font-black">${v}</span>`;
+                        upperTimeDisplay.innerHTML = '--:--';
+                        resultInfo.innerHTML = `Table 1 Active Frost · Type I ${fluid.surface} · ${tLabel}（冰點須低於 OAT 10 °C 以上 / LOUT）`;
+                        return;
+                    }
+                    const lim = lowestLimit(fluid);
+                    const fb = findBand(DB.frost.IV, t);
+                    const avail = fb ? ['100', '75', '50'].filter(c => fb[c]) : ['100'];
+                    setConcAvailability(avail, avail.length < 3 ? `此溫度 Active Frost 只提供：${avail.map(c => c + '/' + (100 - c)).join('、')}` : '');
+                    if (lim !== null && t < lim) return showCaution(`Below fluid's lowest table temperature (${lim} °C) – check LOUT`);
+                    if (!fb) return showCaution('Table 1: below -25 °C – no holdover time guidelines exist');
+                    const conc = [...concRadios].find(r => r.checked).value;
+                    lowerTimeDisplay.innerHTML = `<span class="text-4xl text-gray-900 font-black">${fb[conc]}</span>`;
+                    upperTimeDisplay.innerHTML = '--:--';
+                    resultInfo.innerHTML = `Table 1 Active Frost · Type IV · ${fb.label} · ${conc}/${100 - conc}`;
+                    return;
+                }
+
+                // ===== Standard HOT tables =====
+                const lim = lowestLimit(fluid);
+                const band = findBand(fluid.bands, t);
+                if (!band || (lim !== null && t < lim)) {
+                    if (!isTypeI) setConcAvailability(['100'], '');
+                    calculateSnowIntensity(tempVal);
+                    return showCaution(`Table ${fluid.table}: no HOT below ${lim} °C (lowest table temperature) – check LOUT`);
+                }
+
+                // Concentrations available at this band (N/A rows count as unavailable)
+                let conc = '100';
+                if (!isTypeI) {
+                    const avail = ['100', '75', '50'].filter(c => band.c[c] && band.c[c].some(v => v && v !== 'X'));
+                    let msg = '';
+                    if (avail.length < 3) {
+                        const na = ['100', '75', '50'].filter(c => !avail.includes(c)).map(c => c + '/' + (100 - c));
+                        const hasNA = ['75', '50'].some(c => band.c[c] && band.c[c].every(v => v === null || v === 'X'));
+                        msg = hasNA ? `此防冰液 ${na.join('、')} 為 N/A（無數據）。` : `${band.label}：不提供 ${na.join('、')} 稀釋比例。`;
+                    }
+                    setConcAvailability(avail.length ? avail : ['100'], msg);
+                    conc = [...concRadios].find(r => r.checked).value;
+                }
+                const row = band.c[conc];
+
+                // Map precipitation to a table column
+                let col = precipVal;
+                let extra = '';
+                if (snowMode) {
+                    const intensity = calculateSnowIntensity(tempVal);
+                    if (!intensity) return resetDisplays('請選擇能見度以判定降雪強度 (Table 57)');
+                    if (intensity === 'heavy') return showCaution('Heavy snow (Table 57) – no holdover time guidelines exist');
+                    if (precipVal === 'snow') col = 'snow_' + intensity;
+                    if (precipVal === 'mod_snow_mix_rain' && (intensity === 'light' || intensity === 'verylight')) {
+                        col = 'light_fz_rain';
+                        extra = '（極輕/輕度雪混合雨 → 使用 Light Freezing Rain HOT）';
+                    }
+                } else {
+                    calculateSnowIntensity(tempVal);
+                }
+
+                if (precipVal === 'other') return showCaution('Other: no holdover time guidelines exist');
+                if (['rain_cold_wing', 'mod_snow_mix_rain'].includes(precipVal) && t <= 0) {
+                    return showCaution('No holdover time guidelines exist for this condition at 0 °C and below');
+                }
+                if (!isTypeI && ['fz_drizzle', 'light_fz_rain'].includes(col) && t < -10) {
+                    return showCaution('No holdover time guidelines exist for this condition below -10 °C');
+                }
+
+                const idx = COLS.indexOf(col);
+                const value = row ? row[idx] : 'X';
+                const ctx = `Table ${fluid.table} · ${band.label} · ${isTypeI ? fluid.surface : conc + '/' + (100 - conc)} · ${COL_LABELS[col] || col}${extra}`;
+                if (value === null) return showCaution(ctx + ' – N/A for this fluid', 'N/A');
+                if (!value || value === 'X') return showCaution(ctx + ' – no holdover time guidelines exist');
+
+                const [lo, hi] = value.split('-');
+                lowerTimeDisplay.innerHTML = `<span class="text-5xl text-gray-900 font-black tracking-tighter">${lo}</span>`;
+                upperTimeDisplay.innerHTML = `<span class="text-5xl text-gray-900 font-black tracking-tighter">${hi}</span>`;
+                resultInfo.innerHTML = ctx;
+            }
+
+            // ---------- METAR ----------
+            // Primary: own Cloudflare Worker (same deployment the briefing package uses; merges NOAA tgftp + AWC,
+            // picks the newer report). Fallback: VATSIM (raw text only, CORS open).
+            const WX_API = 'https://briefing-package.zihchi.workers.dev/api/wx';
+            const airportCache = {};
+            const withTimeout = (ms) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
+
+            async function fetchMetar(icao) {
+                try {
+                    const res = await fetch(`${WX_API}?type=metar&ids=${icao}`, { cache: 'no-store', signal: withTimeout(8000) });
+                    if (!res.ok) throw new Error('Worker HTTP ' + res.status);
+                    const data = await res.json();
+                    const row = Array.isArray(data) ? (data.find(r => r.icaoId === icao) || data[0]) : null;
+                    const raw = row && (row.rawOb || row.raw);
+                    if (!raw) throw new Error('Worker empty');
+                    return { raw: raw.trim(), source: 'Worker (NOAA)' };
+                } catch (e) {
+                    const res = await fetch(`https://metar.vatsim.net/metar.php?id=${icao}`, { signal: withTimeout(8000) });
+                    if (!res.ok) throw new Error('VATSIM HTTP ' + res.status);
+                    const text = (await res.text()).trim();
+                    if (!text || !text.includes(icao)) throw new Error('VATSIM empty');
+                    return { raw: text.split('\n')[0].trim(), source: 'VATSIM（備援）' };
+                }
+            }
+            async function fetchAirport(icao) {
+                if (airportCache[icao]) return airportCache[icao];
+                const res = await fetch(`${WX_API}?type=airport&ids=${icao}`, { signal: withTimeout(8000) });
+                if (!res.ok) throw new Error('airport HTTP ' + res.status);
+                const data = await res.json();
+                const a = Array.isArray(data) && data.find(r => r.icaoId === icao);
+                if (!a || typeof a.lat !== 'number' || typeof a.lon !== 'number') throw new Error('no coordinates');
+                return (airportCache[icao] = { lat: a.lat, lon: a.lon, name: a.name });
+            }
+
+            function applyMetar(raw, source, airport) {
+                const P = window.MetarHOT.parse(raw);
+                const map = window.MetarHOT.mapPrecip(P);
+                const rows = [];
+                const row = (label, value, cls = '') => rows.push(`<div class="flex gap-2"><span class="font-bold text-sky-800 whitespace-nowrap">${label}</span><span class="${cls}">${value}</span></div>`);
+                const warn = [];
+
+                // Observation time / age
+                if (P.time) {
+                    const age = Math.round((Date.now() - P.time.getTime()) / 60000);
+                    const hhmm = String(P.time.getUTCHours()).padStart(2, '0') + String(P.time.getUTCMinutes()).padStart(2, '0') + 'Z';
+                    row('觀測時間 Obs', `${hhmm}（${age >= 0 ? age + ' 分鐘前' : '—'}）· 來源 ${source}`, age > 90 ? 'text-red-600 font-bold' : '');
+                    if (age > 90) warn.push('METAR 已超過 90 分鐘，請確認是否為最新報告。');
+                } else {
+                    row('來源 Source', source);
+                }
+
+                // Temperature
+                if (P.tempC !== null) {
+                    tempSelect.value = P.tempC > 0 ? 'above_0' : (P.tempC >= -40 ? String(P.tempC) : '');
+                    row('溫度 OAT', `${P.tempC} °C → ${P.tempC > 0 ? 'Above 0 °C' : P.tempC + ' °C'}`);
+                } else {
+                    row('溫度 OAT', '無法解析，請手動選擇', 'text-red-600 font-bold');
+                }
+
+                // Prevailing visibility (never RVR)
+                if (P.vis) {
+                    const unitRadio = $(P.vis.unit === 'sm' ? 'unit-sm' : 'unit-m');
+                    unitRadio.checked = true;
+                    populateVisibilityOptions(P.vis.unit, false);
+                    visSelect.value = String(P.vis.index);
+                    const label = visSelect.options[visSelect.selectedIndex] ? visSelect.options[visSelect.selectedIndex].text : '';
+                    row('盛行能見度 Prevailing Vis', `<span class="font-mono">${P.vis.text}</span> → Table 57: ${label}<span class="text-gray-500">（使用盛行能見度，不使用 RVR）</span>`);
+                } else {
+                    visSelect.value = '';
+                    row('盛行能見度 Prevailing Vis', '無法解析，請手動選擇', 'text-red-600 font-bold');
+                }
+
+                // Day / Night from sun elevation at observation time
+                if (airport && P.time) {
+                    const elev = window.MetarHOT.sunElevation(P.time, airport.lat, airport.lon);
+                    const day = elev > -0.833;   // between sunrise and sunset
+                    $(day ? 'tod-day' : 'tod-night').checked = true;
+                    row('日/夜 Day/Night', `${day ? 'Day' : 'Night'}（太陽仰角 ${elev.toFixed(1)}°，依日出日落判定，請確認）`);
+                } else {
+                    row('日/夜 Day/Night', '無法取得機場座標，請手動選擇', 'text-amber-700 font-bold');
+                }
+
+                // Precipitation
+                precipSelect.value = map.precip || '';
+                if (map.precip === 'allowance_pl' && map.allowance) allowanceSelect.value = map.allowance;
+                row('降水 Precip', map.precip
+                    ? `${map.reason}`
+                    : `<span class="text-amber-700 font-bold">未自動選取：</span>${map.reason}`);
+                warn.push(...map.warnings);
+
+                $('metarAutoInfo').innerHTML =
+                    `<div class="font-black text-sky-900 mb-2">METAR 自動帶入 · Auto-filled from METAR <span class="font-semibold text-gray-500">（請核對 / please verify）</span></div>` +
+                    rows.join('') +
+                    (warn.length ? `<div class="mt-2 text-amber-800 font-semibold">⚠️ ${warn.join('<br>⚠️ ')}</div>` : '');
+                $('metarAutoInfo').classList.remove('hidden');
+                updateSystem();
+            }
+
+            $('fetchMetarBtn').addEventListener('click', async () => {
+                const icao = $('icaoInput').value.trim().toUpperCase();
+                const btn = $('fetchMetarBtn');
+                const mDisplay = $('metarDisplay');
+                const mError = $('metarError');
+
+                if (!/^[A-Z][A-Z0-9]{3}$/.test(icao)) {
+                    mError.innerHTML = '請輸入正確的 4 碼 ICAO 代碼 (例如: RJCC)';
+                    mError.classList.remove('hidden');
+                    mDisplay.classList.add('hidden');
+                    return;
+                }
+
+                btn.textContent = 'Loading...';
+                btn.disabled = true;
+                mError.classList.add('hidden');
+                try {
+                    const [metar, airport] = await Promise.all([
+                        fetchMetar(icao),
+                        fetchAirport(icao).catch(() => null)
+                    ]);
+                    mDisplay.textContent = metar.raw;
+                    mDisplay.classList.remove('hidden');
+                    applyMetar(metar.raw, metar.source, airport);
+                } catch (error) {
+                    mError.innerHTML = `獲取 METAR 失敗。<br>💡 <span class="text-gray-600">Worker 與 VATSIM 皆無回應，請確認網路狀態或 ICAO 代碼。</span>`;
+                    mError.classList.remove('hidden');
+                    mDisplay.classList.add('hidden');
+                    $('metarAutoInfo').classList.add('hidden');
+                } finally {
+                    btn.textContent = 'Load METAR';
+                    btn.disabled = false;
+                }
+            });
+            $('icaoInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('fetchMetarBtn').click(); });
+
+            // ---------- Listeners ----------
+            document.querySelectorAll('input[name="unit"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    populateVisibilityOptions($('unit-m').checked ? 'm' : 'sm', true);
+                    updateSystem();
+                });
+            });
+            [fluidSelect, tempSelect, precipSelect, allowanceSelect, visSelect].forEach(el => el.addEventListener('change', updateSystem));
+            document.querySelectorAll('input[name="timeOfDay"], input[name="glycol"]').forEach(r => r.addEventListener('change', updateSystem));
+            concRadios.forEach(radio => radio.addEventListener('change', updateSystem));
+
+            populateVisibilityOptions('m', false);
+            updateSystem();
+        });
+    </script>
+</body>
+</html>
